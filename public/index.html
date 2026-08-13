@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#c6f66f">
+  <meta name="description" content="口述、截图和微信文章，一次整理成可复盘的生活记录。">
+  <title>复利日记</title>
+  <link rel="stylesheet" href="/styles.css?v=3">
+  <script src="/app.js?v=3" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand" aria-label="复利日记">
+        <span class="brand-mark" aria-hidden="true">复</span>
+        <span class="brand-copy">
+          <strong>复利日记</strong>
+        </span>
+      </div>
+      <span class="api-state" id="apiState" title="MiniMax 接口状态">AI</span>
+    </header>
+
+    <main>
+      <section class="view is-active" id="todayView" aria-labelledby="todayTitle">
+        <header class="page-heading">
+          <h1 id="todayTitle">今天</h1>
+          <p class="date-line" id="todayDate"></p>
+        </header>
+
+        <section class="surface habits" aria-labelledby="habitsTitle">
+          <div class="habits-header">
+            <h2 id="habitsTitle">习惯</h2>
+            <form class="habit-form" id="habitForm">
+              <input id="habitName" maxlength="20" autocomplete="off" placeholder="添加习惯" aria-label="习惯名称">
+              <button type="submit" aria-label="添加习惯">添加</button>
+            </form>
+          </div>
+          <div class="habit-list" id="habitList"></div>
+        </section>
+
+        <div class="today-grid">
+          <section class="surface composer" aria-label="新记录">
+            <label class="field-label" for="entryText">记录</label>
+            <textarea id="entryText" rows="7" maxlength="12000" placeholder="写下今天的事，或粘贴微信文章链接"></textarea>
+            <input id="imageInput" type="file" accept="image/*" multiple hidden>
+
+            <div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="添加截图，可点击、拖入或粘贴">
+              <strong>添加截图</strong>
+              <span>最多 12 张</span>
+            </div>
+            <div class="upload-status" id="uploadStatus" aria-live="polite"></div>
+            <div class="image-list" id="imageList" aria-label="已添加的截图"></div>
+            <div class="link-notice" id="linkNotice" hidden></div>
+
+            <button class="button button-primary analyze-button" id="analyzeButton" type="button" disabled>
+              整理
+            </button>
+            <p class="privacy-note">记录保存在本机；图片仅在整理时发送。</p>
+          </section>
+
+          <section class="result-wrap" id="resultPanel" aria-live="polite"></section>
+        </div>
+      </section>
+
+      <section class="view" id="historyView" aria-labelledby="historyTitle" hidden>
+        <header class="page-heading compact-heading">
+          <h1 id="historyTitle">记录</h1>
+        </header>
+        <div class="history-list" id="historyList"></div>
+      </section>
+
+      <section class="view" id="weekView" aria-labelledby="weekTitle" hidden>
+        <header class="page-heading compact-heading">
+          <h1 id="weekTitle">本周</h1>
+        </header>
+        <div id="weekContent"></div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="tabbar" aria-label="主要页面">
+    <button class="tab-button is-active" type="button" data-view="today" aria-current="page">今天</button>
+    <button class="tab-button" type="button" data-view="history">记录</button>
+    <button class="tab-button" type="button" data-view="week">本周</button>
+  </nav>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
