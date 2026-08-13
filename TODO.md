@@ -15,6 +15,8 @@
 
 ## 未完成
 
+- [ ] 使用 Kotlin + Jetpack Compose 重写 Android 客户端
+- [ ] 使用 SQLite（Room）保存日记、习惯、每日打卡和周复盘，替换浏览器 localStorage
 - [ ] 配置 MiniMax API Key，并用真实文字、截图和微信文章完成联调
 - [ ] 部署 HTTPS 后端并替换本地地址，使手机脱离电脑和 ADB 也能使用
 - [ ] 增加 Android 系统分享入口，可从微信直接分享链接到应用
