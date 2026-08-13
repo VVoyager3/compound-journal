@@ -14,14 +14,14 @@
 - [x] AI 整理、追问和周复盘切换页面或旋转时继续执行，完成后再原子保存
 - [x] 图片以临时文件保存并流式上传，避免 Base64 在界面状态和 JSON 中重复常驻
 - [x] 目标 API 升级至 Android 16（API 36），并通过本地构建、自动化自检及 API 34 模拟器回归
-- [x] 已在真机安装过较早的调试版；本轮最新版本按要求仅完成模拟器验证，尚未重装真机
+- [x] 最新 API 36 调试版已在 Android 16 真机安装，并完成启动、联网、系统分享、切页、旋转与延迟请求生命周期验证
 
 ## 未完成
 
 - [x] 使用 Kotlin + Jetpack Compose 重写 Android 客户端
 - [x] 使用 SQLite（Room）保存日记、习惯、每日打卡和周复盘，替换浏览器 localStorage
-- [x] 配置 MiniMax API Key，并用真实文字完成真实接口联调（账号当前返回 Token Plan 额度耗尽）
-- [ ] 额度恢复后补做真实截图和微信文章成功链路验收
+- [x] 配置 MiniMax API Key，并用真实文字完成真实接口联调（请求已到达 MiniMax；当前模型响应未通过完整性校验）
+- [ ] 模型稳定返回完整结果后，补做真实截图和微信文章成功链路验收
 - [ ] 部署 HTTPS 后端并替换本地地址，使手机脱离电脑和 ADB 也能使用
 - [x] 增加 Android 系统分享入口，可从微信直接分享链接到应用
 - [ ] 配置正式签名、版本号并生成发布包
@@ -30,5 +30,5 @@
 
 - Android API 地址可通过 `-PcompoundApiBaseUrl=https://你的域名` 配置。
 - 正式签名从 `RELEASE_STORE_FILE`、`RELEASE_STORE_PASSWORD`、`RELEASE_KEY_ALIAS`、`RELEASE_KEY_PASSWORD` 环境变量读取，密钥库不会提交。
-- MiniMax Key 已通过本地 `.env` 注入且不会提交；真实请求已到达 MiniMax，当前外部阻塞是 Token Plan 额度耗尽。
+- MiniMax Key 已通过本地 `.env` 注入且不会提交；真实请求已到达 MiniMax，当前模型响应未通过整理结果的完整性校验。
 - 余下发布项需要 HTTPS 域名/主机和正式签名证书；凭据到位后才能完成发布包验收。
