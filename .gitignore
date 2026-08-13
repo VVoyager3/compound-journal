@@ -1,6 +1,13 @@
 node_modules/
 npm-debug.log*
+work-server.*.log
 .env
 .codegraph/
 android/*.apk
 android/*.idsig
+.gradle/
+.kotlin/
+**/build/
+local.properties
+*.jks
+*.keystore

@@ -11,13 +11,21 @@
 - [x] AI 根据日记中的明确证据自动完成对应习惯打卡
 - [x] 本周习惯统计与 AI 周复盘
 - [x] Android 多图选择、顶部安全区和应用图标
-- [x] 已在真机安装并通过本地自检
+- [x] 已在真机安装过调试版；最新 neo-brutalism 版已通过模拟器、本地构建和自动化自检
 
 ## 未完成
 
-- [ ] 使用 Kotlin + Jetpack Compose 重写 Android 客户端
-- [ ] 使用 SQLite（Room）保存日记、习惯、每日打卡和周复盘，替换浏览器 localStorage
-- [ ] 配置 MiniMax API Key，并用真实文字、截图和微信文章完成联调
+- [x] 使用 Kotlin + Jetpack Compose 重写 Android 客户端
+- [x] 使用 SQLite（Room）保存日记、习惯、每日打卡和周复盘，替换浏览器 localStorage
+- [x] 配置 MiniMax API Key，并用真实文字完成真实接口联调（账号当前返回 Token Plan 额度耗尽）
+- [ ] 额度恢复后补做真实截图和微信文章成功链路验收
 - [ ] 部署 HTTPS 后端并替换本地地址，使手机脱离电脑和 ADB 也能使用
-- [ ] 增加 Android 系统分享入口，可从微信直接分享链接到应用
+- [x] 增加 Android 系统分享入口，可从微信直接分享链接到应用
 - [ ] 配置正式签名、版本号并生成发布包
+
+## 交付说明
+
+- Android API 地址可通过 `-PcompoundApiBaseUrl=https://你的域名` 配置。
+- 正式签名从 `RELEASE_STORE_FILE`、`RELEASE_STORE_PASSWORD`、`RELEASE_KEY_ALIAS`、`RELEASE_KEY_PASSWORD` 环境变量读取，密钥库不会提交。
+- MiniMax Key 已通过本地 `.env` 注入且不会提交；真实请求已到达 MiniMax，当前外部阻塞是 Token Plan 额度耗尽。
+- 余下发布项需要 HTTPS 域名/主机和正式签名证书；凭据到位后才能完成发布包验收。
