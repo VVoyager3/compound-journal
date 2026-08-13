@@ -1,16 +1,13 @@
 package com.compoundjournal.app
 
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.net.Uri
 import android.os.Bundle
-import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -59,7 +56,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
@@ -69,13 +65,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -227,7 +222,7 @@ private fun BrandHeader(connected: ApiClient.ConnectionState?) {
 }
 
 @Composable
-private fun PageHeading(title: String, showDate: Boolean = false) {
+private fun PageHeading(title: String, showDate: Boolean = false, today: LocalDate = LocalDate.now()) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -235,7 +230,7 @@ private fun PageHeading(title: String, showDate: Boolean = false) {
     ) {
         Text(title, color = Ink, fontSize = 30.sp, lineHeight = 33.sp, fontWeight = FontWeight.Black)
         if (showDate) Text(
-            LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年M月d日EEEE", Locale.CHINA)),
+            today.format(DateTimeFormatter.ofPattern("yyyy年M月d日EEEE", Locale.CHINA)),
             color = Muted,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
@@ -301,12 +296,12 @@ internal fun sharedText(action: String?, type: String?, text: CharSequence?): St
 
 class MainActivity : ComponentActivity() {
     private var incomingText by mutableStateOf("")
+    private val model by viewModels<JournalViewModel>()
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         if (state == null) acceptShare(intent)
-        val dao = JournalDatabase.get(this).dao()
-        setContent { JournalApp(dao, incomingText) { incomingText = "" } }
+        setContent { JournalApp(model, incomingText) { incomingText = "" } }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -325,14 +320,27 @@ class MainActivity : ComponentActivity() {
 private enum class Screen(val label: String) { Today("今天"), History("记录"), Week("本周") }
 
 @Composable
-private fun JournalApp(dao: JournalDao, incomingText: String, consumeShare: () -> Unit) {
+private fun JournalApp(model: JournalViewModel, incomingText: String, consumeShare: () -> Unit) {
+    val dao = model.dao
     val entries by dao.entries().collectAsStateWithLifecycle(initialValue = emptyList())
     val habits by dao.habits().collectAsStateWithLifecycle(initialValue = emptyList())
     val checkIns by dao.checkIns().collectAsStateWithLifecycle(initialValue = emptyList())
     var screen by rememberSaveable { mutableStateOf(Screen.Today) }
     var text by rememberSaveable { mutableStateOf("") }
-    var selectedEntry by remember { mutableStateOf<JournalEntry?>(null) }
+    var selectedEntryId by rememberSaveable { mutableStateOf<String?>(null) }
     var connected by remember { mutableStateOf<ApiClient.ConnectionState?>(null) }
+    var today by remember { mutableStateOf(LocalDate.now()) }
+    val completedEntry = model.completedAnalysis?.entry
+    val selectedEntry = selectedEntryId?.let { id ->
+        entries.firstOrNull { it.id == id } ?: completedEntry?.takeIf { it.id == id }
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000)
+            today = LocalDate.now()
+        }
+    }
 
     LaunchedEffect(Unit) {
         connected = withContext(Dispatchers.IO) { ApiClient.health() }
@@ -342,9 +350,16 @@ private fun JournalApp(dao: JournalDao, incomingText: String, consumeShare: () -
         if (incomingText.isNotBlank()) {
             text = listOf(text, incomingText).filter(String::isNotBlank).joinToString("\n").take(12_000)
             screen = Screen.Today
-            selectedEntry = null
+            selectedEntryId = null
             consumeShare()
         }
+    }
+
+    LaunchedEffect(completedEntry?.id, entries) {
+        val completed = model.completedAnalysis ?: return@LaunchedEffect
+        if (text == completed.submittedDraft) text = ""
+        if (screen == Screen.Today) selectedEntryId = completed.entry.id
+        if (entries.any { it.id == completed.entry.id }) model.acknowledgeAnalysis(completed.entry.id)
     }
 
     MaterialTheme(colorScheme = lightColorScheme(
@@ -358,16 +373,16 @@ private fun JournalApp(dao: JournalDao, incomingText: String, consumeShare: () -
     )) {
         Scaffold(
             containerColor = Paper,
-            bottomBar = { BrutalTabs(screen) { screen = it; selectedEntry = null } },
+            bottomBar = { BrutalTabs(screen) { screen = it; selectedEntryId = null } },
         ) { padding ->
             Column(Modifier.fillMaxSize().background(Paper).padding(padding).padding(horizontal = 12.dp)) {
                 BrandHeader(connected)
                 Box(Modifier.weight(1f)) {
                     when {
-                        selectedEntry != null -> EntryDetail(dao, selectedEntry!!, { selectedEntry = it }) { selectedEntry = null }
-                        screen == Screen.Today -> TodayScreen(dao, habits, checkIns, text, { text = it }) { selectedEntry = it }
-                        screen == Screen.History -> HistoryScreen(dao, entries) { selectedEntry = it }
-                        else -> WeekScreen(dao, entries, habits, checkIns)
+                        selectedEntry != null -> EntryDetail(model, selectedEntry) { selectedEntryId = null }
+                        screen == Screen.Today -> TodayScreen(model, dao, habits, checkIns, today, text) { text = it }
+                        screen == Screen.History -> HistoryScreen(dao, entries) { selectedEntryId = it.id }
+                        else -> WeekScreen(model, entries, habits, checkIns, today)
                     }
                 }
             }
@@ -377,36 +392,30 @@ private fun JournalApp(dao: JournalDao, incomingText: String, consumeShare: () -
 
 @Composable
 private fun TodayScreen(
+    model: JournalViewModel,
     dao: JournalDao,
     habits: List<Habit>,
     checkIns: List<CheckIn>,
+    today: LocalDate,
     text: String,
     setText: (String) -> Unit,
-    onSaved: (JournalEntry) -> Unit,
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var images by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var habitName by rememberSaveable { mutableStateOf("") }
     var pendingHabitDelete by remember { mutableStateOf<Habit?>(null) }
-    var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf("") }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        scope.launch {
-            val selected = uris.take(12 - images.size)
-            val added = selected.mapNotNull { uri -> imageData(context, uri) }
-            images = images + added
-            if (added.size < selected.size) error = "部分图片无法读取、超过 20MB 或压缩失败。"
-        }
+        model.addImages(uris)
     }
-    val today = LocalDate.now().toString()
+    val todayText = today.toString()
+    val images = model.images
+    val error = listOf(model.imageError, model.analyzeError).filter(String::isNotBlank).joinToString("\n")
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item { PageHeading("今天", showDate = true) }
+        item { PageHeading("今天", showDate = true, today = today) }
         item {
             BrutalSurface(padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -427,7 +436,12 @@ private fun TodayScreen(
                 } else {
                     Column(Modifier.padding(top = 10.dp)) {
                         habits.forEach { habit ->
-                            val done = checkIns.any { it.habitId == habit.id && it.date == today }
+                            val completedDates = checkIns.asSequence()
+                                .filter { it.habitId == habit.id }
+                                .mapNotNull { runCatching { LocalDate.parse(it.date) }.getOrNull() }
+                                .toSet()
+                            val done = today in completedDates
+                            val streak = habitStreak(completedDates, today)
                             Row(
                                 Modifier.fillMaxWidth().border(1.dp, PaperDeep).padding(vertical = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -437,13 +451,20 @@ private fun TodayScreen(
                                 Box(
                                     Modifier.size(28.dp).clip(checkShape).background(if (done) Accent else SurfaceWhite)
                                         .border(2.dp, Ink, checkShape)
-                                        .clickable { scope.launch {
-                                            if (done) dao.removeCheckIn(habit.id, today) else dao.saveCheckIn(CheckIn(habit.id, today))
+                                        .clickable(enabled = !model.analyzeBusy) { scope.launch {
+                                            if (done) dao.removeCheckIn(habit.id, todayText) else dao.saveCheckIn(CheckIn(habit.id, todayText))
                                         } },
                                     contentAlignment = Alignment.Center,
                                 ) { if (done) Text("✓", color = Ink, fontWeight = FontWeight.Black) }
                                 Text(habit.name, Modifier.weight(1f), color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Text("删除", Modifier.clickable { pendingHabitDelete = habit }.padding(4.dp), color = Danger, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                if (streak > 0) Text("$streak 天", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "删除",
+                                    Modifier.clickable(enabled = !model.analyzeBusy) { pendingHabitDelete = habit }.padding(4.dp),
+                                    color = Danger,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
                             }
                         }
                     }
@@ -464,12 +485,17 @@ private fun TodayScreen(
                     Modifier.fillMaxWidth().heightIn(min = 50.dp).padding(top = 12.dp)
                         .clip(RoundedCornerShape(14.dp)).background(SurfaceSoft)
                         .drawBehind { drawRoundRect(Ink, cornerRadius = CornerRadius(14.dp.toPx()), style = Stroke(2.dp.toPx(), pathEffect = dash)) }
-                        .clickable { picker.launch("image/*") }.padding(horizontal = 14.dp, vertical = 12.dp),
+                        .clickable(enabled = !model.imageBusy && !model.analyzeBusy) { picker.launch("image/*") }
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("添加截图", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(if (images.isEmpty()) "最多 12 张" else "已选 ${images.size}/12 张", color = Muted, fontSize = 12.sp)
+                    Text(
+                        if (model.imageBusy) "正在处理" else if (images.isEmpty()) "最多 12 张" else "已选 ${images.size}/12 张",
+                        color = Muted,
+                        fontSize = 12.sp,
+                    )
                 }
                 images.forEachIndexed { index, image ->
                     Row(
@@ -478,10 +504,10 @@ private fun TodayScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("${index + 1}. ${image.first}", Modifier.weight(1f), color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("${index + 1}. ${image.name}", Modifier.weight(1f), color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Text(
                             "移除",
-                            Modifier.clickable { images = images.toMutableList().also { it.removeAt(index) } }.padding(4.dp),
+                            Modifier.clickable(enabled = !model.analyzeBusy) { model.removeImage(index) }.padding(4.dp),
                             color = Danger,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -490,32 +516,10 @@ private fun TodayScreen(
                 }
                 if (error.isNotBlank()) Text(error, Modifier.padding(top = 10.dp), color = Danger, fontSize = 13.sp)
                 BrutalButton(
-                    text = if (busy) "正在整理" else "整理",
+                    text = if (model.analyzeBusy) "正在整理" else "整理",
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
-                    enabled = !busy && (text.isNotBlank() || images.isNotEmpty()),
-                    onClick = {
-                        busy = true; error = ""
-                        scope.launch {
-                            runCatching { withContext(Dispatchers.IO) { ApiClient.analyze(text.trim(), images, habits) } }
-                                .onSuccess { json ->
-                                    val entry = json.toEntry()
-                                    withContext(Dispatchers.IO) {
-                                        dao.saveEntry(entry)
-                                        json.optJSONArray("checkIns")?.let { list ->
-                                            habits.forEach { habit ->
-                                                val completed = (0 until list.length()).any { index ->
-                                                    val item = list.getJSONObject(index)
-                                                    item.optString("name") == habit.name && item.optString("status") == "completed"
-                                                }
-                                                if (completed) dao.saveCheckIn(CheckIn(habit.id, today))
-                                            }
-                                        }
-                                    }
-                                    setText(""); images = emptyList(); onSaved(entry)
-                                }.onFailure { error = it.message ?: "整理失败" }
-                            busy = false
-                        }
-                    },
+                    enabled = !model.analyzeBusy && !model.imageBusy && (text.isNotBlank() || images.isNotEmpty()),
+                    onClick = { model.analyze(text, habits, today) },
                 )
                 Text("记录保存在本机；图片仅在整理时发送。", Modifier.fillMaxWidth().padding(top = 8.dp), color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center)
             }
@@ -601,12 +605,11 @@ private fun HistoryScreen(dao: JournalDao, entries: List<JournalEntry>, open: (J
 }
 
 @Composable
-private fun EntryDetail(dao: JournalDao, entry: JournalEntry, update: (JournalEntry) -> Unit, back: () -> Unit) {
-    val scope = rememberCoroutineScope()
+private fun EntryDetail(model: JournalViewModel, entry: JournalEntry, back: () -> Unit) {
     val json = remember(entry.json) { JSONObject(entry.json) }
-    var question by rememberSaveable { mutableStateOf("") }
-    var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf("") }
+    val question = if (model.chatDraftEntryId == entry.id) model.chatDraft else ""
+    val busy = model.chatBusyEntryId == entry.id
+    val error = if (model.chatErrorEntryId == entry.id) model.chatError else ""
     BackHandler(onBack = back)
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -736,26 +739,12 @@ private fun EntryDetail(dao: JournalDao, entry: JournalEntry, update: (JournalEn
                 }
 
                 Text("继续追问", Modifier.padding(top = 20.dp, bottom = 8.dp), color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-                BrutalTextField(question, { question = it.take(2_000) }, "追问这条记录", Modifier.fillMaxWidth().heightIn(min = 54.dp))
+                BrutalTextField(question, { model.setChatDraft(entry.id, it) }, "追问这条记录", Modifier.fillMaxWidth().heightIn(min = 54.dp))
                 BrutalButton(
                     text = if (busy) "发送中" else "发送",
                     modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                     enabled = !busy && question.isNotBlank(),
-                    onClick = {
-                        val message = question.trim(); busy = true; error = ""
-                        scope.launch {
-                            runCatching { withContext(Dispatchers.IO) { ApiClient.chat(json, message) } }
-                                .onSuccess { answer ->
-                                    val chat = json.optJSONArray("chat") ?: JSONArray().also { json.put("chat", it) }
-                                    chat.put(JSONObject().put("role", "user").put("content", message))
-                                    chat.put(JSONObject().put("role", "assistant").put("content", answer))
-                                    val saved = json.toEntry()
-                                    withContext(Dispatchers.IO) { dao.saveEntry(saved) }
-                                    question = ""; update(saved)
-                                }.onFailure { error = it.message ?: "追问失败" }
-                            busy = false
-                        }
-                    },
+                    onClick = { model.chat(entry, question.trim()) },
                 )
                 if (error.isNotBlank()) Text(error, Modifier.padding(top = 8.dp), color = Danger, fontSize = 13.sp)
             }
@@ -789,20 +778,23 @@ private fun ReflectionBlock(title: String, value: String, accent: Boolean = fals
 }
 
 @Composable
-private fun WeekScreen(dao: JournalDao, entries: List<JournalEntry>, habits: List<Habit>, checkIns: List<CheckIn>) {
-    val scope = rememberCoroutineScope()
-    val threshold = OffsetDateTime.now().minusDays(7)
-    val recent = entries.filter { runCatching { OffsetDateTime.parse(it.createdAt).isAfter(threshold) }.getOrDefault(false) }
+private fun WeekScreen(
+    model: JournalViewModel,
+    entries: List<JournalEntry>,
+    habits: List<Habit>,
+    checkIns: List<CheckIn>,
+    today: LocalDate,
+) {
+    val recent = entries.filter { entry ->
+        entryLocalDate(entry.createdAt)?.let { isInSevenDayWindow(it, today) } == true
+    }
     val ids = recent.joinToString("|") { it.id }
-    var review by remember(ids) { mutableStateOf<JSONObject?>(null) }
-    var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf("") }
-    val cutoff = LocalDate.now().minusDays(6)
+    val review = if (model.reviewEntryIds == ids) model.reviewJson?.let(::JSONObject) else null
+    val busy = model.reviewBusyEntryIds == ids
+    val error = if (model.reviewErrorEntryIds == ids) model.reviewError else ""
 
     LaunchedEffect(ids) {
-        review = if (ids.isBlank()) null else withContext(Dispatchers.IO) {
-            dao.review(ids)?.let { JSONObject(it.json) }
-        }
+        model.loadReview(ids)
     }
 
     LazyColumn(
@@ -830,7 +822,11 @@ private fun WeekScreen(dao: JournalDao, entries: List<JournalEntry>, habits: Lis
                     Text(recent.size.toString(), color = Ink, fontSize = 25.sp, fontWeight = FontWeight.Black)
                 }
                 habits.forEach { habit ->
-                    val count = checkIns.count { it.habitId == habit.id && !LocalDate.parse(it.date).isBefore(cutoff) }
+                    val count = checkIns.count {
+                        it.habitId == habit.id && runCatching {
+                            isInSevenDayWindow(LocalDate.parse(it.date), today)
+                        }.getOrDefault(false)
+                    }
                     Row(
                         Modifier.fillMaxWidth().border(1.dp, PaperDeep).padding(vertical = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -857,17 +853,7 @@ private fun WeekScreen(dao: JournalDao, entries: List<JournalEntry>, habits: Lis
                     text = if (busy) "正在复盘" else if (review == null) "生成 AI 周复盘" else "重新生成复盘",
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
                     enabled = !busy,
-                    onClick = {
-                        busy = true; error = ""
-                        scope.launch {
-                            runCatching { withContext(Dispatchers.IO) { ApiClient.review(recent) } }
-                                .onSuccess { value ->
-                                    review = value
-                                    withContext(Dispatchers.IO) { dao.saveReview(WeeklyReview(ids, OffsetDateTime.now().toString(), value.toString())) }
-                                }.onFailure { error = it.message ?: "复盘失败" }
-                            busy = false
-                        }
-                    },
+                    onClick = { model.generateReview(recent) },
                 )
             }
         }
@@ -889,41 +875,7 @@ private fun WeekScreen(dao: JournalDao, entries: List<JournalEntry>, habits: Lis
     }
 }
 
-private suspend fun imageData(context: android.content.Context, uri: Uri): Pair<String, String>? = withContext(Dispatchers.IO) {
-    runCatching {
-        val resolver = context.contentResolver
-        val size = resolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getLong(0) else null
-        }
-        require(size == null || size <= 20L * 1024 * 1024) { "图片超过 20MB" }
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)!!.use { BitmapFactory.decodeStream(it, null, bounds) }
-        require(bounds.outWidth > 0 && bounds.outHeight > 0) { "图片无法读取" }
-        var sample = 1
-        while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 3200) sample *= 2
-        val options = BitmapFactory.Options().apply { inSampleSize = sample }
-        val source = resolver.openInputStream(uri)!!.use { BitmapFactory.decodeStream(it, null, options) }
-            ?: error("图片无法读取")
-        val scale = minOf(1f, 1600f / maxOf(source.width, source.height))
-        val bitmap = if (scale < 1f) Bitmap.createScaledBitmap(source, (source.width * scale).toInt(), (source.height * scale).toInt(), true) else source
-        var quality = 84
-        val output = ByteArrayOutputStream()
-        do {
-            output.reset()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)
-            quality -= 8
-        } while (output.size() > 750_000 && quality >= 44)
-        require(output.size() <= 850_000) { "图片压缩后仍然过大" }
-        if (bitmap !== source) bitmap.recycle()
-        source.recycle()
-        val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) cursor.getString(0)?.takeLast(120) else null
-        } ?: uri.lastPathSegment?.takeLast(120) ?: "screenshot.jpg"
-        name to "data:image/jpeg;base64,${Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)}"
-    }.getOrNull()
-}
-
-private fun JSONObject.toEntry() = JournalEntry(
+internal fun JSONObject.toEntry() = JournalEntry(
     id = optString("id", UUID.randomUUID().toString()),
     createdAt = optString("createdAt", OffsetDateTime.now().toString()),
     title = optString("title", "今天的整理"),

@@ -11,6 +11,7 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "entries")
@@ -39,6 +40,16 @@ interface JournalDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveEntry(entry: JournalEntry)
+
+    @Update
+    suspend fun updateEntry(entry: JournalEntry): Int
+
+    @Transaction
+    suspend fun saveAnalysis(entry: JournalEntry, checkIns: List<CheckIn>) {
+        saveEntry(entry)
+        checkIns.forEach { saveCheckIn(it) }
+        clearReviews()
+    }
 
     @Query("DELETE FROM entries WHERE id = :entryId")
     suspend fun removeEntry(entryId: String)
@@ -73,8 +84,10 @@ interface JournalDao {
     @Query("SELECT * FROM check_ins")
     fun checkIns(): Flow<List<CheckIn>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun saveCheckIn(checkIn: CheckIn)
+    @Query("INSERT OR REPLACE INTO check_ins (habitId, date, status) SELECT :habitId, :date, :status WHERE EXISTS (SELECT 1 FROM habits WHERE id = :habitId)")
+    suspend fun saveCheckIn(habitId: String, date: String, status: String = "completed")
+
+    suspend fun saveCheckIn(checkIn: CheckIn) = saveCheckIn(checkIn.habitId, checkIn.date, checkIn.status)
 
     @Query("DELETE FROM check_ins WHERE habitId = :habitId AND date = :date")
     suspend fun removeCheckIn(habitId: String, date: String)
