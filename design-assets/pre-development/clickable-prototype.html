@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>栖光 · 开发前可点击视觉原型</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: #211e1a;
+      background: #efe9dc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body { margin: 0; }
+
+    button,
+    select,
+    input { font: inherit; }
+
+    button { cursor: pointer; }
+
+    .prototype-shell {
+      width: min(100% - 24px, 1100px);
+      margin: 24px auto 56px;
+    }
+
+    .prototype-header {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding: 20px;
+      border: 3px solid #211e1a;
+      background: #fff7e6;
+      box-shadow: 6px 6px 0 #211e1a;
+    }
+
+    .prototype-header h1,
+    .prototype-header p { margin: 0; }
+
+    .prototype-controls {
+      display: flex;
+      gap: 12px;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+
+    .prototype-controls label {
+      display: grid;
+      gap: 6px;
+      font-weight: 700;
+    }
+
+    .prototype-controls select,
+    .prototype-controls button {
+      min-height: 44px;
+      padding: 8px 12px;
+      border: 2px solid #211e1a;
+      border-radius: 2px;
+      color: #211e1a;
+      background: #fff7e6;
+      box-shadow: 3px 3px 0 #211e1a;
+    }
+
+    .prototype-controls button.primary {
+      background: #ff6b4a;
+    }
+
+    .prototype-layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 430px) minmax(260px, 1fr);
+      gap: 28px;
+      align-items: start;
+    }
+
+    .phone-stage {
+      position: relative;
+      width: 100%;
+      background: transparent;
+    }
+
+    .phone-stage img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .hotspot-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .hotspot-layer button {
+      position: absolute;
+      display: grid;
+      place-items: center;
+      min-width: 30px;
+      min-height: 30px;
+      padding: 4px;
+      border: 3px dashed #ff4b2e;
+      border-radius: 2px;
+      color: #211e1a;
+      background: rgb(255 247 230 / 86%);
+      box-shadow: 3px 3px 0 #211e1a;
+      font-weight: 700;
+      pointer-events: auto;
+    }
+
+    .hotspot-layer.is-hidden button {
+      color: transparent;
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    .hotspot-layer button:hover,
+    .hotspot-layer button:focus-visible {
+      color: #211e1a;
+      border-color: #ff4b2e;
+      background: #fff7e6;
+      box-shadow: 3px 3px 0 #211e1a;
+      outline: 3px solid #59b8d1;
+      outline-offset: 2px;
+    }
+
+    .prototype-notes {
+      display: grid;
+      gap: 16px;
+    }
+
+    .prototype-panel {
+      padding: 18px;
+      border: 3px solid #211e1a;
+      background: #fff7e6;
+      box-shadow: 5px 5px 0 #211e1a;
+    }
+
+    .prototype-panel h2,
+    .prototype-panel p { margin-top: 0; }
+
+    .prototype-panel ol,
+    .prototype-panel ul { padding-left: 22px; }
+
+    .avatar-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .avatar-option {
+      min-height: 44px;
+      padding: 8px;
+      border: 3px solid #211e1a;
+      background: #fff;
+      box-shadow: 3px 3px 0 #211e1a;
+      cursor: pointer;
+    }
+
+    .avatar-option[aria-pressed="true"] { background: #ffcf58; }
+
+    .avatar-option img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: contain;
+      background: #fff;
+    }
+
+    .avatar-option span {
+      display: block;
+      margin-top: 6px;
+      font-weight: 800;
+    }
+
+    .flow-progress {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .flow-progress span {
+      padding: 6px 8px;
+      border: 2px solid #211e1a;
+      background: #fff7e6;
+    }
+
+    .flow-progress span.current {
+      background: #ffcf58;
+      box-shadow: 2px 2px 0 #211e1a;
+    }
+
+    .screen-purpose {
+      border-left: 8px solid #59b8d1;
+    }
+
+    .prototype-status {
+      min-height: 48px;
+      margin: 0;
+      padding: 12px;
+      border: 2px dashed #211e1a;
+      background: #fffaf0;
+    }
+
+    @media (max-width: 780px) {
+      .prototype-layout { grid-template-columns: 1fr; }
+      .phone-stage { width: min(100%, 430px); margin-inline: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="prototype-shell">
+    <header class="prototype-header">
+      <h1>栖光 · 开发前可点击视觉原型</h1>
+      <p>此文件只验证七个页面和五条关键路径；不连接数据、AI、动画或正式业务逻辑。</p>
+      <div class="prototype-controls">
+        <label>
+          当前页面
+          <select id="screen-picker">
+            <option value="home">P01 今日首页</option>
+            <option value="record">P02 记录与整理</option>
+            <option value="past">P03 某日回顾</option>
+            <option value="tasks">P04 任务板</option>
+            <option value="growth">P05 成长</option>
+            <option value="review">P06 周复盘</option>
+            <option value="system">P07 我的系统</option>
+          </select>
+        </label>
+        <label>
+          关键路径
+          <select id="flow-picker">
+            <option value="first-record">第一次记录</option>
+            <option value="task-feedback">任务口述反馈</option>
+            <option value="past-day">回看某一天</option>
+            <option value="habit-growth">BONUS 与花盆</option>
+            <option value="weekly-review">周复盘更新系统</option>
+          </select>
+        </label>
+        <button type="button" class="primary" id="start-flow">开始路径</button>
+        <button type="button" id="toggle-hotspots" aria-pressed="true">隐藏热点</button>
+      </div>
+    </header>
+
+    <div class="prototype-layout">
+      <div class="phone-stage">
+        <img id="screen-image" src="01-home.png" alt="栖光今日首页视觉稿">
+        <div class="hotspot-layer" id="hotspot-layer" aria-label="页面可点击区域"></div>
+      </div>
+
+      <aside class="prototype-notes">
+        <section class="prototype-panel">
+          <h2>正式头像选择</h2>
+          <p>直接使用用户原创头像；同一时间只启用一个生活分身外观。</p>
+          <div class="avatar-options">
+            <button type="button" class="avatar-option" data-avatar="male" aria-pressed="true">
+              <img src="avatar-male-original.jpg" alt="鹿角头饰男生头像">
+              <span>男生</span>
+            </button>
+            <button type="button" class="avatar-option" data-avatar="female" aria-pressed="false">
+              <img src="avatar-female-original.jpg" alt="牛纹帽双辫女生头像">
+              <span>女生</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="prototype-panel screen-purpose">
+          <h2 id="screen-title">P01 今日首页</h2>
+          <p id="screen-purpose">五秒内看懂状态、今日唯一主线和记录入口。</p>
+        </section>
+
+        <section class="prototype-panel">
+          <h2>当前关键路径</h2>
+          <div class="flow-progress" id="flow-progress"></div>
+          <div class="prototype-controls">
+            <button type="button" id="previous-step">上一步</button>
+            <button type="button" class="primary" id="next-step">下一步</button>
+          </div>
+        </section>
+
+        <section class="prototype-panel">
+          <h2>交互说明</h2>
+          <ul>
+            <li>显示热点时，虚线框是本轮需要验证的点击区域。</li>
+            <li>隐藏热点后，透明区域仍可点击，便于接近真实原型体验。</li>
+            <li>页面图片是视觉参考，不代表最终代码布局和字体渲染。</li>
+          </ul>
+          <p class="prototype-status" id="prototype-status" aria-live="polite">请选择热点或开始一条关键路径。</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const screens = {
+      home: {
+        title: 'P01 今日首页',
+        image: '01-home.png',
+        alt: '栖光今日首页视觉稿',
+        purpose: '五秒内看懂状态、今日唯一主线和记录入口。',
+        hotspots: [
+          ['日记桌', 7, 24, 34, 20, 'record'],
+          ['任务板', 27, 12, 32, 14, 'tasks'],
+          ['日历', 58, 12, 18, 14, 'past'],
+          ['书架', 74, 16, 18, 23, 'growth'],
+          ['生活分身', 40, 28, 20, 18, 'review'],
+          ['主线反馈', 8, 51, 84, 16, 'tasks'],
+          ['日历', 22, 89, 16, 8, 'past'],
+          ['记录', 40, 88, 19, 9, 'record'],
+          ['成长', 61, 89, 16, 8, 'growth'],
+          ['系统', 81, 89, 14, 8, 'system']
+        ]
+      },
+      record: {
+        title: 'P02 记录与整理',
+        image: '02-record.png',
+        alt: '栖光记录与整理视觉稿',
+        purpose: '自由记录，并在发送前控制 AI 上下文和推断。',
+        hotspots: [
+          ['关闭', 76, 7, 17, 7, 'home'],
+          ['删减上下文', 23, 50, 55, 7, null, '发送范围保持由用户控制。'],
+          ['仅保存原文', 8, 58, 36, 8, null, '原文已保存在本机，尚未发送给 AI。'],
+          ['保存并整理', 46, 58, 46, 8, 'past'],
+          ['今日', 6, 89, 15, 8, 'home'],
+          ['日历', 22, 89, 16, 8, 'past'],
+          ['成长', 61, 89, 16, 8, 'growth'],
+          ['系统', 81, 89, 14, 8, 'system']
+        ]
+      },
+      past: {
+        title: 'P03 某日回顾',
+        image: '03-day-review.png',
+        alt: '栖光某日回顾视觉稿',
+        purpose: '追溯当天事件、状态变化和每一条证据。',
+        hotspots: [
+          ['返回', 6, 7, 13, 7, 'home'],
+          ['日历', 74, 7, 18, 7, null, '月历将允许选择任意有记录或空白的日期。'],
+          ['查看变化依据', 9, 82, 82, 7, null, '状态变化会展开原始事件与用户校准依据。'],
+          ['今日', 6, 89, 15, 8, 'home'],
+          ['记录', 41, 89, 18, 8, 'record'],
+          ['成长', 61, 89, 16, 8, 'growth'],
+          ['系统', 81, 89, 14, 8, 'system']
+        ]
+      },
+      tasks: {
+        title: 'P04 任务板',
+        image: '04-task-board.png',
+        alt: '栖光任务板视觉稿',
+        purpose: '看清目标、里程碑、今日行动和独立习惯的关系。',
+        hotspots: [
+          ['调整重点', 66, 7, 27, 7, 'system'],
+          ['完成', 10, 39, 25, 7, null, '已选择“完成”，确认前不结算经验。'],
+          ['部分完成', 37, 39, 27, 7, null, '已选择“部分完成”，确认后结算一半经验。'],
+          ['今天不做', 66, 39, 25, 7, null, '今天不做不会扣分，并会用于调整未来建议。'],
+          ['确认反馈', 11, 54, 79, 7, 'growth'],
+          ['BONUS 任务', 10, 63, 80, 9, null, '用户可以主动选择习惯并设为 BONUS；每天最多三个。'],
+          ['日历', 22, 89, 16, 8, 'past'],
+          ['记录', 41, 89, 18, 8, 'record'],
+          ['成长', 61, 89, 16, 8, 'growth'],
+          ['系统', 81, 89, 14, 8, 'system']
+        ]
+      },
+      growth: {
+        title: 'P05 成长',
+        image: '05-growth.png',
+        alt: '栖光成长视觉稿',
+        purpose: '解释分支等级和每笔经验来源，不设置人生总等级。',
+        hotspots: [
+          ['经验账本', 66, 7, 27, 7, null, '完整账本会显示来源、时间、分支和撤销记录。'],
+          ['困难任务 +20', 8, 67, 84, 7, 'tasks'],
+          ['轻量习惯 +5', 8, 74, 84, 7, 'tasks'],
+          ['里程碑 +50', 8, 81, 84, 7, 'past'],
+          ['今日', 6, 89, 15, 8, 'home'],
+          ['日历', 22, 89, 16, 8, 'past'],
+          ['记录', 41, 89, 18, 8, 'record'],
+          ['系统', 81, 89, 14, 8, 'system']
+        ]
+      },
+      review: {
+        title: 'P06 周复盘',
+        image: '06-weekly-review.png',
+        alt: '栖光周复盘视觉稿',
+        purpose: '从真实证据形成下周唯一重点和一个最小实验。',
+        hotspots: [
+          ['稍后看', 77, 7, 16, 7, 'home'],
+          ['证据时间线', 11, 34, 78, 7, 'past'],
+          ['修改', 11, 74, 32, 7, null, '用户可以修改下周重点和最小实验。'],
+          ['确认采用', 46, 74, 43, 7, 'home'],
+          ['加入我的系统', 61, 91, 28, 6, 'system']
+        ]
+      },
+      system: {
+        title: 'P07 我的系统',
+        image: '07-system.png',
+        alt: '栖光我的系统视觉稿',
+        purpose: '让用户查看和修改 AI 对自己的长期理解与权限。',
+        hotspots: [
+          ['头像选择', 70, 7, 22, 7, null, '直接使用用户原创的男生或女生头像，同一时间只启用一个。'],
+          ['AI 权限', 8, 66, 84, 7, null, '默认每次发送前显示并确认上下文范围。'],
+          ['导出数据', 8, 78, 84, 7, null, '导出全部原始记录、结构化数据和经验账本。'],
+          ['删除数据', 8, 84, 84, 7, null, '删除是严肃操作，需要再次确认并区分本地与云端。'],
+          ['今日', 6, 89, 15, 8, 'home'],
+          ['日历', 22, 89, 16, 8, 'past'],
+          ['记录', 41, 89, 18, 8, 'record'],
+          ['成长', 61, 89, 16, 8, 'growth']
+        ]
+      }
+    };
+
+    const flows = {
+      'first-record': ['home', 'record', 'past'],
+      'task-feedback': ['home', 'tasks', 'growth'],
+      'past-day': ['home', 'past'],
+      'habit-growth': ['home', 'tasks', 'growth'],
+      'weekly-review': ['home', 'review', 'system', 'home']
+    };
+
+    const screenPicker = document.getElementById('screen-picker');
+    const flowPicker = document.getElementById('flow-picker');
+    const screenImage = document.getElementById('screen-image');
+    const hotspotLayer = document.getElementById('hotspot-layer');
+    const screenTitle = document.getElementById('screen-title');
+    const screenPurpose = document.getElementById('screen-purpose');
+    const status = document.getElementById('prototype-status');
+    const flowProgress = document.getElementById('flow-progress');
+    const toggleHotspots = document.getElementById('toggle-hotspots');
+
+    document.querySelectorAll('[data-avatar]').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('[data-avatar]').forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+        status.textContent = `当前生活分身外观：${button.dataset.avatar === 'male' ? '鹿角头饰男生' : '牛纹帽双辫女生'}。切换外观不会改变成长数据。`;
+      });
+    });
+
+    let activeFlow = flowPicker.value;
+    let flowStep = 0;
+
+    function renderScreen(name, message) {
+      const screen = screens[name];
+      screenPicker.value = name;
+      screenImage.src = screen.image;
+      screenImage.alt = screen.alt;
+      screenTitle.textContent = screen.title;
+      screenPurpose.textContent = screen.purpose;
+      hotspotLayer.replaceChildren();
+
+      for (const [label, left, top, width, height, target, note] of screen.hotspots) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.style.left = `${left}%`;
+        button.style.top = `${top}%`;
+        button.style.width = `${width}%`;
+        button.style.height = `${height}%`;
+        button.setAttribute('aria-label', label);
+        button.addEventListener('click', () => {
+          if (target) renderScreen(target, `${label} → ${screens[target].title}`);
+          else status.textContent = note || `${label}：此状态将在正式原型中展开。`;
+        });
+        hotspotLayer.append(button);
+      }
+
+      status.textContent = message || `${screen.title}：${screen.purpose}`;
+    }
+
+    function renderFlow() {
+      const steps = flows[activeFlow];
+      flowProgress.replaceChildren();
+      steps.forEach((name, index) => {
+        const item = document.createElement('span');
+        item.textContent = screens[name].title.replace(/^P\d+\s*/, '');
+        if (index === flowStep) item.className = 'current';
+        flowProgress.append(item);
+      });
+    }
+
+    function showFlowStep() {
+      const steps = flows[activeFlow];
+      flowStep = Math.max(0, Math.min(flowStep, steps.length - 1));
+      renderScreen(steps[flowStep], `关键路径第 ${flowStep + 1}/${steps.length} 步。可点击页面热点或使用下一步。`);
+      renderFlow();
+    }
+
+    screenPicker.addEventListener('change', () => renderScreen(screenPicker.value));
+    flowPicker.addEventListener('change', () => {
+      activeFlow = flowPicker.value;
+      flowStep = 0;
+      renderFlow();
+    });
+    document.getElementById('start-flow').addEventListener('click', () => {
+      activeFlow = flowPicker.value;
+      flowStep = 0;
+      showFlowStep();
+    });
+    document.getElementById('previous-step').addEventListener('click', () => {
+      flowStep -= 1;
+      showFlowStep();
+    });
+    document.getElementById('next-step').addEventListener('click', () => {
+      flowStep += 1;
+      showFlowStep();
+    });
+    toggleHotspots.addEventListener('click', () => {
+      const hidden = hotspotLayer.classList.toggle('is-hidden');
+      toggleHotspots.setAttribute('aria-pressed', String(!hidden));
+      toggleHotspots.textContent = hidden ? '显示热点' : '隐藏热点';
+    });
+
+    renderScreen('home');
+    renderFlow();
+  </script>
+</body>
+</html>
