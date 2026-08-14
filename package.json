@@ -1,14 +1,25 @@
 {
-  "name": "compound-journal",
-  "version": "0.1.0",
+  "name": "qiguang",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch server.mjs",
-    "start": "node server.mjs",
-    "test": "node test.mjs"
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "serve": "npm run build && node --env-file-if-exists=.env --experimental-strip-types server.mjs",
+    "eval:ai": "node --experimental-strip-types scripts/ai-eval.mjs",
+    "check:release": "node scripts/release-check.mjs",
+    "check:server": "node --experimental-strip-types --check server.mjs",
+    "test": "node --experimental-strip-types --test test/*.test.mjs",
+    "check": "npm run test && npm run build && npm run check:server"
   },
   "engines": {
-    "node": ">=20.12"
+    "node": ">=22.18"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1"
   }
 }

@@ -1,0 +1,1070 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import 'fake-indexeddb/auto';
+
+import { DB_VERSION, QiguangDb, parseBackup } from '../src/db.ts';
+
+function databaseName(label) {
+  return `qiguang-test-${label}-${crypto.randomUUID()}`;
+}
+
+function deleteDatabase(name) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(name);
+    request.addEventListener('success', () => resolve(), { once: true });
+    request.addEventListener('error', () => reject(request.error), { once: true });
+    request.addEventListener('blocked', () => reject(new Error(`database ${name} is still open`)), { once: true });
+  });
+}
+
+async function withDatabase(t, label) {
+  const name = databaseName(label);
+  const db = await QiguangDb.open(name);
+  t.after(async () => {
+    db.close();
+    await deleteDatabase(name);
+  });
+  return db;
+}
+
+function openRawDatabase(name, version = DB_VERSION, onUpgrade) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(name, version);
+    request.addEventListener('upgradeneeded', () => onUpgrade?.(request.result, request.transaction), { once: true });
+    request.addEventListener('success', () => resolve(request.result), { once: true });
+    request.addEventListener('error', () => reject(request.error), { once: true });
+  });
+}
+
+function storeShape(store) {
+  return {
+    keyPath: store.keyPath,
+    autoIncrement: store.autoIncrement,
+    indexes: Array.from(store.indexNames, (name) => {
+      const index = store.index(name);
+      return {
+        name,
+        keyPath: index.keyPath,
+        unique: index.unique,
+        multiEntry: index.multiEntry,
+      };
+    }),
+  };
+}
+
+function emptyBackupData() {
+  return Object.fromEntries([
+    'profile', 'areas', 'entries', 'revisions', 'observations', 'goals', 'milestones',
+    'analyses', 'events', 'snapshots', 'quests', 'questFeedback', 'habits', 'habitLogs',
+    'branches', 'xpLedger', 'reviews', 'memories', 'analysisJobs', 'settings',
+  ].map((name) => [name, []]));
+}
+
+function analysisRequest(entry, requestId = crypto.randomUUID()) {
+  return {
+    contractVersion: '1.0', operation: 'daily_analysis', requestId, locale: 'zh-CN',
+    timeZone: 'Asia/Shanghai', localDate: entry.localDate,
+    userInput: { entries: [{ entryId: entry.id, revision: entry.version, text: entry.body }] },
+    context: { confirmedEvents: [], recentStates: [], goals: [], bonusHabits: [], memories: [], constraints: [] },
+    permissions: {
+      entryIds: [entry.id], includeConfirmedEvents: false, includeRecentStates: false,
+      includeGoals: false, includeBonusHabits: false, memoryIds: [],
+    },
+  };
+}
+
+function analysisResponse(request) {
+  const quote = '会议很多';
+  const source = Array.from(request.userInput.entries[0].text);
+  const start = source.join('').indexOf(quote);
+  return {
+    contractVersion: '1.0', requestId: request.requestId, operation: 'daily_analysis', warnings: [],
+    result: {
+      title: '会议之后恢复', summary: '会议较多，散步后有所缓解。', explicitMoods: ['缓和'],
+      events: [
+        {
+          candidateId: 'fact-1', title: '会议较多', description: '记录明确提到会议很多。',
+          sourceType: 'explicit', confirmation: 'confirmed_by_default', confidence: 'high',
+          evidence: [{ entryId: request.userInput.entries[0].entryId, quote, start, end: start + Array.from(quote).length }],
+          stateImpactCandidates: [{
+            dimension: 'energy', direction: 'negative', strength: 'medium', suggestedDelta: -6,
+            reason: '密集会议消耗体力。', confidence: 'medium',
+          }],
+          growthEvidenceCandidate: null,
+        },
+        {
+          candidateId: 'inference-1', title: '散步可能帮助恢复', description: '只观察到同时出现。',
+          sourceType: 'inferred', confirmation: 'pending', confidence: 'low',
+          evidence: [{
+            entryId: request.userInput.entries[0].entryId, quote: '散步后好了一些',
+            start: source.join('').indexOf('散步后好了一些'), end: source.join('').indexOf('散步后好了一些') + 7,
+          }],
+          stateImpactCandidates: [{
+            dimension: 'mental', direction: 'positive', strength: 'small', suggestedDelta: 3,
+            reason: '散步后感觉有所缓解。', confidence: 'low',
+          }],
+          growthEvidenceCandidate: null,
+        },
+      ],
+      reflection: {
+        whatHappened: '会议较多，散步后有所恢复。', specificCredit: '主动留出了恢复时间。',
+        patternCandidate: { observation: '会议日可能需要过渡。', evidenceCount: 1, neededEvidence: '再观察两次。' },
+        nextSmallStep: '会议后留十分钟。',
+      },
+      questSuggestions: [],
+      memoryCandidates: [{
+        type: 'constraint', statement: '会议密集的晚上注意力可能较低。', confidence: 'low',
+        supportingEventIds: ['fact-1'], counterEvidence: [], recommendedAction: 'observe',
+      }],
+    },
+  };
+}
+
+function weeklyRequest(events, requestId = crypto.randomUUID()) {
+  return {
+    contractVersion: '1.0', operation: 'weekly_review', requestId, locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    period: { start: '2026-08-10', end: '2026-08-14' }, userInput: { note: '' },
+    context: {
+      events: events.map((event) => ({ eventId: event.id, version: event.version, localDate: event.localDate, title: event.title, description: event.description })),
+      stateSnapshots: [], taskResults: [], habits: [], growth: [], goals: [], experiments: [], memories: [],
+    },
+    permissions: {
+      eventIds: events.map((event) => event.id), includeStateSnapshots: false, includeTaskResults: false, includeHabits: false,
+      includeGrowth: false, includeGoals: false, includeExperiments: false, memoryIds: [],
+    },
+  };
+}
+
+function weeklyResponse(request) {
+  const [first, second] = request.context.events;
+  return {
+    contractVersion: '1.0', requestId: request.requestId, operation: 'weekly_review', warnings: [],
+    result: {
+      stateTrends: [{
+        dimension: 'energy', direction: 'stable', summary: '两天都记录了相似的现实事件。',
+        evidenceEventIds: [first.eventId, second.eventId], evidenceDates: [first.localDate, second.localDate], relationship: 'correlation',
+      }],
+      recurringBenefits: [], recurringCosts: [], growthDeposits: [], habitDecisions: [],
+      nextWeekTheme: { title: '保护恢复节奏', reason: '用一个小实验继续观察。' },
+      nextExperiment: { hypothesis: '短休息可能帮助恢复。', minimumAction: '每天休息十分钟。', metric: '记录开始次数。', endDate: '2026-08-21', stopCondition: '明显增加负担时停止。' },
+      systemCandidates: [{
+        type: 'pattern', statement: '密集会议后可能需要恢复时间。', confidence: 'low',
+        supportingEventIds: [first.eventId, second.eventId], counterEvidence: [], recommendedAction: 'observe',
+      }],
+    },
+  };
+}
+
+test('v4 schema contains all twenty documented stores and integrity indexes', async (t) => {
+  const db = await withDatabase(t, 'schema');
+  const raw = await openRawDatabase(db.name);
+  try {
+    assert.equal(raw.version, 4);
+    assert.deepEqual(Array.from(raw.objectStoreNames), [
+      'analyses', 'analysisJobs', 'areas', 'branches', 'entries', 'events', 'goals', 'habitLogs',
+      'habits', 'memories', 'milestones', 'observations', 'profile', 'questFeedback', 'quests',
+      'reviews', 'revisions', 'settings', 'snapshots', 'xpLedger',
+    ]);
+
+    const transaction = raw.transaction(Array.from(raw.objectStoreNames), 'readonly');
+    assert.equal(transaction.objectStore('revisions').index('byEntryVersion').unique, true);
+    assert.equal(transaction.objectStore('observations').index('byAssessmentDimension').unique, true);
+    assert.equal(transaction.objectStore('observations').index('byEvidenceId').unique, false);
+    assert.equal(transaction.objectStore('habitLogs').index('byHabitDate').unique, true);
+    assert.equal(transaction.objectStore('xpLedger').index('bySettlementKey').unique, true);
+    assert.equal(transaction.objectStore('analyses').index('byRequestId').unique, true);
+    assert.equal(transaction.objectStore('analysisJobs').index('byRequestId').unique, true);
+    await new Promise((resolve, reject) => {
+      transaction.addEventListener('complete', resolve, { once: true });
+      transaction.addEventListener('error', () => reject(transaction.error), { once: true });
+    });
+  } finally {
+    raw.close();
+  }
+});
+
+test('opening v4 migrates a v1 journal without losing data', async (t) => {
+  const name = databaseName('v1-migration');
+  const timestamp = new Date().toISOString();
+  const raw = await openRawDatabase(name, 1, (database) => {
+    database.createObjectStore('entries', { keyPath: 'id' }).createIndex('byLocalDateCreatedAt', ['localDate', 'createdAt']);
+    database.createObjectStore('revisions', { keyPath: 'id' }).createIndex('byEntryId', 'entryId');
+    database.createObjectStore('observations', { keyPath: 'id' });
+    database.createObjectStore('settings', { keyPath: 'id' });
+  });
+  const transaction = raw.transaction(['entries', 'observations', 'settings'], 'readwrite');
+  transaction.objectStore('entries').add({
+    id: 'legacy-entry', localDate: '2026-08-13', body: '旧记录', inputMethod: 'text',
+    createdAt: timestamp, updatedAt: timestamp, version: 1,
+  });
+  transaction.objectStore('settings').add({
+    id: 'app', reduceMotion: true, onboardingSeen: true, createdAt: timestamp, updatedAt: timestamp, version: 1,
+  });
+  transaction.objectStore('observations').add({
+    id: 'legacy-observation', assessmentId: 'legacy-assessment', localDate: '2026-08-13',
+    dimension: 'energy', kind: 'user-self-assessment', value: 48, observedAt: timestamp,
+    createdAt: timestamp, updatedAt: timestamp, version: 1,
+  });
+  await new Promise((resolve, reject) => {
+    transaction.addEventListener('complete', resolve, { once: true });
+    transaction.addEventListener('error', () => reject(transaction.error), { once: true });
+  });
+  raw.close();
+
+  const db = await QiguangDb.open(name);
+  t.after(async () => {
+    db.close();
+    await deleteDatabase(name);
+  });
+  assert.equal((await db.getEntry('legacy-entry')).body, '旧记录');
+  assert.equal((await db.getEntry('legacy-entry')).analysisStatus, 'not-submitted');
+  assert.equal((await db.getSettings()).reduceMotion, true);
+  assert.equal((await db.getSettings()).aiAllowed, false);
+  assert.equal((await db.listStateObservations('energy'))[0].active, true);
+  assert.equal((await db.exportBundle()).data.areas.length, 0);
+});
+
+test('format v3 backups without weekly reviews upgrade safely to format v4', async (t) => {
+  const db = await withDatabase(t, 'backup-v3-upgrade');
+  await db.addEntry('旧版备份中的真实记录', '2026-08-14');
+  const backup = await db.exportBundle();
+  backup.formatVersion = 3;
+  const parsed = parseBackup(JSON.stringify(backup));
+  assert.equal(parsed.formatVersion, 4);
+  assert.equal(parsed.data.entries[0].body, '旧版备份中的真实记录');
+});
+
+test('daily analysis stays queued locally, saves candidates atomically, and applies only confirmed events', async (t) => {
+  const db = await withDatabase(t, 'i3-analysis');
+  const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', '2026-08-14');
+  await db.saveAssessment({ energy: 50, mind: 50 }, '2026-08-13');
+  const request = analysisRequest(entry, 'analysis-request-1');
+  const queued = await db.createDailyAnalysisJob(request);
+  assert.equal(queued.status, 'queued');
+  assert.equal((await db.getEntry(entry.id)).analysisStatus, 'queued');
+
+  await db.markAnalysisJobProcessing(queued.id);
+  const analysis = await db.saveDailyAnalysis(queued.id, analysisResponse(request));
+  assert.equal(analysis.status, 'ready');
+  assert.equal((await db.getEntry(entry.id)).analysisStatus, 'succeeded');
+  assert.equal((await db.listAnalysisJobs('2026-08-14'))[0].status, 'succeeded');
+  const events = await db.listJournalEvents('2026-08-14');
+  assert.deepEqual(events.map((item) => item.confirmation), ['confirmed', 'pending']);
+  assert.equal((await db.resolvedStateAtOrBefore('2026-08-14')).energy.value, 44);
+  assert.equal((await db.resolvedStateAtOrBefore('2026-08-14')).mind.value, 50);
+  const memory = (await db.listMemories('candidate'))[0];
+  await db.decideMemory(memory.id, 'confirmed');
+  assert.equal((await db.listMemories('confirmed')).length, 1);
+
+  await db.decideEvent(events[1].id, 'confirmed');
+  assert.equal((await db.resolvedStateAtOrBefore('2026-08-14')).mind.value, 53);
+  await db.decideEvent(events[0].id, 'rejected');
+  assert.equal((await db.resolvedStateAtOrBefore('2026-08-14')).energy.value, 50);
+  assert.equal((await db.listMemories('candidate')).length, 1);
+  await assert.rejects(() => db.decideMemory(memory.id, 'confirmed'), /没有有效证据/);
+});
+
+test('a successful reanalysis supersedes the previous daily summary without double-counting effects', async (t) => {
+  const db = await withDatabase(t, 'i3-reanalysis');
+  await db.saveAssessment({ energy: 50 }, '2026-08-13');
+  const firstEntry = await db.addEntry('今天会议很多，晚上散步后好了一些。', '2026-08-14');
+  const firstRequest = analysisRequest(firstEntry, 'reanalysis-first');
+  const firstJob = await db.createDailyAnalysisJob(firstRequest);
+  await db.markAnalysisJobProcessing(firstJob.id);
+  const first = await db.saveDailyAnalysis(firstJob.id, analysisResponse(firstRequest));
+  const oldMemory = (await db.listMemories('candidate'))[0];
+  await db.decideMemory(oldMemory.id, 'confirmed');
+  assert.equal((await db.resolvedStateAtOrBefore('2026-08-14')).energy.value, 44);
+
+  const secondEntry = await db.addEntry('补充记录：晚上没有继续工作。', '2026-08-14');
+  const secondRequest = analysisRequest(firstEntry, 'reanalysis-second');
+  secondRequest.userInput.entries.push({ entryId: secondEntry.id, revision: secondEntry.version, text: secondEntry.body });
+  secondRequest.permissions.entryIds.push(secondEntry.id);
+  const secondJob = await db.createDailyAnalysisJob(secondRequest);
+  await db.markAnalysisJobProcessing(secondJob.id);
+  const second = await db.saveDailyAnalysis(secondJob.id, analysisResponse(secondRequest));
+
+  const analyses = await db.listDailyAnalyses('2026-08-14');
+  assert.equal(analyses.find((item) => item.id === first.id).status, 'stale');
+  assert.equal(analyses.find((item) => item.id === second.id).status, 'ready');
+  assert.ok((await db.listJournalEvents('2026-08-14')).filter((item) => item.analysisId === first.id).every((item) => !item.active));
+  assert.equal((await db.resolvedStateAtOrBefore('2026-08-14')).energy.value, 44);
+  assert.equal((await db.listMemories('candidate')).find((item) => item.id === oldMemory.id).evidenceIds.length, 0);
+});
+
+test('an older in-flight daily request cannot overwrite a newer request that finishes first', async (t) => {
+  const db = await withDatabase(t, 'i3-reanalysis-order');
+  const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', '2026-08-14');
+  const omittedEntry = await db.addEntry('这条记录不进入后一次发送范围。', '2026-08-14');
+  const olderRequest = analysisRequest(entry, 'reanalysis-older');
+  olderRequest.userInput.entries.push({ entryId: omittedEntry.id, revision: omittedEntry.version, text: omittedEntry.body });
+  olderRequest.permissions.entryIds.push(omittedEntry.id);
+  const olderJob = await db.createDailyAnalysisJob(olderRequest);
+  await db.markAnalysisJobProcessing(olderJob.id);
+
+  const newerRequest = analysisRequest(entry, 'reanalysis-newer');
+  const newerJob = await db.createDailyAnalysisJob(newerRequest);
+  assert.equal((await db.listAnalysisJobs('2026-08-14')).find((item) => item.id === olderJob.id).status, 'stale');
+  assert.equal((await db.getEntry(omittedEntry.id)).analysisStatus, 'not-submitted');
+  await db.markAnalysisJobProcessing(newerJob.id);
+  const newer = await db.saveDailyAnalysis(newerJob.id, analysisResponse(newerRequest));
+  await assert.rejects(() => db.saveDailyAnalysis(olderJob.id, analysisResponse(olderRequest)), /更新请求取代/);
+  assert.equal((await db.listDailyAnalyses('2026-08-14')).find((item) => item.id === newer.id).status, 'ready');
+});
+
+test('retry uses one request and editing the source makes old analysis and impacts stale', async (t) => {
+  const db = await withDatabase(t, 'i3-stale');
+  const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', '2026-08-14');
+  await db.saveAssessment({ energy: 60 }, '2026-08-13');
+  const request = analysisRequest(entry, 'stable-request-id');
+  const firstJob = await db.createDailyAnalysisJob(request);
+  assert.equal((await db.createDailyAnalysisJob(request)).id, firstJob.id);
+  await db.markAnalysisJobProcessing(firstJob.id);
+  const firstAnalysis = await db.saveDailyAnalysis(firstJob.id, analysisResponse(request));
+  assert.equal((await db.saveDailyAnalysis(firstJob.id, analysisResponse(request))).id, firstAnalysis.id);
+  assert.equal((await db.listDailyAnalyses('2026-08-14')).length, 1);
+  const memory = (await db.listMemories('candidate'))[0];
+  await db.decideMemory(memory.id, 'confirmed');
+
+  await db.editEntry(entry.id, 1, '今天会议取消了，晚上只是在家休息。');
+  assert.equal((await db.listDailyAnalyses('2026-08-14'))[0].status, 'stale');
+  assert.equal((await db.listAnalysisJobs('2026-08-14'))[0].status, 'stale');
+  assert.ok((await db.listJournalEvents('2026-08-14')).every((item) => !item.active));
+  assert.equal((await db.resolvedStateAtOrBefore('2026-08-14')).energy.value, 60);
+  const staleMemory = (await db.listMemories('candidate'))[0];
+  assert.deepEqual(staleMemory.evidenceIds, []);
+  await assert.rejects(() => db.decideMemory(staleMemory.id, 'confirmed'), /没有有效证据/);
+});
+
+test('analysis quest suggestions are accepted atomically once and stale suggestions are rejected', async (t) => {
+  const db = await withDatabase(t, 'i3-quest-suggestion');
+  const makeSuggestion = () => ({
+    type: 'main', title: '留十分钟过渡', why: '先观察低压力恢复是否有帮助。', minimumVersion: '十分钟不打开新工作。',
+    estimatedMinutes: 10, difficulty: 'light', primaryState: 'mental', growthBranchId: null, sourceGoalId: null, isRecovery: true,
+  });
+  const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', '2026-08-14');
+  const request = analysisRequest(entry, 'quest-suggestion-ready');
+  const response = analysisResponse(request);
+  response.result.questSuggestions = [makeSuggestion()];
+  const job = await db.createDailyAnalysisJob(request);
+  await db.markAnalysisJobProcessing(job.id);
+  const analysis = await db.saveDailyAnalysis(job.id, response);
+  assert.equal((await db.acceptAnalysisQuestSuggestion(analysis.id, 0)).created, true);
+  assert.equal((await db.acceptAnalysisQuestSuggestion(analysis.id, 0)).created, false);
+  assert.equal((await db.listQuests('2026-08-15')).length, 1);
+
+  const staleEntry = await db.addEntry('今天会议很多，晚上散步后好了一些。', '2026-08-13');
+  const staleRequest = analysisRequest(staleEntry, 'quest-suggestion-stale');
+  const staleResponse = analysisResponse(staleRequest);
+  staleResponse.result.questSuggestions = [makeSuggestion()];
+  const staleJob = await db.createDailyAnalysisJob(staleRequest);
+  await db.markAnalysisJobProcessing(staleJob.id);
+  const staleAnalysis = await db.saveDailyAnalysis(staleJob.id, staleResponse);
+  await db.editEntry(staleEntry.id, staleEntry.version, '原始记录已被修改，旧建议不能继续使用。');
+  await assert.rejects(() => db.acceptAnalysisQuestSuggestion(staleAnalysis.id, 0), /已经过期/);
+});
+
+test('I3 analyses, events, queue, and memory survive exact backup restore', async (t) => {
+  const db = await withDatabase(t, 'i3-roundtrip');
+  const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', '2026-08-14');
+  const request = analysisRequest(entry, 'portable-analysis');
+  const job = await db.createDailyAnalysisJob(request);
+  await db.markAnalysisJobProcessing(job.id);
+  await db.saveDailyAnalysis(job.id, analysisResponse(request));
+  const before = await db.exportBundle();
+  await db.clearAll();
+  await db.importBundle(JSON.stringify(before));
+  assert.deepEqual((await db.exportBundle()).data, before.data);
+});
+
+test('merging I3 data keeps two auditable copies and remaps every analysis reference', async (t) => {
+  const db = await withDatabase(t, 'i3-merge');
+  const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', '2026-08-14');
+  const request = analysisRequest(entry, 'merge-analysis');
+  const job = await db.createDailyAnalysisJob(request);
+  await db.markAnalysisJobProcessing(job.id);
+  await db.saveDailyAnalysis(job.id, analysisResponse(request));
+  const backup = await db.exportBundle();
+  await db.importBundle(JSON.stringify(backup));
+  const merged = await db.exportBundle();
+  assert.equal(merged.data.entries.length, 2);
+  assert.equal(merged.data.analysisJobs.length, 2);
+  assert.equal(merged.data.analyses.length, 2);
+  assert.equal(merged.data.events.length, 4);
+  assert.equal(merged.data.memories.length, 2);
+  assert.equal(new Set(merged.data.analysisJobs.map((item) => item.requestId)).size, 2);
+  assert.equal(new Set(merged.data.analyses.map((item) => item.requestId)).size, 2);
+  assert.doesNotThrow(() => parseBackup(JSON.stringify(merged)));
+});
+
+test('weekly review uses confirmed event versions, stays idempotent, and only applies after user confirmation', async (t) => {
+  const db = await withDatabase(t, 'i3-weekly-review');
+  for (const [date, requestId] of [['2026-08-11', 'week-day-a'], ['2026-08-13', 'week-day-b']]) {
+    const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', date);
+    const request = analysisRequest(entry, requestId);
+    const job = await db.createDailyAnalysisJob(request);
+    await db.markAnalysisJobProcessing(job.id);
+    await db.saveDailyAnalysis(job.id, analysisResponse(request));
+  }
+  const events = (await db.listJournalEvents()).filter((item) => item.sourceType === 'explicit');
+  const request = weeklyRequest(events, 'weekly-review-1');
+  const job = await db.createWeeklyReviewJob(request);
+  assert.equal(job.status, 'queued');
+  await db.markAnalysisJobProcessing(job.id);
+  const review = await db.saveWeeklyReview(job.id, weeklyResponse(request));
+  assert.equal(review.status, 'candidate');
+  assert.equal((await db.saveWeeklyReview(job.id, weeklyResponse(request))).id, review.id);
+  assert.equal((await db.listMemories('candidate')).filter((item) => item.reviewId === review.id).length, 1);
+
+  const confirmed = await db.confirmWeeklyReview(review.id, '我确认的恢复主题', review.nextExperiment);
+  assert.equal(confirmed.review.status, 'confirmed');
+  assert.equal(confirmed.questCreated, true);
+  assert.equal((await db.listQuests('2026-08-15'))[0].title, '我确认的恢复主题');
+  const backup = await db.exportBundle();
+  assert.doesNotThrow(() => parseBackup(JSON.stringify(backup)));
+  const corrupted = structuredClone(backup);
+  corrupted.data.reviews[0].stateTrends = [null];
+  assert.throws(() => parseBackup(JSON.stringify(corrupted)), /原始响应不一致/);
+  await db.importBundle(JSON.stringify(backup));
+  const merged = await db.exportBundle();
+  assert.equal(merged.data.reviews.length, 2);
+  assert.equal(merged.data.analysisJobs.filter((item) => item.operation === 'weekly_review').length, 2);
+  assert.doesNotThrow(() => parseBackup(JSON.stringify(merged)));
+});
+
+test('weekly result is rejected when a selected event changes during the request', async (t) => {
+  const db = await withDatabase(t, 'i3-weekly-stale');
+  for (const [date, requestId] of [['2026-08-11', 'stale-day-a'], ['2026-08-13', 'stale-day-b']]) {
+    const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', date);
+    const request = analysisRequest(entry, requestId);
+    const job = await db.createDailyAnalysisJob(request);
+    await db.markAnalysisJobProcessing(job.id);
+    await db.saveDailyAnalysis(job.id, analysisResponse(request));
+  }
+  const events = (await db.listJournalEvents()).filter((item) => item.sourceType === 'explicit');
+  const request = weeklyRequest(events, 'weekly-stale-1');
+  const job = await db.createWeeklyReviewJob(request);
+  await db.markAnalysisJobProcessing(job.id);
+  await db.decideEvent(events[0].id, 'confirmed', { title: '用户核对后的事件' });
+  await assert.rejects(() => db.saveWeeklyReview(job.id, weeklyResponse(request)), /旧结果没有应用/);
+  assert.equal((await db.listAnalysisJobs('2026-08-14')).find((item) => item.id === job.id).status, 'stale');
+  assert.equal((await db.listReviews('weekly')).length, 0);
+});
+
+test('an older in-flight weekly review cannot become visible after a newer review finishes', async (t) => {
+  const db = await withDatabase(t, 'i3-weekly-order');
+  for (const [date, requestId] of [['2026-08-11', 'weekly-order-day-a'], ['2026-08-13', 'weekly-order-day-b']]) {
+    const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', date);
+    const request = analysisRequest(entry, requestId);
+    const job = await db.createDailyAnalysisJob(request);
+    await db.markAnalysisJobProcessing(job.id);
+    await db.saveDailyAnalysis(job.id, analysisResponse(request));
+  }
+  const events = (await db.listJournalEvents()).filter((item) => item.sourceType === 'explicit');
+  const olderRequest = weeklyRequest(events, 'weekly-order-older');
+  const olderJob = await db.createWeeklyReviewJob(olderRequest);
+  await db.markAnalysisJobProcessing(olderJob.id);
+  const newerRequest = weeklyRequest(events, 'weekly-order-newer');
+  const newerJob = await db.createWeeklyReviewJob(newerRequest);
+  assert.equal((await db.listAnalysisJobs('2026-08-14')).find((item) => item.id === olderJob.id).status, 'stale');
+  await db.markAnalysisJobProcessing(newerJob.id);
+  const newer = await db.saveWeeklyReview(newerJob.id, weeklyResponse(newerRequest));
+  await assert.rejects(() => db.saveWeeklyReview(olderJob.id, weeklyResponse(olderRequest)), /更新请求取代/);
+  assert.deepEqual((await db.listReviews('weekly')).map((item) => item.id), [newer.id]);
+});
+
+test('merging duplicate memories stays a candidate and never preserves automatic confirmation', async (t) => {
+  const db = await withDatabase(t, 'i3-memory-merge');
+  const entries = [];
+  for (const [date, requestId] of [['2026-08-12', 'memory-day-a'], ['2026-08-14', 'memory-day-b']]) {
+    const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', date);
+    entries.push(entry);
+    const request = analysisRequest(entry, requestId);
+    const job = await db.createDailyAnalysisJob(request);
+    await db.markAnalysisJobProcessing(job.id);
+    await db.saveDailyAnalysis(job.id, analysisResponse(request));
+  }
+  const candidates = await db.listMemories('candidate');
+  await db.decideMemory(candidates[0].id, 'confirmed');
+  await assert.rejects(() => db.mergeMemoryCandidates(candidates, '旧检查结果不应被应用。'), /已经改变/);
+  const current = [...await db.listMemories('candidate'), ...await db.listMemories('confirmed')];
+  const merged = await db.mergeMemoryCandidates(current, '会议密集后可能需要一段恢复时间。');
+  assert.equal(merged.status, 'candidate');
+  assert.equal(merged.userEdited, true);
+  assert.equal(merged.evidenceIds.length, 2);
+  assert.equal((await db.listMemories('forgotten')).length, 1);
+  await db.decideMemory(merged.id, 'confirmed');
+  assert.equal((await db.listMemories('confirmed')).length, 1);
+
+  const supportingEvents = (await db.listJournalEvents()).filter((item) => merged.evidenceIds.includes(item.id));
+  await db.decideEvent(supportingEvents[0].id, 'rejected');
+  assert.equal((await db.listMemories('confirmed')).length, 1);
+  const replacementRequest = analysisRequest(entries[1], 'memory-day-b-refresh');
+  const replacementJob = await db.createDailyAnalysisJob(replacementRequest);
+  await db.markAnalysisJobProcessing(replacementJob.id);
+  await db.saveDailyAnalysis(replacementJob.id, analysisResponse(replacementRequest));
+  assert.equal((await db.listMemories('candidate')).find((item) => item.id === merged.id).status, 'candidate');
+  const exportAfterRefresh = await db.exportBundle();
+  assert.doesNotThrow(() => parseBackup(JSON.stringify(exportAfterRefresh)));
+});
+
+test('I2 defaults are created once with eight areas and six root assets', async (t) => {
+  const db = await withDatabase(t, 'i2-defaults');
+  await Promise.all([db.ensureI2Defaults(), db.ensureI2Defaults()]);
+  const bundle = await db.exportBundle();
+  assert.equal(bundle.data.profile.length, 1);
+  assert.equal(bundle.data.areas.length, 8);
+  assert.equal(bundle.data.branches.length, 6);
+  assert.equal(new Set(bundle.data.branches.map((item) => item.rootAsset)).size, 6);
+  assert.ok(bundle.data.areas.every((item) => item.mode === 'explore'));
+});
+
+test('build areas and active goal roles keep their documented caps', async (t) => {
+  const db = await withDatabase(t, 'i2-goal-caps');
+  await db.ensureI2Defaults();
+  const areas = await db.listAreas();
+  const branches = await db.listBranches();
+  await db.saveArea(areas[0].id, { mode: 'build' });
+  await db.saveArea(areas[1].id, { mode: 'build' });
+  await assert.rejects(() => db.saveArea(areas[2].id, { mode: 'build' }), /最多两个/);
+
+  const input = (result, role) => ({
+    result, role, why: '值得长期建设', evidence: '形成可验证成果', nextStep: '先做最小一步',
+    areaId: areas[0].id, branchId: branches[0].id,
+  });
+  assert.equal((await db.addGoal(input('主目标', 'main'))).role, 'main');
+  assert.equal((await db.addGoal(input('第一个次目标', 'secondary'))).role, 'secondary');
+  assert.equal((await db.addGoal(input('第二个次目标', 'secondary'))).role, 'secondary');
+  const overflow = await db.addGoal(input('第四个目标', 'secondary'));
+  assert.equal(overflow.role, 'wishlist');
+  assert.equal(overflow.status, 'idea');
+});
+
+test('goals and habits can be edited or paused without deleting their history', async (t) => {
+  const db = await withDatabase(t, 'i2-edit-pause');
+  await db.ensureI2Defaults();
+  const area = (await db.listAreas())[0];
+  const branch = (await db.listBranches())[0];
+  const goal = await db.addGoal({
+    result: '旧结果', why: '真实原因', evidence: '真实证据', nextStep: '旧下一步',
+    areaId: area.id, branchId: branch.id, role: 'main',
+  });
+  const updatedGoal = await db.saveGoal(goal.id, { result: '新结果', nextStep: '新下一步', status: 'completed' });
+  assert.equal(updatedGoal.result, '新结果');
+  assert.equal(updatedGoal.status, 'completed');
+  assert.equal((await db.addGoal({
+    result: '新主目标', why: '继续建设', evidence: '新证据', nextStep: '先做一步',
+    areaId: area.id, branchId: branch.id, role: 'main',
+  })).role, 'main');
+
+  const habit = await db.addHabit({
+    name: '散步', minimumAction: '走两分钟', scheduleDays: [5], dimension: 'energy',
+    branchId: branch.id, difficulty: 'light', bonusEnabled: true,
+  });
+  await db.saveHabit(habit.id, { name: '晚饭后散步', status: 'paused' });
+  assert.equal((await db.listHabits())[0].name, '晚饭后散步');
+  assert.equal((await db.ensureTodayBonusQuests('2026-08-14')).length, 0);
+});
+
+test('task feedback is atomic, editable, undoable, and XP stays idempotent', async (t) => {
+  const db = await withDatabase(t, 'i2-feedback');
+  await db.ensureI2Defaults();
+  const branch = (await db.listBranches())[0];
+  const quest = await db.addQuest({
+    localDate: '2026-08-14', type: 'main', sourceType: 'manual', title: '完成困难行动',
+    reason: '推进真实目标', minimumAction: '先专注十分钟', estimatedMinutes: 45,
+    difficulty: 'hard', branchId: branch.id, actionId: 'same-real-action',
+  });
+
+  await db.feedbackQuest(quest.id, 'completed', '完成了', '产出一份结果');
+  assert.deepEqual(await db.branchProgress(branch.id), { totalXp: 20, level: 1, currentXp: 0, nextLevelXp: 30 });
+  await db.feedbackQuest(quest.id, 'partial', '只完成一部分', '完成最小动作');
+  assert.equal((await db.branchProgress(branch.id)).totalXp, 10);
+  assert.equal((await db.listXpLedger(branch.id)).filter((item) => !item.reversedAt).length, 1);
+
+  await db.undoQuestFeedback(quest.id);
+  assert.equal((await db.branchProgress(branch.id)).totalXp, 0);
+  assert.equal((await db.listQuests('2026-08-14'))[0].status, 'pending');
+
+  await db.feedbackQuest(quest.id, 'completed');
+  const duplicate = await db.addQuest({
+    localDate: '2026-08-14', type: 'side', sourceType: 'manual', title: '同一行动的另一种呈现',
+    reason: '验证不重复结算', minimumAction: '确认结果', estimatedMinutes: 5,
+    difficulty: 'challenge', branchId: branch.id, actionId: 'same-real-action',
+  });
+  await db.feedbackQuest(duplicate.id, 'completed');
+  assert.equal((await db.branchProgress(branch.id)).totalXp, 20);
+});
+
+test('confirmed task effects form a clamped and undoable state ledger', async (t) => {
+  const db = await withDatabase(t, 'i2-state-ledger');
+  await db.ensureI2Defaults();
+  await db.saveAssessment({ energy: 50 }, '2026-08-13');
+  const common = {
+    localDate: '2026-08-14', sourceType: 'manual', reason: '验证状态明细', minimumAction: '做一步',
+    estimatedMinutes: 10, difficulty: 'light', dimension: 'energy',
+  };
+  const first = await db.addQuest({ ...common, type: 'main', title: '消耗体力的行动' });
+  const second = await db.addQuest({ ...common, type: 'side', title: '另一项消耗' });
+  await db.feedbackQuest(first.id, 'completed', '', '', undefined, -12);
+  await db.feedbackQuest(second.id, 'completed', '', '', undefined, -10);
+  assert.equal((await db.resolvedStateAtOrBefore('2026-08-14')).energy.value, 35);
+  assert.equal((await db.resolvedStateAtOrBefore('2026-08-14')).energy.clamped, true);
+
+  await db.feedbackQuest(second.id, 'partial', '', '', undefined, 5);
+  assert.equal((await db.resolvedStateAtOrBefore('2026-08-14')).energy.value, 43);
+  await db.undoQuestFeedback(first.id);
+  assert.equal((await db.resolvedStateAtOrBefore('2026-08-14')).energy.value, 55);
+  const ledger = await db.listStateObservations('energy');
+  assert.equal(ledger.filter((item) => item.kind === 'event-impact' && item.active).length, 1);
+  assert.equal(ledger.filter((item) => item.kind === 'event-impact' && !item.active).length, 2);
+});
+
+test('pending daily quests never exceed one main, three BONUS, and two side quests', async (t) => {
+  const db = await withDatabase(t, 'i2-quest-caps');
+  await db.ensureI2Defaults();
+  const common = { localDate: '2026-08-14', sourceType: 'manual', reason: '手动安排', minimumAction: '做一步', estimatedMinutes: 10, difficulty: 'light' };
+  await db.addQuest({ ...common, type: 'main', title: '主线' });
+  await assert.rejects(() => db.addQuest({ ...common, type: 'main', title: '额外主线' }), /达到上限/);
+  for (let index = 0; index < 3; index += 1) await db.addQuest({ ...common, type: 'bonus', title: `BONUS ${index}` });
+  await assert.rejects(() => db.addQuest({ ...common, type: 'bonus', title: '额外 BONUS' }), /达到上限/);
+  for (let index = 0; index < 2; index += 1) await db.addQuest({ ...common, type: 'side', title: `支线 ${index}` });
+  await assert.rejects(() => db.addQuest({ ...common, type: 'side', title: '额外支线' }), /达到上限/);
+  assert.deepEqual((await db.listQuests('2026-08-14')).map((item) => item.type), ['main', 'bonus', 'bonus', 'bonus', 'side', 'side']);
+});
+
+test('only user-enabled habits create BONUS quests and momentum does not reset after a miss', async (t) => {
+  const db = await withDatabase(t, 'i2-habits');
+  await db.ensureI2Defaults();
+  const branch = (await db.listBranches())[0];
+  const makeHabit = (name, bonusEnabled = true) => db.addHabit({
+    name, minimumAction: '做两分钟', scheduleDays: [1, 2, 3, 4, 5, 6, 7],
+    dimension: 'energy', branchId: branch.id, difficulty: 'light', bonusEnabled,
+  });
+  const habit = await makeHabit('散步');
+  await makeHabit('拉伸');
+  await makeHabit('早睡');
+  await assert.rejects(() => makeHabit('第四个启用习惯'), /最多三个/);
+  await makeHabit('未启用的候选', false);
+
+  assert.equal((await db.ensureTodayBonusQuests('2026-08-14')).length, 3);
+  assert.equal((await db.ensureTodayBonusQuests('2026-08-14')).length, 0);
+  const first = (await db.listQuests('2026-08-14')).find((item) => item.sourceId === habit.id);
+  await db.feedbackQuest(first.id, 'completed');
+  for (const [date, result] of [
+    ['2026-08-13', 'partial'], ['2026-08-12', 'exempt'], ['2026-08-11', 'completed'],
+    ['2026-08-10', 'skipped'], ['2026-08-09', 'completed'], ['2026-08-08', 'partial'],
+  ]) {
+    await db.ensureTodayBonusQuests(date);
+    const quest = (await db.listQuests(date)).find((item) => item.sourceId === habit.id);
+    await db.feedbackQuest(quest.id, result);
+  }
+  assert.equal(await db.habitMomentum(habit.id, '2026-08-14'), 2.9);
+});
+
+test('a milestone adds 50 XP once and undo reverses it', async (t) => {
+  const db = await withDatabase(t, 'i2-milestone');
+  await db.ensureI2Defaults();
+  const area = (await db.listAreas())[0];
+  const branch = (await db.listBranches())[0];
+  const goal = await db.addGoal({
+    result: '发布一个作品', why: '形成创造杠杆', evidence: '公开链接', nextStep: '完成草稿',
+    areaId: area.id, branchId: branch.id, role: 'main',
+  });
+  const milestone = await db.addMilestone(goal.id, '完成可公开版本', '有真实链接');
+  await db.completeMilestone(milestone.id, '2026-08-14');
+  await db.completeMilestone(milestone.id, '2026-08-14');
+  assert.equal((await db.branchProgress(branch.id)).totalXp, 50);
+  await db.undoMilestone(milestone.id);
+  assert.equal((await db.branchProgress(branch.id)).totalXp, 0);
+});
+
+test('I2 goals, feedback, habits, and XP survive exact backup restore', async (t) => {
+  const db = await withDatabase(t, 'i2-roundtrip');
+  await db.ensureI2Defaults();
+  const area = (await db.listAreas())[0];
+  const branch = (await db.listBranches())[0];
+  const goal = await db.addGoal({
+    result: '形成真实成果', why: '长期复利', evidence: '公开证据', nextStep: '先做十分钟',
+    areaId: area.id, branchId: branch.id, role: 'main',
+  });
+  const quest = await db.addQuest({
+    localDate: '2026-08-14', type: 'main', sourceType: 'goal', sourceId: goal.id,
+    title: '先做十分钟', reason: '来自真实目标', minimumAction: '打开文档', estimatedMinutes: 10,
+    difficulty: 'standard', branchId: branch.id,
+  });
+  await db.feedbackQuest(quest.id, 'partial', '继续缩小', '完成开头');
+  await db.addHabit({
+    name: '短散步', minimumAction: '走两分钟', scheduleDays: [5], dimension: 'energy',
+    branchId: branch.id, difficulty: 'light', bonusEnabled: true,
+  });
+  const before = await db.exportBundle();
+  const portable = JSON.parse(JSON.stringify(before));
+  await db.clearAll();
+  await db.importBundle(JSON.stringify(portable));
+  assert.deepEqual((await db.exportBundle()).data, portable.data);
+  assert.equal((await db.branchProgress(branch.id)).totalXp, 5);
+});
+
+test('merging a complete I2 backup remaps references and settlement keys', async (t) => {
+  const db = await withDatabase(t, 'i2-merge');
+  await db.ensureI2Defaults();
+  const area = (await db.listAreas())[0];
+  const branch = (await db.listBranches())[0];
+  const goal = await db.addGoal({
+    result: '交付成果', why: '积累作品', evidence: '可见链接', nextStep: '完成一页',
+    areaId: area.id, branchId: branch.id, role: 'main',
+  });
+  const quest = await db.addQuest({
+    localDate: '2026-08-14', type: 'main', sourceType: 'goal', sourceId: goal.id,
+    title: '完成一页', reason: '推进作品', minimumAction: '写一个段落', estimatedMinutes: 20,
+    difficulty: 'hard', branchId: branch.id, actionId: 'merge-action',
+  });
+  await db.feedbackQuest(quest.id, 'completed');
+  const backup = await db.exportBundle();
+  await db.importBundle(JSON.stringify(backup));
+  const merged = await db.exportBundle();
+  assert.equal(merged.data.goals.length, 2);
+  assert.equal(merged.data.quests.length, 2);
+  assert.equal(merged.data.questFeedback.length, 2);
+  assert.equal(merged.data.xpLedger.length, 2);
+  assert.equal(new Set(merged.data.xpLedger.map((item) => item.settlementKey)).size, 2);
+  assert.doesNotThrow(() => JSON.stringify(merged));
+});
+
+test('100 records can each be added, edited, and read back', async (t) => {
+  const db = await withDatabase(t, 'hundred-records');
+  const created = [];
+
+  for (let index = 0; index < 100; index += 1) {
+    created.push(await db.addEntry(`original ${index}`, '2026-08-14'));
+  }
+  assert.equal((await db.listEntries('2026-08-14')).length, 100);
+
+  for (let index = 0; index < created.length; index += 1) {
+    const updated = await db.editEntry(created[index].id, 1, `updated ${index}`);
+    assert.equal(updated.version, 2);
+    assert.equal((await db.getEntry(created[index].id)).body, `updated ${index}`);
+  }
+
+  const all = await db.listEntries('2026-08-14');
+  assert.equal(all.length, 100);
+  assert.ok(all.every((entry) => entry.version === 2));
+});
+
+test('same-day entries have a stable chronological order', async (t) => {
+  const db = await withDatabase(t, 'stable-order');
+  await Promise.all([
+    db.addEntry('one', '2026-08-14'),
+    db.addEntry('two', '2026-08-14'),
+    db.addEntry('three', '2026-08-14'),
+    db.addEntry('four', '2026-08-14'),
+  ]);
+
+  const first = await db.listEntries('2026-08-14');
+  const second = await db.listEntries('2026-08-14');
+  assert.deepEqual(first.map((entry) => entry.body), ['one', 'two', 'three', 'four']);
+  assert.deepEqual(first.map((entry) => entry.id), second.map((entry) => entry.id));
+  assert.deepEqual(
+    first.map((entry) => entry.createdAt),
+    [...first].map((entry) => entry.createdAt).sort((left, right) => left.localeCompare(right)),
+  );
+});
+
+test('original leading and trailing whitespace is preserved', async (t) => {
+  const db = await withDatabase(t, 'verbatim-body');
+  const body = '\n  an intentionally quiet opening  \n';
+  const entry = await db.addEntry(body, '2026-08-14');
+  assert.equal((await db.getEntry(entry.id)).body, body);
+});
+
+test('edit creates a revision and undo restores the previous body as a new version', async (t) => {
+  const db = await withDatabase(t, 'undo');
+  const original = await db.addEntry('before', '2026-08-14');
+
+  const edited = await db.editEntry(original.id, original.version, 'after');
+  assert.equal(edited.body, 'after');
+  assert.equal(edited.version, 2);
+  assert.deepEqual(
+    (await db.listRevisions(original.id)).map(({ fromVersion, previousBody, reason, undoneAt }) => ({
+      fromVersion,
+      previousBody,
+      reason,
+      undone: Boolean(undoneAt),
+    })),
+    [{ fromVersion: 1, previousBody: 'before', reason: 'user-edit', undone: false }],
+  );
+
+  const undone = await db.undoLastEdit(original.id);
+  assert.equal(undone.body, 'before');
+  assert.equal(undone.version, 3);
+  assert.deepEqual(
+    (await db.listRevisions(original.id)).map(({ fromVersion, previousBody, reason, undoneAt }) => ({
+      fromVersion,
+      previousBody,
+      reason,
+      undone: Boolean(undoneAt),
+    })),
+    [
+      { fromVersion: 2, previousBody: 'after', reason: 'undo', undone: false },
+      { fromVersion: 1, previousBody: 'before', reason: 'user-edit', undone: true },
+    ],
+  );
+  await assert.rejects(() => db.undoLastEdit(original.id));
+});
+
+test('concurrent edits with the same expectedVersion allow exactly one winner', async (t) => {
+  const db = await withDatabase(t, 'optimistic-lock');
+  const original = await db.addEntry('original', '2026-08-14');
+
+  const attempts = await Promise.allSettled([
+    db.editEntry(original.id, 1, 'first contender'),
+    db.editEntry(original.id, 1, 'second contender'),
+  ]);
+  assert.equal(attempts.filter(({ status }) => status === 'fulfilled').length, 1);
+  assert.equal(attempts.filter(({ status }) => status === 'rejected').length, 1);
+
+  const saved = await db.getEntry(original.id);
+  assert.equal(saved.version, 2);
+  assert.ok(['first contender', 'second contender'].includes(saved.body));
+  assert.equal((await db.listRevisions(original.id)).length, 1);
+});
+
+test('all five assessment dimensions accept inclusive boundaries and latest values win', async (t) => {
+  const db = await withDatabase(t, 'assessments');
+  await db.saveAssessment({
+    energy: 0,
+    mind: 25,
+    connection: 50,
+    progress: 75,
+    play: 100,
+  }, '2026-08-13');
+
+  const baseline = await db.latestAssessment();
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(baseline).map(([key, value]) => [key, value.value])),
+    { energy: 0, mind: 25, connection: 50, progress: 75, play: 100 },
+  );
+  await assert.rejects(() => db.saveAssessment({ energy: -1 }, '2026-08-14'));
+  await assert.rejects(() => db.saveAssessment({ play: 101 }, '2026-08-14'));
+
+  await new Promise((resolve) => setTimeout(resolve, 2));
+  await db.saveAssessment({ energy: 100, mind: 0 }, '2026-08-14');
+  const latest = await db.latestAssessment();
+  assert.equal(latest.energy.value, 100);
+  assert.equal(latest.mind.value, 0);
+  assert.equal(latest.connection.value, 50);
+
+  const historical = await db.assessmentAtOrBefore('2026-08-13');
+  assert.equal(historical.energy.value, 0);
+  assert.equal(historical.mind.value, 25);
+});
+
+test('an empty database restores an export without changing its data', async (t) => {
+  const db = await withDatabase(t, 'roundtrip');
+  const entry = await db.addEntry('portable journal', '2026-08-14');
+  await db.editEntry(entry.id, 1, 'portable journal, edited');
+  await db.saveAssessment({ energy: 64, play: 81 }, '2026-08-14');
+  await db.saveSettings({ onboardingSeen: true, reduceMotion: true });
+  const before = await db.exportBundle();
+
+  await db.clearAll();
+  const empty = await db.exportBundle();
+  assert.deepEqual(empty.data, emptyBackupData());
+
+  await db.importBundle(JSON.stringify(before));
+  const restored = await db.exportBundle();
+  assert.deepEqual(restored.data, before.data);
+});
+
+test('invalid backup is rejected before it can change existing data', async (t) => {
+  const db = await withDatabase(t, 'invalid-import');
+  await db.addEntry('must survive', '2026-08-14');
+  await db.saveSettings({ onboardingSeen: true });
+  const before = await db.exportBundle();
+  const corrupt = structuredClone(before);
+  corrupt.data.revisions.push({
+    id: crypto.randomUUID(),
+    entryId: 'missing-entry',
+    fromVersion: 1,
+    previousBody: 'orphan',
+    reason: 'user-edit',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    version: 1,
+  });
+
+  await assert.rejects(() => db.importBundle(JSON.stringify(corrupt)));
+  assert.deepEqual((await db.exportBundle()).data, before.data);
+
+  const missingObservationTime = structuredClone(before);
+  missingObservationTime.data.observations.push({
+    id: crypto.randomUUID(),
+    assessmentId: crypto.randomUUID(),
+    localDate: '2026-08-14',
+    dimension: 'energy',
+    kind: 'user-self-assessment',
+    value: 50,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    version: 1,
+  });
+  await assert.rejects(() => db.importBundle(JSON.stringify(missingObservationTime)));
+  assert.deepEqual((await db.exportBundle()).data, before.data);
+
+  const invalidObservationKind = structuredClone(before);
+  const observationTime = new Date().toISOString();
+  invalidObservationKind.data.observations.push({
+    id: crypto.randomUUID(),
+    assessmentId: crypto.randomUUID(),
+    localDate: '2026-08-14',
+    dimension: 'energy',
+    kind: 'automatic-guess',
+    value: 50,
+    active: true,
+    observedAt: observationTime,
+    createdAt: observationTime,
+    updatedAt: observationTime,
+    version: 1,
+  });
+  await assert.rejects(() => db.importBundle(JSON.stringify(invalidObservationKind)));
+  assert.deepEqual((await db.exportBundle()).data, before.data);
+
+  const invalidSettings = structuredClone(before);
+  invalidSettings.data.settings[0].reduceMotion = 'sometimes';
+  await assert.rejects(() => db.importBundle(JSON.stringify(invalidSettings)));
+  assert.deepEqual((await db.exportBundle()).data, before.data);
+});
+
+test('repeated import keeps both copies and remaps revision and assessment references', async (t) => {
+  const db = await withDatabase(t, 'merge-import');
+  const original = await db.addEntry('first version', '2026-08-14');
+  await db.editEntry(original.id, 1, 'second version');
+  await db.saveAssessment({ energy: 40, mind: 60 }, '2026-08-14');
+  await db.saveSettings({ onboardingSeen: true, reduceMotion: true });
+  const backup = await db.exportBundle();
+
+  await db.saveSettings({ reduceMotion: false });
+  await db.importBundle(JSON.stringify(backup));
+  const merged = await db.exportBundle();
+
+  assert.equal(merged.data.entries.length, 2);
+  const importedEntry = merged.data.entries.find((entry) => entry.id !== original.id);
+  assert.ok(importedEntry);
+  assert.equal(importedEntry.importedFromId, original.id);
+  assert.equal(importedEntry.body, 'second version');
+  assert.equal(importedEntry.version, 2);
+
+  assert.equal(merged.data.revisions.length, 2);
+  const originalRevisionId = backup.data.revisions[0].id;
+  const importedRevision = merged.data.revisions.find((revision) => revision.id !== originalRevisionId);
+  assert.ok(importedRevision);
+  assert.equal(importedRevision.entryId, importedEntry.id);
+  assert.equal(importedRevision.fromVersion, 1);
+
+  assert.equal(merged.data.observations.length, 4);
+  const originalObservationIds = new Set(backup.data.observations.map((item) => item.id));
+  const importedObservations = merged.data.observations.filter((item) => !originalObservationIds.has(item.id));
+  assert.equal(importedObservations.length, 2);
+  assert.equal(new Set(importedObservations.map((item) => item.assessmentId)).size, 1);
+  assert.notEqual(importedObservations[0].assessmentId, backup.data.observations[0].assessmentId);
+
+  assert.equal(merged.data.settings.length, 1);
+  assert.equal(merged.data.settings[0].reduceMotion, false);
+});
+
+test('restore after an app reload replaces bootstrap settings when user data is empty', async (t) => {
+  const db = await withDatabase(t, 'reload-settings');
+  await db.saveSettings({ onboardingSeen: true, reduceMotion: true });
+  const backup = await db.exportBundle();
+
+  await db.clearAll();
+  await db.saveSettings({ onboardingSeen: true, reduceMotion: false });
+  await db.importBundle(JSON.stringify(backup));
+
+  assert.deepEqual((await db.exportBundle()).data.settings, backup.data.settings);
+});
+
+test('import preserves local customisation even when there are no activity records', async (t) => {
+  const db = await withDatabase(t, 'merge-custom-empty');
+  await db.ensureI2Defaults();
+  const backup = await db.exportBundle();
+  const [firstArea] = await db.listAreas();
+
+  await db.saveProfile({ userName: '本机用户' });
+  await db.saveSettings({ onboardingSeen: true, reduceMotion: true });
+  await db.saveArea(firstArea.id, { name: '本机健康' });
+  await db.importBundle(JSON.stringify(backup));
+
+  assert.equal((await db.getProfile()).userName, '本机用户');
+  assert.equal((await db.getSettings()).reduceMotion, true);
+  const areas = await db.listAreas();
+  assert.equal(areas.length, 16);
+  assert.ok(areas.some((area) => area.name === '本机健康'));
+});
+
+test('deleting the whole database allows reopening a new empty database', async (t) => {
+  const db = await withDatabase(t, 'delete-database');
+  await db.addEntry('temporary', '2026-08-14');
+  await db.saveAssessment({ play: 100 }, '2026-08-14');
+  await db.saveSettings({ onboardingSeen: true });
+
+  await db.deleteDatabase();
+  const reopened = await QiguangDb.open(db.name);
+  assert.deepEqual((await reopened.exportBundle()).data, emptyBackupData());
+  reopened.close();
+});
+
+test('blocked deletion waits for the blocking connection instead of reporting a false failure', async (t) => {
+  const db = await withDatabase(t, 'blocked-delete');
+  await db.addEntry('temporary', '2026-08-14');
+  const blocker = await openRawDatabase(db.name);
+  t.after(() => blocker.close());
+
+  let outcome = 'pending';
+  const deletion = db.deleteDatabase().then(
+    () => { outcome = 'resolved'; },
+    () => { outcome = 'rejected'; },
+  );
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(outcome, 'pending');
+
+  blocker.close();
+  await deletion;
+  assert.equal(outcome, 'resolved');
+});
+
+test('explicit recovery replaces an unreadable database with a validated backup', async (t) => {
+  const name = databaseName('recovery-import');
+  const source = await QiguangDb.open(name);
+  let restored;
+  t.after(async () => {
+    source.close();
+    restored?.close();
+    await deleteDatabase(name);
+  });
+
+  await source.addEntry('saved in backup', '2026-08-14');
+  await source.saveAssessment({ energy: 72 }, '2026-08-14');
+  const backup = await source.exportBundle();
+  await source.addEntry('not in backup', '2026-08-14');
+  source.close();
+
+  restored = await QiguangDb.restoreFromBackup(JSON.stringify(backup), name);
+  assert.deepEqual((await restored.exportBundle()).data, backup.data);
+});
+
+test('deleting an entry cascades its revisions without touching other entries', async (t) => {
+  const db = await withDatabase(t, 'cascade');
+  const doomed = await db.addEntry('delete me', '2026-08-14');
+  const survivor = await db.addEntry('keep me', '2026-08-14');
+  await db.editEntry(doomed.id, 1, 'delete me edited');
+  await db.editEntry(survivor.id, 1, 'keep me edited');
+
+  await db.deleteEntry(doomed.id);
+  assert.equal(await db.getEntry(doomed.id), undefined);
+  assert.deepEqual(await db.listRevisions(doomed.id), []);
+  assert.equal((await db.getEntry(survivor.id)).body, 'keep me edited');
+  assert.equal((await db.listRevisions(survivor.id)).length, 1);
+});
