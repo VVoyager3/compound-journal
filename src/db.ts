@@ -53,7 +53,7 @@ import { DIFFICULTY_XP, canAddQuest, habitMomentum, levelFromXp, questXp, resolv
 export const DB_NAME = 'qiguang';
 export const DB_VERSION = 4;
 export const BACKUP_FORMAT_VERSION = 4;
-export const APP_VERSION = '0.5.0';
+export const APP_VERSION = '0.5.5';
 
 const STORE_NAMES = [
   'profile',
@@ -476,7 +476,8 @@ export function parseBackup(text: string): BackupBundle {
     assertOneOf(item.status, ['ready', 'stale'], '每日整理状态');
     if (!Array.isArray(item.sourceEntries) || !item.sourceEntries.length || item.sourceEntries.length > 30) throw new Error('每日整理来源无效。');
     item.sourceEntries.forEach((source) => {
-      if (!source || typeof source.entryId !== 'string' || !entryIds.has(source.entryId)) throw new Error('每日整理引用了不存在的记录。');
+      if (!source || typeof source.entryId !== 'string') throw new Error('每日整理来源无效。');
+      if (!entryIds.has(source.entryId) && item.status !== 'stale') throw new Error('生效中的每日整理引用了不存在的记录。');
       assertInteger(source.revision, 1, Number.MAX_SAFE_INTEGER, '每日整理记录版本');
     });
     assertText(item.contextSummary, '整理上下文摘要', 2_000, true);
@@ -499,7 +500,8 @@ export function parseBackup(text: string): BackupBundle {
     assertOneOf(item.confirmation, ['confirmed', 'pending', 'rejected'], '事件确认状态');
     assertOneOf(item.confidence, ['high', 'medium', 'low'], '事件确定程度');
     assertStringArray(item.sourceEntryIds, '事件来源记录', 30, 200);
-    if (!item.sourceEntryIds.length || item.sourceEntryIds.some((id) => !entryIds.has(id))) throw new Error('整理事件引用了不存在的记录。');
+    if (!item.sourceEntryIds.length) throw new Error('整理事件缺少来源记录。');
+    if (item.sourceEntryIds.some((id) => !entryIds.has(id)) && item.active) throw new Error('生效中的整理事件引用了不存在的记录。');
     if (!Array.isArray(item.evidence) || !item.evidence.length || !Array.isArray(item.stateImpactCandidates)) throw new Error('整理事件证据或状态候选无效。');
     if (typeof item.active !== 'boolean' || typeof item.userEdited !== 'boolean') throw new Error('整理事件状态无效。');
   });
@@ -1102,7 +1104,7 @@ export class QiguangDb {
     return jobs.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
 
-  async markAnalysisJobProcessing(id: string): Promise<AnalysisJob> {
+  async markAnalysisJobProcessing(id: string, interrupted?: { expectedVersion: number; staleBefore: string }): Promise<AnalysisJob> {
     const transaction = this.database.transaction(['entries', 'events', 'analysisJobs'], 'readwrite');
     const jobs = transaction.objectStore('analysisJobs');
     const job = await requestResult(jobs.get(id)) as AnalysisJob | undefined;
@@ -1110,7 +1112,15 @@ export class QiguangDb {
       transaction.abort();
       throw new Error('整理任务不存在。');
     }
-    if (!['queued', 'failed'].includes(job.status)) {
+    const resumesInterrupted = interrupted !== undefined
+      && job.status === 'processing'
+      && job.version === interrupted.expectedVersion
+      && job.updatedAt <= interrupted.staleBefore;
+    if (interrupted && !resumesInterrupted) {
+      transaction.abort();
+      throw new Error('整理任务状态已经改变，请重新检查。');
+    }
+    if (!['queued', 'failed'].includes(job.status) && !resumesInterrupted) {
       transaction.abort();
       throw new Error(job.status === 'stale' ? '记录已改变，请重新整理。' : '这次整理不需要重复提交。');
     }
@@ -1142,7 +1152,7 @@ export class QiguangDb {
     return updated;
   }
 
-  async failAnalysisJob(id: string, errorCode: AnalysisErrorCode, message: string, nextAttemptAt?: string): Promise<AnalysisJob> {
+  async failAnalysisJob(id: string, errorCode: AnalysisErrorCode, message: string, nextAttemptAt?: string, expectedProcessingVersion?: number): Promise<AnalysisJob> {
     assertText(message, '整理错误', 500, true);
     if (nextAttemptAt !== undefined) assertTimestamp(nextAttemptAt, '下次整理时间');
     const transaction = this.database.transaction(['entries', 'analysisJobs'], 'readwrite');
@@ -1155,6 +1165,10 @@ export class QiguangDb {
     if (job.status !== 'processing') {
       transaction.abort();
       throw new Error(job.status === 'stale' ? '这次整理已被同一天的更新请求取代。' : '整理任务尚未进入处理状态。');
+    }
+    if (expectedProcessingVersion !== undefined && job.version !== expectedProcessingVersion) {
+      transaction.abort();
+      throw new Error('这次整理已被新的重试接管。');
     }
     const timestamp = nowIso();
     const status = errorCode === 'SAFETY_REVIEW' ? 'safety-review' as const : 'failed' as const;
@@ -1170,7 +1184,7 @@ export class QiguangDb {
     return updated;
   }
 
-  async saveDailyAnalysis(id: string, value: unknown): Promise<DailyAnalysis> {
+  async saveDailyAnalysis(id: string, value: unknown, expectedProcessingVersion?: number): Promise<DailyAnalysis> {
     const transaction = this.database.transaction(['entries', 'analyses', 'events', 'observations', 'snapshots', 'memories', 'analysisJobs'], 'readwrite');
     const jobs = transaction.objectStore('analysisJobs');
     const job = await requestResult(jobs.get(id)) as AnalysisJob | undefined;
@@ -1193,6 +1207,10 @@ export class QiguangDb {
     if (job.status !== 'processing') {
       transaction.abort();
       throw new Error(job.status === 'stale' ? '这次整理已被同一天的更新请求取代。' : '整理任务尚未进入处理状态。');
+    }
+    if (expectedProcessingVersion !== undefined && job.version !== expectedProcessingVersion) {
+      transaction.abort();
+      throw new Error('这次整理已被新的重试接管。');
     }
     const entries = transaction.objectStore('entries');
     const currentEntries = await Promise.all(request.userInput.entries.map((item) => requestResult(entries.get(item.entryId)) as Promise<JournalEntry | undefined>));
@@ -1378,7 +1396,7 @@ export class QiguangDb {
     return { quest, created: true };
   }
 
-  async saveWeeklyReview(id: string, value: unknown): Promise<Review> {
+  async saveWeeklyReview(id: string, value: unknown, expectedProcessingVersion?: number): Promise<Review> {
     const transaction = this.database.transaction(['events', 'reviews', 'memories', 'analysisJobs'], 'readwrite');
     const jobs = transaction.objectStore('analysisJobs');
     const job = await requestResult(jobs.get(id)) as AnalysisJob | undefined;
@@ -1397,6 +1415,10 @@ export class QiguangDb {
     if (job.status !== 'processing') {
       transaction.abort();
       throw new Error(job.status === 'stale' ? '这次周复盘已被同周期的更新请求取代。' : '周复盘任务尚未进入处理状态。');
+    }
+    if (expectedProcessingVersion !== undefined && job.version !== expectedProcessingVersion) {
+      transaction.abort();
+      throw new Error('这次周复盘已被新的重试接管。');
     }
     const events = transaction.objectStore('events');
     const currentEvents = await Promise.all(request.context.events.map((item) => requestResult(events.get(item.eventId)) as Promise<JournalEvent | undefined>));

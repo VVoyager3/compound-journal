@@ -220,10 +220,17 @@ export function modelPayload(request, previousContent, validationError) {
 async function callModel(request, previousContent, validationError) {
   const key = process.env.MINIMAX_API_KEY;
   if (!key) throw Object.assign(new Error('服务端尚未配置 MiniMax API 密钥。'), { code: 'SERVICE_UNAVAILABLE' });
+  let endpoint;
+  try {
+    endpoint = new URL(process.env.MINIMAX_API_URL || 'https://api.minimaxi.com/v1/chat/completions');
+  } catch {
+    throw Object.assign(new Error('模型服务地址无效。'), { code: 'SERVICE_UNAVAILABLE' });
+  }
+  if (endpoint.protocol !== 'https:') throw Object.assign(new Error('模型服务地址必须使用 HTTPS。'), { code: 'SERVICE_UNAVAILABLE' });
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
   try {
-    const response = await fetch(process.env.MINIMAX_API_URL || 'https://api.minimaxi.com/v1/chat/completions', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(modelPayload(request, previousContent, validationError)),
@@ -483,6 +490,11 @@ async function serveStatic(request, response) {
     info = await stat(target);
     if (!info.isFile()) throw new Error('not a file');
   } catch {
+    const isNavigation = /(?:^|,)\s*text\/html\b/i.test(String(request.headers.accept ?? '')) && extname(pathname) === '';
+    if (relative !== 'index.html' && !isNavigation) {
+      fail(response, 404, 'NOT_FOUND', '资源不存在。');
+      return;
+    }
     target = resolve(DIST_DIR, 'index.html');
     try { info = await stat(target); } catch {
       fail(response, 503, 'BUILD_MISSING', '请先运行 npm run build。');

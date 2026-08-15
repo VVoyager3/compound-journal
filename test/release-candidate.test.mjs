@@ -45,6 +45,12 @@ test('manifest provides an installable local-first application identity', async 
 
 test('service worker is versioned, keeps AI network-only, and waits for an explicit update action', async () => {
   const source = await read('public/sw.js');
+  const packageVersion = JSON.parse(await read('package.json')).version;
+  const dbSource = await read('src/db.ts');
+  const appVersion = dbSource.match(/APP_VERSION\s*=\s*['"]([^'"]+)/)?.[1];
+  const cacheVersion = source.match(/CACHE_NAME\s*=\s*['"]qiguang-shell-v([^'"]+)/)?.[1];
+  assert.equal(appVersion, packageVersion, 'backup and package versions must match');
+  assert.equal(cacheVersion, packageVersion, 'every release must install a new immutable shell cache');
   new vm.Script(source, { filename: 'public/sw.js' });
   assert.match(source, /qiguang-[\w-]*v\d+/i, 'cache name must carry a version');
   assert.match(source, /addEventListener\(['"]install['"]/);
@@ -76,6 +82,13 @@ test('client has no microphone capability, unsafe HTML sink, or third-party trac
   assert(!/\b(?:getUserMedia|MediaRecorder|webkitSpeechRecognition|SpeechRecognition)\b/.test(clientSource), 'client must rely on the system input method');
   assert(!/\.innerHTML\s*=|\.outerHTML\s*=|insertAdjacentHTML\s*\(/.test(clientSource), 'user text must not reach an HTML sink');
   assert(!/google-analytics|googletagmanager|segment\.com|mixpanel|fullstory|hotjar/i.test(clientSource), 'tracking code is not allowed');
+  assert(!/\b(?:XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/.test(clientSource), 'client network access must use the audited fetch allowlist');
+
+  const fetchCalls = [...clientSource.matchAll(/\bfetch\s*\(/g)];
+  const literalFetches = [...clientSource.matchAll(/\bfetch\s*\(\s*(['"])([^'"]+)\1/g)];
+  assert.equal(fetchCalls.length, literalFetches.length, 'dynamic client fetch targets are not allowed');
+  const fetchTargets = literalFetches.map((match) => match[2]);
+  assert.deepEqual([...new Set(fetchTargets)].sort(), ['/api/analyze', '/api/health'], 'only AI and its manual health check may use the network');
 
   const manifest = await read('public/manifest.webmanifest');
   assert(!/microphone|audio-capture|getUserMedia/i.test(manifest));
@@ -111,6 +124,8 @@ test('static server sends strict security and update-safe cache headers', async 
     assert.equal(response.status, 200);
     assert.match(response.headers.get('cache-control') ?? '', /no-cache/, `${asset} must revalidate for updates`);
   }
+  const missingAsset = await fetch(`${base}/assets/definitely-missing.js`);
+  assert.equal(missingAsset.status, 404, 'missing static assets must not be disguised as the HTML app shell');
   const health = await fetch(`${base}/api/health`);
   assert.match(health.headers.get('cache-control') ?? '', /no-store/);
 });

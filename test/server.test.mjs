@@ -156,6 +156,34 @@ test('same-origin server validates requests, retries format once, and caches one
   assert.equal(upstreamCalls, 3);
 });
 
+test('server refuses to send the API key or journal text to an insecure model endpoint', async (t) => {
+  const nativeFetch = globalThis.fetch.bind(globalThis);
+  const originalKey = process.env.MINIMAX_API_KEY;
+  const originalUrl = process.env.MINIMAX_API_URL;
+  process.env.MINIMAX_API_KEY = 'test-key-never-logged';
+  process.env.MINIMAX_API_URL = 'http://model.example/v1/chat/completions';
+  let upstreamCalls = 0;
+  globalThis.fetch = async () => { upstreamCalls += 1; throw new Error('must not be called'); };
+  const server = startServer(0, '127.0.0.1');
+  await once(server, 'listening');
+  const base = `http://127.0.0.1:${server.address().port}`;
+  t.after(async () => {
+    globalThis.fetch = nativeFetch;
+    if (originalKey === undefined) delete process.env.MINIMAX_API_KEY;
+    else process.env.MINIMAX_API_KEY = originalKey;
+    if (originalUrl === undefined) delete process.env.MINIMAX_API_URL;
+    else process.env.MINIMAX_API_URL = originalUrl;
+    server.close();
+    await once(server, 'close');
+  });
+
+  const response = await nativeFetch(`${base}/api/analyze`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestEnvelope('insecure-upstream')),
+  });
+  assert.equal(response.status, 503);
+  assert.equal(upstreamCalls, 0);
+});
+
 test('server rejects cross-site envelopes, shares concurrent work, and stops model safety warnings', async (t) => {
   const nativeFetch = globalThis.fetch.bind(globalThis);
   const originalKey = process.env.MINIMAX_API_KEY;

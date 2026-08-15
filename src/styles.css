@@ -41,7 +41,7 @@ body {
   overflow-x: hidden;
   color: var(--ink);
   background: var(--paper);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.55;
 }
 
@@ -833,6 +833,26 @@ p {
   background: var(--ink);
 }
 
+.tag-warn {
+  background: var(--warn);
+}
+
+.recovery-action {
+  display: grid;
+  gap: 10px;
+  border-left: 7px solid var(--warn);
+  box-shadow: var(--shadow-small);
+}
+
+.recovery-title {
+  font-size: 1.05rem;
+}
+
+.main-action .quest-quick-actions .button {
+  width: auto;
+  flex: 1 1 128px;
+}
+
 .simple-list,
 .entry-timeline,
 .search-section {
@@ -957,6 +977,7 @@ p {
 
 .calendar-panel {
   padding: 12px;
+  overflow-x: auto;
 }
 
 .calendar-toolbar,
@@ -983,7 +1004,8 @@ p {
 .weekday-row,
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(44px, 1fr));
+  min-width: 308px;
 }
 
 .weekday-row {
@@ -1230,6 +1252,7 @@ input[type="checkbox"] {
 input[type="range"] {
   width: 100%;
   min-width: 0;
+  min-height: 44px;
   accent-color: var(--coral);
 }
 
@@ -1704,6 +1727,39 @@ input[type="range"] {
   display: grid;
   gap: 8px;
   padding: 15px 2px;
+}
+
+.branch-details {
+  margin-top: 8px;
+  border-top: 2px solid var(--ink);
+}
+
+.branch-details > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.branch-evidence,
+.branch-related {
+  display: grid;
+  gap: 5px;
+  padding-block: 8px;
+  border-top: 1px dashed var(--ink);
+}
+
+.branch-evidence h3,
+.branch-related h3,
+.branch-link-row,
+.branch-sub-row {
+  margin: 0;
+}
+
+.branch-sub-row {
+  padding-left: 10px;
+  border-left: 3px solid var(--blue);
 }
 
 .milestone-row {

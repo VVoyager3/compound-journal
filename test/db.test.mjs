@@ -313,6 +313,39 @@ test('an older in-flight daily request cannot overwrite a newer request that fin
   assert.equal((await db.listDailyAnalyses('2026-08-14')).find((item) => item.id === newer.id).status, 'ready');
 });
 
+test('an interrupted request resumes only after expiry and old attempts lose CAS', async (t) => {
+  const db = await withDatabase(t, 'i3-interrupted-resume');
+  const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', '2026-08-14');
+  const request = analysisRequest(entry, 'interrupted-request');
+  const job = await db.createDailyAnalysisJob(request);
+  const firstAttempt = await db.markAnalysisJobProcessing(job.id);
+
+  await assert.rejects(
+    () => db.markAnalysisJobProcessing(job.id, { expectedVersion: firstAttempt.version, staleBefore: new Date(0).toISOString() }),
+    /状态已经改变/,
+  );
+  assert.equal((await db.listAnalysisJobs('2026-08-14'))[0].version, firstAttempt.version);
+
+  const resumed = await db.markAnalysisJobProcessing(job.id, {
+    expectedVersion: firstAttempt.version,
+    staleBefore: new Date(Date.now() + 60_000).toISOString(),
+  });
+  assert.equal(resumed.attemptCount, firstAttempt.attemptCount + 1);
+  assert.equal(resumed.version, firstAttempt.version + 1);
+
+  await assert.rejects(
+    () => db.failAnalysisJob(job.id, 'MODEL_TIMEOUT', '旧请求超时。', undefined, firstAttempt.version),
+    /新的重试接管/,
+  );
+  await assert.rejects(
+    () => db.saveDailyAnalysis(job.id, analysisResponse(request), firstAttempt.version),
+    /新的重试接管/,
+  );
+  const saved = await db.saveDailyAnalysis(job.id, analysisResponse(request), resumed.version);
+  assert.equal(saved.requestId, request.requestId);
+  assert.equal((await db.listAnalysisJobs('2026-08-14'))[0].status, 'succeeded');
+});
+
 test('retry uses one request and editing the source makes old analysis and impacts stale', async (t) => {
   const db = await withDatabase(t, 'i3-stale');
   const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', '2026-08-14');
@@ -1067,4 +1100,21 @@ test('deleting an entry cascades its revisions without touching other entries', 
   assert.deepEqual(await db.listRevisions(doomed.id), []);
   assert.equal((await db.getEntry(survivor.id)).body, 'keep me edited');
   assert.equal((await db.listRevisions(survivor.id)).length, 1);
+});
+
+test('deleting an analysed entry leaves an importable backup with only inactive references', async (t) => {
+  const db = await withDatabase(t, 'delete-analysed-entry');
+  const entry = await db.addEntry('今天会议很多，晚上散步后好了一些。', '2026-08-14');
+  const request = analysisRequest(entry, 'delete-analysis');
+  const job = await db.createDailyAnalysisJob(request);
+  await db.markAnalysisJobProcessing(job.id);
+  await db.saveDailyAnalysis(job.id, analysisResponse(request));
+
+  await db.deleteEntry(entry.id);
+  const backup = await db.exportBundle();
+  assert.doesNotThrow(() => parseBackup(JSON.stringify(backup)));
+  assert.equal(backup.data.analyses[0].status, 'stale');
+  assert.ok(backup.data.events.every((event) => !event.active));
+  assert.ok(backup.data.observations.filter((item) => item.kind === 'event-impact').every((item) => !item.active));
+  assert.equal(backup.data.analysisJobs[0].status, 'stale');
 });

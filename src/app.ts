@@ -52,6 +52,7 @@ interface InstallPromptEvent extends Event {
 }
 
 const DRAFT_KEY = 'qiguang.record-drafts.v2';
+const INTERRUPTED_TAKEOVER_MS = 2 * 60_000;
 const appRoot = document.querySelector<HTMLElement>('#app');
 if (!appRoot) throw new Error('页面缺少应用容器。');
 const root: HTMLElement = appRoot;
@@ -61,6 +62,8 @@ let settings: AppSettings;
 let currentRoute = parseRoute();
 let previousRouteKey = routeKey(currentRoute);
 let routeNavigationPending = false;
+let focusRecordInputOnNextRender = false;
+let focusAfterRenderSelector = '';
 let renderToken = 0;
 let calendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let toastTimer = 0;
@@ -98,6 +101,18 @@ function primaryButton(label: string, onClick: () => void): HTMLButtonElement {
   const button = node('button', 'button button-primary', label);
   button.type = 'button';
   button.addEventListener('click', onClick);
+  return button;
+}
+
+function interruptedRetryButton(job: AnalysisJob, onClick: () => void): HTMLButtonElement {
+  const button = primaryButton('处理中；2 分钟后可检查重试', onClick);
+  const refresh = () => {
+    const remaining = Date.parse(job.updatedAt) + INTERRUPTED_TAKEOVER_MS - Date.now();
+    button.disabled = remaining > 0;
+    button.textContent = remaining > 0 ? '处理中；2 分钟后可检查重试' : '检查同一请求并重试';
+    if (remaining > 0) window.setTimeout(() => { if (button.isConnected) refresh(); }, remaining + 50);
+  };
+  refresh();
   return button;
 }
 
@@ -185,7 +200,7 @@ async function analysisContext(date: string): Promise<{
   };
 }
 
-async function submitAnalysisJob(job: AnalysisJob): Promise<void> {
+async function submitAnalysisJob(job: AnalysisJob, resumeInterrupted = false): Promise<void> {
   if (job.operation !== 'daily_analysis') throw new Error('这不是每日整理任务。');
   if (!settings.aiAllowed) {
     showToast('AI 权限已关闭；没有发送任何内容。', 'error');
@@ -199,7 +214,10 @@ async function submitAnalysisJob(job: AnalysisJob): Promise<void> {
   }
   let processing: AnalysisJob;
   try {
-    processing = await db.markAnalysisJobProcessing(job.id);
+    processing = await db.markAnalysisJobProcessing(job.id, resumeInterrupted ? {
+      expectedVersion: job.version,
+      staleBefore: new Date(Date.now() - INTERRUPTED_TAKEOVER_MS).toISOString(),
+    } : undefined);
   } catch (error) {
     showToast(errorMessage(error), 'error');
     await render();
@@ -225,19 +243,19 @@ async function submitAnalysisJob(job: AnalysisJob): Promise<void> {
     }
     if (processing.operation !== 'daily_analysis') throw new Error('整理队列操作发生变化。');
     parseDailyAnalysisResponse(body, processing.request as DailyAnalysisRequest);
-    await db.saveDailyAnalysis(processing.id, body);
+    await db.saveDailyAnalysis(processing.id, body, processing.version);
     showToast('整理已保存；推断仍等你确认。');
   } catch (error) {
     const current = (await db.listAnalysisJobs(processing.localDate)).find((item) => item.id === processing.id);
-    if (current?.status !== 'stale') {
+    if (current?.status === 'processing' && current.version === processing.version) {
       const typed = error as Error & { code?: AnalysisErrorCode; nextAttemptAt?: string };
       const code: AnalysisErrorCode = typed.name === 'AbortError' ? 'MODEL_TIMEOUT'
         : typed.code ?? (navigator.onLine ? 'SERVICE_UNAVAILABLE' : 'OFFLINE');
-      await db.failAnalysisJob(processing.id, code, analysisErrorCopy(code, errorMessage(error)), typed.nextAttemptAt);
+      await db.failAnalysisJob(processing.id, code, analysisErrorCopy(code, errorMessage(error)), typed.nextAttemptAt, processing.version);
       showToast(analysisErrorCopy(code, errorMessage(error)), 'error');
-    } else {
+    } else if (current?.status === 'stale') {
       showToast('记录已改变，旧整理结果没有应用。', 'error');
-    }
+    } else showToast('同一请求已由新的重试接管，旧结果没有应用。');
   } finally {
     window.clearTimeout(timeout);
     await render();
@@ -336,12 +354,20 @@ function renderShell(main: HTMLElement, route: Route): void {
   connectivity.classList.add('shell-network-status');
   shell.append(connectivity, main, bottomNavigation(route));
   root.replaceChildren(shell);
-  if (!routeNavigationPending) return;
+  if (!routeNavigationPending && !focusAfterRenderSelector) return;
+  const requestedFocus = focusAfterRenderSelector;
+  focusAfterRenderSelector = '';
+  if (!routeNavigationPending) {
+    requestAnimationFrame(() => main.querySelector<HTMLElement>(requestedFocus)?.focus({ preventScroll: true }));
+    return;
+  }
   routeNavigationPending = false;
   requestAnimationFrame(() => {
     const stored = Number(sessionStorage.getItem(`qiguang.scroll.${routeKey(route)}`) ?? 0);
     window.scrollTo({ top: Number.isFinite(stored) ? stored : 0, behavior: 'auto' });
-    main.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true });
+    const target = focusRecordInputOnNextRender ? main.querySelector<HTMLElement>('.journal-input') : main.querySelector<HTMLElement>('h1');
+    focusRecordInputOnNextRender = false;
+    target?.focus({ preventScroll: true });
   });
 }
 
@@ -493,11 +519,83 @@ const QUEST_LABELS: Record<QuestType, string> = { main: 'MAIN', bonus: 'BONUS', 
 const DIFFICULTY_LABELS: Record<Difficulty, string> = { light: '轻量', standard: '标准', hard: '困难', challenge: '挑战' };
 const FEEDBACK_LABELS: Record<FeedbackResult, string> = { completed: '完成', partial: '部分完成', skipped: '跳过', exempt: '豁免' };
 
+interface RecoverySuggestion {
+  title: string;
+  minimumAction: string;
+  estimatedMinutes: number;
+}
+
+const RECOVERY_SUGGESTIONS: Record<Dimension, RecoverySuggestion[]> = {
+  energy: [
+    { title: '先让身体缓一缓', minimumAction: '喝一杯水，离开屏幕慢走五分钟', estimatedMinutes: 5 },
+    { title: '做一次很短的舒展', minimumAction: '活动肩颈并伸展三分钟', estimatedMinutes: 3 },
+  ],
+  mind: [
+    { title: '给大脑留三分钟空白', minimumAction: '闭眼慢呼吸六次，只观察此刻感受', estimatedMinutes: 3 },
+    { title: '暂时停止继续输入', minimumAction: '离开信息流，安静坐着或走动十分钟', estimatedMinutes: 10 },
+  ],
+  connection: [
+    { title: '和一个信任的人重新连上', minimumAction: '发一句真实近况，不要求对方立刻回复', estimatedMinutes: 3 },
+    { title: '留下一个小小的善意', minimumAction: '向一个具体的人表达一次感谢', estimatedMinutes: 5 },
+  ],
+  progress: [
+    { title: '把工作缩到下一步', minimumAction: '关掉无关页面，只做当前任务五分钟', estimatedMinutes: 5 },
+    { title: '先卸下一项不必要的推进', minimumAction: '把今天不重要的一项移到稍后', estimatedMinutes: 3 },
+  ],
+  play: [
+    { title: '留一点没有产出要求的时间', minimumAction: '听歌、玩或发呆十分钟，不做成果记录', estimatedMinutes: 10 },
+    { title: '跟着好奇心走一小步', minimumAction: '做一件纯粹觉得有趣的小事五分钟', estimatedMinutes: 5 },
+  ],
+};
+
 function selectOption(value: string, label: string, selected = false): HTMLOptionElement {
   const option = node('option', '', label);
   option.value = value;
   option.selected = selected;
   return option;
+}
+
+function questFeedbackFocusSelector(quest: Quest): string {
+  const id = CSS.escape(quest.id);
+  return `[data-quest-feedback-for="${id}"],[data-habit-checkin-for="${id}"]`;
+}
+
+async function saveQuickQuestFeedback(quest: Quest, result: Extract<FeedbackResult, 'completed' | 'partial' | 'skipped'>, controls: HTMLElement): Promise<void> {
+  const buttons = [...controls.querySelectorAll<HTMLButtonElement>('button')];
+  buttons.forEach((button) => { button.disabled = true; });
+  try {
+    await db.feedbackQuest(quest.id, result, '', '', quest.difficulty, 0);
+    if (result === 'completed') sessionStorage.setItem('qiguang.character-celebration', quest.id);
+    if (quest.sourceType === 'habit' && result === 'completed') sessionStorage.setItem('qiguang.plant-celebration', quest.sourceId ?? '');
+    focusAfterRenderSelector = questFeedbackFocusSelector(quest);
+    showToast(result === 'skipped' ? '今天不做已记下；没有扣分。' : `已记为${FEEDBACK_LABELS[result]}；可以随时撤销。`);
+    await render();
+  } catch (error) {
+    buttons.forEach((button) => { button.disabled = false; });
+    showToast(errorMessage(error), 'error');
+  }
+}
+
+function quickQuestActions(quest: Quest): HTMLElement {
+  const actions = node('div', 'quest-actions quest-quick-actions');
+  const choices: Array<[Extract<FeedbackResult, 'completed' | 'partial' | 'skipped'>, string, string]> = [
+    ['completed', '完成', 'button-primary'],
+    ['partial', '做了一部分', 'button-secondary'],
+    ['skipped', '今天不做', 'button-quiet'],
+  ];
+  for (const [result, label, className] of choices) {
+    const button = node('button', `button ${className}`, label);
+    button.type = 'button';
+    button.setAttribute('aria-label', `${label}：${quest.title}`);
+    button.addEventListener('click', () => { void saveQuickQuestFeedback(quest, result, actions); });
+    actions.append(button);
+  }
+  const details = node('button', 'button button-quiet', '详细反馈');
+  details.type = 'button';
+  details.setAttribute('aria-label', `详细反馈任务：${quest.title}`);
+  details.addEventListener('click', () => { void openQuestFeedbackDialog(quest); });
+  actions.append(details);
+  return actions;
 }
 
 async function openQuestFeedbackDialog(quest: Quest): Promise<void> {
@@ -536,6 +634,18 @@ async function openQuestFeedbackDialog(quest: Quest): Promise<void> {
   note.placeholder = '例如：十分钟版本更容易开始。';
   note.value = previousFeedback?.note ?? '';
   noteLabel.append(note);
+  const skipReason = node('select', 'input');
+  skipReason.append(
+    selectOption('', '不填写原因'),
+    selectOption('状态不合适', '状态不合适'),
+    selectOption('任务不重要', '任务不重要'),
+    selectOption('时间不足', '时间不足'),
+    selectOption('其他原因', '其他原因'),
+  );
+  const skipReasonControl = labelledControl('今天不做的原因（可选）', skipReason);
+  const updateSkipReasonVisibility = () => { skipReasonControl.hidden = result.value !== 'skipped'; };
+  result.addEventListener('change', updateSkipReasonVisibility);
+  updateSkipReasonVisibility();
   let stateDelta: HTMLSelectElement | undefined;
   let stateControl: HTMLLabelElement | undefined;
   if (quest.dimension) {
@@ -623,7 +733,7 @@ async function openQuestFeedbackDialog(quest: Quest): Promise<void> {
     }
   });
   aiPanel.append(understand);
-  content.append(resultLabel, difficultyLabel, actualLabel, aiPanel, noteLabel, ...(stateControl ? [stateControl] : []), status);
+  content.append(resultLabel, difficultyLabel, actualLabel, aiPanel, skipReasonControl, noteLabel, ...(stateControl ? [stateControl] : []), status);
 
   const cancel = node('button', 'button button-secondary', '取消');
   cancel.type = 'button';
@@ -634,12 +744,13 @@ async function openQuestFeedbackDialog(quest: Quest): Promise<void> {
     save.disabled = true;
     status.textContent = '正在保存反馈和经验账本…';
     try {
-      await db.feedbackQuest(
-        quest.id, result.value as FeedbackResult, note.value, actual.value, difficulty.value as Difficulty, Number(stateDelta?.value ?? 0),
-      );
+      const savedNote = result.value === 'skipped' && skipReason.value
+        ? `${skipReason.value}${note.value.trim() ? `：${note.value.trim()}` : ''}` : note.value;
+      await db.feedbackQuest(quest.id, result.value as FeedbackResult, savedNote, actual.value, difficulty.value as Difficulty, Number(stateDelta?.value ?? 0));
       if (result.value === 'completed') sessionStorage.setItem('qiguang.character-celebration', quest.id);
       if (quest.sourceType === 'habit' && result.value === 'completed') sessionStorage.setItem('qiguang.plant-celebration', quest.sourceId ?? '');
       dialog.close();
+      focusAfterRenderSelector = questFeedbackFocusSelector(quest);
       showToast('反馈已保存；可以在任务卡上撤销。');
       await render();
     } catch (error) {
@@ -655,6 +766,8 @@ async function openQuestFeedbackDialog(quest: Quest): Promise<void> {
 
 function questCard(quest: Quest, compact = false): HTMLElement {
   const card = node('article', `${compact ? 'quest-row' : 'surface quest-card'} is-${quest.type} is-${quest.status}`);
+  card.dataset.questId = quest.id;
+  card.tabIndex = -1;
   const heading = node('div', 'quest-heading');
   heading.append(
     node('span', `tag${quest.type === 'main' ? ' tag-dark' : ''}`, QUEST_LABELS[quest.type]),
@@ -663,13 +776,15 @@ function questCard(quest: Quest, compact = false): HTMLElement {
   card.append(heading, node('h3', '', quest.title), node('p', compact ? 'caption' : '', quest.reason));
   const minimum = node('p', 'quest-minimum', `最小动作：${quest.minimumAction} · 约 ${quest.estimatedMinutes} 分钟`);
   card.append(minimum);
-  const actions = node('div', 'quest-actions');
-  const feedback = node('button', `button ${quest.status === 'pending' ? 'button-primary' : 'button-secondary'}`, quest.status === 'pending' ? '去反馈' : `结果：${FEEDBACK_LABELS[quest.status]}`);
-  feedback.type = 'button';
-  feedback.setAttribute('aria-label', quest.status === 'pending' ? `反馈任务：${quest.title}` : `修改任务“${quest.title}”的反馈`);
-  feedback.addEventListener('click', () => { void openQuestFeedbackDialog(quest); });
-  actions.append(feedback);
-  if (quest.status !== 'pending') {
+  if (quest.status === 'pending') card.append(quickQuestActions(quest));
+  else {
+    const actions = node('div', 'quest-actions');
+    const feedback = node('button', 'button button-secondary', `结果：${FEEDBACK_LABELS[quest.status]}`);
+    feedback.type = 'button';
+    feedback.dataset.questFeedbackFor = quest.id;
+    feedback.setAttribute('aria-label', `修改任务“${quest.title}”的反馈`);
+    feedback.addEventListener('click', () => { void openQuestFeedbackDialog(quest); });
+    actions.append(feedback);
     const undo = node('button', 'button button-quiet', '撤销反馈');
     undo.type = 'button';
     undo.setAttribute('aria-label', `撤销任务“${quest.title}”的反馈`);
@@ -677,6 +792,7 @@ function questCard(quest: Quest, compact = false): HTMLElement {
       undo.disabled = true;
       try {
         await db.undoQuestFeedback(quest.id);
+        focusAfterRenderSelector = `[data-quest-id="${CSS.escape(quest.id)}"]`;
         showToast('反馈与对应经验已撤销。');
         await render();
       } catch (error) {
@@ -685,9 +801,118 @@ function questCard(quest: Quest, compact = false): HTMLElement {
       }
     });
     actions.append(undo);
+    card.append(actions);
   }
-  card.append(actions);
   return card;
+}
+
+function homeHabitCheckin(quest: Quest): HTMLElement {
+  const row = node('article', `quest-row home-habit-checkin is-${quest.status}`);
+  row.dataset.questId = quest.id;
+  row.tabIndex = -1;
+  const copy = node('div', 'home-habit-copy');
+  copy.append(node('strong', '', quest.title), node('span', 'caption', `最小动作：${quest.minimumAction}`));
+  const actions = node('div', 'quest-actions');
+  if (quest.status === 'pending') {
+    const complete = node('button', 'button button-primary', '完成打卡');
+    complete.type = 'button';
+    complete.setAttribute('aria-label', `完成打卡：${quest.title}`);
+    complete.addEventListener('click', () => { void saveQuickQuestFeedback(quest, 'completed', actions); });
+    actions.append(complete);
+  } else {
+    const undo = node('button', 'button button-secondary', `已${FEEDBACK_LABELS[quest.status]} · 撤销`);
+    undo.type = 'button';
+    undo.dataset.habitCheckinFor = quest.id;
+    undo.setAttribute('aria-label', `撤销习惯“${quest.title}”今天的打卡`);
+    undo.addEventListener('click', async () => {
+      undo.disabled = true;
+      try {
+        await db.undoQuestFeedback(quest.id);
+        focusAfterRenderSelector = `[data-quest-id="${CSS.escape(quest.id)}"]`;
+        showToast('习惯打卡已撤销；动量历史会按事实重算。');
+        await render();
+      } catch (error) {
+        undo.disabled = false;
+        showToast(errorMessage(error), 'error');
+      }
+    });
+    actions.append(undo);
+  }
+  actions.append(iconButton(`进入任务板详细管理“${quest.title}”`, null, () => go({ name: 'tasks' }), 'button button-quiet'));
+  row.append(copy, actions);
+  return row;
+}
+
+function recoveryPanel(state: ResolvedDimensionState, date: string, useMainSlot: boolean): HTMLElement {
+  const suggestions = RECOVERY_SUGGESTIONS[state.dimension];
+  let suggestionIndex = 0;
+  const panel = node('section', 'surface recovery-action');
+  panel.append(node('span', 'tag tag-warn', 'RECOVERY · 状态优先'), node('h2', '', `先补足${dimensionLabel(state.dimension)}`));
+  panel.append(node('p', '', `${dimensionLabel(state.dimension)}最近为 ${state.value}/100。低状态时先恢复，不默认要求继续推进。`));
+  const title = node('strong', 'recovery-title');
+  const detail = node('p', 'quest-minimum');
+  const renderSuggestion = () => {
+    const suggestion = suggestions[suggestionIndex] ?? suggestions[0];
+    if (!suggestion) return;
+    title.textContent = suggestion.title;
+    detail.textContent = `最小动作：${suggestion.minimumAction} · 约 ${suggestion.estimatedMinutes} 分钟 · 轻量`;
+  };
+  renderSuggestion();
+  panel.append(title, detail);
+  const actions = node('div', 'quest-actions');
+  const accept = node('button', 'button button-primary', '加入今天');
+  accept.type = 'button';
+  accept.addEventListener('click', async () => {
+    const suggestion = suggestions[suggestionIndex] ?? suggestions[0];
+    if (!suggestion) return;
+    [...actions.querySelectorAll<HTMLButtonElement>('button')].forEach((button) => { button.disabled = true; });
+    try {
+      const quest = await db.addQuest({
+        localDate: date,
+        type: useMainSlot ? 'main' : 'side',
+        sourceType: 'recovery',
+        actionId: `recovery:${date}:${state.dimension}:${suggestionIndex}`,
+        title: suggestion.title,
+        reason: `${dimensionLabel(state.dimension)}近期状态较低，先恢复再决定是否推进。`,
+        minimumAction: suggestion.minimumAction,
+        estimatedMinutes: suggestion.estimatedMinutes,
+        difficulty: 'light',
+        dimension: state.dimension,
+        aiSuggested: false,
+        userModified: false,
+      });
+      if (!useMainSlot) sessionStorage.setItem('qiguang.open-side-quest', quest.id);
+      focusAfterRenderSelector = `[data-quest-id="${CSS.escape(quest.id)}"]`;
+      showToast('恢复行动已加入今天；不完成也不会扣分。');
+      await render();
+    } catch (error) {
+      [...actions.querySelectorAll<HTMLButtonElement>('button')].forEach((button) => { button.disabled = false; });
+      showToast(errorMessage(error), 'error');
+    }
+  });
+  const another = node('button', 'button button-secondary', '换一个');
+  another.type = 'button';
+  another.addEventListener('click', () => {
+    suggestionIndex = (suggestionIndex + 1) % suggestions.length;
+    renderSuggestion();
+    title.focus({ preventScroll: true });
+  });
+  title.tabIndex = -1;
+  const dismiss = node('button', 'button button-quiet', '暂时不用');
+  dismiss.type = 'button';
+  dismiss.addEventListener('click', () => {
+    sessionStorage.setItem(`qiguang.recovery-dismissed.${date}.${state.dimension}`, '1');
+    const next = panel.nextElementSibling as HTMLElement | null;
+    panel.remove();
+    if (next) {
+      next.tabIndex = -1;
+      next.focus({ preventScroll: true });
+    }
+    showToast('已收起；没有扣分，也不会改变状态。');
+  });
+  actions.append(accept, another, dismiss);
+  panel.append(actions);
+  return panel;
 }
 
 async function todayPage(): Promise<HTMLElement> {
@@ -708,7 +933,7 @@ async function todayPage(): Promise<HTMLElement> {
   hero.append(roomStage(false, plantStates, profile?.avatar ?? null));
   const line = node('div', 'avatar-line');
   const known = Object.values(observations);
-  const lowest = known.sort((a, b) => a.value - b.value)[0];
+  const lowest = known.filter((item) => !observationIsStale(item)).sort((a, b) => a.value - b.value)[0];
   line.append(pixelIcon('character'), node('p', '', lowest && lowest.value < 45
     ? `今天先照顾一下${dimensionLabel(lowest.dimension)}。`
     : entries.length ? '今天的事实已经好好留在这里。' : '先记录，不急着给自己打分。'));
@@ -716,23 +941,37 @@ async function todayPage(): Promise<HTMLElement> {
   main.append(hero);
 
   const mainQuest = quests.find((item) => item.type === 'main');
+  const recoveryDismissed = lowest ? sessionStorage.getItem(`qiguang.recovery-dismissed.${today}.${lowest.dimension}`) === '1' : false;
+  const hasRecoveryQuest = quests.some((item) => item.sourceType === 'recovery');
+  if (lowest && lowest.value < 45 && !recoveryDismissed && !hasRecoveryQuest) {
+    main.append(recoveryPanel(lowest, today, !mainQuest));
+  }
   if (mainQuest) {
     const action = node('section', 'surface main-action quest-main-action');
     action.append(node('span', 'tag tag-dark', 'MAIN · 今日主线'), node('h2', '', mainQuest.title));
     action.append(node('p', '', mainQuest.reason), node('p', 'quest-minimum', `最小动作：${mainQuest.minimumAction} · 约 ${mainQuest.estimatedMinutes} 分钟`));
-    const feedback = primaryButton(mainQuest.status === 'pending' ? '反馈这次行动' : `已${FEEDBACK_LABELS[mainQuest.status]} · 修改反馈`, () => { void openQuestFeedbackDialog(mainQuest); });
-    feedback.setAttribute('aria-label', mainQuest.status === 'pending' ? `反馈今日主线：${mainQuest.title}` : `修改今日主线“${mainQuest.title}”的反馈`);
-    action.append(feedback);
-    if (mainQuest.status !== 'pending') {
+    action.dataset.questId = mainQuest.id;
+    action.tabIndex = -1;
+    if (mainQuest.status === 'pending') action.append(quickQuestActions(mainQuest));
+    else {
+      const feedback = node('button', 'button button-secondary', `已${FEEDBACK_LABELS[mainQuest.status]} · 修改反馈`);
+      feedback.type = 'button';
+      feedback.dataset.questFeedbackFor = mainQuest.id;
+      feedback.setAttribute('aria-label', `修改今日主线“${mainQuest.title}”的反馈`);
+      feedback.addEventListener('click', () => { void openQuestFeedbackDialog(mainQuest); });
+      action.append(feedback);
       const undo = node('button', 'button button-quiet', '撤销这次反馈');
       undo.type = 'button';
       undo.setAttribute('aria-label', `撤销今日主线“${mainQuest.title}”的反馈`);
       undo.addEventListener('click', async () => {
+        undo.disabled = true;
         try {
           await db.undoQuestFeedback(mainQuest.id);
+          focusAfterRenderSelector = `[data-quest-id="${CSS.escape(mainQuest.id)}"]`;
           showToast('主线反馈与对应经验已撤销。');
           await render();
         } catch (error) {
+          undo.disabled = false;
           showToast(errorMessage(error), 'error');
         }
       });
@@ -752,7 +991,7 @@ async function todayPage(): Promise<HTMLElement> {
     const heading = node('div', 'section-heading');
     heading.append(node('h2', '', 'BONUS 习惯'), node('span', 'caption', `${bonusQuests.length}/3 · 可选，不中断惩罚`));
     bonus.append(heading);
-    bonusQuests.forEach((quest) => bonus.append(questCard(quest, true)));
+    bonusQuests.forEach((quest) => bonus.append(homeHabitCheckin(quest)));
     main.append(bonus);
   }
   const sideQuests = quests.filter((item) => item.type === 'side');
@@ -761,6 +1000,11 @@ async function todayPage(): Promise<HTMLElement> {
     const summary = node('summary', '', `支线 ${sideQuests.length}/2`);
     side.append(summary);
     sideQuests.forEach((quest) => side.append(questCard(quest, true)));
+    const openSideQuest = sessionStorage.getItem('qiguang.open-side-quest');
+    if (openSideQuest && sideQuests.some((quest) => quest.id === openSideQuest)) {
+      side.open = true;
+      sessionStorage.removeItem('qiguang.open-side-quest');
+    }
     main.append(side);
   }
 
@@ -794,10 +1038,6 @@ function recordPage(route: Route): HTMLElement {
   const close = node('a', 'text-link', '关闭');
   close.href = '#/today';
   main.append(pageHeader('像发消息一样', route.date && route.date !== localDate() ? '补记这一天' : '记录今天', close));
-
-  const intro = node('aside', 'notice');
-  intro.append(node('strong', '', '原文只保存在这台设备'), node('p', '', '可以直接使用系统输入法口述；栖光不会申请麦克风权限。'));
-  main.append(intro);
 
   const form = node('form', 'record-form');
   const dateLabel = node('label', 'field-label', '日期');
@@ -977,6 +1217,37 @@ function dialogShell(title: string): { dialog: HTMLDialogElement; content: HTMLE
   return { dialog, content, actions };
 }
 
+function showOnboarding(): void {
+  const { dialog, content, actions } = dialogShell('先从一件真实发生的事开始');
+  const points = node('ol', 'onboarding-points');
+  for (const copy of [
+    '你可以像发消息一样记录，不用先整理好语言。',
+    '系统会整理记录，但推断由你决定是否相信。',
+    '数据和个人系统由你控制，可以导出、删除或关闭 AI。',
+  ]) points.append(node('li', '', copy));
+  content.append(points);
+  const begin = primaryButton('开始第一条记录', () => {
+    begin.disabled = true;
+    void (async () => {
+      try {
+        settings = await db.saveSettings({ onboardingSeen: true });
+        dialog.close();
+        if (currentRoute.name === 'record') document.querySelector<HTMLTextAreaElement>('.journal-input')?.focus();
+        else {
+          focusRecordInputOnNextRender = true;
+          go({ name: 'record' });
+        }
+      } catch (error) {
+        begin.disabled = false;
+        showToast(errorMessage(error), 'error');
+      }
+    })();
+  });
+  actions.append(begin);
+  dialog.showModal();
+  begin.focus();
+}
+
 function confirmAction(title: string, message: string, confirmLabel: string, dangerous = false): Promise<boolean> {
   return new Promise((resolve) => {
     const { dialog, content, actions } = dialogShell(title);
@@ -1043,7 +1314,7 @@ async function openAnalysisPreview(date: string, entries: JournalEntry[], retryJ
     send.disabled = !navigator.onLine;
     send.addEventListener('click', () => {
       dialog.close();
-      void submitAnalysisJob(retryJob);
+      void submitAnalysisJob(retryJob, retryJob.status === 'processing');
     });
     actions.append(cancel, send);
     dialog.showModal();
@@ -1350,7 +1621,11 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[]): Prom
     section.append(safety);
   } else if (latestJob?.status === 'processing') {
     const state = node('div', 'analysis-job-state is-running');
-    state.append(node('strong', '', '正在整理'), node('p', '', '可以离开本页；原文已在本机保存。请暂时不要修改这批记录。'));
+    state.append(
+      node('strong', '', '正在整理'),
+      node('p', '', '可以离开本页；原文已在本机保存。另一标签也可能仍在处理，请暂时不要修改这批记录。'),
+      interruptedRetryButton(latestJob, () => { void openAnalysisPreview(date, entries, latestJob); }),
+    );
     section.append(state);
   } else if (latestJob && ['queued', 'failed'].includes(latestJob.status)) {
     const state = node('div', `analysis-job-state is-${latestJob.status}`);
@@ -1572,7 +1847,7 @@ function weeklyPreview(content: HTMLElement, request: WeeklyReviewRequest): void
   content.append(summary);
 }
 
-async function submitWeeklyReviewJob(job: AnalysisJob): Promise<void> {
+async function submitWeeklyReviewJob(job: AnalysisJob, resumeInterrupted = false): Promise<void> {
   if (job.operation !== 'weekly_review') throw new Error('这不是周复盘任务。');
   if (!settings.aiAllowed || !navigator.onLine) {
     showToast(!settings.aiAllowed ? 'AI 权限已关闭；没有发送任何内容。' : '已保存在本机；联网后由你手动重试。', !settings.aiAllowed ? 'error' : 'normal');
@@ -1580,7 +1855,10 @@ async function submitWeeklyReviewJob(job: AnalysisJob): Promise<void> {
     return;
   }
   let processing: AnalysisJob;
-  try { processing = await db.markAnalysisJobProcessing(job.id); } catch (error) {
+  try { processing = await db.markAnalysisJobProcessing(job.id, resumeInterrupted ? {
+    expectedVersion: job.version,
+    staleBefore: new Date(Date.now() - INTERRUPTED_TAKEOVER_MS).toISOString(),
+  } : undefined); } catch (error) {
     showToast(errorMessage(error), 'error'); await render(); return;
   }
   await render();
@@ -1598,16 +1876,17 @@ async function submitWeeklyReviewJob(job: AnalysisJob): Promise<void> {
     }
     if (processing.operation !== 'weekly_review') throw new Error('复盘队列操作发生变化。');
     parseWeeklyReviewResponse(body, processing.request as WeeklyReviewRequest);
-    await db.saveWeeklyReview(processing.id, body);
+    await db.saveWeeklyReview(processing.id, body, processing.version);
     showToast('周复盘候选已保存；下周主题仍等你确认。');
   } catch (error) {
     const current = (await db.listAnalysisJobs(processing.localDate)).find((item) => item.id === processing.id);
-    if (current?.status !== 'stale') {
+    if (current?.status === 'processing' && current.version === processing.version) {
       const typed = error as Error & { code?: AnalysisErrorCode; nextAttemptAt?: string };
       const code: AnalysisErrorCode = typed.name === 'AbortError' ? 'MODEL_TIMEOUT' : typed.code ?? (navigator.onLine ? 'SERVICE_UNAVAILABLE' : 'OFFLINE');
-      await db.failAnalysisJob(processing.id, code, analysisErrorCopy(code, errorMessage(error)), typed.nextAttemptAt);
+      await db.failAnalysisJob(processing.id, code, analysisErrorCopy(code, errorMessage(error)), typed.nextAttemptAt, processing.version);
       showToast(analysisErrorCopy(code, errorMessage(error)), 'error');
-    } else showToast('周内证据已改变，旧复盘结果没有应用。', 'error');
+    } else if (current?.status === 'stale') showToast('周内证据已改变，旧复盘结果没有应用。', 'error');
+    else showToast('同一复盘已由新的重试接管，旧结果没有应用。');
   } finally {
     window.clearTimeout(timeout);
     await render();
@@ -1623,7 +1902,7 @@ async function openWeeklyReviewPreview(period: { start: string; end: string }, r
     cancel.type = 'button'; cancel.addEventListener('click', () => dialog.close());
     const send = node('button', 'button button-primary', navigator.onLine ? '使用同一请求重试' : '当前离线');
     send.type = 'button'; send.disabled = !navigator.onLine;
-    send.addEventListener('click', () => { dialog.close(); void submitWeeklyReviewJob(retryJob); });
+    send.addEventListener('click', () => { dialog.close(); void submitWeeklyReviewJob(retryJob, retryJob.status === 'processing'); });
     actions.append(cancel, send); dialog.showModal(); cancel.focus(); return;
   }
   const baseRequest = await weeklyReviewRequest(period, '');
@@ -1743,7 +2022,14 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   if (!review) {
     const intro = node('section', 'surface review-intro');
     intro.append(node('p', 'eyebrow', 'WEEKLY REVIEW'), node('h2', '', '用证据决定下一周'), node('p', '', '只整理已确认事件和行动摘要；不发送整周日记原文。最后只留下一个主题和一个最小实验。'));
-    if (job?.status === 'processing') intro.append(node('p', 'analysis-job-state is-running', '正在生成；可以离开本页。'));
+    if (job?.status === 'processing') {
+      const state = node('div', 'analysis-job-state is-running');
+      state.append(
+        node('p', '', '正在生成；可以离开本页。另一标签也可能仍在处理。'),
+        interruptedRetryButton(job, () => { void openWeeklyReviewPreview(period, job); }),
+      );
+      intro.append(state);
+    }
     else if (job && ['queued', 'failed'].includes(job.status)) intro.append(primaryButton(job.status === 'failed' ? '检查范围并重试' : '继续这次复盘', () => { void openWeeklyReviewPreview(period, job); }));
     else intro.append(primaryButton('检查范围并生成', () => { void openWeeklyReviewPreview(period); }));
     main.append(intro);
@@ -2221,8 +2507,8 @@ async function openBranchDialog(): Promise<void> {
 }
 
 async function growthPage(): Promise<HTMLElement> {
-  const [branches, habits, ledger, quests, milestones] = await Promise.all([
-    db.listBranches(), db.listHabits(), db.listXpLedger(), db.listQuests(), db.listMilestones(),
+  const [branches, habits, ledger, quests, milestones, goals, feedbacks] = await Promise.all([
+    db.listBranches(), db.listHabits(), db.listXpLedger(), db.listQuests(), db.listMilestones(), db.listGoals(), db.listQuestFeedback(),
   ]);
   const [progress, momentums] = await Promise.all([
     Promise.all(branches.map((branch) => db.branchProgress(branch.id))),
@@ -2249,6 +2535,53 @@ async function growthPage(): Promise<HTMLElement> {
     meter.value = value.currentXp;
     meter.setAttribute('aria-label', `${branch.name}等级 ${value.level}，${value.currentXp}/${value.nextLevelXp} XP`);
     card.append(meter, node('p', 'caption', `${value.currentXp}/${value.nextLevelXp} XP · 累计有效 ${value.totalXp}`));
+
+    const branchGoals = goals.filter((item) => item.branchId === branch.id);
+    const branchHabits = habits.filter((item) => item.branchId === branch.id);
+    const recentEvidence = ledger.filter((item) => item.branchId === branch.id && !item.reversedAt).slice(0, 3);
+    const details = node('details', 'branch-details');
+    details.append(node('summary', '', '查看证据与关联'));
+    if (!branchGoals.length && !branchHabits.length && !recentEvidence.length) {
+      details.append(node('p', 'empty-copy', '还没有行动、目标或习惯关联到这个分支。'));
+    }
+    if (recentEvidence.length) {
+      const evidence = node('section', 'branch-evidence');
+      evidence.append(node('h3', '', '最近证据'));
+      for (const item of recentEvidence) {
+        const quest = item.sourceType === 'quest' ? quests.find((value) => value.id === item.sourceId) : undefined;
+        const milestone = item.sourceType === 'milestone' ? milestones.find((value) => value.id === item.sourceId) : undefined;
+        const feedback = quest ? feedbacks.find((value) => value.questId === quest.id && !value.undoneAt) : undefined;
+        const sourceLabel = quest ? ({ goal: '目标任务', habit: '习惯任务', recovery: '恢复行动', manual: '手动行动' } as const)[quest.sourceType] : '里程碑';
+        const title = quest?.title ?? milestone?.description ?? '已保留的现实证据';
+        const proof = feedback?.actual || feedback?.note || milestone?.evidence || title;
+        evidence.append(node('p', 'branch-link-row', `${sourceLabel} · ${title} → ${proof} · ${formatDate(item.localDate)} · +${item.finalXp} XP`));
+      }
+      details.append(evidence);
+    }
+    if (branchGoals.length) {
+      const relatedGoals = node('section', 'branch-related');
+      relatedGoals.append(node('h3', '', '相关目标与里程碑'));
+      for (const goal of branchGoals) {
+        const goalStatus = ({ idea: '想法', active: '进行中', paused: '暂停', completed: '已完成', abandoned: '已放下' } as const)[goal.status];
+        const goalRole = ({ main: '主目标', secondary: '次要目标', wishlist: '愿望库' } as const)[goal.role];
+        relatedGoals.append(node('p', 'branch-link-row', `${goalRole} · ${goal.result} · ${goalStatus} · 下一步：${goal.nextStep} · 完成证据：${goal.evidence}`));
+        for (const milestone of milestones.filter((item) => item.goalId === goal.id)) {
+          relatedGoals.append(node('p', 'caption branch-sub-row', `${milestone.status === 'completed' ? '已确认' : '待确认'} · ${milestone.description} · 证据：${milestone.evidence}`));
+        }
+      }
+      details.append(relatedGoals);
+    }
+    if (branchHabits.length) {
+      const relatedHabits = node('section', 'branch-related');
+      relatedHabits.append(node('h3', '', '相关习惯'));
+      for (const habit of branchHabits) {
+        const habitStatus = ({ active: '培养中', paused: '暂停', ended: '已结束' } as const)[habit.status];
+        const momentum = momentums[habits.findIndex((item) => item.id === habit.id)] ?? 0;
+        relatedHabits.append(node('p', 'branch-link-row', `${habit.name} · ${habitStatus} · 动量 ${momentum}/5 · ${habit.trigger ? `触发：${habit.trigger} · ` : ''}最小动作：${habit.minimumAction}`));
+      }
+      details.append(relatedHabits);
+    }
+    card.append(details);
     grid.append(card);
   });
   main.append(grid);
@@ -3025,10 +3358,10 @@ async function start(): Promise<void> {
     await db.ensureI2Defaults();
     settings = await db.getSettings();
     applySettings();
-    if (!settings.onboardingSeen) settings = await db.saveSettings({ onboardingSeen: true });
     currentRoute = parseRoute();
     previousRouteKey = routeKey(currentRoute);
     await render();
+    if (!settings.onboardingSeen) showOnboarding();
   } catch (error) {
     renderDatabaseFailure(error);
   }
