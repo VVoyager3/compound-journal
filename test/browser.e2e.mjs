@@ -146,6 +146,12 @@ test('system reduced motion skips room furniture action', async () => {
 test('installed shell keeps the companion motion sprite available offline', async () => {
   const { context, page } = await offlineShellPage();
   try {
+    const assets = await page.evaluate(async () => {
+      const bundles = [...document.scripts].map((script) => script.src).filter(Boolean);
+      const source = await Promise.all(bundles.map((bundle) => fetch(bundle).then((response) => response.text())));
+      return [...new Set(source.flatMap((text) => [...text.matchAll(/["'`](\/assets\/(?:avatar|character-motion)-[^"'`]+\.(?:png|jpe?g))["'`]/g)].map((match) => match[1])))].sort();
+    });
+    assert.equal(assets.length, 4, 'both portraits and both motion sprites must be built into the shell');
     await context.setOffline(true);
     const dialog = page.getByRole('dialog', { name: '选择生活分身' });
     await dialog.getByRole('button', { name: '选择牛纹帽双辫女生' }).click();
@@ -153,7 +159,8 @@ test('installed shell keeps the companion motion sprite available offline', asyn
     await page.goto(`${baseUrl}/#/today`);
     const imageUrl = await page.locator('.room-character').evaluate((element) => getComputedStyle(element).backgroundImage.match(/url\("?([^"\)]+)"?\)/)?.[1]);
     assert.ok(imageUrl, 'selected companion must use the motion sprite');
-    assert.equal(await page.evaluate((url) => fetch(url).then((response) => response.ok).catch(() => false), imageUrl), true);
+    const cached = await page.evaluate((urls) => Promise.all(urls.map((url) => fetch(url).then((response) => response.ok).catch(() => false))), assets);
+    assert.deepEqual(cached, [true, true, true, true]);
   } finally {
     await context.close();
   }

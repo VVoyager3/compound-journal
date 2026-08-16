@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qiguang-shell-v0.5.13';
+const CACHE_NAME = 'qiguang-shell-v0.5.14';
 const CORE = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-180.png', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -15,7 +15,7 @@ self.addEventListener('install', (event) => {
       if (!bundleResponse.ok) throw new Error(`无法缓存应用资源：${bundle}`);
       return bundleResponse.text();
     }));
-    const images = bundleText.flatMap((text) => [...text.matchAll(/["'](\/assets\/[^"']+\.(?:png|jpe?g))["']/g)].map((match) => match[1]));
+    const images = bundleText.flatMap((text) => [...text.matchAll(/["'`](\/assets\/[^"'`]+\.(?:png|jpe?g))["'`]/g)].map((match) => match[1]));
     await cache.addAll([...new Set([...CORE.slice(1), ...assets, ...images])]);
   })());
 });
