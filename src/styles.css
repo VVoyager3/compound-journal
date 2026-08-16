@@ -572,6 +572,41 @@ p {
   background: #3f291c;
 }
 
+.room-cue {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.room-cue.is-rest {
+  bottom: 15%;
+  left: 42%;
+  width: 64px;
+  height: 14px;
+  border: 2px solid #3f291c;
+  background: #f4e5c8;
+  box-shadow: 5px 4px 0 #3f291c;
+}
+
+.room-cue.is-focus {
+  top: 13%;
+  left: 55%;
+  width: 8px;
+  height: 8px;
+  background: var(--warn);
+  box-shadow: -12px 18px 0 var(--blue), 13px 8px 0 var(--green);
+}
+
+.room-cue.is-play {
+  right: 27%;
+  bottom: 8%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #3f291c;
+  background: var(--coral);
+  box-shadow: 3px 3px 0 #3f291c;
+}
+
 .room-character {
   position: absolute;
   z-index: 4;
@@ -654,6 +689,10 @@ p {
 .room-character.has-motion.is-action-calendar { --action-x: 10px; --action-y: -8px; background-position: -473px -273px; }
 .room-character.has-motion.is-action-books { --action-x: 16px; --action-y: -3px; background-position: -473px -202px; }
 .room-character.has-motion.is-action-window { --action-x: -16px; --action-y: -8px; background-position: -388px -108px; }
+
+.room-character.has-motion.is-resting:not([class*="is-action-"]) {
+  background-position: -430px -9px;
+}
 
 .room-hotspot.is-active {
   outline: 3px solid var(--coral);

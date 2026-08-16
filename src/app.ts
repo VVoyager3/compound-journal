@@ -50,6 +50,7 @@ type RouteName = 'today' | 'calendar' | 'record' | 'tasks' | 'growth' | 'system'
 type PixelIcon = 'today' | 'calendar' | 'record' | 'growth' | 'system' | 'desk' | 'board' | 'books' | 'window' | 'character';
 interface Route { name: RouteName; date?: string }
 interface PlantState { habitId: string; growth: 'empty' | 'started' | 'grown' }
+type RoomCue = 'rest' | 'focus' | 'play';
 interface InstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -383,18 +384,20 @@ function renderShell(main: HTMLElement, route: Route): void {
   });
 }
 
-function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Profile['avatar'] = null, welcoming = false): HTMLElement {
+function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Profile['avatar'] = null, welcoming = false, cue: RoomCue | null = null): HTMLElement {
   const stage = node('section', `room-stage${compact ? ' is-compact' : ''}`);
   stage.setAttribute('aria-label', '温暖的像素房间：包含日记桌、任务板、日历、书架工作台、窗边床铺和生活分身。所有功能也能通过普通导航进入。');
   const scene = node('div', 'room-scene');
   const hour = new Date().getHours();
   scene.classList.add(hour < 6 ? 'is-night' : hour < 12 ? 'is-morning' : hour < 18 ? 'is-day' : 'is-evening');
+  if (cue) scene.classList.add(`is-cue-${cue}`);
   scene.setAttribute('aria-hidden', 'true');
   scene.append(node('div', 'room-floor'));
   for (const furniture of ['desk', 'board', 'calendar', 'books', 'window'] as const) {
     scene.append(node('div', `room-furniture is-${furniture}`));
   }
   scene.append(node('div', 'room-lamp'));
+  if (cue) scene.append(node('div', `room-cue is-${cue}`));
   const celebratingHabit = compact ? null : sessionStorage.getItem('qiguang.plant-celebration');
   const celebratingCharacter = !compact && Boolean(sessionStorage.getItem('qiguang.character-celebration'));
   ['one', 'two', 'three'].forEach((position, index) => {
@@ -402,7 +405,7 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
     const plant = node('div', `room-plant is-${position}${plantState ? ` is-${plantState.growth}` : ''}${plantState?.habitId === celebratingHabit ? ' is-celebrating' : ''}`);
     scene.append(plant);
   });
-  const character = node('div', `room-character is-${avatar ?? 'neutral'}${celebratingCharacter ? ' is-celebrating' : ''}${welcoming ? ' is-welcoming' : ''}`);
+  const character = node('div', `room-character is-${avatar ?? 'neutral'}${celebratingCharacter ? ' is-celebrating' : ''}${welcoming ? ' is-welcoming' : ''}${cue === 'rest' ? ' is-resting' : ''}`);
   if (avatar) {
     character.classList.add('has-motion');
     character.style.backgroundImage = `url("${motionAsset(avatar)}")`;
@@ -483,6 +486,11 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
 
 function observationIsStale(observation: { localDate: string }): boolean {
   return (parseLocalDate(localDate()).getTime() - parseLocalDate(observation.localDate).getTime()) / 86_400_000 > 7;
+}
+
+function roomCueFor(state?: ResolvedDimensionState): RoomCue | null {
+  if (!state || state.value >= 45) return null;
+  return ({ energy: 'rest', mind: 'rest', connection: null, progress: 'focus', play: 'play' } as const)[state.dimension];
 }
 
 async function openStateDetail(dimension: (typeof DIMENSIONS)[number], observation?: ResolvedDimensionState): Promise<void> {
@@ -971,12 +979,12 @@ async function todayPage(): Promise<HTMLElement> {
   const daysSinceActivity = latestEntry ? (Date.now() - Date.parse(latestEntry.createdAt)) / 86_400_000 : 0;
   const returnDismissed = sessionStorage.getItem(`qiguang.return-dismissed.${today}`) === '1';
   const isReturning = Boolean(latestEntry && daysSinceActivity >= 14 && !returnDismissed);
-
-  const hero = node('section', 'home-hero');
-  hero.append(roomStage(false, plantStates, profile?.avatar ?? null, isReturning));
-  const line = node('div', 'avatar-line');
   const known = Object.values(observations);
   const lowest = known.filter((item) => !observationIsStale(item)).sort((a, b) => a.value - b.value)[0];
+
+  const hero = node('section', 'home-hero');
+  hero.append(roomStage(false, plantStates, profile?.avatar ?? null, isReturning, roomCueFor(lowest)));
+  const line = node('div', 'avatar-line');
   line.append(pixelIcon('character'), node('p', '', lowest && lowest.value < 45
     ? `优先：${dimensionLabel(lowest.dimension)}`
     : entries.length ? '已有记录' : '还没有状态记录'));

@@ -273,6 +273,14 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     await page.getByRole('button', { name: '保存这次校准' }).click();
     await page.goto(`${baseUrl}/#/today`);
     await assert.doesNotReject(() => page.getByRole('heading', { name: '先补足体力' }).waitFor());
+    assert.equal(await page.locator('.room-scene.is-cue-rest').count(), 1);
+    assert.equal(await page.locator('.room-character.is-resting').count(), 1);
+    assert.equal(await page.locator('.room-character.is-resting').evaluate((element) => getComputedStyle(element).backgroundPosition), '-430px -9px');
+    assert.equal(await page.locator('.room-cue').count(), 1);
+    await page.getByRole('button', { name: '打开任务', exact: true }).click();
+    assert.equal(await page.locator('.room-character.is-action-board').evaluate((element) => getComputedStyle(element).backgroundPosition), '-371px -202px');
+    await page.waitForURL(/#\/tasks$/);
+    await page.goto(`${baseUrl}/#/today`);
     await page.getByRole('button', { name: '换一个' }).click();
     await assert.doesNotReject(() => page.getByText('做一次很短的舒展').waitFor());
     await page.getByRole('button', { name: '加入今天' }).click();
