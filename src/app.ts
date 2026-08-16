@@ -625,7 +625,7 @@ async function openQuestFeedbackDialog(quest: Quest): Promise<void> {
   const actualLabel = node('label', 'field-label', '实际完成了什么（可选）');
   const actual = node('textarea', 'input compact-textarea');
   actual.maxLength = 2_000;
-  actual.placeholder = '可以直接使用系统输入法口述，不保存音频。';
+  actual.placeholder = '填写你实际完成的内容（可选）';
   actual.value = previousFeedback?.actual ?? '';
   actualLabel.append(actual);
   const noteLabel = node('label', 'field-label', '这次行动给你的反馈（可选）');
@@ -981,7 +981,7 @@ async function todayPage(): Promise<HTMLElement> {
   } else {
     const action = node('section', 'surface main-action');
     action.append(node('span', 'tag tag-dark', 'MAIN · 第一步'), node('h2', '', entries.length ? '选择今天最值得的一步' : '讲讲最近发生的一件事'));
-    action.append(node('p', '', entries.length ? '今天没有主线也不会扣分；需要时再从真实目标安排。' : '不用组织语言，像发消息一样写下来就好。'));
+    action.append(node('p', '', entries.length ? '尚未开始今日主线。' : '先写一条今日主线再开始。'));
     action.append(primaryButton(entries.length ? '打开任务板' : '开始第一条记录', () => go({ name: entries.length ? 'tasks' : 'record' })));
     main.append(action);
   }
@@ -1051,14 +1051,14 @@ function recordPage(route: Route): HTMLElement {
   const textarea = node('textarea', 'journal-input');
   textarea.name = 'body';
   textarea.maxLength = 12_000;
-  textarea.placeholder = '不用组织语言。写下一件真实发生的事、一个感受，或一段系统输入法口述…';
+  textarea.placeholder = '写下今天真实发生的一件事。';
   textarea.value = readDraft(targetDate);
   const counter = node('span', 'character-count', `${textarea.value.length}/12000`);
   bodyLabel.append(textarea, counter);
 
   const saveState = node('p', 'save-state', textarea.value ? '草稿已保存在本页' : '尚未保存');
   saveState.setAttribute('role', 'status');
-  const submit = node('button', 'button button-primary button-wide', '仅保存原文');
+  const submit = node('button', 'button button-primary button-wide', '仅保存本页记录');
   submit.type = 'submit';
   const submitBar = node('div', 'record-submit-bar');
   submitBar.append(saveState, submit);
@@ -1069,13 +1069,13 @@ function recordPage(route: Route): HTMLElement {
   const updateDraftState = (): void => {
     counter.textContent = `${textarea.value.length}/12000`;
     saveDraft(activeDraftDate, textarea.value);
-    saveState.textContent = draftNeedsUnloadWarning ? '浏览器未能保存草稿，请先不要关闭页面' : '草稿已保存在本页';
+    saveState.textContent = draftNeedsUnloadWarning ? '浏览器未能保存草稿，请先不要关闭页面' : '草稿已本地保存';
     saveState.classList.toggle('is-error', draftNeedsUnloadWarning);
   };
   textarea.addEventListener('input', updateDraftState);
   dateInput.addEventListener('change', () => {
     if (!isLocalDate(dateInput.value)) {
-      saveState.textContent = '请选择有效日期；当前草稿仍保留。';
+      saveState.textContent = '请选择有效日期；当前草稿已保留。';
       saveState.classList.add('is-error');
       return;
     }
@@ -1083,7 +1083,7 @@ function recordPage(route: Route): HTMLElement {
     activeDraftDate = dateInput.value;
     textarea.value = readDraft(activeDraftDate);
     counter.textContent = `${textarea.value.length}/12000`;
-    saveState.textContent = textarea.value ? '已恢复这一天的草稿；原日期草稿仍保留' : '已切换日期；原日期草稿仍保留';
+    saveState.textContent = textarea.value ? '已恢复这一天的草稿；其他日期草稿仍保留' : '已切换日期；该日期暂无草稿';
     saveState.classList.remove('is-error');
   });
   form.addEventListener('submit', async (event) => {
