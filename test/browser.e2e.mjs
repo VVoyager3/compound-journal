@@ -247,3 +247,38 @@ test('task feedback lets the user review an AI candidate before XP is settled', 
     await context.close();
   }
 });
+
+test('weekly review sends summaries instead of journals and requires theme confirmation', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.getByRole('textbox', { name: '发生了什么' }).fill('整周原文不应出现在周复盘请求里。');
+    await page.getByRole('button', { name: '仅保存本页记录' }).click();
+    const today = await page.evaluate(() => {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    });
+    await page.goto(`${baseUrl}/#/review/${today}`);
+    await page.getByRole('button', { name: '检查范围并生成' }).click();
+    const preview = page.getByRole('dialog', { name: '检查周复盘发送范围' });
+    await assert.doesNotReject(() => preview.getByText('不会发送这一周的日记原文。只发送下列已确认事实和摘要；AI 不会直接修改任务、习惯、状态、XP 或长期记忆。').waitFor());
+    assert.deepEqual(apiRequests, []);
+    await preview.getByRole('button', { name: '确认范围并生成' }).click();
+    const consent = page.getByRole('dialog', { name: '允许这一次 AI 周复盘？' });
+    await assert.doesNotReject(() => consent.getByText('只发送预览中列出的已确认事实和摘要，不发送整周日记原文。').waitFor());
+    assert.deepEqual(apiRequests, []);
+    await consent.getByRole('button', { name: '允许并继续' }).click();
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '保留可持续节奏' }).waitFor());
+    await assert.doesNotReject(() => page.getByText('候选，尚未应用', { exact: true }).waitFor());
+    assert.equal(apiRequests.length, 1);
+    const request = JSON.parse(apiRequests[0].body);
+    assert.equal(request.operation, 'weekly_review');
+    assert.equal(JSON.stringify(request).includes('整周原文不应出现在周复盘请求里。'), false);
+    await page.getByRole('button', { name: '修改并确认下周主题' }).click();
+    const confirm = page.getByRole('dialog', { name: '确认下周唯一主题与实验' });
+    await confirm.getByRole('button', { name: '由我确认' }).click();
+    await assert.doesNotReject(() => page.getByText('已由你确认', { exact: true }).waitFor());
+  } finally {
+    await context.close();
+  }
+});
