@@ -692,11 +692,11 @@ async function openQuestFeedbackDialog(quest: Quest): Promise<void> {
     }
     stateControl = labelledControl(`对${dimension?.label ?? '状态'}的实际影响`, stateDelta);
   }
-  const status = node('p', 'save-state', '完成和部分完成会写入唯一成长分支；跳过与豁免不扣分。');
+  const status = node('p', 'save-state');
   const aiPanel = node('section', 'feedback-ai-panel');
   aiPanel.append(
-    node('strong', '', '可选：让 AI 理解上面的实际结果'),
-    node('p', 'caption', '点击后只发送任务标题、最小动作、当前难度和“实际完成了什么”这段文字；不会自动结算。你此刻看到的内容就是发送预览。'),
+    node('strong', '', 'AI 理解反馈（可选）'),
+    node('p', 'caption', '发送范围见下方；结果需你确认。'),
   );
   const understand = node('button', 'button button-secondary', 'AI 理解这段反馈');
   understand.type = 'button';
@@ -883,7 +883,7 @@ function recoveryPanel(state: ResolvedDimensionState, date: string, useMainSlot:
   let suggestionIndex = 0;
   const panel = node('section', 'surface recovery-action');
   panel.append(node('span', 'tag tag-warn', 'RECOVERY · 状态优先'), node('h2', '', `先补足${dimensionLabel(state.dimension)}`));
-  panel.append(node('p', '', `${dimensionLabel(state.dimension)}最近为 ${state.value}/100。低状态时先恢复，不默认要求继续推进。`));
+  panel.append(node('p', '', `${dimensionLabel(state.dimension)} ${state.value}/100`));
   const title = node('strong', 'recovery-title');
   const detail = node('p', 'quest-minimum');
   const renderSuggestion = () => {
@@ -1023,7 +1023,7 @@ async function todayPage(): Promise<HTMLElement> {
   if (bonusQuests.length) {
     const bonus = node('section', 'today-optionals');
     const heading = node('div', 'section-heading');
-    heading.append(node('h2', '', 'BONUS 习惯'), node('span', 'caption', `${bonusQuests.length}/3 · 可选，不中断惩罚`));
+    heading.append(node('h2', '', 'BONUS 习惯'), node('span', 'caption', `${bonusQuests.length}/3`));
     bonus.append(heading);
     bonusQuests.forEach((quest) => bonus.append(homeHabitCheckin(quest)));
     main.append(bonus);
@@ -1774,11 +1774,11 @@ async function dayPage(date: string): Promise<HTMLElement> {
 
   const summary = node('section', 'day-summary');
   summary.append(node('h2', '', entries.length ? `这一天留下了 ${entries.length} 条真实记录` : '这一天安静地留白'));
-  summary.append(node('p', '', entries.length ? '按保存顺序回看；修改不会覆盖上一版本。' : '没有记录不代表失败，也不会产生任何扣分。'));
+  summary.append(node('p', '', entries.length ? '按保存顺序回看。' : '没有记录。'));
   main.append(summary, await dailyAnalysisSection(date, entries), statusSummary(observations));
   if (!Object.keys(observations).length) {
     const prompt = node('aside', 'notice inline-notice');
-    prompt.append(node('strong', '', '五维状态仍是“待了解”'), node('p', '', '自评是可选的，不会阻止你继续记录。'));
+    prompt.append(node('strong', '', '五维状态仍是“待了解”'));
     prompt.append(primaryButton('去校准状态', () => go({ name: 'system' })));
     main.append(prompt);
   }
@@ -2077,7 +2077,7 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   main.append(nav);
   if (!review) {
     const intro = node('section', 'surface review-intro');
-    intro.append(node('p', 'eyebrow', 'WEEKLY REVIEW'), node('h2', '', '用证据决定下一周'), node('p', '', '只整理已确认事件和行动摘要；不发送整周日记原文。最后只留下一个主题和一个最小实验。'));
+    intro.append(node('p', 'eyebrow', 'WEEKLY REVIEW'), node('h2', '', '用证据决定下一周'), node('p', '', '确认一个主题和一个最小实验。'));
     if (job?.status === 'processing') {
       const state = node('div', 'analysis-job-state is-running');
       state.append(
@@ -2165,7 +2165,7 @@ async function openGoalDialog(): Promise<void> {
   branches.forEach((item) => branch.append(selectOption(item.id, item.name)));
   const role = node('select', 'input');
   role.append(selectOption('main', '主目标 · 最多 1'), selectOption('secondary', '次要目标 · 最多 2'), selectOption('wishlist', '以后可能想做'));
-  const status = node('p', 'save-state', '超过主目标或次要目标上限时，会安全进入愿望库，不会生成今日任务。');
+  const status = node('p', 'save-state');
   content.append(
     labelledControl('想形成的结果', result), labelledControl('为什么', why), labelledControl('完成证据', evidence),
     labelledControl('下一步', nextStep), labelledControl('关注领域', area), labelledControl('唯一成长分支', branch),
@@ -2226,7 +2226,7 @@ async function openGoalSettingsDialog(goal: Goal): Promise<void> {
   for (const [value, label] of [['idea', '想法'], ['active', '进行中'], ['paused', '暂停'], ['completed', '已完成'], ['abandoned', '已放下']] as const) {
     goalStatus.append(selectOption(value, label, goal.status === value));
   }
-  const status = node('p', 'save-state', '暂停、完成或放下都不会扣除已经形成的成长证据。');
+  const status = node('p', 'save-state');
   content.append(
     labelledControl('目标结果', result), labelledControl('为什么', why), labelledControl('完成证据', evidence),
     labelledControl('下一步', nextStep), labelledControl('关注领域', area), labelledControl('唯一成长分支', branch),
@@ -2267,7 +2267,7 @@ async function openMilestoneDialog(goal: Goal): Promise<void> {
   const evidence = node('textarea', 'input compact-textarea');
   evidence.maxLength = 500;
   evidence.placeholder = '完成时要看到什么证据？';
-  const status = node('p', 'save-state', '里程碑只有确认完成后才结算 50 XP。');
+  const status = node('p', 'save-state');
   content.append(labelledControl('里程碑', description), labelledControl('证据', evidence), status);
   const cancel = node('button', 'button button-secondary', '取消');
   cancel.type = 'button';
@@ -2320,7 +2320,7 @@ async function openQuestDialog(goal?: Goal): Promise<void> {
   const dimension = node('select', 'input');
   dimension.append(selectOption('', '不直接关联五维状态'));
   DIMENSIONS.forEach((item) => dimension.append(selectOption(item.key, item.label)));
-  const status = node('p', 'save-state', '任务必须是今天能做的现实行动；未完成不会扣分。');
+  const status = node('p', 'save-state');
   content.append(
     labelledControl('行动标题', title), labelledControl('为什么今天值得做', reason), labelledControl('最小动作', minimum),
     labelledControl('预计分钟', minutes), labelledControl('任务类型', type), labelledControl('难度', difficulty),
@@ -2395,7 +2395,7 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
   bonus.type = 'checkbox';
   bonus.checked = habit?.bonusEnabled ?? false;
   bonusLabel.append(node('span', '', '由我主动设为 BONUS（最多 3 个）'), bonus);
-  const status = node('p', 'save-state', '遗漏不会扣分、清零或让花盆枯萎。');
+  const status = node('p', 'save-state');
   content.append(
     labelledControl('习惯名称', name), labelledControl('最小动作', minimum), labelledControl('触发条件（可选）', trigger), schedule,
     labelledControl('主要状态', dimension), labelledControl('唯一成长分支', branch), labelledControl('基础难度', difficulty),
@@ -2457,7 +2457,7 @@ async function tasksPage(): Promise<HTMLElement> {
   const goalHeading = node('div', 'section-heading');
   goalHeading.append(node('h2', '', '目标与里程碑'), iconButton('新建目标', null, () => { void openGoalDialog(); }, 'button button-secondary'));
   goalSection.append(goalHeading);
-  if (!goals.length) goalSection.append(node('p', 'empty-copy', '先写清想形成的结果、证据和下一步；不是无限待办清单。'));
+  if (!goals.length) goalSection.append(node('p', 'empty-copy', '还没有目标。'));
   goals.forEach((goal, index) => {
     const card = node('article', 'goal-row');
     card.append(node('span', 'tag', goal.role === 'main' ? '主目标' : goal.role === 'secondary' ? '次要目标' : '愿望库'), node('h3', '', goal.result));
@@ -2498,7 +2498,7 @@ async function tasksPage(): Promise<HTMLElement> {
   const habitHeading = node('div', 'section-heading');
   habitHeading.append(node('h2', '', '习惯与 BONUS'), iconButton('新建习惯', null, () => { void openHabitDialog(); }, 'button button-secondary'));
   habitSection.append(habitHeading);
-  if (!habits.length) habitSection.append(node('p', 'empty-copy', '只建立值得低成本重复的行为；启用 BONUS 需要你主动选择。'));
+  if (!habits.length) habitSection.append(node('p', 'empty-copy', '还没有习惯。'));
   habits.forEach((habit, index) => {
     const row = node('article', 'habit-row');
     const copy = node('div');
@@ -2573,11 +2573,11 @@ async function growthPage(): Promise<HTMLElement> {
   const main = node('main', 'page page-growth');
   main.append(pageHeader('长期证据', '成长', primaryButton('建立分支', () => { void openBranchDialog(); })));
   const note = node('aside', 'notice inline-notice');
-  note.append(node('strong', '', '没有全局人生等级'), node('p', '', '每笔经验只进入一个真实成长分支；长期意义仍由成果、证据和里程碑承载。'));
+  note.append(node('strong', '', '成长分支'));
   main.append(note);
 
   const reviewEntry = node('section', 'surface review-entry');
-  reviewEntry.append(node('p', 'eyebrow', '每周章节'), node('h2', '', '用本周证据安排下一周'), node('p', '', '查看五维趋势、重复收益与消耗，最后只确认一个主题和一个最小实验。'), primaryButton('打开周复盘', () => go({ name: 'review', date: weekRange().start })));
+  reviewEntry.append(node('p', 'eyebrow', '每周章节'), node('h2', '', '用本周证据安排下一周'), primaryButton('打开周复盘', () => go({ name: 'review', date: weekRange().start })));
   main.append(reviewEntry);
 
   const grid = node('section', 'growth-grid');
@@ -2644,7 +2644,7 @@ async function growthPage(): Promise<HTMLElement> {
 
   const habitSection = node('section', 'growth-habits');
   habitSection.append(node('h2', '', '习惯动量'));
-  if (!habits.length) habitSection.append(node('p', 'empty-copy', '还没有习惯。动量按最近 7 个计划日滚动计算，中断不会清零。'));
+  if (!habits.length) habitSection.append(node('p', 'empty-copy', '还没有习惯。'));
   habits.forEach((habit, index) => {
     const row = node('div', 'habit-momentum-row');
     const meter = node('progress', 'momentum-progress');
@@ -2681,7 +2681,7 @@ async function growthPage(): Promise<HTMLElement> {
 function assessmentForm(observations: Partial<Record<Dimension, StateObservation>>): HTMLElement {
   const section = node('section', 'surface settings-section');
   section.append(node('h2', '', '五维自评'));
-  section.append(node('p', 'muted', '这是你对近期状态的校准，不是诊断，也不是人生总分。可以只回答确定的部分。'));
+  section.append(node('p', 'muted', '只校准确定的部分。'));
   const form = node('form', 'assessment-form');
   for (const dimension of DIMENSIONS) {
     const existing = observations[dimension.key];
@@ -2812,7 +2812,7 @@ async function openAreaDialog(): Promise<void> {
     selectOption('build', '重点建设 · 最多两个'),
     selectOption('pause', '暂停 · 不安排主动任务'),
   );
-  const status = node('p', 'save-state', '领域是生活的组成部分，不是每天都要推进的待办。');
+  const status = node('p', 'save-state');
   content.append(labelledControl('领域名称', name), labelledControl('阶段模式', mode), status);
   const cancel = node('button', 'button button-secondary', '取消');
   cancel.type = 'button';
@@ -2870,7 +2870,7 @@ function areasSettings(areas: Area[]): HTMLElement {
   const section = node('section', 'surface settings-section');
   const heading = node('div', 'section-heading');
   heading.append(node('h2', '', '关注领域'), iconButton('添加领域', null, () => { void openAreaDialog(); }, 'button button-secondary'));
-  section.append(heading, node('p', 'muted', '默认八领域可改名、暂停、删除或合并；重点建设同时最多两个。'));
+  section.append(heading);
   const list = node('div', 'area-list');
   for (const area of areas) {
     const row = node('div', 'area-row');
@@ -3153,7 +3153,7 @@ function memorySettings(memories: SystemMemory[], events: JournalEvent[]): HTMLE
   };
   candidates.forEach((memory) => appendMemory(memory, '待确认'));
   confirmed.forEach((memory) => appendMemory(memory, '已确认'));
-  if (!candidates.length && !confirmed.length) section.append(node('p', 'muted', '还没有长期候选。一次观察通常只值得继续观察，不会自动定义你。'));
+  if (!candidates.length && !confirmed.length) section.append(node('p', 'muted', '还没有候选。'));
   return section;
 }
 
@@ -3165,7 +3165,7 @@ function aiPermissionSettings(): HTMLElement {
   input.type = 'checkbox';
   input.checked = settings.aiAllowed;
   const copy = node('span');
-  copy.append(node('strong', '', '允许主动整理'), node('span', 'caption', '只有点击整理、检查发送范围并确认后才联网；恢复联网不会静默上传。'));
+  copy.append(node('strong', '', '允许主动整理'), node('span', 'caption', '每次发送前确认范围。'));
   permission.append(copy, input);
   input.addEventListener('change', async () => {
     input.disabled = true;
@@ -3179,7 +3179,7 @@ function aiPermissionSettings(): HTMLElement {
       input.disabled = false;
     }
   });
-  const health = node('p', 'caption', '发送预览固定开启。API 密钥只存在于同源服务端环境变量，不进入浏览器数据库或备份。同源中转只为幂等在内存缓存已验证响应最多 10 分钟，不持久化正文。');
+  const health = node('p', 'caption', '发送前始终显示范围。');
   const check = node('button', 'button button-secondary', '检查整理服务');
   check.type = 'button';
   check.addEventListener('click', async () => {
