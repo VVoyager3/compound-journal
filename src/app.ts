@@ -1037,7 +1037,7 @@ function recordPage(route: Route): HTMLElement {
   const main = node('main', 'page page-record');
   const close = node('a', 'text-link', '关闭');
   close.href = '#/today';
-  main.append(pageHeader('像发消息一样', route.date && route.date !== localDate() ? '补记这一天' : '记录今天', close));
+  main.append(pageHeader('记录', route.date && route.date !== localDate() ? '补记这一天' : '记录今天', close));
 
   const form = node('form', 'record-form');
   const dateLabel = node('label', 'field-label', '日期');
@@ -1056,7 +1056,7 @@ function recordPage(route: Route): HTMLElement {
   const counter = node('span', 'character-count', `${textarea.value.length}/12000`);
   bodyLabel.append(textarea, counter);
 
-  const saveState = node('p', 'save-state', textarea.value ? '草稿已保存在本页' : '尚未保存');
+  const saveState = node('p', 'save-state', textarea.value ? '草稿已本地保存' : '尚未保存');
   saveState.setAttribute('role', 'status');
   const submit = node('button', 'button button-primary button-wide', '仅保存本页记录');
   submit.type = 'submit';
@@ -1221,9 +1221,9 @@ function showOnboarding(): void {
   const { dialog, content, actions } = dialogShell('先从一件真实发生的事开始');
   const points = node('ol', 'onboarding-points');
   for (const copy of [
-    '你可以像发消息一样记录，不用先整理好语言。',
-    '系统会整理记录，但推断由你决定是否相信。',
-    '数据和个人系统由你控制，可以导出、删除或关闭 AI。',
+    '先写一条今天发生的事。',
+    '系统会先整理，再由你决定是否采用。',
+    '数据和系统由你控制，可导出、删除或关闭 AI。',
   ]) points.append(node('li', '', copy));
   content.append(points);
   const begin = primaryButton('开始第一条记录', () => {
