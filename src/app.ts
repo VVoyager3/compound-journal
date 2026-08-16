@@ -383,7 +383,7 @@ function renderShell(main: HTMLElement, route: Route): void {
   });
 }
 
-function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Profile['avatar'] = null): HTMLElement {
+function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Profile['avatar'] = null, welcoming = false): HTMLElement {
   const stage = node('section', `room-stage${compact ? ' is-compact' : ''}`);
   stage.setAttribute('aria-label', '温暖的像素房间：包含日记桌、任务板、日历、书架工作台、窗边床铺和生活分身。所有功能也能通过普通导航进入。');
   const scene = node('div', 'room-scene');
@@ -401,7 +401,7 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
     const plant = node('div', `room-plant is-${position}${plantState ? ` is-${plantState.growth}` : ''}${plantState?.habitId === celebratingHabit ? ' is-celebrating' : ''}`);
     scene.append(plant);
   });
-  const character = node('div', `room-character is-${avatar ?? 'neutral'}${celebratingCharacter ? ' is-celebrating' : ''}`);
+  const character = node('div', `room-character is-${avatar ?? 'neutral'}${celebratingCharacter ? ' is-celebrating' : ''}${welcoming ? ' is-welcoming' : ''}`);
   if (avatar) {
     character.classList.add('has-motion');
     character.style.backgroundImage = `url("${motionAsset(avatar)}")`;
@@ -955,8 +955,8 @@ function recoveryPanel(state: ResolvedDimensionState, date: string, useMainSlot:
 async function todayPage(): Promise<HTMLElement> {
   const today = localDate();
   await db.ensureTodayBonusQuests(today);
-  const [entries, observations, quests, habits, habitLogs, profile] = await Promise.all([
-    db.listEntries(today), db.resolvedStateAtOrBefore(today), db.listQuests(today), db.listHabits(), db.listHabitLogs(), db.getProfile(),
+  const [entries, observations, quests, habits, habitLogs, profile, entryHistory] = await Promise.all([
+    db.listEntries(today), db.resolvedStateAtOrBefore(today), db.listQuests(today), db.listHabits(), db.listHabitLogs(), db.getProfile(), db.listEntries(),
   ]);
   const bonusQuests = quests.filter((item) => item.type === 'bonus');
   const plantStates: PlantState[] = habits.filter((item) => item.status === 'active' && item.bonusEnabled).slice(0, 3).map((habit) => {
@@ -966,8 +966,13 @@ async function todayPage(): Promise<HTMLElement> {
   const main = node('main', 'page page-today');
   main.append(pageHeader(formatDate(today), '今天'));
 
+  const latestEntry = entryHistory.at(-1);
+  const daysSinceActivity = latestEntry ? (Date.now() - Date.parse(latestEntry.createdAt)) / 86_400_000 : 0;
+  const returnDismissed = sessionStorage.getItem(`qiguang.return-dismissed.${today}`) === '1';
+  const isReturning = Boolean(latestEntry && daysSinceActivity >= 14 && !returnDismissed);
+
   const hero = node('section', 'home-hero');
-  hero.append(roomStage(false, plantStates, profile?.avatar ?? null));
+  hero.append(roomStage(false, plantStates, profile?.avatar ?? null, isReturning));
   const line = node('div', 'avatar-line');
   const known = Object.values(observations);
   const lowest = known.filter((item) => !observationIsStale(item)).sort((a, b) => a.value - b.value)[0];
@@ -976,6 +981,29 @@ async function todayPage(): Promise<HTMLElement> {
     : entries.length ? '已有记录' : '还没有状态记录'));
   hero.append(line);
   main.append(hero);
+
+  if (isReturning) {
+    const returning = node('section', 'home-return');
+    const actions = node('div', 'home-return-actions');
+    const record = node('button', 'button button-secondary', '记录近况');
+    record.type = 'button';
+    record.addEventListener('click', () => go({ name: 'record' }));
+    const history = node('button', 'button button-quiet', '先看看以前');
+    history.type = 'button';
+    history.addEventListener('click', () => go({ name: 'calendar' }));
+    const dismiss = node('button', 'button button-quiet', '暂时不用');
+    dismiss.type = 'button';
+    dismiss.addEventListener('click', () => {
+      sessionStorage.setItem(`qiguang.return-dismissed.${today}`, '1');
+      returning.remove();
+      const next = main.querySelector<HTMLElement>('.main-action h2, .main-action button') ?? main;
+      next.tabIndex = -1;
+      next.focus({ preventScroll: true });
+    });
+    actions.append(record, history, dismiss);
+    returning.append(node('strong', '', '欢迎回来'), node('p', '', '要从最近发生的一件事开始吗？'), actions);
+    main.append(returning);
+  }
 
   const mainQuest = quests.find((item) => item.type === 'main');
   const recoveryDismissed = lowest ? sessionStorage.getItem(`qiguang.recovery-dismissed.${today}.${lowest.dimension}`) === '1' : false;

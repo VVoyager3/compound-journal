@@ -128,6 +128,69 @@ test('room uses one of the documented time palettes', async () => {
   }
 });
 
+test('returning after a long recording gap can record, revisit, or dismiss', async () => {
+  const { context, page } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.evaluate(() => new Promise((resolve, reject) => {
+      const request = indexedDB.open('qiguang');
+      request.addEventListener('error', () => reject(request.error));
+      request.addEventListener('success', () => {
+        const database = request.result;
+        const date = new Date(); date.setDate(date.getDate() - 15);
+        const localDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const timestamp = date.toISOString();
+        const transaction = database.transaction('entries', 'readwrite');
+        transaction.objectStore('entries').add({ id: crypto.randomUUID(), localDate, body: '之前留下的记录。', inputMethod: 'text', analysisStatus: 'not-submitted', createdAt: timestamp, updatedAt: timestamp, version: 1 });
+        transaction.addEventListener('complete', () => { database.close(); resolve(undefined); });
+        transaction.addEventListener('abort', () => { database.close(); reject(transaction.error); });
+      });
+    }));
+    await page.goto(`${baseUrl}/#/today`);
+    await assert.doesNotReject(() => page.getByText('欢迎回来', { exact: true }).waitFor());
+    await assert.doesNotReject(() => page.getByText('要从最近发生的一件事开始吗？', { exact: true }).waitFor());
+    await assert.doesNotReject(() => page.locator('.room-character.is-welcoming').waitFor());
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+    await page.getByRole('button', { name: '先看看以前' }).click();
+    await page.waitForURL(/#\/calendar$/);
+    await page.goto(`${baseUrl}/#/today`);
+    await page.getByRole('button', { name: '记录近况' }).click();
+    await page.waitForURL(/#\/record$/);
+    await page.goto(`${baseUrl}/#/today`);
+    await page.getByRole('button', { name: '暂时不用' }).click();
+    assert.equal(await page.getByText('欢迎回来', { exact: true }).count(), 0);
+    await page.reload();
+    assert.equal(await page.getByText('欢迎回来', { exact: true }).count(), 0);
+  } finally {
+    await context.close();
+  }
+});
+
+test('a backdated record created today does not trigger the return prompt', async () => {
+  const { context, page } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.evaluate(() => new Promise((resolve, reject) => {
+      const request = indexedDB.open('qiguang');
+      request.addEventListener('error', () => reject(request.error));
+      request.addEventListener('success', () => {
+        const database = request.result;
+        const date = new Date(); date.setDate(date.getDate() - 15);
+        const localDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const timestamp = new Date().toISOString();
+        const transaction = database.transaction('entries', 'readwrite');
+        transaction.objectStore('entries').add({ id: crypto.randomUUID(), localDate, body: '今天补记旧事。', inputMethod: 'text', analysisStatus: 'not-submitted', createdAt: timestamp, updatedAt: timestamp, version: 1 });
+        transaction.addEventListener('complete', () => { database.close(); resolve(undefined); });
+        transaction.addEventListener('abort', () => { database.close(); reject(transaction.error); });
+      });
+    }));
+    await page.goto(`${baseUrl}/#/today`);
+    assert.equal(await page.getByText('欢迎回来', { exact: true }).count(), 0);
+  } finally {
+    await context.close();
+  }
+});
+
 test('system reduced motion skips room furniture action', async () => {
   const { context, page, apiRequests } = await freshPage();
   try {
