@@ -47,12 +47,12 @@ test('first use explains the boundary, records, edits, and undoes locally', asyn
     await page.goto(`${baseUrl}/#/today`);
     const dialog = page.getByRole('dialog', { name: '先从一件真实发生的事开始' });
     await assert.doesNotReject(() => dialog.waitFor());
-    await assert.doesNotReject(() => dialog.getByText('系统会整理记录，但推断由你决定是否相信。').waitFor());
+    await assert.doesNotReject(() => dialog.getByText('系统会先整理，再由你决定是否采用。').waitFor());
     await dialog.getByRole('button', { name: '开始第一条记录' }).click();
     const input = page.getByRole('textbox', { name: '发生了什么' });
     await input.fill('电脑自动回归：记录一件真实发生的事。');
     assert.equal(await input.evaluate((element) => element === document.activeElement), true);
-    await page.getByRole('button', { name: '仅保存原文' }).click();
+    await page.getByRole('button', { name: '仅保存本页记录' }).click();
     await assert.doesNotReject(() => page.locator('#main-content').getByText('电脑自动回归：记录一件真实发生的事。', { exact: true }).waitFor());
 
     await page.getByRole('button', { name: '编辑' }).click();
