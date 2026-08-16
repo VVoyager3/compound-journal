@@ -3196,7 +3196,7 @@ async function systemPage(): Promise<HTMLElement> {
     ['目标与习惯', `${goals.length} 个目标 · ${habits.length} 个习惯`, '只有你确认的目标、任务和 BONUS 会进入系统。'],
     ['已确认规则与记忆', `${memories.filter((item) => item.status === 'confirmed').length} 条`, '每条都可追溯、编辑和忘记。'],
     ['AI 权限', settings.aiAllowed ? '已允许主动整理' : '已关闭', '每次发送仍会展示正文和上下文范围。'],
-    ['生活分身外观', profile.avatar ? (profile.avatar === 'female' ? '原创头像 A' : '原创头像 B') : '尚未选择', '外观只表达陪伴，不需要额外喂养或维持存活。'],
+    ['生活分身外观', profile.avatar ? (profile.avatar === 'female' ? '原创头像 A' : '原创头像 B') : '尚未选择', '仅用于视觉陪伴。'],
   ];
   for (const [label, value, note] of systemRows) {
     const row = node('div', 'system-fact');
@@ -3264,7 +3264,7 @@ async function systemPage(): Promise<HTMLElement> {
   });
   importLabel.append(file);
   const deleteButton = iconButton('删除全部数据', null, () => { void deleteAllDialog(); }, 'button button-danger');
-  data.append(exportButton, importLabel, deleteButton, node('p', 'caption', '导入仅支持经过校验的栖光 JSON 备份；冲突内容保留两份。建议先导出。'));
+  data.append(exportButton, importLabel, deleteButton, node('p', 'caption', '导入仅支持经过校验的备份文件；冲突内容保留两份。建议先导出。'));
   main.append(await installStorageSettings(), data);
   return main;
 }
@@ -3310,7 +3310,7 @@ function renderDatabaseFailure(error: unknown): void {
   main.id = 'main-content';
   main.append(pageHeader('本地数据', '无法安全打开栖光'));
   const card = node('section', 'surface error-state');
-  card.append(node('p', '', errorMessage(error)), node('p', 'muted', '没有进行任何写入。请先关闭其他栖光页面后重试；如果数据库确实无法恢复，也可以用已有备份重建。'));
+  card.append(node('p', '', errorMessage(error)), node('p', 'muted', '没有进行写入。请先关闭其他页面后重试；如需修复可用备份重建。'));
   const actions = node('div', 'database-recovery-actions');
   actions.append(primaryButton('重新打开', () => { location.reload(); }));
   const importLabel = node('label', 'button button-secondary file-button');
@@ -3452,3 +3452,4 @@ async function registerPwa(): Promise<void> {
 }
 
 void start().finally(() => { void registerPwa(); });
+
