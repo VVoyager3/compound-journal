@@ -37,6 +37,16 @@ async function freshPage() {
   return { context, page, apiRequests };
 }
 
+async function offlineShellPage() {
+  const context = await browser.newContext({ viewport: { width: 320, height: 800 } });
+  const page = await context.newPage();
+  await page.goto(`${baseUrl}/#/today`);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+  return { context, page };
+}
+
 async function finishOnboarding(page) {
   await page.goto(`${baseUrl}/#/today`);
   const dialog = page.getByRole('dialog', { name: '选择生活分身' });
@@ -116,6 +126,22 @@ test('system reduced motion skips room furniture action', async () => {
     assert.equal(await page.locator('.room-character.is-action-desk').count(), 0);
     await page.waitForURL(/#\/record$/);
     assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('installed shell keeps the companion motion sprite available offline', async () => {
+  const { context, page } = await offlineShellPage();
+  try {
+    await context.setOffline(true);
+    const dialog = page.getByRole('dialog', { name: '选择生活分身' });
+    await dialog.getByRole('button', { name: '选择牛纹帽双辫女生' }).click();
+    await dialog.getByRole('button', { name: '开始记录' }).click();
+    await page.goto(`${baseUrl}/#/today`);
+    const imageUrl = await page.locator('.room-character').evaluate((element) => getComputedStyle(element).backgroundImage.match(/url\("?([^"\)]+)"?\)/)?.[1]);
+    assert.ok(imageUrl, 'selected companion must use the motion sprite');
+    assert.equal(await page.evaluate((url) => fetch(url).then((response) => response.ok).catch(() => false), imageUrl), true);
   } finally {
     await context.close();
   }

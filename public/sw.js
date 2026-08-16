@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qiguang-shell-v0.5.11';
+const CACHE_NAME = 'qiguang-shell-v0.5.12';
 const CORE = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-180.png', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -9,7 +9,14 @@ self.addEventListener('install', (event) => {
     const html = await response.text();
     await cache.put('/', new Response(html, { headers: response.headers }));
     const assets = [...html.matchAll(/(?:src|href)="(\/(?!api\/)[^"]+)"/g)].map((match) => match[1]);
-    await cache.addAll([...new Set([...CORE.slice(1), ...assets])]);
+    const bundles = assets.filter((asset) => asset.endsWith('.js'));
+    const bundleText = await Promise.all(bundles.map(async (bundle) => {
+      const bundleResponse = await fetch(bundle, { cache: 'no-store' });
+      if (!bundleResponse.ok) throw new Error(`无法缓存应用资源：${bundle}`);
+      return bundleResponse.text();
+    }));
+    const images = bundleText.flatMap((text) => [...text.matchAll(/["'](\/assets\/[^"']+\.(?:png|jpe?g))["']/g)].map((match) => match[1]));
+    await cache.addAll([...new Set([...CORE.slice(1), ...assets, ...images])]);
   })());
 });
 

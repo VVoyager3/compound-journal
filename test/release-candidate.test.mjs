@@ -62,6 +62,8 @@ test('service worker is versioned, keeps AI network-only, and waits for an expli
   assert.match(source, /(?:index\.html|cache\.match\(\s*['"]\/['"])/, 'offline navigation must fall back to the app shell');
   assert.match(source, /\/api\//, 'AI API needs an explicit network-only branch');
   assert.match(source, /request\.method[^\n]*(?:GET|['"]GET['"])/, 'only GET requests may enter Cache API');
+  assert.match(source, /bundleText[\s\S]*matchAll/, 'shell install must discover imported image assets from the built bundle');
+  assert.match(source, /png\|jpe\?g/, 'avatar and motion images must enter the install cache');
   assert(!/skipWaiting\(\)\s*;?[\s\S]{0,80}addEventListener\(['"]activate['"]/.test(source), 'install must not unconditionally force activation');
   if (source.includes('skipWaiting')) {
     assert.match(source, /addEventListener\(['"]message['"]/);
