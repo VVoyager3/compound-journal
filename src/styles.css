@@ -581,6 +581,22 @@ p {
   box-shadow: -6px -7px 0 -3px #704426, 6px -7px 0 -3px #704426;
 }
 
+.room-character.has-motion {
+  bottom: 18%;
+  width: 56px;
+  height: 84px;
+  border: 0;
+  background-repeat: no-repeat;
+  background-position: -46px -9px;
+  background-size: 538px 358px;
+  box-shadow: none;
+}
+
+.room-character.has-motion::before,
+.room-character.has-motion::after {
+  display: none;
+}
+
 .room-plant {
   position: absolute;
   z-index: 3;
@@ -707,6 +723,29 @@ p {
 
 .character-panel p {
   font-size: .8rem;
+}
+
+.character-portrait,
+.avatar-preview {
+  display: block;
+  width: 76px;
+  height: 76px;
+  border: 2px solid var(--ink);
+  object-fit: cover;
+  object-position: center top;
+}
+
+.character-portrait {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.avatar-preview {
+  width: min(100%, 180px);
+  height: 180px;
+  margin-top: -8px;
+  object-position: center 15%;
 }
 
 .character-actions {

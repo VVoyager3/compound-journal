@@ -41,6 +41,10 @@ import {
   type WeeklyReviewRequest,
 } from './analysis-contract.ts';
 import { DIFFICULTY_XP, type Difficulty, type FeedbackResult, type QuestType } from './rules.ts';
+import maleAvatarImage from '../design-assets/pre-development/avatar-male-original.jpg';
+import femaleAvatarImage from '../design-assets/pre-development/avatar-female-original.jpg';
+import maleMotionImage from '../design-assets/pre-development/character-motion-male.png';
+import femaleMotionImage from '../design-assets/pre-development/character-motion-female.png';
 
 type RouteName = 'today' | 'calendar' | 'record' | 'tasks' | 'growth' | 'system' | 'day' | 'review';
 type PixelIcon = 'today' | 'calendar' | 'record' | 'growth' | 'system' | 'desk' | 'board' | 'books' | 'window' | 'character';
@@ -73,6 +77,14 @@ let memoryDrafts: Record<string, string> = {};
 let installPrompt: InstallPromptEvent | null = null;
 let reloadingForUpdate = false;
 let updateAcceptedInThisTab = false;
+
+function avatarAsset(avatar: Exclude<Profile['avatar'], null>): string {
+  return avatar === 'male' ? maleAvatarImage : femaleAvatarImage;
+}
+
+function motionAsset(avatar: Exclude<Profile['avatar'], null>): string {
+  return avatar === 'male' ? maleMotionImage : femaleMotionImage;
+}
 
 function node<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text?: string): HTMLElementTagNameMap[K] {
   const result = document.createElement(tag);
@@ -387,7 +399,12 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
     const plant = node('div', `room-plant is-${position}${plantState ? ` is-${plantState.growth}` : ''}${plantState?.habitId === celebratingHabit ? ' is-celebrating' : ''}`);
     scene.append(plant);
   });
-  scene.append(node('div', `room-character is-${avatar ?? 'neutral'}${celebratingCharacter ? ' is-celebrating' : ''}`));
+  const character = node('div', `room-character is-${avatar ?? 'neutral'}${celebratingCharacter ? ' is-celebrating' : ''}`);
+  if (avatar) {
+    character.classList.add('has-motion');
+    character.style.backgroundImage = `url("${motionAsset(avatar)}")`;
+  }
+  scene.append(character);
   if (celebratingHabit && plantStates.some((item) => item.habitId === celebratingHabit)) sessionStorage.removeItem('qiguang.plant-celebration');
   if (celebratingCharacter) sessionStorage.removeItem('qiguang.character-celebration');
   stage.append(scene);
@@ -421,16 +438,22 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
           }
           const created = node('div', 'character-panel');
           created.id = characterPanelId;
-          created.append(node('strong', '', '生活分身'), node('p', '', '记录真实生活，选择今天最值得的一步。'));
+          if (avatar) {
+            const portrait = node('img', 'character-portrait') as HTMLImageElement;
+            portrait.src = avatarAsset(avatar);
+            portrait.alt = '';
+            created.append(portrait);
+          }
+          created.append(node('strong', '', '生活分身'));
           const actions = node('div', 'character-actions');
           const record = primaryButton('讲讲今天', () => go({ name: 'record' }));
-          const why = node('button', 'button button-secondary', '为什么先记录');
-          why.type = 'button';
-          why.addEventListener('click', () => showToast('记录提供事实，任务把长期目标变成今天能做的最小一步。'));
           const week = node('button', 'button button-secondary', '看本周');
           week.type = 'button';
           week.addEventListener('click', () => go({ name: 'calendar' }));
-          actions.append(record, why, week);
+          const style = node('button', 'button button-secondary', '更换外观');
+          style.type = 'button';
+          style.addEventListener('click', () => go({ name: 'system' }));
+          actions.append(record, week, style);
           created.append(actions);
           stage.append(created);
           button.setAttribute('aria-expanded', 'true');
@@ -2704,15 +2727,24 @@ function profileForm(profile: Profile): HTMLElement {
   const avatar = node('select', 'input');
   avatar.append(
     selectOption('', '暂不选择', profile.avatar === null),
-    selectOption('female', '原创头像 A', profile.avatar === 'female'),
-    selectOption('male', '原创头像 B', profile.avatar === 'male'),
+    selectOption('female', '牛纹帽双辫女生', profile.avatar === 'female'),
+    selectOption('male', '鹿角头饰男生', profile.avatar === 'male'),
   );
-  const status = node('p', 'save-state', '这些内容由你直接设置，不根据日记擅自修改。');
+  const preview = node('img', 'avatar-preview') as HTMLImageElement;
+  preview.alt = '生活分身外观预览';
+  const updatePreview = () => {
+    const selected = (avatar.value || null) as Profile['avatar'];
+    preview.hidden = selected === null;
+    if (selected) preview.src = avatarAsset(selected);
+  };
+  avatar.addEventListener('change', updatePreview);
+  updatePreview();
+  const status = node('p', 'save-state', '');
   const save = node('button', 'button button-secondary', '保存章节设置');
   save.type = 'submit';
   form.append(
     labelledControl('你的称呼', userName), labelledControl('生活分身称呼', companionName),
-    labelledControl('当前人生章节', chapterTitle), labelledControl('生活分身外观', avatar), status, save,
+    labelledControl('当前人生章节', chapterTitle), labelledControl('生活分身外观', avatar), preview, status, save,
   );
   form.addEventListener('submit', async (event) => {
     event.preventDefault();

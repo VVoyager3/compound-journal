@@ -126,3 +126,25 @@ test('completed action is traceable from its growth branch at 320px', async () =
     await context.close();
   }
 });
+
+test('selected companion uses the supplied portrait and matching room sprite', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.goto(`${baseUrl}/#/system`);
+    await page.getByLabel('生活分身外观').selectOption('female');
+    const preview = page.locator('.avatar-preview');
+    await assert.doesNotReject(() => preview.waitFor({ state: 'visible' }));
+    assert.match(await preview.getAttribute('src') ?? '', /avatar-female-original/);
+    await page.getByRole('button', { name: '保存章节设置' }).click();
+    await page.goto(`${baseUrl}/#/today`);
+    const roomSprite = page.locator('.room-character.has-motion');
+    await assert.doesNotReject(() => roomSprite.waitFor({ state: 'visible' }));
+    assert.match(await roomSprite.evaluate((element) => getComputedStyle(element).backgroundImage), /character-motion-female/);
+    const geometry = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
+    assert.ok(geometry.scrollWidth <= geometry.width);
+    assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
