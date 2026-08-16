@@ -394,18 +394,21 @@ p {
 
 .room-scene {
   --window-sky: var(--blue);
+  --room-wash: none;
+  --lamp-opacity: 0;
   position: absolute;
   inset: 0;
   overflow: hidden;
   background:
     repeating-linear-gradient(90deg, transparent 0 31px, rgb(76 47 27 / 10%) 31px 33px),
+    var(--room-wash),
     linear-gradient(#edc98f 0 40%, #b57b43 40% 100%);
 }
 
 .room-scene.is-morning { --window-sky: #f3b45d; }
 .room-scene.is-day { --window-sky: #59b8d1; }
-.room-scene.is-evening { --window-sky: #d9785d; }
-.room-scene.is-night { --window-sky: #485d92; }
+.room-scene.is-evening { --window-sky: #d9785d; --room-wash: linear-gradient(rgb(255 178 91 / 16%), rgb(117 63 42 / 12%)); --lamp-opacity: 1; }
+.room-scene.is-night { --window-sky: #485d92; --room-wash: linear-gradient(rgb(34 49 94 / 24%), rgb(40 34 67 / 16%)); --lamp-opacity: 1; }
 
 .room-scene::before {
   content: "";
@@ -543,6 +546,30 @@ p {
   height: 8px;
   border: 2px solid #3f291c;
   background: var(--warn);
+}
+
+.room-lamp {
+  position: absolute;
+  z-index: 3;
+  top: 28%;
+  left: 27%;
+  width: 12px;
+  height: 18px;
+  border: 2px solid #3f291c;
+  background: #f3b45d;
+  box-shadow: 0 0 0 4px rgb(243 180 93 / 24%), 0 0 16px 6px rgb(243 180 93 / 35%);
+  opacity: var(--lamp-opacity);
+  pointer-events: none;
+}
+
+.room-lamp::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 4px;
+  width: 2px;
+  height: 12px;
+  background: #3f291c;
 }
 
 .room-character {

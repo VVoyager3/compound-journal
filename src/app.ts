@@ -394,6 +394,7 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
   for (const furniture of ['desk', 'board', 'calendar', 'books', 'window'] as const) {
     scene.append(node('div', `room-furniture is-${furniture}`));
   }
+  scene.append(node('div', 'room-lamp'));
   const celebratingHabit = compact ? null : sessionStorage.getItem('qiguang.plant-celebration');
   const celebratingCharacter = !compact && Boolean(sessionStorage.getItem('qiguang.character-celebration'));
   ['one', 'two', 'three'].forEach((position, index) => {

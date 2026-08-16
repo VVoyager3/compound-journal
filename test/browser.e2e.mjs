@@ -123,6 +123,9 @@ test('room uses one of the documented time palettes', async () => {
     await page.goto(`${baseUrl}/#/today`);
     const phase = await page.locator('.room-scene').getAttribute('class');
     assert.match(phase ?? '', /is-(night|morning|day|evening)/);
+    assert.match(await page.locator('.room-scene').evaluate((element) => getComputedStyle(element).backgroundImage), /linear-gradient/);
+    const lampOpacity = Number(await page.locator('.room-lamp').evaluate((element) => getComputedStyle(element).opacity));
+    assert.equal(lampOpacity > 0, /is-(night|evening)/.test(phase ?? ''));
   } finally {
     await context.close();
   }
