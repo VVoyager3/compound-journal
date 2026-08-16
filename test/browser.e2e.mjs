@@ -30,7 +30,9 @@ async function freshPage() {
   const page = await context.newPage();
   const apiRequests = [];
   page.on('request', (request) => {
-    if (new URL(request.url()).pathname.startsWith('/api/')) apiRequests.push(request.url());
+    if (new URL(request.url()).pathname.startsWith('/api/')) {
+      apiRequests.push({ url: request.url(), method: request.method(), body: request.postData() });
+    }
   });
   return { context, page, apiRequests };
 }
@@ -39,6 +41,19 @@ async function finishOnboarding(page) {
   await page.goto(`${baseUrl}/#/today`);
   await page.getByRole('dialog', { name: '先从一件真实发生的事开始' }).getByRole('button', { name: '开始第一条记录' }).click();
   await assert.doesNotReject(() => page.getByRole('textbox', { name: '发生了什么' }).waitFor());
+}
+
+async function xpLedgerCount(page) {
+  return page.evaluate(() => new Promise((resolve, reject) => {
+    const open = indexedDB.open('qiguang');
+    open.addEventListener('error', () => reject(open.error));
+    open.addEventListener('success', () => {
+      const database = open.result;
+      const request = database.transaction('xpLedger', 'readonly').objectStore('xpLedger').count();
+      request.addEventListener('success', () => { database.close(); resolve(request.result); });
+      request.addEventListener('error', () => { database.close(); reject(request.error); });
+    });
+  }));
 }
 
 test('first use explains the boundary, records, edits, and undoes locally', async () => {
@@ -144,6 +159,90 @@ test('selected companion uses the supplied portrait and matching room sprite', a
     const geometry = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
     assert.ok(geometry.scrollWidth <= geometry.width);
     assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('daily analysis sends only after range confirmation and keeps inference user-confirmed', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.getByRole('textbox', { name: '发生了什么' }).fill('下午连续开会，晚上散步以后平静了一些。');
+    await page.getByRole('button', { name: '仅保存本页记录' }).click();
+    await page.getByRole('button', { name: '检查范围并整理' }).click();
+    const dialog = page.getByRole('dialog', { name: '检查本次发送范围' });
+    await assert.doesNotReject(() => dialog.waitFor());
+    const send = dialog.getByRole('button', { name: '确认并整理' });
+    assert.equal(await send.isEnabled(), false);
+    assert.deepEqual(apiRequests, []);
+    await dialog.getByRole('checkbox', { name: /我允许将本次选中的内容发送/ }).check();
+    assert.equal(await send.isEnabled(), true);
+    assert.deepEqual(apiRequests, []);
+    await send.click();
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '测试整理结果' }).waitFor());
+    const inference = page.locator('.analysis-event').filter({ hasText: '等待用户决定的推断' });
+    await assert.doesNotReject(() => inference.getByText('待确认', { exact: true }).waitFor());
+    assert.equal(await inference.getByText('已确认', { exact: true }).count(), 0);
+    await inference.getByRole('button', { name: '核对这条推断' }).click();
+    const decision = page.getByRole('dialog', { name: '决定是否相信这条推断' });
+    await assert.doesNotReject(() => decision.getByText('AI 推断 · 确认前不产生影响').waitFor());
+    await decision.getByRole('button', { name: '确认并应用候选' }).click();
+    await assert.doesNotReject(() => inference.getByText('已确认', { exact: true }).waitFor());
+    assert.equal(await inference.getByText('待确认', { exact: true }).count(), 0);
+    assert.equal(apiRequests.length, 1);
+    assert.deepEqual({ path: new URL(apiRequests[0].url).pathname, method: apiRequests[0].method }, { path: '/api/analyze', method: 'POST' });
+    const request = JSON.parse(apiRequests[0].body);
+    assert.equal(request.operation, 'daily_analysis');
+    assert.equal(request.userInput.entries.length, 1);
+    assert.equal(request.userInput.entries[0].text, '下午连续开会，晚上散步以后平静了一些。');
+    assert.deepEqual(request.permissions.entryIds, request.userInput.entries.map((entry) => entry.entryId));
+    assert.deepEqual(request.context, { confirmedEvents: [], recentStates: [], goals: [], bonusHabits: [], memories: [], constraints: [] });
+    assert.deepEqual(request.permissions, {
+      entryIds: request.permissions.entryIds,
+      includeConfirmedEvents: false,
+      includeRecentStates: false,
+      includeGoals: false,
+      includeBonusHabits: false,
+      memoryIds: [],
+    });
+  } finally {
+    await context.close();
+  }
+});
+
+test('task feedback lets the user review an AI candidate before XP is settled', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.goto(`${baseUrl}/#/tasks`);
+    await page.getByRole('button', { name: '安排任务' }).click();
+    await page.getByRole('textbox', { name: '行动标题' }).fill('反馈闭环行动');
+    await page.getByRole('textbox', { name: '为什么今天值得做' }).fill('验证实际结果始终由用户确认');
+    await page.getByRole('textbox', { name: '最小动作' }).fill('完成一个可核对步骤');
+    await page.getByRole('button', { name: '安排到今天' }).click();
+    await page.getByRole('button', { name: '详细反馈任务：反馈闭环行动' }).click();
+    const dialog = page.getByRole('dialog', { name: '反馈这次行动' });
+    await dialog.getByRole('textbox', { name: '实际完成了什么（可选）' }).fill('完成了一部分可核对步骤。');
+    assert.deepEqual(apiRequests, []);
+    await dialog.getByRole('button', { name: 'AI 理解这段反馈' }).click();
+    const consent = page.getByRole('dialog', { name: '允许这一次 AI 理解？' });
+    await assert.doesNotReject(() => consent.getByText('将通过同源中转发送本页明确列出的任务信息和反馈文字。API 密钥不在设备中；发送前仍由你主动点击。').waitFor());
+    assert.deepEqual(apiRequests, []);
+    await consent.getByRole('button', { name: '允许并继续' }).click();
+    await assert.doesNotReject(() => dialog.getByText(/已回填候选“部分完成”/).waitFor());
+    assert.equal(await xpLedgerCount(page), 0);
+    assert.equal(await page.getByRole('button', { name: '详细反馈任务：反馈闭环行动' }).count(), 1);
+    assert.equal(await page.getByRole('button', { name: '修改任务“反馈闭环行动”的反馈' }).count(), 0);
+    await dialog.getByRole('button', { name: '确认反馈' }).click();
+    await assert.doesNotReject(() => page.getByRole('button', { name: '修改任务“反馈闭环行动”的反馈' }).waitFor());
+    assert.equal(await xpLedgerCount(page), 1);
+    assert.equal(apiRequests.length, 1);
+    assert.deepEqual({ path: new URL(apiRequests[0].url).pathname, method: apiRequests[0].method }, { path: '/api/analyze', method: 'POST' });
+    const request = JSON.parse(apiRequests[0].body);
+    assert.equal(request.operation, 'task_feedback');
+    assert.deepEqual(Object.keys(request.userInput).sort(), ['currentDifficulty', 'feedbackText', 'minimumAction', 'questId', 'questTitle']);
+    assert.equal(request.userInput.feedbackText, '完成了一部分可核对步骤。');
   } finally {
     await context.close();
   }
