@@ -599,6 +599,17 @@ p {
   display: none;
 }
 
+.room-character.has-motion.is-action-desk { --action-x: -16px; --action-y: 4px; background-position: -448px -126px; }
+.room-character.has-motion.is-action-board { --action-x: -10px; --action-y: -8px; background-position: -371px -202px; }
+.room-character.has-motion.is-action-calendar { --action-x: 10px; --action-y: -8px; background-position: -473px -273px; }
+.room-character.has-motion.is-action-books { --action-x: 16px; --action-y: -3px; background-position: -473px -202px; }
+.room-character.has-motion.is-action-window { --action-x: -16px; --action-y: -8px; background-position: -388px -108px; }
+
+.room-hotspot.is-active {
+  outline: 3px solid var(--coral);
+  outline-offset: 1px;
+}
+
 .room-plant {
   position: absolute;
   z-index: 3;
@@ -2557,6 +2568,14 @@ noscript {
     animation: character-cheer 420ms steps(2, end);
   }
 
+  .room-character.has-motion[class*="is-action-"] {
+    animation: room-action 320ms steps(3, end);
+  }
+
+  .room-hotspot.is-active {
+    animation: room-hotspot-flash 320ms steps(2, end);
+  }
+
   @keyframes toast-in {
     from { opacity: 0; transform: translateY(8px); }
   }
@@ -2572,6 +2591,15 @@ noscript {
 
   @keyframes character-cheer {
     50% { transform: translate(-50%, -7px); }
+  }
+
+  @keyframes room-action {
+    45% { transform: translate(calc(-50% + var(--action-x)), var(--action-y)); }
+    100% { transform: translate(-50%, 0); }
+  }
+
+  @keyframes room-hotspot-flash {
+    50% { outline-color: var(--paper); }
   }
 }
 

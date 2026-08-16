@@ -409,6 +409,8 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
   if (celebratingCharacter) sessionStorage.removeItem('qiguang.character-celebration');
   stage.append(scene);
   if (!compact) {
+    let actionPending = false;
+    let actionTimer: number | undefined;
     const characterPanelId = `character-panel-${crypto.randomUUID()}`;
     const hotspots: Array<[string, string, Route | null, PixelIcon]> = [
       ['desk', '记录', { name: 'record' }, 'desk'],
@@ -424,7 +426,17 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
       button.setAttribute('aria-label', destination ? `打开${label}` : label);
       button.append(pixelIcon(icon), node('span', 'hotspot-label', label));
       const target = destination;
-      if (target) button.addEventListener('click', () => go(target));
+      if (target) button.addEventListener('click', () => {
+        if (actionPending || settings.reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !avatar) {
+          if (actionTimer !== undefined) window.clearTimeout(actionTimer);
+          go(target);
+          return;
+        }
+        actionPending = true;
+        button.classList.add('is-active');
+        character.classList.add(`is-action-${position}`);
+        actionTimer = window.setTimeout(() => go(target), 320);
+      });
       else {
         button.setAttribute('aria-controls', characterPanelId);
         button.setAttribute('aria-expanded', 'false');

@@ -89,6 +89,54 @@ test('first use selects a companion, records, edits, and undoes locally', async 
   }
 });
 
+test('room furniture gives a short companion action before direct navigation', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.goto(`${baseUrl}/#/today`);
+    await page.getByRole('button', { name: '打开记录' }).click();
+    await assert.doesNotReject(() => page.locator('.room-character.is-action-desk').waitFor());
+    await page.getByRole('button', { name: '打开任务', exact: true }).click();
+    await page.waitForURL(/#\/tasks$/);
+    await page.waitForTimeout(350);
+    assert.match(page.url(), /#\/tasks$/);
+    assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('system reduced motion skips room furniture action', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  try {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await finishOnboarding(page);
+    await page.goto(`${baseUrl}/#/today`);
+    await page.getByRole('button', { name: '打开记录' }).click();
+    assert.equal(await page.locator('.room-character.is-action-desk').count(), 0);
+    await page.waitForURL(/#\/record$/);
+    assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('reduced motion keeps room furniture navigation immediate', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.goto(`${baseUrl}/#/system`);
+    await page.getByRole('checkbox', { name: '减少动态效果' }).check();
+    await page.goto(`${baseUrl}/#/today`);
+    await page.getByRole('button', { name: '打开记录' }).click();
+    assert.equal(await page.locator('.room-character.is-action-desk').count(), 0);
+    await page.waitForURL(/#\/record$/);
+    assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
 test('low state proposes replaceable recovery and one-click no-penalty feedback', async () => {
   const { context, page, apiRequests } = await freshPage();
   try {
