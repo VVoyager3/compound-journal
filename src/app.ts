@@ -384,7 +384,7 @@ function renderShell(main: HTMLElement, route: Route): void {
   });
 }
 
-function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Profile['avatar'] = null, welcoming = false, cue: RoomCue | null = null, snapshotDate: string | null = null): HTMLElement {
+function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Profile['avatar'] = null, welcoming = false, cue: RoomCue | null = null, snapshotDate: string | null = null, hasMainQuest = false): HTMLElement {
   const stage = node('section', `room-stage${compact ? ' is-compact' : ''}`);
   if (snapshotDate) stage.dataset.snapshotDate = snapshotDate;
   stage.setAttribute('aria-label', '温暖的像素房间：包含日记桌、任务板、日历、书架工作台、窗边床铺和生活分身。所有功能也能通过普通导航进入。');
@@ -469,10 +469,10 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
           const week = node('button', 'button button-secondary', '看本周');
           week.type = 'button';
           week.addEventListener('click', () => go({ name: 'calendar' }));
-          const style = node('button', 'button button-secondary', '更换外观');
-          style.type = 'button';
-          style.addEventListener('click', () => go({ name: 'system' }));
-          actions.append(record, week, style);
+          const why = node('button', 'button button-secondary', hasMainQuest ? '为什么给我这个主线？' : '安排今天的主线');
+          why.type = 'button';
+          why.addEventListener('click', () => go({ name: 'tasks' }));
+          actions.append(record, why, week);
           created.append(actions);
           stage.append(created);
           button.setAttribute('aria-expanded', 'true');
@@ -560,7 +560,9 @@ function statusSummary(observations: Partial<Record<Dimension, ResolvedDimension
     item.append(
       node('span', 'status-name', dimension.label),
       node('strong', '', observation ? String(observation.value) : '待了解'),
-      node('span', 'caption', observation ? (observationIsStale(observation, referenceDate) ? '需要更新' : stateBand(observation.value)) : '可选校准'),
+      node('span', 'caption', observation
+        ? `${observationIsStale(observation, referenceDate) ? '需要更新' : stateBand(observation.value)} · 最后证据：${formatDate(observation.localDate, { year: 'numeric' })}`
+        : '可选校准'),
     );
     grid.append(item);
   }
@@ -988,9 +990,10 @@ async function todayPage(): Promise<HTMLElement> {
   const isReturning = Boolean(latestEntry && daysSinceActivity >= 14 && !returnDismissed);
   const known = Object.values(observations);
   const lowest = known.filter((item) => !observationIsStale(item)).sort((a, b) => a.value - b.value)[0];
+  const mainQuest = quests.find((item) => item.type === 'main');
 
   const hero = node('section', 'home-hero');
-  hero.append(roomStage(false, plantStates, profile?.avatar ?? null, isReturning, roomCueFor(lowest)));
+  hero.append(roomStage(false, plantStates, profile?.avatar ?? null, isReturning, roomCueFor(lowest), null, Boolean(mainQuest)));
   const line = node('div', 'avatar-line');
   line.append(pixelIcon('character'), node('p', '', lowest && lowest.value < 45
     ? `优先：${dimensionLabel(lowest.dimension)}`
@@ -1021,7 +1024,6 @@ async function todayPage(): Promise<HTMLElement> {
     main.append(returning);
   }
 
-  const mainQuest = quests.find((item) => item.type === 'main');
   const recoveryDismissed = lowest ? sessionStorage.getItem(`qiguang.recovery-dismissed.${today}.${lowest.dimension}`) === '1' : false;
   const hasRecoveryQuest = quests.some((item) => item.sourceType === 'recovery');
   if (lowest && lowest.value < 45 && !recoveryDismissed && !hasRecoveryQuest) {

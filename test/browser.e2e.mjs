@@ -116,6 +116,37 @@ test('room furniture gives a short companion action before direct navigation', a
   }
 });
 
+test('the companion offers record, main-line context, and weekly review', async () => {
+  const { context, page } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.goto(`${baseUrl}/#/today`);
+    await page.getByRole('button', { name: '生活分身' }).click();
+    const panel = page.locator('.character-panel');
+    await assert.doesNotReject(() => panel.waitFor());
+    await assert.doesNotReject(() => panel.getByRole('button', { name: '讲讲今天' }).waitFor());
+    await assert.doesNotReject(() => panel.getByRole('button', { name: '安排今天的主线' }).waitFor());
+    await assert.doesNotReject(() => panel.getByRole('button', { name: '看本周' }).waitFor());
+    assert.equal(await panel.getByRole('button', { name: '为什么给我这个主线？' }).count(), 0);
+    assert.equal(await panel.getByRole('button', { name: '更换外观' }).count(), 0);
+    await panel.getByRole('button', { name: '安排今天的主线' }).click();
+    await page.waitForURL(/#\/tasks$/);
+    await page.getByRole('button', { name: '安排任务' }).click();
+    await page.getByRole('textbox', { name: '行动标题' }).fill('验证主线依据');
+    await page.getByRole('textbox', { name: '为什么今天值得做' }).fill('这是主线的可追溯理由。');
+    await page.getByRole('textbox', { name: '最小动作' }).fill('完成一个最小步骤');
+    await page.getByRole('combobox', { name: '任务类型' }).selectOption('main');
+    await page.getByRole('button', { name: '安排到今天' }).click();
+    await page.goto(`${baseUrl}/#/today`);
+    await page.getByRole('button', { name: '生活分身' }).click();
+    await panel.getByRole('button', { name: '为什么给我这个主线？' }).click();
+    await page.waitForURL(/#\/tasks$/);
+    await assert.doesNotReject(() => page.getByText('这是主线的可追溯理由。').waitFor());
+  } finally {
+    await context.close();
+  }
+});
+
 test('keyboard users can skip the room and open a direct route', async () => {
   const { context, page } = await freshPage();
   try {
@@ -336,11 +367,11 @@ test('a day review keeps its own state freshness and excludes future habits', as
     });
     await page.goto(`${baseUrl}/#/day/${past}`);
     await assert.doesNotReject(() => page.getByText('当日状态', { exact: true }).waitFor());
-    assert.equal(await page.getByRole('button', { name: /体力 25 需要关注/ }).count(), 1);
+    assert.equal(await page.getByRole('button', { name: /体力 25 需要关注 .*最后证据：/ }).count(), 1);
     assert.equal(await page.getByText('需要更新', { exact: true }).count(), 0);
     assert.equal(await page.locator('.room-stage[data-snapshot-date]').getAttribute('data-snapshot-date'), past);
     assert.equal(await page.locator('.room-plant.is-empty').count(), 0);
-    await page.getByRole('button', { name: /体力 25 需要关注/ }).click();
+    await page.getByRole('button', { name: /体力 25 需要关注 .*最后证据：/ }).click();
     const detail = page.getByRole('dialog', { name: '体力状态依据' });
     await assert.doesNotReject(() => detail.waitFor());
     assert.equal(await detail.getByText('需要更新', { exact: true }).count(), 0);
