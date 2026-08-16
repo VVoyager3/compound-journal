@@ -384,12 +384,13 @@ function renderShell(main: HTMLElement, route: Route): void {
   });
 }
 
-function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Profile['avatar'] = null, welcoming = false, cue: RoomCue | null = null): HTMLElement {
+function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Profile['avatar'] = null, welcoming = false, cue: RoomCue | null = null, snapshotDate: string | null = null): HTMLElement {
   const stage = node('section', `room-stage${compact ? ' is-compact' : ''}`);
+  if (snapshotDate) stage.dataset.snapshotDate = snapshotDate;
   stage.setAttribute('aria-label', '温暖的像素房间：包含日记桌、任务板、日历、书架工作台、窗边床铺和生活分身。所有功能也能通过普通导航进入。');
   const scene = node('div', 'room-scene');
   const hour = new Date().getHours();
-  scene.classList.add(hour < 6 ? 'is-night' : hour < 12 ? 'is-morning' : hour < 18 ? 'is-day' : 'is-evening');
+  scene.classList.add(snapshotDate ? 'is-day' : hour < 6 ? 'is-night' : hour < 12 ? 'is-morning' : hour < 18 ? 'is-day' : 'is-evening');
   if (cue) scene.classList.add(`is-cue-${cue}`);
   scene.setAttribute('aria-hidden', 'true');
   scene.append(node('div', 'room-floor'));
@@ -484,8 +485,13 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
   return stage;
 }
 
-function observationIsStale(observation: { localDate: string }): boolean {
-  return (parseLocalDate(localDate()).getTime() - parseLocalDate(observation.localDate).getTime()) / 86_400_000 > 7;
+function observationIsStale(observation: { localDate: string }, referenceDate = localDate()): boolean {
+  return (parseLocalDate(referenceDate).getTime() - parseLocalDate(observation.localDate).getTime()) / 86_400_000 > 7;
+}
+
+function timestampLocalDate(timestamp: string): string {
+  const value = new Date(timestamp);
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
 }
 
 function roomCueFor(state?: ResolvedDimensionState): RoomCue | null {
@@ -493,17 +499,18 @@ function roomCueFor(state?: ResolvedDimensionState): RoomCue | null {
   return ({ energy: 'rest', mind: 'rest', connection: null, progress: 'focus', play: 'play' } as const)[state.dimension];
 }
 
-async function openStateDetail(dimension: (typeof DIMENSIONS)[number], observation?: ResolvedDimensionState): Promise<void> {
-  const ledger = await db.listStateObservations(dimension.key);
+async function openStateDetail(dimension: (typeof DIMENSIONS)[number], observation?: ResolvedDimensionState, referenceDate = localDate()): Promise<void> {
+  const ledger = await db.listStateObservations(dimension.key, referenceDate);
   const sameDayCalibrationOverrides = observation && ledger.some((item) => item.active && item.kind === 'event-impact'
     && item.localDate === observation.localDate && !observation.observationIds.includes(item.id));
   const { dialog, content, actions } = dialogShell(`${dimension.label}状态依据`);
   if (observation) {
+    const stale = observationIsStale(observation, referenceDate);
     content.append(
       node('p', '', `${observation.value} · ${stateBand(observation.value)}`),
       node('p', 'muted', `最后证据：${formatDate(observation.localDate, { year: 'numeric' })}`),
-      node('p', observationIsStale(observation) ? 'danger-copy' : 'caption', observationIsStale(observation)
-        ? '这次校准已经超过 7 天，需要更新；旧值仍保留，不自动猜测。'
+      node('p', stale ? 'danger-copy' : 'caption', stale
+        ? referenceDate === localDate() ? '这次校准已经超过 7 天，需要更新；旧值仍保留，不自动猜测。' : '到这一天，这次校准已经超过 7 天；仍显示为当时的最后状态。'
         : sameDayCalibrationOverrides ? '你在同一天的直接校准覆盖了事件变化；变化证据仍保留在下方。'
           : observation.clamped ? `这一天的事件变化已按规则截断为 ${observation.dailyDelta > 0 ? '+' : ''}${observation.dailyDelta}。` : '状态只由你的校准和已确认反馈重算。'),
     );
@@ -539,21 +546,21 @@ async function openStateDetail(dimension: (typeof DIMENSIONS)[number], observati
   close.focus();
 }
 
-function statusSummary(observations: Partial<Record<Dimension, ResolvedDimensionState>>): HTMLElement {
+function statusSummary(observations: Partial<Record<Dimension, ResolvedDimensionState>>, referenceDate = localDate()): HTMLElement {
   const section = node('section', 'surface status-summary');
   const header = node('div', 'section-heading');
-  header.append(node('div', '', '近日状态'), node('span', 'caption', '来自你的自评'));
+  header.append(node('div', '', referenceDate === localDate() ? '近日状态' : '当日状态'), node('span', 'caption', '来自你的自评'));
   section.append(header);
   const grid = node('div', 'status-grid');
   for (const dimension of DIMENSIONS) {
     const observation = observations[dimension.key];
     const item = node('button', 'status-item');
     item.type = 'button';
-    item.addEventListener('click', () => { void openStateDetail(dimension, observation); });
+    item.addEventListener('click', () => { void openStateDetail(dimension, observation, referenceDate); });
     item.append(
       node('span', 'status-name', dimension.label),
       node('strong', '', observation ? String(observation.value) : '待了解'),
-      node('span', 'caption', observation ? (observationIsStale(observation) ? '需要更新' : stateBand(observation.value)) : '可选校准'),
+      node('span', 'caption', observation ? (observationIsStale(observation, referenceDate) ? '需要更新' : stateBand(observation.value)) : '可选校准'),
     );
     grid.append(item);
   }
@@ -1805,16 +1812,24 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[]): Prom
 }
 
 async function dayPage(date: string): Promise<HTMLElement> {
-  const [entries, observations, quests] = await Promise.all([db.listEntries(date), db.resolvedStateAtOrBefore(date), db.listQuests(date)]);
+  const [entries, observations, quests, habits, habitLogs, profile] = await Promise.all([
+    db.listEntries(date), db.resolvedStateAtOrBefore(date), db.listQuests(date), db.listHabits(), db.listHabitLogs(), db.getProfile(),
+  ]);
+  const plantStates: PlantState[] = habits.filter((item) => item.bonusEnabled && timestampLocalDate(item.createdAt) <= date).slice(0, 3).map((habit) => {
+    const results = habitLogs.filter((item) => item.habitId === habit.id && item.localDate === date).map((item) => item.result);
+    return { habitId: habit.id, growth: results.includes('completed') ? 'grown' : results.includes('partial') ? 'started' : 'empty' };
+  });
+  const known = Object.values(observations);
+  const lowest = known.filter((item) => !observationIsStale(item, date)).sort((a, b) => a.value - b.value)[0];
   const main = node('main', 'page page-day');
   const calendarLink = node('a', 'button button-secondary compact-button', '日历');
   calendarLink.href = '#/calendar';
-  main.append(pageHeader('某日回顾', formatDate(date, { year: 'numeric' }), calendarLink), roomStage(true));
+  main.append(pageHeader('某日回顾', formatDate(date, { year: 'numeric' }), calendarLink), roomStage(true, plantStates, profile?.avatar ?? null, false, roomCueFor(lowest), date));
 
   const summary = node('section', 'day-summary');
   summary.append(node('h2', '', entries.length ? `这一天留下了 ${entries.length} 条真实记录` : '这一天安静地留白'));
   if (!entries.length) summary.append(node('p', '', '没有记录。'));
-  main.append(summary, await dailyAnalysisSection(date, entries), statusSummary(observations));
+  main.append(summary, await dailyAnalysisSection(date, entries), statusSummary(observations, date));
   if (!Object.keys(observations).length) {
     const prompt = node('aside', 'notice inline-notice');
     prompt.append(node('strong', '', '五维状态仍是“待了解”'));

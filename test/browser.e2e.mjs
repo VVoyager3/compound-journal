@@ -280,6 +280,14 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     await page.getByRole('button', { name: '打开任务', exact: true }).click();
     assert.equal(await page.locator('.room-character.is-action-board').evaluate((element) => getComputedStyle(element).backgroundPosition), '-371px -202px');
     await page.waitForURL(/#\/tasks$/);
+    const today = await page.evaluate(() => {
+      const value = new Date();
+      return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    });
+    await page.goto(`${baseUrl}/#/day/${today}`);
+    assert.equal(await page.locator(`.room-stage[data-snapshot-date="${today}"]`).count(), 1);
+    assert.equal(await page.locator('.room-scene.is-day.is-cue-rest').count(), 1);
+    assert.equal(await page.locator('.room-character.is-resting').count(), 1);
     await page.goto(`${baseUrl}/#/today`);
     await page.getByRole('button', { name: '换一个' }).click();
     await assert.doesNotReject(() => page.getByText('做一次很短的舒展').waitFor());
@@ -292,6 +300,50 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     await page.getByRole('button', { name: '今天不做：做一次很短的舒展' }).click();
     await assert.doesNotReject(() => page.getByText('今天不做已记下；没有扣分。').waitFor());
     assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('a day review keeps its own state freshness and excludes future habits', async () => {
+  const { context, page } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    const past = await page.evaluate(() => {
+      const value = new Date();
+      value.setDate(value.getDate() - 10);
+      const localDate = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+      const pastTimestamp = value.toISOString();
+      const currentTimestamp = new Date().toISOString();
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open('qiguang');
+        request.addEventListener('error', () => reject(request.error));
+        request.addEventListener('success', () => {
+          const database = request.result;
+          const transaction = database.transaction(['observations', 'habits'], 'readwrite');
+          transaction.objectStore('observations').add({
+            id: crypto.randomUUID(), assessmentId: crypto.randomUUID(), localDate, dimension: 'energy', kind: 'user-self-assessment', value: 25,
+            active: true, observedAt: pastTimestamp, createdAt: pastTimestamp, updatedAt: pastTimestamp, version: 1,
+          });
+          transaction.objectStore('habits').add({
+            id: crypto.randomUUID(), name: '后来才建立的习惯', minimumAction: '不会出现在过去', scheduleDays: [1], dimension: 'energy', branchId: crypto.randomUUID(), difficulty: 'light',
+            status: 'active', bonusEnabled: true, createdAt: currentTimestamp, updatedAt: currentTimestamp, version: 1,
+          });
+          transaction.addEventListener('complete', () => { database.close(); resolve(localDate); });
+          transaction.addEventListener('abort', () => { database.close(); reject(transaction.error); });
+        });
+      });
+    });
+    await page.goto(`${baseUrl}/#/day/${past}`);
+    await assert.doesNotReject(() => page.getByText('当日状态', { exact: true }).waitFor());
+    assert.equal(await page.getByRole('button', { name: /体力 25 需要关注/ }).count(), 1);
+    assert.equal(await page.getByText('需要更新', { exact: true }).count(), 0);
+    assert.equal(await page.locator('.room-stage[data-snapshot-date]').getAttribute('data-snapshot-date'), past);
+    assert.equal(await page.locator('.room-plant.is-empty').count(), 0);
+    await page.getByRole('button', { name: /体力 25 需要关注/ }).click();
+    const detail = page.getByRole('dialog', { name: '体力状态依据' });
+    await assert.doesNotReject(() => detail.waitFor());
+    assert.equal(await detail.getByText('需要更新', { exact: true }).count(), 0);
   } finally {
     await context.close();
   }
