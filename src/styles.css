@@ -586,10 +586,12 @@ p {
   width: 56px;
   height: 84px;
   border: 0;
+  background-color: transparent;
   background-repeat: no-repeat;
   background-position: -46px -9px;
   background-size: 538px 358px;
   box-shadow: none;
+  mix-blend-mode: multiply;
 }
 
 .room-character.has-motion::before,
@@ -699,8 +701,23 @@ p {
 }
 
 .room-hotspot.is-character {
-  left: calc(50% - 22px);
-  top: 48%;
+  left: calc(50% - 38px);
+  top: 47%;
+  width: 76px;
+  height: 118px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.room-hotspot.is-character .pixel-icon,
+.room-hotspot.is-character .hotspot-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .character-panel {
@@ -745,6 +762,45 @@ p {
   width: min(100%, 180px);
   height: 180px;
   margin-top: -8px;
+  object-position: center 15%;
+}
+
+.avatar-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.avatar-choice {
+  display: grid;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px;
+  border: var(--line) solid var(--ink);
+  border-radius: 0;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow-small);
+  font: inherit;
+  font-weight: 850;
+}
+
+.avatar-choice:active,
+.avatar-choice.is-selected {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.avatar-choice.is-selected {
+  background: var(--coral-soft);
+}
+
+.avatar-choice-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 2px solid var(--ink);
+  object-fit: cover;
   object-position: center 15%;
 }
 

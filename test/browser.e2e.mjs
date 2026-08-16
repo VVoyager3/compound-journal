@@ -39,7 +39,9 @@ async function freshPage() {
 
 async function finishOnboarding(page) {
   await page.goto(`${baseUrl}/#/today`);
-  await page.getByRole('dialog', { name: '先从一件真实发生的事开始' }).getByRole('button', { name: '开始第一条记录' }).click();
+  const dialog = page.getByRole('dialog', { name: '选择生活分身' });
+  await dialog.getByRole('button', { name: '选择牛纹帽双辫女生' }).click();
+  await dialog.getByRole('button', { name: '开始记录' }).click();
   await assert.doesNotReject(() => page.getByRole('textbox', { name: '发生了什么' }).waitFor());
 }
 
@@ -56,14 +58,15 @@ async function xpLedgerCount(page) {
   }));
 }
 
-test('first use explains the boundary, records, edits, and undoes locally', async () => {
+test('first use selects a companion, records, edits, and undoes locally', async () => {
   const { context, page, apiRequests } = await freshPage();
   try {
     await page.goto(`${baseUrl}/#/today`);
-    const dialog = page.getByRole('dialog', { name: '先从一件真实发生的事开始' });
+    const dialog = page.getByRole('dialog', { name: '选择生活分身' });
     await assert.doesNotReject(() => dialog.waitFor());
-    await assert.doesNotReject(() => dialog.getByText('系统会先整理，再由你决定是否采用。').waitFor());
-    await dialog.getByRole('button', { name: '开始第一条记录' }).click();
+    await dialog.getByRole('button', { name: '选择牛纹帽双辫女生' }).click();
+    await assert.doesNotReject(() => dialog.getByText('已选择牛纹帽双辫女生').waitFor());
+    await dialog.getByRole('button', { name: '开始记录' }).click();
     const input = page.getByRole('textbox', { name: '发生了什么' });
     await input.fill('电脑自动回归：记录一件真实发生的事。');
     assert.equal(await input.evaluate((element) => element === document.activeElement), true);
@@ -77,6 +80,9 @@ test('first use explains the boundary, records, edits, and undoes locally', asyn
     await page.getByRole('button', { name: '查看版本' }).click();
     await page.getByRole('button', { name: '撤销最近修改' }).click();
     await assert.doesNotReject(() => page.locator('#main-content').getByText('电脑自动回归：记录一件真实发生的事。', { exact: true }).waitFor());
+    await page.goto(`${baseUrl}/#/today`);
+    const roomSprite = await page.locator('.room-character').getAttribute('style');
+    assert.match(roomSprite ?? '', /character-motion-female/);
     assert.deepEqual(apiRequests, []);
   } finally {
     await context.close();

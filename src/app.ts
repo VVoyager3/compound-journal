@@ -958,8 +958,8 @@ async function todayPage(): Promise<HTMLElement> {
   const known = Object.values(observations);
   const lowest = known.filter((item) => !observationIsStale(item)).sort((a, b) => a.value - b.value)[0];
   line.append(pixelIcon('character'), node('p', '', lowest && lowest.value < 45
-    ? `今天先照顾一下${dimensionLabel(lowest.dimension)}。`
-    : entries.length ? '今天的事实已经好好留在这里。' : '先记录，不急着给自己打分。'));
+    ? `优先：${dimensionLabel(lowest.dimension)}`
+    : entries.length ? '已有记录' : '还没有状态记录'));
   hero.append(line);
   main.append(hero);
 
@@ -1004,8 +1004,7 @@ async function todayPage(): Promise<HTMLElement> {
   } else {
     const action = node('section', 'surface main-action');
     action.append(node('span', 'tag tag-dark', 'MAIN · 第一步'), node('h2', '', entries.length ? '选择今天最值得的一步' : '讲讲最近发生的一件事'));
-    action.append(node('p', '', entries.length ? '尚未开始今日主线。' : '先写一条今日主线再开始。'));
-    action.append(primaryButton(entries.length ? '打开任务板' : '开始第一条记录', () => go({ name: entries.length ? 'tasks' : 'record' })));
+    action.append(primaryButton(entries.length ? '打开任务板' : '开始记录', () => go({ name: entries.length ? 'tasks' : 'record' })));
     main.append(action);
   }
 
@@ -1241,18 +1240,16 @@ function dialogShell(title: string): { dialog: HTMLDialogElement; content: HTMLE
 }
 
 function showOnboarding(): void {
-  const { dialog, content, actions } = dialogShell('先从一件真实发生的事开始');
-  const points = node('ol', 'onboarding-points');
-  for (const copy of [
-    '先写一条今天发生的事。',
-    '系统会先整理，再由你决定是否采用。',
-    '数据和系统由你控制，可导出、删除或关闭 AI。',
-  ]) points.append(node('li', '', copy));
-  content.append(points);
-  const begin = primaryButton('开始第一条记录', () => {
+  const { dialog, content, actions } = dialogShell('选择生活分身');
+  const choices = node('div', 'avatar-choices');
+  const selected = node('p', 'save-state', '');
+  let avatar: Profile['avatar'] = null;
+  const begin = primaryButton('开始记录', () => {
+    if (!avatar) return;
     begin.disabled = true;
     void (async () => {
       try {
+        await db.saveProfile({ avatar });
         settings = await db.saveSettings({ onboardingSeen: true });
         dialog.close();
         if (currentRoute.name === 'record') document.querySelector<HTMLTextAreaElement>('.journal-input')?.focus();
@@ -1266,9 +1263,33 @@ function showOnboarding(): void {
       }
     })();
   });
+  begin.disabled = true;
+  (['female', 'male'] as const).forEach((choice) => {
+    const label = choice === 'female' ? '牛纹帽双辫女生' : '鹿角头饰男生';
+    const button = node('button', 'avatar-choice');
+    button.type = 'button';
+    button.setAttribute('aria-label', `选择${label}`);
+    button.setAttribute('aria-pressed', 'false');
+    const image = node('img', 'avatar-choice-image') as HTMLImageElement;
+    image.src = avatarAsset(choice);
+    image.alt = '';
+    button.append(image, node('span', '', label));
+    button.addEventListener('click', () => {
+      avatar = choice;
+      choices.querySelectorAll<HTMLButtonElement>('.avatar-choice').forEach((item) => {
+        const active = item === button;
+        item.classList.toggle('is-selected', active);
+        item.setAttribute('aria-pressed', String(active));
+      });
+      selected.textContent = `已选择${label}`;
+      begin.disabled = false;
+    });
+    choices.append(button);
+  });
+  content.append(choices, selected);
   actions.append(begin);
   dialog.showModal();
-  begin.focus();
+  choices.querySelector<HTMLButtonElement>('button')?.focus();
 }
 
 function confirmAction(title: string, message: string, confirmLabel: string, dangerous = false): Promise<boolean> {
