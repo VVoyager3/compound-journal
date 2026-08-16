@@ -387,6 +387,8 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
   const stage = node('section', `room-stage${compact ? ' is-compact' : ''}`);
   stage.setAttribute('aria-label', '温暖的像素房间：包含日记桌、任务板、日历、书架工作台、窗边床铺和生活分身。所有功能也能通过普通导航进入。');
   const scene = node('div', 'room-scene');
+  const hour = new Date().getHours();
+  scene.classList.add(hour < 6 ? 'is-night' : hour < 12 ? 'is-morning' : hour < 18 ? 'is-day' : 'is-evening');
   scene.setAttribute('aria-hidden', 'true');
   scene.append(node('div', 'room-floor'));
   for (const furniture of ['desk', 'board', 'calendar', 'books', 'window'] as const) {

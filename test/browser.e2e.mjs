@@ -116,6 +116,18 @@ test('room furniture gives a short companion action before direct navigation', a
   }
 });
 
+test('room uses one of the documented time palettes', async () => {
+  const { context, page } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.goto(`${baseUrl}/#/today`);
+    const phase = await page.locator('.room-scene').getAttribute('class');
+    assert.match(phase ?? '', /is-(night|morning|day|evening)/);
+  } finally {
+    await context.close();
+  }
+});
+
 test('system reduced motion skips room furniture action', async () => {
   const { context, page, apiRequests } = await freshPage();
   try {

@@ -376,6 +376,7 @@ p {
 }
 
 .room-scene {
+  --window-sky: var(--blue);
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -383,6 +384,11 @@ p {
     repeating-linear-gradient(90deg, transparent 0 31px, rgb(76 47 27 / 10%) 31px 33px),
     linear-gradient(#edc98f 0 40%, #b57b43 40% 100%);
 }
+
+.room-scene.is-morning { --window-sky: #f3b45d; }
+.room-scene.is-day { --window-sky: #59b8d1; }
+.room-scene.is-evening { --window-sky: #d9785d; }
+.room-scene.is-night { --window-sky: #485d92; }
 
 .room-scene::before {
   content: "";
@@ -508,7 +514,7 @@ p {
   background:
     linear-gradient(90deg, transparent 46%, #fff7e6 46% 54%, transparent 54%),
     linear-gradient(transparent 47%, #fff7e6 47% 55%, transparent 55%),
-    var(--blue);
+    var(--window-sky);
 }
 
 .room-furniture.is-window::after {
