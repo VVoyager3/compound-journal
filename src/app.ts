@@ -3502,7 +3502,7 @@ function showUpdateNotice(registration: ServiceWorkerRegistration): void {
   notice.dataset.updateNotice = 'true';
   notice.setAttribute('role', 'status');
   const copy = node('div');
-  copy.append(node('strong', '', '新版本已准备好'), node('p', '', '不会强制刷新。请先完成当前编辑，再由你决定更新。'));
+  copy.append(node('strong', '', '新版本已准备好'));
   const update = node('button', 'button button-secondary', '更新并重新打开');
   update.type = 'button';
   update.addEventListener('click', () => {

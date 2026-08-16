@@ -116,6 +116,21 @@ test('room furniture gives a short companion action before direct navigation', a
   }
 });
 
+test('keyboard users can skip the room and open a direct route', async () => {
+  const { context, page } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.goto(`${baseUrl}/#/today`);
+    await page.getByRole('link', { name: '跳到主要内容' }).press('Enter');
+    assert.equal(await page.locator('#main-content').evaluate((element) => element === document.activeElement), true);
+    await page.getByRole('link', { name: '记录', exact: true }).press('Enter');
+    await page.waitForURL(/#\/record$/);
+    await assert.doesNotReject(() => page.getByRole('textbox', { name: '发生了什么' }).waitFor());
+  } finally {
+    await context.close();
+  }
+});
+
 test('room uses one of the documented time palettes', async () => {
   const { context, page } = await freshPage();
   try {
