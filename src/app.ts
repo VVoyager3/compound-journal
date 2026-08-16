@@ -1805,7 +1805,7 @@ async function dayPage(date: string): Promise<HTMLElement> {
 
   const summary = node('section', 'day-summary');
   summary.append(node('h2', '', entries.length ? `这一天留下了 ${entries.length} 条真实记录` : '这一天安静地留白'));
-  summary.append(node('p', '', entries.length ? '按保存顺序回看。' : '没有记录。'));
+  if (!entries.length) summary.append(node('p', '', '没有记录。'));
   main.append(summary, await dailyAnalysisSection(date, entries), statusSummary(observations));
   if (!Object.keys(observations).length) {
     const prompt = node('aside', 'notice inline-notice');
@@ -2479,7 +2479,7 @@ async function tasksPage(): Promise<HTMLElement> {
   day.append(dayHeading);
   if (!quests.length) {
     const empty = node('div', 'surface empty-state');
-    empty.append(node('p', '', '今天还没有任务。保持留白不会产生惩罚。'), primaryButton('安排一个最小行动', () => { void openQuestDialog(); }));
+    empty.append(node('p', '', '今天还没有任务。'), primaryButton('安排一个最小行动', () => { void openQuestDialog(); }));
     day.append(empty);
   } else quests.forEach((quest) => day.append(questCard(quest)));
   main.append(day);
@@ -2603,9 +2603,6 @@ async function growthPage(): Promise<HTMLElement> {
   ]);
   const main = node('main', 'page page-growth');
   main.append(pageHeader('长期证据', '成长', primaryButton('建立分支', () => { void openBranchDialog(); })));
-  const note = node('aside', 'notice inline-notice');
-  note.append(node('strong', '', '成长分支'));
-  main.append(note);
 
   const reviewEntry = node('section', 'surface review-entry');
   reviewEntry.append(node('p', 'eyebrow', '每周章节'), node('h2', '', '用本周证据安排下一周'), primaryButton('打开周复盘', () => go({ name: 'review', date: weekRange().start })));
@@ -2688,7 +2685,7 @@ async function growthPage(): Promise<HTMLElement> {
 
   const ledgerSection = node('section', 'xp-ledger');
   ledgerSection.append(node('h2', '', '经验账本'));
-  if (!ledger.length) ledgerSection.append(node('p', 'empty-copy', '完成行动或确认里程碑后，每一笔经验都会在这里保留来源与撤销结果。'));
+  if (!ledger.length) ledgerSection.append(node('p', 'empty-copy', '还没有经验记录。'));
   ledger.slice(0, 30).forEach((item) => {
     const branch = branches.find((value) => value.id === item.branchId);
     const source = item.sourceType === 'milestone'
@@ -2712,7 +2709,6 @@ async function growthPage(): Promise<HTMLElement> {
 function assessmentForm(observations: Partial<Record<Dimension, StateObservation>>): HTMLElement {
   const section = node('section', 'surface settings-section');
   section.append(node('h2', '', '五维自评'));
-  section.append(node('p', 'muted', '只校准确定的部分。'));
   const form = node('form', 'assessment-form');
   for (const dimension of DIMENSIONS) {
     const existing = observations[dimension.key];
