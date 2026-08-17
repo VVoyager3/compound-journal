@@ -55,10 +55,16 @@ test('service worker is versioned, keeps AI network-only, and waits for an expli
   const source = await read('public/sw.js');
   const packageVersion = JSON.parse(await read('package.json')).version;
   const dbSource = await read('src/db.ts');
+  const androidBuild = await read('android/app/build.gradle');
   const appVersion = dbSource.match(/APP_VERSION\s*=\s*['"]([^'"]+)/)?.[1];
   const cacheVersion = source.match(/CACHE_NAME\s*=\s*['"]qiguang-shell-v([^'"]+)/)?.[1];
+  const androidVersion = androidBuild.match(/versionName\s+["']([^"']+)/)?.[1];
+  const androidVersionCode = Number(androidBuild.match(/versionCode\s+(\d+)/)?.[1]);
+  const [major, minor, patch] = packageVersion.split('.').map(Number);
   assert.equal(appVersion, packageVersion, 'backup and package versions must match');
   assert.equal(cacheVersion, packageVersion, 'every release must install a new immutable shell cache');
+  assert.equal(androidVersion, packageVersion, 'Android and package versions must match');
+  assert.equal(androidVersionCode, major * 10_000 + minor * 100 + patch, 'Android versionCode must follow the package version');
   new vm.Script(source, { filename: 'public/sw.js' });
   assert.match(source, /qiguang-[\w-]*v\d+/i, 'cache name must carry a version');
   assert.match(source, /addEventListener\(['"]install['"]/);
