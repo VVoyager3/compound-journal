@@ -43,6 +43,14 @@ test('manifest provides an installable local-first application identity', async 
   assert.match(html, /name="viewport"/);
 });
 
+test('room motion sprites use real PNG alpha instead of a painted grid', async () => {
+  for (const gender of ['female', 'male']) {
+    const png = await readFile(path.join(root, 'design-assets', 'pre-development', `character-motion-${gender}-transparent.png`));
+    assert.deepEqual([...png.subarray(1, 4)], [80, 78, 71], `${gender} motion asset must be a PNG`);
+    assert.equal(png[25], 6, `${gender} motion asset must use RGBA color type`);
+  }
+});
+
 test('service worker is versioned, keeps AI network-only, and waits for an explicit update action', async () => {
   const source = await read('public/sw.js');
   const packageVersion = JSON.parse(await read('package.json')).version;

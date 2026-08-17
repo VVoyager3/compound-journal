@@ -321,7 +321,7 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     await assert.doesNotReject(() => page.getByRole('heading', { name: '先补足体力' }).waitFor());
     assert.equal(await page.locator('.room-scene.is-cue-rest').count(), 1);
     assert.equal(await page.locator('.room-character.is-resting').count(), 1);
-    assert.equal(await page.locator('.room-character.is-resting').evaluate((element) => getComputedStyle(element).backgroundPosition), '-430px -9px');
+    assert.equal(await page.locator('.room-character.is-resting').evaluate((element) => getComputedStyle(element).backgroundPosition), '-432px -3px');
     assert.equal(await page.locator('.room-cue').count(), 1);
     await page.getByRole('button', { name: '打开任务', exact: true }).click();
     assert.equal(await page.locator('.room-character.is-action-board').count(), 1);
@@ -442,6 +442,10 @@ test('selected companion uses the supplied portrait and matching room sprite', a
     const roomSprite = page.locator('.room-character.has-motion');
     await assert.doesNotReject(() => roomSprite.waitFor({ state: 'visible' }));
     assert.match(await roomSprite.evaluate((element) => getComputedStyle(element).backgroundImage), /character-motion-female/);
+    assert.deepEqual(await roomSprite.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { backgroundPosition: style.backgroundPosition, mixBlendMode: style.mixBlendMode };
+    }), { backgroundPosition: '-35px -3px', mixBlendMode: 'normal' });
     const geometry = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
     assert.ok(geometry.scrollWidth <= geometry.width);
     assert.deepEqual(apiRequests, []);

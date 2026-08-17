@@ -43,8 +43,8 @@ import {
 import { DIFFICULTY_XP, type Difficulty, type FeedbackResult, type QuestType } from './rules.ts';
 import maleAvatarImage from '../design-assets/pre-development/avatar-male-original.jpg';
 import femaleAvatarImage from '../design-assets/pre-development/avatar-female-original.jpg';
-import maleMotionImage from '../design-assets/pre-development/character-motion-male.png';
-import femaleMotionImage from '../design-assets/pre-development/character-motion-female.png';
+import maleMotionImage from '../design-assets/pre-development/character-motion-male-transparent.png';
+import femaleMotionImage from '../design-assets/pre-development/character-motion-female-transparent.png';
 
 type RouteName = 'today' | 'calendar' | 'record' | 'tasks' | 'growth' | 'system' | 'day' | 'review';
 type PixelIcon = 'today' | 'calendar' | 'record' | 'growth' | 'system' | 'desk' | 'board' | 'books' | 'window' | 'character';

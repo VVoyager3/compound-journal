@@ -699,12 +699,28 @@ p {
   border: 0;
   background-color: transparent;
   background-repeat: no-repeat;
-  background-position: -46px -9px;
+  background-position: var(--idle-frame);
   background-size: 538px 358px;
   box-shadow: none;
-  filter: contrast(1.12) brightness(1.06) drop-shadow(2px 3px 0 rgb(63 41 28 / 25%));
-  mix-blend-mode: multiply;
+  filter: drop-shadow(2px 3px 0 rgb(63 41 28 / 25%));
+  mix-blend-mode: normal;
   will-change: transform, background-position;
+}
+
+.room-character.has-motion.is-female {
+  --idle-frame: -35px -3px;
+  --left-frame: -100px -3px;
+  --back-frame: -174px -3px;
+  --right-frame: -248px -3px;
+  --rest-frame: -432px -3px;
+}
+
+.room-character.has-motion.is-male {
+  --idle-frame: -36px -3px;
+  --left-frame: -103px -3px;
+  --back-frame: -175px -3px;
+  --right-frame: -239px -3px;
+  --rest-frame: -426px -3px;
 }
 
 .room-character.has-motion::before {
@@ -729,39 +745,39 @@ p {
   --action-x: clamp(-118px, -23vw, -82px);
   --action-y: 5px;
   --action-frame: -448px -126px;
-  --travel-frame: -101px -9px;
+  --travel-frame: var(--left-frame);
 }
 
 .room-character.has-motion.is-action-board {
   --action-x: -8px;
   --action-y: -58px;
   --action-frame: -371px -202px;
-  --travel-frame: -177px -9px;
+  --travel-frame: var(--back-frame);
 }
 
 .room-character.has-motion.is-action-calendar {
   --action-x: clamp(72px, 23vw, 108px);
   --action-y: -58px;
   --action-frame: -473px -273px;
-  --travel-frame: -246px -9px;
+  --travel-frame: var(--right-frame);
 }
 
 .room-character.has-motion.is-action-books {
   --action-x: clamp(98px, 31vw, 142px);
   --action-y: -28px;
   --action-frame: -473px -202px;
-  --travel-frame: -246px -9px;
+  --travel-frame: var(--right-frame);
 }
 
 .room-character.has-motion.is-action-window {
   --action-x: clamp(-148px, -31vw, -108px);
   --action-y: -55px;
   --action-frame: -388px -108px;
-  --travel-frame: -101px -9px;
+  --travel-frame: var(--left-frame);
 }
 
 .room-character.has-motion.is-resting:not([class*="is-action-"]) {
-  background-position: -430px -9px;
+  background-position: var(--rest-frame);
 }
 
 .room-hotspot.is-active {
@@ -2904,7 +2920,7 @@ noscript {
   }
 
   @keyframes room-walk-cycle {
-    0%, 8% { background-position: -46px -9px; }
+    0%, 8% { background-position: var(--idle-frame); }
     9%, 88% { background-position: var(--travel-frame); }
     92%, 100% { background-position: var(--action-frame); }
   }
@@ -2920,11 +2936,11 @@ noscript {
   }
 
   @keyframes room-wander-sprite {
-    0%, 100% { background-position: -46px -9px; }
-    8%, 28% { background-position: -101px -9px; }
-    29%, 52% { background-position: -177px -9px; }
-    53%, 76% { background-position: -246px -9px; }
-    77%, 92% { background-position: -101px -9px; }
+    0%, 100% { background-position: var(--idle-frame); }
+    8%, 28% { background-position: var(--left-frame); }
+    29%, 52% { background-position: var(--back-frame); }
+    53%, 76% { background-position: var(--right-frame); }
+    77%, 92% { background-position: var(--left-frame); }
   }
 
   @keyframes room-hotspot-flash {
