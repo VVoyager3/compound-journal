@@ -1,6 +1,6 @@
 {
   "name": "qiguang",
-  "version": "0.5.26",
+  "version": "0.5.27",
   "private": true,
   "type": "module",
   "scripts": {
@@ -30,6 +30,8 @@
   },
   "dependencies": {
     "@capacitor/android": "^7.6.8",
-    "@capacitor/core": "^7.6.8"
+    "@capacitor/core": "^7.6.8",
+    "@capacitor/filesystem": "7.0.0",
+    "@capacitor/share": "^7.0.4"
   }
 }

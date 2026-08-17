@@ -41,6 +41,7 @@ import {
   type WeeklyReviewRequest,
 } from './analysis-contract.ts';
 import { DIFFICULTY_XP, type Difficulty, type FeedbackResult, type QuestType } from './rules.ts';
+import { Capacitor } from '@capacitor/core';
 import maleAvatarImage from '../design-assets/pre-development/avatar-male-original.jpg';
 import femaleAvatarImage from '../design-assets/pre-development/avatar-female-original.jpg';
 import maleMotionImage from '../design-assets/pre-development/character-motion-male-transparent.png';
@@ -3408,12 +3409,28 @@ async function systemPage(): Promise<HTMLElement> {
     exportButton.disabled = true;
     try {
       const bundle = await db.exportBundle();
-      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json;charset=utf-8' });
+      const contents = JSON.stringify(bundle, null, 2);
+      const filename = `qiguang-backup-${localDate()}.json`;
+      if (Capacitor.isNativePlatform()) {
+        const [{ Directory, Encoding, Filesystem }, { Share }] = await Promise.all([
+          import('@capacitor/filesystem'),
+          import('@capacitor/share'),
+        ]);
+        await Filesystem.writeFile({ path: filename, data: contents, directory: Directory.Cache, encoding: Encoding.UTF8 });
+        const { uri } = await Filesystem.getUri({ path: filename, directory: Directory.Cache });
+        await Share.share({ title: '栖光备份', text: '保存或分享这份栖光本地备份。', files: [uri], dialogTitle: '保存栖光备份' });
+        showToast('已交给系统保存或分享。');
+        return;
+      }
+      const blob = new Blob([contents], { type: 'application/json;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `qiguang-backup-${localDate()}.json`;
+      link.download = filename;
+      link.hidden = true;
+      document.body.append(link);
       link.click();
+      link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       showToast('备份文件已生成，请妥善保存。');
     } catch (error) {

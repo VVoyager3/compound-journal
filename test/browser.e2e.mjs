@@ -459,6 +459,65 @@ test('selected companion uses the supplied portrait and matching room sprite', a
   }
 });
 
+test('an exported backup restores records after deleting all local data', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    const marker = `完整恢复验证-${Date.now()}`;
+    await page.getByRole('textbox', { name: '发生了什么' }).fill(marker);
+    await page.getByRole('button', { name: '仅保存本页记录' }).click();
+    await page.waitForURL(/#\/day\/\d{4}-\d{2}-\d{2}$/);
+    await assert.doesNotReject(() => page.locator('#main-content').getByText(marker, { exact: true }).waitFor());
+    await page.goto(`${baseUrl}/?backup-test=${Date.now()}#/system`);
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '我的系统' }).waitFor());
+
+    await page.evaluate(() => {
+      const createObjectURL = URL.createObjectURL.bind(URL);
+      URL.createObjectURL = (blob) => {
+        globalThis.__qiguangBackupText = blob.text();
+        return createObjectURL(blob);
+      };
+      HTMLAnchorElement.prototype.click = function captureBackup() {
+        if (this.download && this.href.startsWith('blob:')) {
+          globalThis.__qiguangBackupMetadata = {
+            connected: this.isConnected,
+            filename: this.download,
+          };
+        }
+      };
+    });
+    await page.getByRole('button', { name: '导出全部数据' }).click();
+    await assert.doesNotReject(() => page.getByText('备份文件已生成，请妥善保存。', { exact: true }).waitFor());
+    await page.waitForFunction(() => Boolean(globalThis.__qiguangBackupText && globalThis.__qiguangBackupMetadata));
+    const backup = await page.evaluate(async () => ({ ...globalThis.__qiguangBackupMetadata, text: await globalThis.__qiguangBackupText }));
+    assert.equal(backup.connected, true, 'the browser download link should be attached before activation');
+    assert.match(backup.filename, /^qiguang-backup-\d{4}-\d{2}-\d{2}\.json$/);
+    assert.equal(JSON.parse(backup.text).format, 'qiguang-backup');
+
+    await page.getByRole('button', { name: '删除全部数据' }).click();
+    const deleteDialog = page.getByRole('dialog', { name: '永久删除全部本地数据' });
+    await deleteDialog.getByRole('textbox', { name: '输入“删除全部数据”以确认' }).fill('删除全部数据');
+    await deleteDialog.getByRole('button', { name: '永久删除' }).click();
+    await assert.doesNotReject(() => page.getByRole('dialog', { name: '选择生活分身' }).waitFor());
+
+    await finishOnboarding(page);
+    await page.goto(`${baseUrl}/?restore-test=${Date.now()}#/system`);
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '我的系统' }).waitFor());
+    await page.locator('input[type="file"]').setInputFiles({ name: backup.filename, mimeType: 'application/json', buffer: Buffer.from(backup.text) });
+    const importDialog = page.getByRole('dialog', { name: '检查备份' });
+    await importDialog.getByRole('checkbox', { name: '我已先导出当前数据，并确认合并导入' }).check();
+    await importDialog.getByRole('button', { name: '合并并导入' }).click();
+    await page.waitForURL(/#\/today$/);
+    await page.goto(`${baseUrl}/#/calendar`);
+    await page.getByRole('searchbox', { name: '搜索记录文字' }).fill(marker);
+    await page.getByRole('button', { name: '查找' }).click();
+    await assert.doesNotReject(() => page.getByText(marker, { exact: true }).waitFor());
+    assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
 test('daily analysis sends only after range confirmation and keeps inference user-confirmed', async () => {
   const { context, page, apiRequests } = await freshPage();
   try {
