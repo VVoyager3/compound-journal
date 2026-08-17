@@ -389,7 +389,15 @@ function renderShell(main: HTMLElement, route: Route): void {
   });
 }
 
-function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Profile['avatar'] = null, welcoming = false, cue: RoomCue | null = null, snapshotDate: string | null = null, hasMainQuest = false): HTMLElement {
+function companionMessage(welcoming: boolean, cue: RoomCue | null, hasMainQuest: boolean): string {
+  if (welcoming) return '你回来啦。先把最近发生的一件事放下吧。';
+  if (cue === 'rest') return '先缓一缓，今天只做一件轻一点的事也可以。';
+  if (cue === 'focus') return '主线还在这儿。先选一个最小动作吧。';
+  if (cue === 'play') return '给自己留一点有趣的空白，今天才更像生活。';
+  return hasMainQuest ? '主线已经在等你了；需要的话，我陪你拆成下一步。' : '我在。今天想从哪里开始？';
+}
+
+function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Profile['avatar'] = null, companionName = '小栖', welcoming = false, cue: RoomCue | null = null, snapshotDate: string | null = null, hasMainQuest = false): HTMLElement {
   const stage = node('section', `room-stage${compact ? ' is-compact' : ''}`);
   if (snapshotDate) stage.dataset.snapshotDate = snapshotDate;
   stage.setAttribute('aria-label', '温暖的像素房间：包含日记桌、任务板、日历、书架工作台、窗边床铺和生活分身。所有功能也能通过普通导航进入。');
@@ -424,6 +432,7 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
     let actionPending = false;
     let actionTimer: number | undefined;
     const characterPanelId = `character-panel-${crypto.randomUUID()}`;
+    const characterBubbleId = `character-bubble-${crypto.randomUUID()}`;
     const hotspots: Array<[string, string, Route | null, PixelIcon]> = [
       ['desk', '记录', { name: 'record' }, 'desk'],
       ['board', '任务', { name: 'tasks' }, 'board'],
@@ -450,7 +459,6 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
         actionTimer = window.setTimeout(() => go(target), 320);
       });
       else {
-        button.setAttribute('aria-controls', characterPanelId);
         button.setAttribute('aria-expanded', 'false');
         button.addEventListener('click', () => {
           const panel = stage.querySelector<HTMLElement>('.character-panel');
@@ -460,6 +468,19 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
             if (!panel.hidden) panel.querySelector<HTMLButtonElement>('button')?.focus();
             return;
           }
+          const bubble = stage.querySelector<HTMLElement>('.character-bubble');
+          if (!bubble) {
+            const createdBubble = node('div', 'character-bubble', companionMessage(welcoming, cue, hasMainQuest));
+            createdBubble.id = characterBubbleId;
+            createdBubble.setAttribute('role', 'status');
+            character.classList.add('is-welcoming');
+            window.setTimeout(() => character.classList.remove('is-welcoming'), 520);
+            stage.append(createdBubble);
+            button.setAttribute('aria-controls', characterBubbleId);
+            button.setAttribute('aria-expanded', 'true');
+            return;
+          }
+          bubble.remove();
           const created = node('div', 'character-panel');
           created.id = characterPanelId;
           if (avatar) {
@@ -468,7 +489,7 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
             portrait.alt = '';
             created.append(portrait);
           }
-          created.append(node('strong', '', '生活分身'));
+          created.append(node('strong', '', `${companionName || '小栖'}的行动建议`));
           const actions = node('div', 'character-actions');
           const record = primaryButton('讲讲今天', () => go({ name: 'record' }));
           const week = node('button', 'button button-secondary', '看本周');
@@ -480,6 +501,7 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
           actions.append(record, why, week);
           created.append(actions);
           stage.append(created);
+          button.setAttribute('aria-controls', characterPanelId);
           button.setAttribute('aria-expanded', 'true');
           record.focus();
         });
@@ -998,7 +1020,7 @@ async function todayPage(): Promise<HTMLElement> {
   const mainQuest = quests.find((item) => item.type === 'main');
 
   const hero = node('section', 'home-hero');
-  hero.append(roomStage(false, plantStates, profile?.avatar ?? null, isReturning, roomCueFor(lowest), null, Boolean(mainQuest)));
+  hero.append(roomStage(false, plantStates, profile?.avatar ?? null, profile?.companionName || '小栖', isReturning, roomCueFor(lowest), null, Boolean(mainQuest)));
   const line = node('div', 'avatar-line');
   line.append(pixelIcon('character'), node('p', '', lowest && lowest.value < 45
     ? `优先：${dimensionLabel(lowest.dimension)}`
@@ -1831,7 +1853,7 @@ async function dayPage(date: string): Promise<HTMLElement> {
   const main = node('main', 'page page-day');
   const calendarLink = node('a', 'button button-secondary compact-button', '日历');
   calendarLink.href = '#/calendar';
-  main.append(pageHeader('某日回顾', formatDate(date, { year: 'numeric' }), calendarLink), roomStage(true, plantStates, profile?.avatar ?? null, false, roomCueFor(lowest), date));
+  main.append(pageHeader('某日回顾', formatDate(date, { year: 'numeric' }), calendarLink), roomStage(true, plantStates, profile?.avatar ?? null, profile?.companionName || '小栖', false, roomCueFor(lowest), date));
 
   const summary = node('section', 'day-summary');
   summary.append(node('h2', '', entries.length ? `这一天留下了 ${entries.length} 条真实记录` : '这一天安静地留白'));

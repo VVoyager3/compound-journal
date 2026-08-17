@@ -122,6 +122,8 @@ test('the companion offers record, main-line context, and weekly review', async 
     await finishOnboarding(page);
     await page.goto(`${baseUrl}/#/today`);
     await page.getByRole('button', { name: '生活分身' }).click();
+    await assert.doesNotReject(() => page.locator('.character-bubble').getByText('我在。今天想从哪里开始？', { exact: true }).waitFor());
+    await page.getByRole('button', { name: '生活分身' }).click();
     const panel = page.locator('.character-panel');
     await assert.doesNotReject(() => panel.waitFor());
     await assert.doesNotReject(() => panel.getByRole('button', { name: '讲讲今天' }).waitFor());
@@ -138,6 +140,7 @@ test('the companion offers record, main-line context, and weekly review', async 
     await page.getByRole('combobox', { name: '任务类型' }).selectOption('main');
     await page.getByRole('button', { name: '安排到今天' }).click();
     await page.goto(`${baseUrl}/#/today`);
+    await page.getByRole('button', { name: '生活分身' }).click();
     await page.getByRole('button', { name: '生活分身' }).click();
     await panel.getByRole('button', { name: '为什么给我这个主线？' }).click();
     await page.waitForURL(/#\/tasks$/);

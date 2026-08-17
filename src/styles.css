@@ -1948,6 +1948,34 @@ input[type="range"] {
   box-shadow: var(--shadow-small);
 }
 
+.character-bubble {
+  position: absolute;
+  z-index: 8;
+  right: 13%;
+  bottom: 39%;
+  max-width: min(228px, 68%);
+  padding: 7px 9px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: .78rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.character-bubble::after {
+  position: absolute;
+  bottom: -8px;
+  left: 28px;
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  background: var(--paper);
+  content: "";
+  transform: rotate(45deg);
+}
+
 .branch-details {
   margin-top: 8px;
   border-top: 2px solid var(--ink);
