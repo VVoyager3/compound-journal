@@ -12,7 +12,7 @@
     "test:e2e": "npm run build && node --test --test-concurrency=1 test/browser.e2e.mjs",
     "check:release": "node scripts/release-check.mjs",
     "check:server": "node --experimental-strip-types --check server.mjs",
-    "test": "npm run build && node --experimental-strip-types --test --test-concurrency=1 test/*.test.mjs",
+    "test": "npm run build && node scripts/test.mjs",
     "check": "npm run test && npm run check:server"
   },
   "engines": {

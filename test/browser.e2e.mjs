@@ -525,6 +525,7 @@ test('weekly review sends summaries instead of journals and requires theme confi
     await finishOnboarding(page);
     await page.getByRole('textbox', { name: '发生了什么' }).fill('整周原文不应出现在周复盘请求里。');
     await page.getByRole('button', { name: '仅保存本页记录' }).click();
+    await page.waitForURL(/#\/day\/\d{4}-\d{2}-\d{2}$/);
     const today = await page.evaluate(() => {
       const now = new Date();
       return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
