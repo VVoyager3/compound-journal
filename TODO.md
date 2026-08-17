@@ -67,10 +67,11 @@
 - [x] 完成 CSP、隐私说明、Android 16 真机兼容和离线重载
 - [x] 完成减少动画、键盘、屏幕阅读器语义与移动端检查
 - [x] 接入 Capacitor Android 原生壳、构建同步脚本和可配置 HTTPS AI 服务基址
-- [ ] 完成 Android 调试 APK 构建、安装与原生壳真机回归
+- [x] 完成 Android 调试 APK 构建
+- [ ] 完成 Android 原生壳安装与真机回归
 - [ ] 进行十四天封闭使用，再决定图片、同步、原生壳等扩展
 
-当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。`npm run check` 已通过 71 项，`npm run check:release` 5/5 通过。Android 16 内置浏览器真机已验证首次引导、分身、记录落盘、成长分支、离线刷新、键盘和系统页语义；Capacitor Android 原生壳、`android:sync`/`android:debug` 脚本和 `VITE_API_ORIGIN` 已接入，前端资源同步通过。首次 APK 构建卡在 Android SDK Platform 36 下载，尚未产生 APK；还需在 SDK 下载恢复后完成原生包安装、数据导入回传、真实模型密钥评估、iPhone 回归与十四天封闭使用，因此 I4 仍保持未完成。
+当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。`npm run check` 已通过 71 项，`npm run check:release` 5/5 通过。Android 16 内置浏览器真机已验证首次引导、分身、记录落盘、成长分支、离线刷新、键盘和系统页语义；Capacitor Android 原生壳、`android:sync`/`android:debug` 脚本和 `VITE_API_ORIGIN` 已接入，前端资源同步通过。使用 D 盘 JDK 21、Android SDK Platform 36 和 Capacitor v7 已成功生成约 8.95 MB 的 debug APK；还需在真机重新连接后完成原生包安装、数据导入回传、真实模型密钥评估、iPhone 回归与十四天封闭使用，因此 I4 仍保持未完成。
 
 ## 当前不做
 
