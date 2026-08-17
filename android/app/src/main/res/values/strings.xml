@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">栖光</string>
+    <string name="title_activity_main">栖光</string>
+    <string name="package_name">com.vvoyager3.qiguang</string>
+    <string name="custom_url_scheme">com.vvoyager3.qiguang</string>
+</resources>

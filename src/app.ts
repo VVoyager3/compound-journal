@@ -58,6 +58,11 @@ interface InstallPromptEvent extends Event {
 
 const DRAFT_KEY = 'qiguang.record-drafts.v2';
 const INTERRUPTED_TAKEOVER_MS = 2 * 60_000;
+const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN ?? '').replace(/\/$/, '');
+
+function apiUrl(path: '/api/analyze' | '/api/health'): string {
+  return `${API_ORIGIN}${path}`;
+}
 const appRoot = document.querySelector<HTMLElement>('#app');
 if (!appRoot) throw new Error('页面缺少应用容器。');
 const root: HTMLElement = appRoot;
@@ -240,7 +245,7 @@ async function submitAnalysisJob(job: AnalysisJob, resumeInterrupted = false): P
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 50_000);
   try {
-    const response = await fetch('/api/analyze', {
+    const response = await fetch(apiUrl('/api/analyze'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(processing.request),
@@ -763,7 +768,7 @@ async function openQuestFeedbackDialog(quest: Quest): Promise<void> {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 50_000);
     try {
-      const response = await fetch('/api/analyze', {
+      const response = await fetch(apiUrl('/api/analyze'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request), signal: controller.signal,
       });
       const body = await response.json().catch(() => null) as unknown;
@@ -1977,7 +1982,7 @@ async function submitWeeklyReviewJob(job: AnalysisJob, resumeInterrupted = false
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 50_000);
   try {
-    const response = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(processing.request), signal: controller.signal });
+    const response = await fetch(apiUrl('/api/analyze'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(processing.request), signal: controller.signal });
     const body = await response.json().catch(() => null) as { error?: { code?: AnalysisErrorCode; message?: string } } | null;
     if (!response.ok) {
       const apiError = new Error(body?.error?.message || '周复盘服务暂时不可用。') as Error & { code?: AnalysisErrorCode; nextAttemptAt?: string };
@@ -3156,7 +3161,7 @@ async function openSystemCandidateReview(memories: SystemMemory[], events: Journ
       const timeout = window.setTimeout(() => controller.abort(), 50_000);
       let response: Response;
       try {
-        response = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request), signal: controller.signal });
+        response = await fetch(apiUrl('/api/analyze'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request), signal: controller.signal });
       } finally { window.clearTimeout(timeout); }
       const body = await response.json().catch(() => null) as unknown;
       if (!response.ok) throw new Error((body as { error?: { message?: string } } | null)?.error?.message || '候选检查服务暂时不可用。');
@@ -3237,7 +3242,7 @@ function aiPermissionSettings(): HTMLElement {
   check.addEventListener('click', async () => {
     check.disabled = true;
     try {
-      const response = await fetch('/api/health', { cache: 'no-store' });
+      const response = await fetch(apiUrl('/api/health'), { cache: 'no-store' });
       const value = await response.json() as { configured?: boolean; model?: string; contractVersion?: string };
       health.textContent = value.configured
         ? `服务已配置 · ${value.model ?? '模型未标识'} · 合约 ${value.contractVersion ?? '未知'}`

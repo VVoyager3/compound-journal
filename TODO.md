@@ -1,6 +1,6 @@
 # 栖光 TODO
 
-> 当前状态：I1 本地记录与历史、I2 任务与成长、I3 AI 整理与复盘均已通过电脑端验收，进入 I4 发布候选。
+> 当前状态：I1 本地记录与历史、I2 任务与成长、I3 AI 整理与复盘均已通过电脑端验收；Android 16 真机 PWA 回归和 Capacitor Android 原生壳已接入，进入 I4 发布候选。
 > 当前仍保持本地优先；I2 不连接模型，真机回归暂缓到功能收敛后的 I4 发布候选。
 > 唯一实施基线：[开发前审查总览](./开发前审查总览.md) 及其引用的 v1.1 文档；昨天的 Android、MiniMax 和旧网页原型不再作为兼容目标。
 > 数据库按迭代迁移：当前 v4 保留 I1/I2 数据，并加入 I3 实际使用的整理任务、事件、复盘和系统候选；不预建未使用的未来实体。
@@ -64,11 +64,13 @@
 ### I4：发布候选
 
 - [x] 完成 Manifest、Service Worker、离线更新和持久存储提示
-- [ ] 完成 CSP、隐私说明、真机兼容和数据恢复演练
-- [ ] 完成减少动画、键盘、屏幕阅读器和移动端检查
+- [x] 完成 CSP、隐私说明、Android 16 真机兼容和离线重载
+- [x] 完成减少动画、键盘、屏幕阅读器语义与移动端检查
+- [x] 接入 Capacitor Android 原生壳、构建同步脚本和可配置 HTTPS AI 服务基址
+- [ ] 完成 Android 调试 APK 构建、安装与原生壳真机回归
 - [ ] 进行十四天封闭使用，再决定图片、同步、原生壳等扩展
 
-当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求白名单只允许 AI 整理与手动健康检查，`npm run check:release` 5/5 通过。`npm run test:e2e` 使用系统 Chrome 重复验证首次引导→记录→编辑→撤销、低状态恢复→一击反馈，以及成长证据追溯三条路径；电脑端也已完成 Service Worker 离线冷启动和 320/360/390/430px 核心页面无横向溢出回归。尚需把其余 AI/周复盘关键路径固化为 E2E，并完成 200% 原生浏览器字体、公网 API 鉴权与 HTTPS/兼容回滚、Android/iPhone 真机安装和数据恢复证据，因此 I4 仍保持未完成。
+当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。`npm run check` 已通过 71 项，`npm run check:release` 5/5 通过。Android 16 内置浏览器真机已验证首次引导、分身、记录落盘、成长分支、离线刷新、键盘和系统页语义；Capacitor Android 原生壳、`android:sync`/`android:debug` 脚本和 `VITE_API_ORIGIN` 已接入，前端资源同步通过。首次 APK 构建卡在 Android SDK Platform 36 下载，尚未产生 APK；还需在 SDK 下载恢复后完成原生包安装、数据导入回传、真实模型密钥评估、iPhone 回归与十四天封闭使用，因此 I4 仍保持未完成。
 
 ## 当前不做
 

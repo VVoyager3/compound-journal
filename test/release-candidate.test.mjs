@@ -88,9 +88,10 @@ test('client has no microphone capability, unsafe HTML sink, or third-party trac
 
   const fetchCalls = [...clientSource.matchAll(/\bfetch\s*\(/g)];
   const literalFetches = [...clientSource.matchAll(/\bfetch\s*\(\s*(['"])([^'"]+)\1/g)];
-  assert.equal(fetchCalls.length, literalFetches.length, 'dynamic client fetch targets are not allowed');
-  const fetchTargets = literalFetches.map((match) => match[2]);
-  assert.deepEqual([...new Set(fetchTargets)].sort(), ['/api/analyze', '/api/health'], 'only AI and its manual health check may use the network');
+  assert.equal(literalFetches.length, 0, 'client fetches must use the typed API allowlist');
+  assert.equal(fetchCalls.length, 5, 'only the five audited AI and health requests may use the network');
+  assert.match(clientSource, /function apiUrl\(path: '\/api\/analyze' \| '\/api\/health'\)/, 'API helper must restrict paths to the audited allowlist');
+  assert.equal((clientSource.match(/fetch\(apiUrl\(/g) ?? []).length, fetchCalls.length, 'every client fetch must use the audited API helper');
 
   const manifest = await read('public/manifest.webmanifest');
   assert(!/microphone|audio-capture|getUserMedia/i.test(manifest));
