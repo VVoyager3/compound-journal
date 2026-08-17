@@ -108,6 +108,7 @@ test('the companion can wander and walks to furniture before direct navigation',
     const before = await character.boundingBox();
     await page.getByRole('button', { name: '让小栖在房间里走走' }).click();
     await assert.doesNotReject(() => page.locator('.room-character.is-wandering').waitFor());
+    assert.match(await character.evaluate((element) => getComputedStyle(element).animationName), /room-step-weight/);
     await page.waitForTimeout(850);
     const wandering = await character.boundingBox();
     assert.ok(before && wandering && Math.abs(wandering.x - before.x) > 20, 'companion should visibly wander around the room');
@@ -140,6 +141,10 @@ test('the companion offers record, main-line context, and weekly review', async 
     await assert.doesNotReject(() => panel.getByRole('button', { name: '讲讲今天' }).waitFor());
     await assert.doesNotReject(() => panel.getByRole('button', { name: '安排今天的主线' }).waitFor());
     await assert.doesNotReject(() => panel.getByRole('button', { name: '看本周' }).waitFor());
+    const panelBox = await panel.boundingBox();
+    const actionBoxes = await panel.getByRole('button').evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().toJSON()));
+    assert.ok(panelBox && actionBoxes.every((box) => box.left >= panelBox.x && box.right <= panelBox.x + panelBox.width), 'all three companion actions should stay inside the panel');
+    assert.ok(actionBoxes.at(-1)?.width > panelBox.width * .8, 'the third companion action should have a full visible row');
     assert.equal(await panel.getByRole('button', { name: '为什么给我这个主线？' }).count(), 0);
     assert.equal(await panel.getByRole('button', { name: '更换外观' }).count(), 0);
     await panel.getByRole('button', { name: '安排今天的主线' }).click();

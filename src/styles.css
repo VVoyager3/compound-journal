@@ -704,7 +704,8 @@ p {
   box-shadow: none;
   filter: drop-shadow(2px 3px 0 rgb(63 41 28 / 25%));
   mix-blend-mode: normal;
-  will-change: transform, background-position;
+  transform-origin: 50% 92%;
+  will-change: transform, scale, rotate, background-position;
 }
 
 .room-character.has-motion.is-female {
@@ -966,6 +967,7 @@ p {
   bottom: 8px;
   left: 8px;
   display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
   gap: 7px;
   padding: 10px;
   border: var(--line) solid var(--ink);
@@ -978,7 +980,12 @@ p {
 }
 
 .character-panel p {
+  grid-column: 2;
   font-size: .8rem;
+}
+
+.character-panel > strong {
+  grid-column: 2;
 }
 
 .character-portrait,
@@ -992,9 +999,8 @@ p {
 }
 
 .character-portrait {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  grid-row: 1 / 3;
+  pointer-events: none;
 }
 
 .avatar-preview {
@@ -1045,8 +1051,13 @@ p {
 
 .character-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
+}
+
+.character-actions .button:last-child {
+  grid-column: 1 / -1;
 }
 
 .character-actions .button {
@@ -2849,13 +2860,15 @@ noscript {
   .room-character.has-motion.is-wandering {
     animation:
       room-wander-path 2600ms cubic-bezier(.42, 0, .25, 1) both,
-      room-wander-sprite 2600ms steps(1, end) both;
+      room-wander-sprite 2600ms steps(1, end) both,
+      room-step-weight 2600ms steps(1, end) both;
   }
 
   .room-character.has-motion[class*="is-action-"] {
     animation:
       room-action 780ms cubic-bezier(.22, .72, .2, 1) both,
-      room-walk-cycle 780ms steps(1, end) both;
+      room-walk-cycle 780ms steps(1, end) both,
+      room-step-weight 780ms steps(1, end) both;
   }
 
   .room-hotspot.is-active {
@@ -2941,6 +2954,12 @@ noscript {
     29%, 52% { background-position: var(--back-frame); }
     53%, 76% { background-position: var(--right-frame); }
     77%, 92% { background-position: var(--left-frame); }
+  }
+
+  @keyframes room-step-weight {
+    0%, 100% { scale: 1; rotate: 0deg; }
+    10%, 34%, 58%, 82% { scale: 1.04 .96; rotate: -1deg; }
+    22%, 46%, 70%, 92% { scale: .98 1.03; rotate: 1deg; }
   }
 
   @keyframes room-hotspot-flash {
