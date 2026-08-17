@@ -18,7 +18,7 @@
   --line: 3px;
   --shadow: 6px 6px 0 var(--ink);
   --shadow-small: 3px 3px 0 var(--ink);
-  --page-pad: clamp(10px, 4vw, 26px);
+  --page-pad: clamp(10px, 4vw, 20px);
 }
 
 *,
@@ -156,7 +156,7 @@ p {
 }
 
 .app-shell {
-  width: min(100%, 760px);
+  width: min(100%, 540px);
   margin-inline: auto;
   background: var(--paper);
   box-shadow: 0 0 0 1px rgb(24 22 20 / 8%);
@@ -205,8 +205,8 @@ p {
 .page {
   display: grid;
   min-width: 0;
-  gap: 22px;
-  padding: 24px var(--page-pad) calc(110px + env(safe-area-inset-bottom));
+  gap: 18px;
+  padding: 18px var(--page-pad) calc(110px + env(safe-area-inset-bottom));
 }
 
 .page-header {
@@ -756,20 +756,36 @@ p {
 .room-hotspot {
   position: absolute;
   z-index: 6;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 2px solid var(--ink);
-  border-radius: 2px;
+  border: 0;
   color: var(--ink);
-  background: rgb(255 247 230 / 92%);
-  box-shadow: 2px 2px 0 var(--ink);
+  background: transparent;
+  box-shadow: none;
   font-weight: 950;
 }
 
+.room-hotspot:not(.is-character) .pixel-icon,
 .hotspot-label {
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.room-hotspot:not(.is-character) .pixel-icon {
+  width: 20px;
+  height: 20px;
+  padding: 1px;
+}
+
+.hotspot-label {
+  padding: 1px 3px;
   font-size: 9px;
   font-weight: 900;
   line-height: 1;
@@ -1760,7 +1776,7 @@ input[type="range"] {
   left: 50%;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  width: min(100%, 760px);
+  width: min(100%, 540px);
   min-height: calc(70px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   border-top: var(--line) solid var(--ink);
@@ -1924,6 +1940,14 @@ input[type="range"] {
   padding: 15px 2px;
 }
 
+.goal-row.is-main {
+  padding: 14px;
+  border: var(--line) solid var(--ink);
+  border-top: 6px solid var(--coral);
+  background: var(--surface);
+  box-shadow: var(--shadow-small);
+}
+
 .branch-details {
   margin-top: 8px;
   border-top: 2px solid var(--ink);
@@ -2016,7 +2040,7 @@ input[type="range"] {
 
 .growth-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   min-width: 0;
   gap: 12px;
 }
@@ -2025,6 +2049,12 @@ input[type="range"] {
   display: grid;
   gap: 8px;
   padding: 14px;
+}
+
+.branch-card.is-featured {
+  padding: 18px;
+  border-top: 7px solid var(--coral);
+  box-shadow: var(--shadow);
 }
 
 .branch-level {
@@ -2155,8 +2185,17 @@ input[type="range"] {
 
 .review-period-nav {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.review-period {
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .review-intro,
@@ -2613,17 +2652,6 @@ noscript {
 }
 
 @media (min-width: 700px) {
-  .page-today {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .page-today > .page-header,
-  .page-today > .status-summary,
-  .page-today > .simple-list,
-  .page-today > .home-shortcuts {
-    grid-column: 1 / -1;
-  }
-
   .page-day > .room-stage {
     max-width: 580px;
     justify-self: center;

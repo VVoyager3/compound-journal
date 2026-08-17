@@ -1810,7 +1810,7 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[]): Prom
   }
   const candidateCount = ready.result.memoryCandidates.length;
   if (candidateCount) section.append(node('p', 'system-candidate-note', `${candidateCount} 条长期候选已进入“我的系统”，不会自动成为关于你的结论。`));
-  section.append(node('p', 'caption', `${ready.contextSummary} · 合约 ${ready.contractVersion}`));
+  if (ready.contextSummary) section.append(node('p', 'caption', ready.contextSummary));
   const sourceVersions = new Map(ready.sourceEntries.map((item) => [item.entryId, item.revision]));
   const uncovered = entries.filter((entry) => sourceVersions.get(entry.id) !== entry.version).length;
   const refresh = iconButton(uncovered ? `有 ${uncovered} 条新增记录，重新整理` : '重新检查范围并整理', null, () => { void openAnalysisPreview(date, entries); }, 'button button-secondary');
@@ -2129,16 +2129,16 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   const review = reviews.find((item) => item.periodStart === period.start && item.periodEnd === period.end);
   const job = jobs.filter((item) => item.operation === 'weekly_review' && (item.request as WeeklyReviewRequest).period.start === period.start)[0];
   const main = node('main', 'page page-review');
-  main.append(pageHeader('章节报告', `${formatDate(period.start)}—${formatDate(period.end)}`));
+  main.append(pageHeader('章节报告', '周复盘'));
   const nav = node('nav', 'review-period-nav'); nav.setAttribute('aria-label', '周复盘周期');
   const previousWeek = iconButton('上一周', null, () => go({ name: 'review', date: shiftDate(period.start, -7) }));
   const nextWeek = iconButton('下一周', null, () => go({ name: 'review', date: shiftDate(period.start, 7) }));
   nextWeek.disabled = shiftDate(period.start, 7) > localDate();
-  nav.append(previousWeek, nextWeek);
+  nav.append(previousWeek, node('span', 'caption review-period', `${formatDate(period.start)}—${formatDate(period.end)}`), nextWeek);
   main.append(nav);
   if (!review) {
     const intro = node('section', 'surface review-intro');
-    intro.append(node('p', 'eyebrow', 'WEEKLY REVIEW'), node('h2', '', '用证据决定下一周'), node('p', '', '确认一个主题和一个最小实验。'));
+    intro.append(node('p', 'eyebrow', 'WEEKLY REVIEW'), node('h2', '', '用证据决定下一周'));
     if (job?.status === 'processing') {
       const state = node('div', 'analysis-job-state is-running');
       state.append(
@@ -2195,7 +2195,8 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
     candidates.append(node('strong', '', `${reviewMemories.length} 条系统候选等待逐条核对`), node('p', '', '周复盘没有自动把它们变成关于你的结论。'), iconButton('去我的系统核对', null, () => go({ name: 'system' }), 'button button-secondary'));
     main.append(candidates);
   }
-  main.append(experiment, node('p', 'caption', `合约 ${review.contractVersion} · ${review.warnings.join('；') || '没有额外警告'}`));
+  main.append(experiment);
+  if (review.warnings.length) main.append(node('p', 'caption', review.warnings.join('；')));
   return main;
 }
 
@@ -2520,7 +2521,7 @@ async function tasksPage(): Promise<HTMLElement> {
   goalSection.append(goalHeading);
   if (!goals.length) goalSection.append(node('p', 'empty-copy', '还没有目标。'));
   goals.forEach((goal, index) => {
-    const card = node('article', 'goal-row');
+    const card = node('article', `goal-row${goal.role === 'main' ? ' is-main' : ''}`);
     card.append(node('span', 'tag', goal.role === 'main' ? '主目标' : goal.role === 'secondary' ? '次要目标' : '愿望库'), node('h3', '', goal.result));
     card.append(node('p', '', goal.why), node('p', 'quest-minimum', `下一步：${goal.nextStep}`));
     const actions = node('div', 'quest-actions');
@@ -2598,7 +2599,8 @@ async function openBranchDialog(): Promise<void> {
   const parent = node('select', 'input');
   parent.append(selectOption('', '直接放在根资产下'));
   branches.forEach((item) => parent.append(selectOption(item.id, item.name)));
-  const status = node('p', 'save-state', '经验只进入一个主要分支，不设置全局人生等级。');
+  const status = node('p', 'save-state');
+  status.setAttribute('aria-live', 'polite');
   content.append(labelledControl('分支名称', name), labelledControl('根资产', rootAsset), labelledControl('父分支（可选）', parent), status);
   const cancel = node('button', 'button button-secondary', '取消');
   cancel.type = 'button';
@@ -2635,13 +2637,16 @@ async function growthPage(): Promise<HTMLElement> {
   main.append(pageHeader('长期证据', '成长', primaryButton('建立分支', () => { void openBranchDialog(); })));
 
   const reviewEntry = node('section', 'surface review-entry');
-  reviewEntry.append(node('p', 'eyebrow', '每周章节'), node('h2', '', '用本周证据安排下一周'), primaryButton('打开周复盘', () => go({ name: 'review', date: weekRange().start })));
+  reviewEntry.append(node('p', 'eyebrow', '每周章节'), node('h2', '', '本周复盘'), primaryButton('打开周复盘', () => go({ name: 'review', date: weekRange().start })));
   main.append(reviewEntry);
 
   const grid = node('section', 'growth-grid');
-  branches.forEach((branch, index) => {
-    const value = progress[index]!;
-    const card = node('article', 'surface branch-card');
+  const featuredBranchId = goals.find((goal) => goal.role === 'main' && goal.status === 'active')?.branchId;
+  const progressByBranch = new Map(branches.map((branch, index) => [branch.id, progress[index]! ]));
+  const orderedBranches = featuredBranchId ? [...branches].sort((left, right) => Number(right.id === featuredBranchId) - Number(left.id === featuredBranchId)) : branches;
+  orderedBranches.forEach((branch) => {
+    const value = progressByBranch.get(branch.id)!;
+    const card = node('article', `surface branch-card${branch.id === featuredBranchId ? ' is-featured' : ''}`);
     const rootName = ROOT_ASSETS.find((item) => item.key === branch.rootAsset)?.name ?? branch.rootAsset;
     card.append(node('span', 'caption', rootName), node('h2', '', branch.name), node('strong', 'branch-level', `Lv.${value.level}`));
     const meter = node('progress', 'xp-progress');
@@ -3312,17 +3317,18 @@ async function systemPage(): Promise<HTMLElement> {
   const overview = node('section', 'surface settings-section system-overview');
   overview.append(node('h2', '', '个人系统概况'));
   const facts = node('dl', 'system-facts');
-  const systemRows: Array<[string, string, string]> = [
-    ['当前章节', profile.chapterTitle, `从 ${formatDate(profile.chapterStartedOn, { year: 'numeric' })} 开始，由你自己定义。`],
+  const systemRows: Array<[string, string, string?]> = [
+    ['当前章节', profile.chapterTitle],
     ['关注领域', `${areas.length} 个 · ${areas.filter((item) => item.mode === 'build').length}/2 重点建设`, '暂停领域不会产生任务或惩罚。'],
     ['目标与习惯', `${goals.length} 个目标 · ${habits.length} 个习惯`, '只有你确认的目标、任务和 BONUS 会进入系统。'],
     ['已确认规则与记忆', `${memories.filter((item) => item.status === 'confirmed').length} 条`, '每条都可追溯、编辑和忘记。'],
     ['AI 权限', settings.aiAllowed ? '已允许主动整理' : '已关闭', '每次发送仍会展示正文和上下文范围。'],
-    ['生活分身外观', profile.avatar ? (profile.avatar === 'female' ? '原创头像 A' : '原创头像 B') : '尚未选择', '仅用于视觉陪伴。'],
+    ['生活分身外观', profile.avatar ? (profile.avatar === 'female' ? '牛纹帽双辫女生' : '鹿角头饰男生') : '尚未选择'],
   ];
   for (const [label, value, note] of systemRows) {
     const row = node('div', 'system-fact');
-    row.append(node('dt', '', label), node('dd', '', value), node('p', 'caption', note));
+    row.append(node('dt', '', label), node('dd', '', value));
+    if (note) row.append(node('p', 'caption', note));
     facts.append(row);
   }
   overview.append(facts);
