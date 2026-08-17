@@ -51,6 +51,25 @@ test('room motion sprites use real PNG alpha instead of a painted grid', async (
   }
 });
 
+test('Android launcher and splash use the Qiguang identity instead of Capacitor defaults', async () => {
+  const foreground = await read('android/app/src/main/res/drawable-v24/ic_launcher_foreground.xml');
+  const background = await read('android/app/src/main/res/values/ic_launcher_background.xml');
+  const adaptive = await read('android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml');
+  const styles = await read('android/app/src/main/res/values/styles.xml');
+  const activity = await read('android/app/src/main/java/com/vvoyager3/qiguang/MainActivity.java');
+  assert.match(foreground, /#FF6B4A/i);
+  assert.match(foreground, /#F7C844/i);
+  assert.match(background, /#FFF7E6/i);
+  assert.match(adaptive, /@drawable\/ic_launcher_foreground/);
+  assert(!/#26A69A|com\.getcapacitor/i.test(`${foreground}\n${background}`), 'Capacitor starter identity must not ship');
+  assert.match(styles, /windowSplashScreenBackground[^\n]+ic_launcher_background/);
+  assert.match(styles, /windowSplashScreenAnimatedIcon[^\n]+ic_launcher_foreground/);
+  assert.match(styles, /postSplashScreenTheme[^\n]+AppTheme\.NoActionBar/);
+  assert.match(styles, /Theme\.AppCompat\.Light\.NoActionBar/);
+  assert.match(activity, /SplashScreen\.installSplashScreen\(this\)/);
+  assert(existsSync(path.join(root, 'android/app/src/main/res/drawable-port-xxhdpi/splash.png')));
+});
+
 test('service worker is versioned, keeps AI network-only, and waits for an explicit update action', async () => {
   const source = await read('public/sw.js');
   const packageVersion = JSON.parse(await read('package.json')).version;

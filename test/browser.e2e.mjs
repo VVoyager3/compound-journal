@@ -336,6 +336,7 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
       return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
     });
     await page.goto(`${baseUrl}/#/day/${today}`);
+    await page.locator(`.room-stage[data-snapshot-date="${today}"]`).waitFor();
     assert.equal(await page.locator(`.room-stage[data-snapshot-date="${today}"]`).count(), 1);
     assert.equal(await page.locator('.room-scene.is-day.is-cue-rest').count(), 1);
     assert.equal(await page.locator('.room-character.is-resting').count(), 1);

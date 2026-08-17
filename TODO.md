@@ -71,9 +71,10 @@
 - [x] 完成 Android 调试 APK 构建
 - [x] 完成 Android 原生壳安装与真机回归
 - [x] 完成浏览器备份“导出→删除→导入→恢复”闭环，并在 Android 原生壳通过系统分享面板导出真实文件
+- [x] 用栖光品牌资源替换 Capacitor 默认桌面图标与启动页，并消除 Android 深色模式冷启动黑屏
 - [ ] 进行十四天封闭使用，再决定图片、同步、原生壳等扩展
 
-当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。`npm run check` 已通过 72 项，`npm run check:release` 6/6 通过，`npm run eval:ai` 16/16 通过，端到端流程 18/18 通过。Android 16 内置浏览器真机已验证首次引导、分身、记录落盘、成长分支、离线刷新、键盘和系统页语义；Capacitor Android 原生壳、`android:sync`/`android:debug` 脚本和 `VITE_API_ORIGIN` 已接入，前端资源同步通过。使用 D 盘 JDK 21、Android SDK Platform 36 和 Capacitor v7 已生成 v0.5.27 debug APK；v0.5.27 已在 Android 16 真机完成保留数据的覆盖安装，人物透明居中、散步位移、朝向和踩步重心均已通过连续画面复核，行动面板三个入口完整可见且已分别进入记录、任务与日历；浏览器已通过完整备份恢复回归，原生壳已实际生成 JSON 文件并唤起 Android 系统分享面板。真实模型密钥评估、iPhone 回归与十四天封闭使用仍需在对应外部条件具备后完成，因此 I4 仍保持未完成。
+当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。`npm run check` 已通过 73 项、1 项仅在发布门禁启用，`npm run check:release` 7/7 通过，`npm run eval:ai` 16/16 通过，端到端流程 18/18 通过。Android 16 内置浏览器真机已验证首次引导、分身、记录落盘、成长分支、离线刷新、键盘和系统页语义；Capacitor Android 原生壳、`android:sync`/`android:debug` 脚本和 `VITE_API_ORIGIN` 已接入，前端资源同步通过。使用 D 盘 JDK 21、Android SDK Platform 36 和 Capacitor v7 已生成 v0.5.28 debug APK；v0.5.28 已在 Android 16 真机完成保留数据的覆盖安装，人物透明居中、散步位移、朝向和踩步重心均已通过连续画面复核，行动面板三个入口完整可见且已分别进入记录、任务与日历；浏览器已通过完整备份恢复回归，原生壳已实际生成 JSON 文件并唤起 Android 系统分享面板。Android 桌面图标和系统启动页现与 PWA 使用同一栖光品牌图形，冷启动不再出现深色空白页，真机 `am start -W` 冷启动为 392 ms。真实模型密钥评估、iPhone 回归与十四天封闭使用仍需在对应外部条件具备后完成，因此 I4 仍保持未完成。
 
 ## 当前不做
 
