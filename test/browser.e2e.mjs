@@ -99,17 +99,26 @@ test('first use selects a companion, records, edits, and undoes locally', async 
   }
 });
 
-test('room furniture gives a short companion action before direct navigation', async () => {
+test('the companion can wander and walks to furniture before direct navigation', async () => {
   const { context, page, apiRequests } = await freshPage();
   try {
     await finishOnboarding(page);
     await page.goto(`${baseUrl}/#/today`);
+    const character = page.locator('.room-character');
+    const before = await character.boundingBox();
+    await page.getByRole('button', { name: '让小栖在房间里走走' }).click();
+    await assert.doesNotReject(() => page.locator('.room-character.is-wandering').waitFor());
+    await page.waitForTimeout(850);
+    const wandering = await character.boundingBox();
+    assert.ok(before && wandering && Math.abs(wandering.x - before.x) > 20, 'companion should visibly wander around the room');
+    await page.waitForTimeout(1850);
+    assert.equal(await page.locator('.room-character.is-wandering').count(), 0);
     await page.getByRole('button', { name: '打开记录' }).click();
     await assert.doesNotReject(() => page.locator('.room-character.is-action-desk').waitFor());
-    await page.getByRole('button', { name: '打开任务', exact: true }).click();
-    await page.waitForURL(/#\/tasks$/);
-    await page.waitForTimeout(350);
-    assert.match(page.url(), /#\/tasks$/);
+    await page.waitForTimeout(400);
+    const during = await character.boundingBox();
+    assert.ok(before && during && during.x < before.x - 20, 'companion should visibly walk toward the desk');
+    await page.waitForURL(/#\/record$/);
     assert.deepEqual(apiRequests, []);
   } finally {
     await context.close();
@@ -122,7 +131,9 @@ test('the companion offers record, main-line context, and weekly review', async 
     await finishOnboarding(page);
     await page.goto(`${baseUrl}/#/today`);
     await page.getByRole('button', { name: '生活分身' }).click();
-    await assert.doesNotReject(() => page.locator('.character-bubble').getByText('我在。今天想从哪里开始？', { exact: true }).waitFor());
+    const bubble = page.locator('.character-bubble');
+    await assert.doesNotReject(() => bubble.getByText('我在。今天想从哪里开始？', { exact: true }).waitFor());
+    assert.equal(await bubble.evaluate((element) => getComputedStyle(element).pointerEvents), 'none');
     await page.getByRole('button', { name: '生活分身' }).click();
     const panel = page.locator('.character-panel');
     await assert.doesNotReject(() => panel.waitFor());
@@ -271,6 +282,7 @@ test('installed shell keeps the companion motion sprite available offline', asyn
     const dialog = page.getByRole('dialog', { name: '选择生活分身' });
     await dialog.getByRole('button', { name: '选择牛纹帽双辫女生' }).click();
     await dialog.getByRole('button', { name: '开始记录' }).click();
+    await page.waitForURL(/#\/record$/);
     await page.goto(`${baseUrl}/#/today`);
     const imageUrl = await page.locator('.room-character').evaluate((element) => getComputedStyle(element).backgroundImage.match(/url\("?([^"\)]+)"?\)/)?.[1]);
     assert.ok(imageUrl, 'selected companion must use the motion sprite');
@@ -312,7 +324,7 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     assert.equal(await page.locator('.room-character.is-resting').evaluate((element) => getComputedStyle(element).backgroundPosition), '-430px -9px');
     assert.equal(await page.locator('.room-cue').count(), 1);
     await page.getByRole('button', { name: '打开任务', exact: true }).click();
-    assert.equal(await page.locator('.room-character.is-action-board').evaluate((element) => getComputedStyle(element).backgroundPosition), '-371px -202px');
+    assert.equal(await page.locator('.room-character.is-action-board').count(), 1);
     await page.waitForURL(/#\/tasks$/);
     const today = await page.evaluate(() => {
       const value = new Date();

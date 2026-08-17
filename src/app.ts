@@ -431,8 +431,32 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
   if (!compact) {
     let actionPending = false;
     let actionTimer: number | undefined;
+    const roomMotionReduced = settings.reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const characterPanelId = `character-panel-${crypto.randomUUID()}`;
     const characterBubbleId = `character-bubble-${crypto.randomUUID()}`;
+    if (avatar && !roomMotionReduced) {
+      const wander = node('button', 'room-wander-button');
+      wander.type = 'button';
+      wander.setAttribute('aria-label', `让${companionName || '小栖'}在房间里走走`);
+      wander.append(pixelIcon('character'), node('span', '', '散步'));
+      wander.addEventListener('click', () => {
+        if (actionPending) return;
+        actionPending = true;
+        stage.classList.add('is-character-moving');
+        stage.setAttribute('aria-busy', 'true');
+        wander.classList.add('is-active');
+        character.classList.add('is-wandering');
+        actionTimer = window.setTimeout(() => {
+          character.classList.remove('is-wandering');
+          wander.classList.remove('is-active');
+          stage.classList.remove('is-character-moving');
+          stage.removeAttribute('aria-busy');
+          actionPending = false;
+          actionTimer = undefined;
+        }, 2600);
+      });
+      stage.append(wander);
+    }
     const hotspots: Array<[string, string, Route | null, PixelIcon]> = [
       ['desk', '记录', { name: 'record' }, 'desk'],
       ['board', '任务', { name: 'tasks' }, 'board'],
@@ -448,15 +472,17 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
       button.append(pixelIcon(icon), node('span', 'hotspot-label', label));
       const target = destination;
       if (target) button.addEventListener('click', () => {
-        if (actionPending || settings.reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !avatar) {
-          if (actionTimer !== undefined) window.clearTimeout(actionTimer);
+        if (actionPending) return;
+        if (roomMotionReduced || !avatar) {
           go(target);
           return;
         }
         actionPending = true;
+        stage.classList.add('is-character-moving');
+        stage.setAttribute('aria-busy', 'true');
         button.classList.add('is-active');
         character.classList.add(`is-action-${position}`);
-        actionTimer = window.setTimeout(() => go(target), 320);
+        actionTimer = window.setTimeout(() => go(target), 780);
       });
       else {
         button.setAttribute('aria-expanded', 'false');
