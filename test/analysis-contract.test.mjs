@@ -4,6 +4,8 @@ import test from 'node:test';
 import {
   parseDailyAnalysisRequest,
   parseDailyAnalysisResponse,
+  parseGoalDecompositionRequest,
+  parseGoalDecompositionResponse,
   parseModelJson,
   parseSystemCandidateReviewRequest,
   parseSystemCandidateReviewResponse,
@@ -304,4 +306,38 @@ test('system candidate review can only suggest type-safe user-confirmed merges',
   const duplicate = structuredClone(response);
   duplicate.result.groups.push({ ...duplicate.result.groups[0], action: 'keep_separate', mergedStatement: null });
   assert.throws(() => parseSystemCandidateReviewResponse(duplicate, request), /多个分组/);
+});
+
+test('goal decomposition stays a bounded editable draft with matching memory permission', () => {
+  const request = parseGoalDecompositionRequest({
+    contractVersion: '1.0', operation: 'goal_decomposition', requestId: 'goal-plan-1', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    userInput: { result: '发布一篇可阅读的文章', why: '把经验整理成作品', completionEvidence: '文章获得公开链接' },
+    context: {
+      area: { areaId: 'area-1', name: '创造与作品', mode: 'build' },
+      branch: { branchId: 'branch-1', name: '写作实践' },
+      memories: [{ memoryId: 'memory-1', type: 'constraint', statement: '长时间连续写作容易耗尽注意力。' }],
+    },
+    permissions: { memoryIds: ['memory-1'] },
+  });
+  const response = parseGoalDecompositionResponse({
+    contractVersion: '1.0', requestId: request.requestId, operation: 'goal_decomposition',
+    result: {
+      refinedResult: '发布一篇有公开链接的文章', completionEvidence: '文章可以通过公开链接阅读', rationale: '先形成初稿，再用一次反馈修订。',
+      milestones: [
+        { title: '完成文章初稿', evidence: '保存一份包含开头、正文和结尾的初稿。' },
+        { title: '完成一次反馈修订', evidence: '保留反馈和修订后的版本。' },
+      ],
+      nextStep: { title: '列出文章结构', why: '先降低开始成本', minimumAction: '只列三个要点', estimatedMinutes: 15, difficulty: 'light' },
+      assumptions: ['当前没有明确截止日期。'],
+    }, warnings: [],
+  }, request);
+  assert.equal(response.result.milestones.length, 2);
+  assert.equal(response.result.nextStep.minimumAction, '只列三个要点');
+
+  const unauthorized = structuredClone(request);
+  unauthorized.permissions.memoryIds = [];
+  assert.throws(() => parseGoalDecompositionRequest(unauthorized), /权限与系统记忆范围不一致/);
+  const tooLarge = structuredClone(response);
+  tooLarge.result.nextStep.estimatedMinutes = 241;
+  assert.throws(() => parseGoalDecompositionResponse(tooLarge, request), /预计时间/);
 });

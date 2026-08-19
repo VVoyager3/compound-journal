@@ -72,6 +72,17 @@ function systemCandidateEnvelope() {
   };
 }
 
+function goalDecompositionEnvelope() {
+  return {
+    contractVersion: '1.0', operation: 'goal_decomposition', requestId: 'goal-plan-server', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    userInput: { result: '发布一篇文章', why: '沉淀经验', completionEvidence: '文章有可访问链接' },
+    context: {
+      area: { areaId: 'area-1', name: '创造与作品', mode: 'build' },
+      branch: { branchId: 'branch-1', name: '写作实践' }, memories: [],
+    }, permissions: { memoryIds: [] },
+  };
+}
+
 test('server prompt treats journal text as data and local danger gate is conservative', () => {
   const ordinary = requestEnvelope();
   const payload = modelPayload(ordinary, '', '');
@@ -80,6 +91,7 @@ test('server prompt treats journal text as data and local danger gate is conserv
   assert.equal(hasImmediateDangerSignal(ordinary), false);
   assert.equal(hasImmediateDangerSignal(requestEnvelope('danger', '我现在想自杀')), true);
   assert.equal(hasImmediateDangerSignal(requestEnvelope('quoted', '文章讨论了自杀预防，但这不是我的想法。')), false);
+  assert.equal(hasImmediateDangerSignal(goalDecompositionEnvelope()), false);
 });
 
 test('same-origin server validates requests, retries format once, and caches one idempotent result', async (t) => {
@@ -232,7 +244,7 @@ test('server rejects cross-site envelopes, shares concurrent work, and stops mod
   assert.equal(upstreamCalls, 2);
 });
 
-test('same-origin fixture routes task feedback and weekly review through their strict contracts', async (t) => {
+test('same-origin fixture routes auxiliary AI operations through their strict contracts', async (t) => {
   const nativeFetch = globalThis.fetch.bind(globalThis);
   const original = { nodeEnv: process.env.NODE_ENV, fixture: process.env.QIGUANG_TEST_AI, key: process.env.MINIMAX_API_KEY };
   process.env.NODE_ENV = 'test';
@@ -256,4 +268,9 @@ test('same-origin fixture routes task feedback and weekly review through their s
   const system = await nativeFetch(`${base}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(systemCandidateEnvelope()) });
   assert.equal(system.status, 200);
   assert.equal((await system.json()).result.groups[0].action, 'merge');
+  const goal = await nativeFetch(`${base}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(goalDecompositionEnvelope()) });
+  assert.equal(goal.status, 200);
+  const goalResult = (await goal.json()).result;
+  assert.equal(goalResult.milestones.length, 2);
+  assert.equal(goalResult.nextStep.difficulty, 'light');
 });

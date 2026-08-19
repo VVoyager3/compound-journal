@@ -99,6 +99,50 @@ test('first use selects a companion, records, edits, and undoes locally', async 
   }
 });
 
+test('success diary prompts stay optional and AI goal decomposition requires confirmation', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    const input = page.getByRole('textbox', { name: '发生了什么' });
+    await page.getByRole('button', { name: '小小成功' }).click();
+    assert.match(await input.inputValue(), /今天做成或推进了什么？哪怕很小/);
+    assert.deepEqual(apiRequests, []);
+
+    await page.goto(`${baseUrl}/#/tasks`);
+    await page.getByRole('button', { name: '新建目标' }).click();
+    const goalDialog = page.getByRole('dialog', { name: '建立一个真实目标' });
+    await goalDialog.getByRole('textbox', { name: '想形成的结果' }).fill('发布一篇文章');
+    await goalDialog.getByRole('textbox', { name: '为什么' }).fill('沉淀一段真实经验');
+    await goalDialog.getByRole('textbox', { name: '完成证据' }).fill('文章有可访问链接');
+    await goalDialog.getByRole('textbox', { name: '下一步' }).fill('先列结构');
+    await goalDialog.getByRole('button', { name: 'AI 帮我拆成小目标' }).click();
+    const preview = page.getByRole('dialog', { name: '检查目标拆解发送范围' });
+    await assert.doesNotReject(() => preview.getByText(/AI 只返回可编辑草案/).waitFor());
+    assert.deepEqual(apiRequests, []);
+    await preview.getByRole('button', { name: '确认范围并生成草案' }).click();
+    const consent = page.getByRole('dialog', { name: '允许这一次目标拆解？' });
+    await consent.getByRole('button', { name: '允许并继续' }).click();
+    await assert.doesNotReject(() => goalDialog.getByRole('heading', { name: '可编辑的拆解草案' }).waitFor());
+    await goalDialog.getByRole('checkbox', { name: /同时把“写下第一版结构”安排到今天/ }).check();
+    await goalDialog.getByRole('button', { name: '建立目标' }).click();
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '发布一篇文章' }).waitFor());
+    await assert.doesNotReject(() => page.getByText('完成第一段可检查成果', { exact: true }).waitFor());
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '写下第一版结构' }).waitFor());
+    assert.equal(apiRequests.length, 1);
+    const request = JSON.parse(apiRequests[0].body);
+    assert.equal(request.operation, 'goal_decomposition');
+    assert.deepEqual(Object.keys(request.userInput).sort(), ['completionEvidence', 'result', 'why']);
+    assert.equal('entries' in request.context, false);
+
+    await page.goto(`${baseUrl}/#/today`);
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '今天的节奏' }).waitFor());
+    await page.getByRole('button', { name: '开始收束今天' }).click();
+    await assert.doesNotReject(() => page.getByRole('dialog', { name: '收束今天' }).waitFor());
+  } finally {
+    await context.close();
+  }
+});
+
 test('the companion wanders naturally and walks to furniture before direct navigation', async () => {
   const { context, page, apiRequests } = await freshPage();
   try {
@@ -159,7 +203,8 @@ test('the companion offers record, main-line context, and weekly review', async 
     await page.getByRole('button', { name: '生活分身' }).click();
     await panel.getByRole('button', { name: '为什么给我这个主线？' }).click();
     await page.waitForURL(/#\/tasks$/);
-    await assert.doesNotReject(() => page.getByText('这是主线的可追溯理由。').waitFor());
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '任务板' }).waitFor());
+    await assert.doesNotReject(() => page.locator('.task-board').getByText('这是主线的可追溯理由。', { exact: true }).waitFor());
   } finally {
     await context.close();
   }
@@ -577,6 +622,12 @@ test('task feedback lets the user review an AI candidate before XP is settled', 
     await page.getByRole('textbox', { name: '为什么今天值得做' }).fill('验证实际结果始终由用户确认');
     await page.getByRole('textbox', { name: '最小动作' }).fill('完成一个可核对步骤');
     await page.getByRole('button', { name: '安排到今天' }).click();
+    await page.getByRole('button', { name: '调整或顺延任务：反馈闭环行动' }).click();
+    const adjustment = page.getByRole('dialog', { name: '调整这项行动' });
+    await adjustment.getByRole('button', { name: '缩到 5 分钟' }).click();
+    await adjustment.getByRole('textbox', { name: '最小动作' }).fill('只完成一个五分钟版本');
+    await adjustment.getByRole('button', { name: '保存调整' }).click();
+    await assert.doesNotReject(() => page.getByText(/只完成一个五分钟版本 · 约 5 分钟/).waitFor());
     await page.getByRole('button', { name: '详细反馈任务：反馈闭环行动' }).click();
     const dialog = page.getByRole('dialog', { name: '反馈这次行动' });
     await dialog.getByRole('textbox', { name: '实际完成了什么（可选）' }).fill('完成了一部分可核对步骤。');

@@ -266,6 +266,52 @@ export interface SystemCandidateReviewResponse {
   warnings: string[];
 }
 
+export interface GoalDecompositionRequest {
+  contractVersion: typeof ANALYSIS_CONTRACT_VERSION;
+  operation: 'goal_decomposition';
+  requestId: string;
+  locale: 'zh-CN';
+  timeZone: string;
+  userInput: {
+    result: string;
+    why: string;
+    completionEvidence: string;
+  };
+  context: {
+    area: { areaId: string; name: string; mode: 'build' | 'maintain' | 'explore' | 'pause' };
+    branch: { branchId: string; name: string };
+    memories: Array<{
+      memoryId: string;
+      type: MemoryCandidate['type'];
+      statement: string;
+    }>;
+  };
+  permissions: { memoryIds: string[] };
+}
+
+export interface GoalDecompositionResult {
+  refinedResult: string;
+  completionEvidence: string;
+  rationale: string;
+  milestones: Array<{ title: string; evidence: string }>;
+  nextStep: {
+    title: string;
+    why: string;
+    minimumAction: string;
+    estimatedMinutes: number;
+    difficulty: 'light' | 'standard' | 'hard' | 'challenge';
+  };
+  assumptions: string[];
+}
+
+export interface GoalDecompositionResponse {
+  contractVersion: typeof ANALYSIS_CONTRACT_VERSION;
+  requestId: string;
+  operation: 'goal_decomposition';
+  result: GoalDecompositionResult;
+  warnings: string[];
+}
+
 const LOCAL_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_ZONE_PATTERN = /^[A-Za-z_]+(?:\/[A-Za-z0-9_+\-]+)+$/;
 
@@ -615,6 +661,64 @@ export function parseSystemCandidateReviewRequest(value: unknown): SystemCandida
   };
 }
 
+export function parseGoalDecompositionRequest(value: unknown): GoalDecompositionRequest {
+  const root = objectValue(value, '请求');
+  exactKeys(root, ['contractVersion', 'operation', 'requestId', 'locale', 'timeZone', 'userInput', 'context', 'permissions'], '请求');
+  if (root.contractVersion !== ANALYSIS_CONTRACT_VERSION) throw new Error('UNSUPPORTED_CONTRACT');
+  if (root.operation !== 'goal_decomposition') throw new Error('不支持的目标拆解操作。');
+  if (root.locale !== 'zh-CN') throw new Error('只支持 zh-CN。');
+  const timeZone = textValue(root.timeZone, '时区', 100);
+  if (!TIME_ZONE_PATTERN.test(timeZone)) throw new Error('时区无效。');
+
+  const input = objectValue(root.userInput, '用户输入');
+  exactKeys(input, ['result', 'why', 'completionEvidence'], '用户输入');
+  const context = objectValue(root.context, '上下文');
+  exactKeys(context, ['area', 'branch', 'memories'], '上下文');
+  const area = objectValue(context.area, '关注领域');
+  exactKeys(area, ['areaId', 'name', 'mode'], '关注领域');
+  const branch = objectValue(context.branch, '成长分支');
+  exactKeys(branch, ['branchId', 'name'], '成长分支');
+  const memories = arrayValue(context.memories, '系统记忆', 20).map((value, index) => {
+    const memory = objectValue(value, `系统记忆${index + 1}`);
+    exactKeys(memory, ['memoryId', 'type', 'statement'], `系统记忆${index + 1}`);
+    return {
+      memoryId: textValue(memory.memoryId, '记忆 ID', 200),
+      type: enumValue(memory.type, ['preference', 'pattern', 'principle', 'strength', 'constraint'] as const, '记忆类型'),
+      statement: textValue(memory.statement, '记忆内容', 500),
+    };
+  });
+  if (new Set(memories.map((item) => item.memoryId)).size !== memories.length) throw new Error('系统记忆不能重复。');
+  const permissions = objectValue(root.permissions, '发送权限');
+  exactKeys(permissions, ['memoryIds'], '发送权限');
+  const memoryIds = uniqueStrings(permissions.memoryIds, '允许发送的记忆 ID', 20);
+  if (memoryIds.length !== memories.length || memories.some((item) => !memoryIds.includes(item.memoryId))) throw new Error('发送权限与系统记忆范围不一致。');
+  return {
+    contractVersion: ANALYSIS_CONTRACT_VERSION,
+    operation: 'goal_decomposition',
+    requestId: textValue(root.requestId, '请求 ID', 200),
+    locale: 'zh-CN',
+    timeZone,
+    userInput: {
+      result: textValue(input.result, '目标结果', 160),
+      why: textValue(input.why, '目标理由', 500),
+      completionEvidence: textValue(input.completionEvidence, '完成证据', 500),
+    },
+    context: {
+      area: {
+        areaId: textValue(area.areaId, '领域 ID', 200),
+        name: textValue(area.name, '领域名称', 60),
+        mode: enumValue(area.mode, ['build', 'maintain', 'explore', 'pause'] as const, '领域模式'),
+      },
+      branch: {
+        branchId: textValue(branch.branchId, '分支 ID', 200),
+        name: textValue(branch.name, '分支名称', 60),
+      },
+      memories,
+    },
+    permissions: { memoryIds },
+  };
+}
+
 function parseEvidence(value: unknown, index: number, entries: Map<string, string>): AnalysisEvidence {
   const record = objectValue(value, `证据${index + 1}`);
   exactKeys(record, ['entryId', 'quote', 'start', 'end'], `证据${index + 1}`);
@@ -925,6 +1029,48 @@ export function parseSystemCandidateReviewResponse(value: unknown, request: Syst
   return {
     contractVersion: ANALYSIS_CONTRACT_VERSION, requestId: request.requestId, operation: 'system_candidate_review',
     result: { groups }, warnings: uniqueStrings(root.warnings, '警告', 10, 200),
+  };
+}
+
+export function parseGoalDecompositionResponse(value: unknown, request: GoalDecompositionRequest): GoalDecompositionResponse {
+  const root = objectValue(value, '目标拆解响应');
+  exactKeys(root, ['contractVersion', 'requestId', 'operation', 'result', 'warnings'], '目标拆解响应');
+  if (root.contractVersion !== ANALYSIS_CONTRACT_VERSION || root.operation !== 'goal_decomposition' || root.requestId !== request.requestId) {
+    throw new Error('响应信封与请求不一致。');
+  }
+  const result = objectValue(root.result, '目标拆解结果');
+  exactKeys(result, ['refinedResult', 'completionEvidence', 'rationale', 'milestones', 'nextStep', 'assumptions'], '目标拆解结果');
+  const milestones = arrayValue(result.milestones, '目标里程碑', 5).map((value, index) => {
+    const milestone = objectValue(value, `目标里程碑${index + 1}`);
+    exactKeys(milestone, ['title', 'evidence'], `目标里程碑${index + 1}`);
+    return {
+      title: textValue(milestone.title, '里程碑标题', 200),
+      evidence: textValue(milestone.evidence, '里程碑证据', 500),
+    };
+  });
+  if (milestones.length < 2) throw new Error('目标拆解至少需要两个里程碑。');
+  if (new Set(milestones.map((item) => item.title)).size !== milestones.length) throw new Error('目标里程碑不能重复。');
+  const nextStep = objectValue(result.nextStep, '目标下一步');
+  exactKeys(nextStep, ['title', 'why', 'minimumAction', 'estimatedMinutes', 'difficulty'], '目标下一步');
+  return {
+    contractVersion: ANALYSIS_CONTRACT_VERSION,
+    requestId: request.requestId,
+    operation: 'goal_decomposition',
+    result: {
+      refinedResult: textValue(result.refinedResult, '优化后的目标结果', 160),
+      completionEvidence: textValue(result.completionEvidence, '完成证据', 500),
+      rationale: textValue(result.rationale, '拆解说明', 500),
+      milestones,
+      nextStep: {
+        title: textValue(nextStep.title, '下一步标题', 160),
+        why: textValue(nextStep.why, '下一步理由', 500),
+        minimumAction: textValue(nextStep.minimumAction, '下一步最小动作', 200),
+        estimatedMinutes: integerValue(nextStep.estimatedMinutes, '下一步预计时间', 1, 240),
+        difficulty: enumValue(nextStep.difficulty, ['light', 'standard', 'hard', 'challenge'] as const, '下一步难度'),
+      },
+      assumptions: uniqueStrings(result.assumptions, '待确认假设', 5, 300),
+    },
+    warnings: uniqueStrings(root.warnings, '警告', 10, 200),
   };
 }
 

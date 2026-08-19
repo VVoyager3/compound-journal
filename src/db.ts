@@ -53,7 +53,7 @@ import { DIFFICULTY_XP, canAddQuest, habitMomentum, levelFromXp, questXp, resolv
 export const DB_NAME = 'qiguang';
 export const DB_VERSION = 4;
 export const BACKUP_FORMAT_VERSION = 4;
-export const APP_VERSION = '0.5.28';
+export const APP_VERSION = '0.6.0';
 
 const STORE_NAMES = [
   'profile',
@@ -2198,6 +2198,34 @@ export class QiguangDb {
     quests.add(quest);
     await transactionDone(transaction);
     return quest;
+  }
+
+  async savePendingQuest(id: string, patch: Partial<Pick<Quest, 'localDate' | 'title' | 'reason' | 'minimumAction' | 'estimatedMinutes' | 'difficulty'>>): Promise<Quest> {
+    const transaction = this.database.transaction('quests', 'readwrite');
+    const quests = transaction.objectStore('quests');
+    const current = await requestResult(quests.get(id)) as Quest | undefined;
+    if (!current || current.status !== 'pending') {
+      transaction.abort();
+      throw new Error('只有待完成任务可以调整。');
+    }
+    const updated = { ...current, ...patch, userModified: true, updatedAt: nowIso(), version: current.version + 1 };
+    if (!isLocalDate(updated.localDate)) {
+      transaction.abort();
+      throw new Error('任务日期无效。');
+    }
+    assertText(updated.title, '任务标题', 160);
+    assertText(updated.reason, '任务理由', 500);
+    assertText(updated.minimumAction, '任务最小动作', 200);
+    assertInteger(updated.estimatedMinutes, 1, 24 * 60, '任务预计时间');
+    assertOneOf(updated.difficulty, Object.keys(DIFFICULTY_XP), '任务难度');
+    const destination = await requestResult(quests.index('byLocalDate').getAll(updated.localDate)) as Quest[];
+    if (!canAddQuest(updated.type, destination.filter((item) => item.id !== id && item.status === 'pending').map((item) => item.type))) {
+      transaction.abort();
+      throw new Error('目标日期的这类任务已经达到上限。');
+    }
+    quests.put(updated);
+    await transactionDone(transaction);
+    return updated;
   }
 
   async ensureTodayBonusQuests(date = localDate()): Promise<Quest[]> {

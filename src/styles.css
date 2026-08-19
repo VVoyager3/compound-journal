@@ -1162,6 +1162,48 @@ p {
   flex: 1 1 128px;
 }
 
+.daily-rhythm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.daily-rhythm > .section-heading {
+  grid-column: 1 / -1;
+  padding-inline: 0;
+}
+
+.daily-guide,
+.daily-closeout {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  border-top-width: 5px;
+  box-shadow: var(--shadow-small);
+}
+
+.daily-guide { border-top-color: var(--coral); }
+.daily-closeout { border-top-color: var(--blue); }
+.daily-closeout.is-current { background: #e7f6fa; }
+
+.closeout-checklist,
+.goal-plan-editor,
+.system-guide-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.closeout-item {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 2px solid var(--ink);
+  border-left: 6px solid var(--warn);
+  background: var(--surface);
+}
+
+.closeout-item.is-done { border-left-color: var(--green); }
+
 .simple-list,
 .entry-timeline,
 .search-section {
@@ -1932,6 +1974,27 @@ input[type="range"] {
   line-height: 1.55;
 }
 
+.record-prompts {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 2px dashed var(--ink);
+  background: #fff1bc;
+}
+
+.record-prompt-actions,
+.quest-adjust-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.record-prompt-actions .button,
+.quest-adjust-shortcuts .button {
+  min-height: 40px;
+  padding: 6px 10px;
+}
+
 .today-optionals,
 .task-board,
 .task-goals,
@@ -2037,6 +2100,27 @@ input[type="range"] {
   display: grid;
   gap: 8px;
   padding: 15px 2px;
+}
+
+.goal-decomposition-assistant {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 3px solid var(--ink);
+  background: #e7f6fa;
+}
+
+.goal-plan-editor {
+  padding-top: 10px;
+  border-top: 3px solid var(--ink);
+}
+
+.goal-plan-step {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid var(--ink);
+  background: var(--surface);
 }
 
 .goal-row.is-main {
@@ -2555,6 +2639,22 @@ input[type="range"] {
   border-bottom: 1px dashed var(--ink);
 }
 
+.success-evidence {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 3px solid var(--ink);
+  border-left: 7px solid var(--green);
+  background: #eef5d9;
+}
+
+.success-list {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 21px;
+}
+
 .quest-suggestion {
   border-left-color: var(--coral);
 }
@@ -2616,6 +2716,37 @@ input[type="range"] {
   border-left-color: var(--green);
 }
 
+.system-guide-groups {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.system-guide-group {
+  min-width: 0;
+  padding: 12px;
+  border: 2px solid var(--ink);
+  background: var(--paper-deep);
+}
+
+.system-guide-group:first-child {
+  grid-column: 1 / -1;
+  border-top: 6px solid var(--coral);
+}
+
+.system-guide-group .memory-row {
+  background: var(--surface);
+}
+
+.memory-candidates {
+  padding-block: 10px;
+  border-block: 2px solid var(--ink);
+}
+
+.memory-candidates > summary {
+  min-height: 44px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .ai-settings .setting-row > span {
   display: grid;
   gap: 3px;
@@ -2631,6 +2762,15 @@ noscript {
 }
 
 @media (max-width: 560px) {
+  .daily-rhythm,
+  .system-guide-groups {
+    grid-template-columns: 1fr;
+  }
+
+  .system-guide-group:first-child {
+    grid-column: auto;
+  }
+
   .reflection-row {
     grid-template-columns: 1fr;
     gap: 3px;

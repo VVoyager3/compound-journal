@@ -667,6 +667,28 @@ test('pending daily quests never exceed one main, three BONUS, and two side ques
   assert.deepEqual((await db.listQuests('2026-08-14')).map((item) => item.type), ['main', 'bonus', 'bonus', 'bonus', 'side', 'side']);
 });
 
+test('pending quests can be shrunk, replaced, or moved without bypassing daily caps', async (t) => {
+  const db = await withDatabase(t, 'i2-adjust-quest');
+  await db.ensureI2Defaults();
+  const quest = await db.addQuest({
+    localDate: '2026-08-14', type: 'main', sourceType: 'manual', title: '原行动', reason: '原理由',
+    minimumAction: '做二十分钟', estimatedMinutes: 20, difficulty: 'standard',
+  });
+  const adjusted = await db.savePendingQuest(quest.id, {
+    localDate: '2026-08-15', title: '更适合的行动', minimumAction: '只做五分钟', estimatedMinutes: 5, difficulty: 'light',
+  });
+  assert.deepEqual({ date: adjusted.localDate, title: adjusted.title, minutes: adjusted.estimatedMinutes, modified: adjusted.userModified }, {
+    date: '2026-08-15', title: '更适合的行动', minutes: 5, modified: true,
+  });
+  await db.addQuest({
+    localDate: '2026-08-16', type: 'main', sourceType: 'manual', title: '已有主线', reason: '占用当天名额',
+    minimumAction: '做一步', estimatedMinutes: 5, difficulty: 'light',
+  });
+  await assert.rejects(() => db.savePendingQuest(quest.id, { localDate: '2026-08-16' }), /达到上限/);
+  await db.feedbackQuest(quest.id, 'completed');
+  await assert.rejects(() => db.savePendingQuest(quest.id, { title: '完成后不能改' }), /只有待完成任务/);
+});
+
 test('only user-enabled habits create BONUS quests and momentum does not reset after a miss', async (t) => {
   const db = await withDatabase(t, 'i2-habits');
   await db.ensureI2Defaults();

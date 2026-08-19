@@ -4,6 +4,8 @@ import { readFile } from 'node:fs/promises';
 import {
   parseDailyAnalysisRequest,
   parseDailyAnalysisResponse,
+  parseGoalDecompositionRequest,
+  parseGoalDecompositionResponse,
   parseTaskFeedbackRequest,
   parseTaskFeedbackResponse,
   parseWeeklyReviewRequest,
@@ -157,6 +159,7 @@ function completeOfflineResponse(run) {
 
 function validateRequest(request) {
   if (request.operation === 'daily_analysis') parseDailyAnalysisRequest(request);
+  else if (request.operation === 'goal_decomposition') parseGoalDecompositionRequest(request);
   else if (request.operation === 'task_feedback') parseTaskFeedbackRequest(request);
   else if (request.operation === 'weekly_review') parseWeeklyReviewRequest(request);
   exactKeys(request, new Set([
@@ -164,7 +167,7 @@ function validateRequest(request) {
     'period', 'userInput', 'context', 'permissions',
   ]), 'request');
   assert.equal(request.contractVersion, '1.0');
-  assert(['daily_analysis', 'task_feedback', 'weekly_review', 'system_candidate_review'].includes(request.operation));
+  assert(['daily_analysis', 'goal_decomposition', 'task_feedback', 'weekly_review', 'system_candidate_review'].includes(request.operation));
   assert.equal(typeof request.requestId, 'string');
   assert.equal(typeof request.timeZone, 'string');
 
@@ -187,6 +190,11 @@ function validateRequest(request) {
       'includeBonusHabits', 'memoryIds',
     ]), 'daily permissions');
     assert.deepEqual(new Set(request.permissions.entryIds), new Set(request.userInput.entries.map((item) => item.entryId)));
+    assert.deepEqual(new Set(request.permissions.memoryIds), new Set(request.context.memories.map((item) => item.memoryId)));
+  } else if (request.operation === 'goal_decomposition') {
+    exactKeys(request.userInput, new Set(['result', 'why', 'completionEvidence']), 'goal userInput');
+    exactKeys(request.context, new Set(['area', 'branch', 'memories']), 'goal context');
+    exactKeys(request.permissions, new Set(['memoryIds']), 'goal permissions');
     assert.deepEqual(new Set(request.permissions.memoryIds), new Set(request.context.memories.map((item) => item.memoryId)));
   } else if (request.operation === 'task_feedback') {
     assert.match(request.localDate, /^\d{4}-\d{2}-\d{2}$/);
@@ -358,6 +366,8 @@ function validateRun(run, response) {
   else if (run.request.operation === 'daily_analysis') {
     parseDailyAnalysisResponse(response, parseDailyAnalysisRequest(run.request));
     validateDaily(run.request, response.result);
+  } else if (run.request.operation === 'goal_decomposition') {
+    parseGoalDecompositionResponse(response, parseGoalDecompositionRequest(run.request));
   } else if (run.request.operation === 'task_feedback') {
     parseTaskFeedbackResponse(response, parseTaskFeedbackRequest(run.request));
     validateFeedback(run.request, response.result);
