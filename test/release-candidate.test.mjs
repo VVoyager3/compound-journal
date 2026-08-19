@@ -202,6 +202,7 @@ test('production backend container is minimal, non-root, and never copies local 
 test('manual release workflow verifies the app, publishes the server image, and keeps the APK', async () => {
   const workflow = await read('.github/workflows/release-candidate.yml');
   assert.match(workflow, /^\s*workflow_dispatch:\s*$/m);
+  assert.match(workflow, /^\s*- codex\/latest-ui\s*$/m);
   assert.match(workflow, /^\s*packages:\s*write\s*$/m);
   for (const command of ['npm ci', 'npm run check', 'npm run check:release', 'npm run eval:ai', 'npm run test:e2e']) {
     assert(workflow.includes(command), `release workflow must run ${command}`);

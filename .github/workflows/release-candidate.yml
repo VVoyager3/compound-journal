@@ -2,6 +2,9 @@ name: Release candidate
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - codex/latest-ui
 
 permissions:
   contents: read
