@@ -1,6 +1,6 @@
 {
   "name": "qiguang",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -15,6 +15,7 @@
     "test:e2e": "npm run build && node scripts/e2e.mjs",
     "check:release": "node scripts/release-check.mjs",
     "check:android-release": "node scripts/release-check.mjs --native",
+    "check:deployment": "node scripts/deployment-check.mjs",
     "check:server": "node --experimental-strip-types --check server.mjs",
     "test": "npm run build && node scripts/test.mjs",
     "check": "npm run test && npm run check:server"

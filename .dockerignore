@@ -1,0 +1,10 @@
+.git
+.codegraph
+.env*
+node_modules
+dist
+android
+test
+scripts
+*.md
+*.log

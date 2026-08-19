@@ -185,6 +185,20 @@ test('fresh production output contains no secret, source map, or oversized initi
   }
 });
 
+test('production backend container is minimal, non-root, and never copies local secrets', async () => {
+  const dockerfile = await read('Dockerfile');
+  const dockerignore = await read('.dockerignore');
+  const packageJson = JSON.parse(await read('package.json'));
+  assert.match(dockerfile, /^FROM node:22\.18-alpine AS build/m);
+  assert.equal((dockerfile.match(/^FROM /gm) ?? []).length, 2, 'container must discard build dependencies');
+  assert.match(dockerfile, /^USER node$/m);
+  assert.match(dockerfile, /^HEALTHCHECK /m);
+  assert.match(dockerfile, /COPY --from=build \/app\/dist \.\/dist/);
+  assert(!/COPY\s+\.\s/m.test(dockerfile), 'container must copy only audited files');
+  assert.match(dockerignore, /^\.env\*$/m);
+  assert.equal(packageJson.scripts['check:deployment'], 'node scripts/deployment-check.mjs');
+});
+
 test('native production output contains its explicit HTTPS AI service origin', { skip: process.env.QIGUANG_NATIVE_RELEASE !== '1' }, async () => {
   const origin = new URL(process.env.VITE_API_ORIGIN);
   assert.equal(origin.protocol, 'https:');

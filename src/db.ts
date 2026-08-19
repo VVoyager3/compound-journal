@@ -53,7 +53,7 @@ import { DIFFICULTY_XP, canAddQuest, habitMomentum, levelFromXp, questXp, resolv
 export const DB_NAME = 'qiguang';
 export const DB_VERSION = 4;
 export const BACKUP_FORMAT_VERSION = 4;
-export const APP_VERSION = '0.6.3';
+export const APP_VERSION = '0.6.4';
 
 const STORE_NAMES = [
   'profile',
