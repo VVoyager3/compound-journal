@@ -8,7 +8,7 @@ const tests = (await readdir(join(root, 'test'))).filter((file) => file.endsWith
 
 for (const file of tests) {
   const status = await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ['--experimental-strip-types', '--test', '--test-isolation=none', join(root, 'test', file)], { stdio: 'inherit' });
+    const child = spawn(process.execPath, ['--experimental-strip-types', join(root, 'test', file)], { stdio: 'inherit' });
     child.once('error', reject);
     child.once('exit', (code, signal) => resolve(code === 0 && !signal));
   });

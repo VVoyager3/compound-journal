@@ -11,7 +11,10 @@ const names = [...source.matchAll(/^test\('([^']+)'/gm)].map((match) => match[1]
 for (const name of names) {
   const pattern = `^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`;
   const status = await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ['--experimental-strip-types', '--test', '--test-isolation=none', `--test-name-pattern=${pattern}`, testFile], { stdio: 'inherit' });
+    const args = ['--experimental-strip-types', '--test'];
+    if (process.allowedNodeEnvironmentFlags.has('--test-isolation')) args.push('--test-isolation=none');
+    args.push(`--test-name-pattern=${pattern}`, testFile);
+    const child = spawn(process.execPath, args, { stdio: 'inherit' });
     child.once('error', reject);
     child.once('exit', (code, signal) => resolve(code === 0 && !signal));
   });
