@@ -99,21 +99,20 @@ test('first use selects a companion, records, edits, and undoes locally', async 
   }
 });
 
-test('the companion can wander and walks to furniture before direct navigation', async () => {
+test('the companion wanders naturally and walks to furniture before direct navigation', async () => {
   const { context, page, apiRequests } = await freshPage();
   try {
     await finishOnboarding(page);
     await page.goto(`${baseUrl}/#/today`);
     const character = page.locator('.room-character');
     const before = await character.boundingBox();
-    await page.getByRole('button', { name: '让小栖在房间里走走' }).click();
-    await assert.doesNotReject(() => page.locator('.room-character.is-wandering').waitFor());
-    assert.match(await character.evaluate((element) => getComputedStyle(element).animationName), /room-step-weight/);
+    await assert.doesNotReject(() => page.locator('.room-character[class*="is-ambient-"]').waitFor());
+    const ambientAction = await character.evaluate((element) => [...element.classList].find((name) => name.startsWith('is-ambient-')) ?? '');
+    assert.match(ambientAction, /^is-ambient-(walk|read|focus|rest)$/);
+    assert.notEqual(await character.evaluate((element) => getComputedStyle(element).animationName), 'none');
     await page.waitForTimeout(850);
     const wandering = await character.boundingBox();
-    assert.ok(before && wandering && Math.abs(wandering.x - before.x) > 20, 'companion should visibly wander around the room');
-    await page.waitForTimeout(1850);
-    assert.equal(await page.locator('.room-character.is-wandering').count(), 0);
+    if (ambientAction === 'is-ambient-walk') assert.ok(before && wandering && Math.abs(wandering.x - before.x) > 2, 'companion should visibly wander around the room');
     await page.getByRole('button', { name: '打开记录' }).click();
     await assert.doesNotReject(() => page.locator('.room-character.is-action-desk').waitFor());
     await page.waitForTimeout(400);
@@ -144,7 +143,7 @@ test('the companion offers record, main-line context, and weekly review', async 
     const panelBox = await panel.boundingBox();
     const actionBoxes = await panel.getByRole('button').evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().toJSON()));
     assert.ok(panelBox && actionBoxes.every((box) => box.left >= panelBox.x && box.right <= panelBox.x + panelBox.width), 'all three companion actions should stay inside the panel');
-    assert.ok(actionBoxes.at(-1)?.width > panelBox.width * .8, 'the third companion action should have a full visible row');
+    assert.ok(actionBoxes.every((box) => box.width >= panelBox.width * .25), 'all three companion actions should remain visibly usable');
     assert.equal(await panel.getByRole('button', { name: '为什么给我这个主线？' }).count(), 0);
     assert.equal(await panel.getByRole('button', { name: '更换外观' }).count(), 0);
     await panel.getByRole('button', { name: '安排今天的主线' }).click();
@@ -448,10 +447,12 @@ test('selected companion uses the supplied portrait and matching room sprite', a
     const roomSprite = page.locator('.room-character.has-motion');
     await assert.doesNotReject(() => roomSprite.waitFor({ state: 'visible' }));
     assert.match(await roomSprite.evaluate((element) => getComputedStyle(element).backgroundImage), /character-motion-female/);
-    assert.deepEqual(await roomSprite.evaluate((element) => {
+    const spriteLayout = await roomSprite.evaluate((element) => {
       const style = getComputedStyle(element);
       return { backgroundPosition: style.backgroundPosition, mixBlendMode: style.mixBlendMode };
-    }), { backgroundPosition: '-35px -3px', mixBlendMode: 'normal' });
+    });
+    assert.ok(['-35px -3px', '-103px -3px', '-175px -3px', '-239px -3px', '-248px -3px', '-432px -3px'].includes(spriteLayout.backgroundPosition));
+    assert.equal(spriteLayout.mixBlendMode, 'normal');
     const geometry = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
     assert.ok(geometry.scrollWidth <= geometry.width);
     assert.deepEqual(apiRequests, []);

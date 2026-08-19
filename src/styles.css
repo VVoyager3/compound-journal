@@ -790,39 +790,6 @@ p {
   opacity: .58;
 }
 
-.room-wander-button {
-  position: absolute;
-  z-index: 7;
-  right: 4%;
-  bottom: 3%;
-  display: grid;
-  grid-template-columns: 18px auto;
-  align-items: center;
-  gap: 3px;
-  min-width: 62px;
-  min-height: 38px;
-  padding: 4px 6px;
-  border: 2px solid var(--ink);
-  color: var(--ink);
-  background: var(--paper);
-  box-shadow: 2px 2px 0 var(--ink);
-  font: inherit;
-  font-size: .68rem;
-  font-weight: 900;
-}
-
-.room-wander-button .pixel-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.room-wander-button.is-active {
-  color: var(--surface);
-  background: var(--green);
-  box-shadow: none;
-  transform: translate(2px, 2px);
-}
-
 .room-plant {
   position: absolute;
   z-index: 3;
@@ -1052,18 +1019,15 @@ p {
 .character-actions {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
-}
-
-.character-actions .button:last-child {
-  grid-column: 1 / -1;
 }
 
 .character-actions .button {
   min-width: 0;
   padding: 5px 3px;
   font-size: .72rem;
+  white-space: nowrap;
 }
 
 .avatar-line {
@@ -1609,6 +1573,7 @@ input[type="range"] {
   font-family: ui-monospace, "Cascadia Mono", monospace;
   font-weight: 900;
   text-align: center;
+  white-space: nowrap;
 }
 
 .setting-row {
@@ -2871,6 +2836,28 @@ noscript {
       room-step-weight 780ms steps(1, end) both;
   }
 
+  .room-character.has-motion.is-ambient-walk:not(.is-resting):not([class*="is-action-"]):not(.is-wandering):not(.is-welcoming):not(.is-celebrating) {
+    animation:
+      room-ambient-walk 7200ms cubic-bezier(.42, 0, .25, 1) infinite,
+      room-ambient-walk-sprite 7200ms steps(1, end) infinite,
+      room-step-weight 7200ms steps(1, end) infinite;
+  }
+
+  .room-character.has-motion.is-ambient-read:not(.is-resting):not([class*="is-action-"]):not(.is-welcoming):not(.is-celebrating) {
+    background-position: var(--right-frame);
+    animation: room-ambient-read 5600ms steps(2, end) infinite;
+  }
+
+  .room-character.has-motion.is-ambient-focus:not(.is-resting):not([class*="is-action-"]):not(.is-welcoming):not(.is-celebrating) {
+    background-position: -448px -126px;
+    animation: room-ambient-focus 5200ms steps(2, end) infinite;
+  }
+
+  .room-character.has-motion.is-ambient-rest.is-resting:not([class*="is-action-"]):not(.is-welcoming):not(.is-celebrating) {
+    background-position: var(--rest-frame);
+    animation: room-ambient-rest 5600ms steps(2, end) infinite;
+  }
+
   .room-hotspot.is-active {
     animation: room-hotspot-flash 780ms steps(3, end);
   }
@@ -2946,6 +2933,38 @@ noscript {
     64% { transform: translate3d(calc(-50% + 36px), -44px, 0); }
     80% { transform: translate3d(calc(-50% + 68px), -15px, 0); }
     92% { transform: translate3d(calc(-50% + 25px), 5px, 0); }
+  }
+
+  @keyframes room-ambient-walk {
+    0%, 100% { transform: translate3d(-50%, 0, 0); }
+    18% { transform: translate3d(calc(-50% - 7px), -2px, 0); }
+    38% { transform: translate3d(calc(-50% + 5px), 0, 0); }
+    58% { transform: translate3d(calc(-50% + 8px), -2px, 0); }
+    78% { transform: translate3d(calc(-50% - 4px), 0, 0); }
+  }
+
+  @keyframes room-ambient-walk-sprite {
+    0%, 14% { background-position: var(--idle-frame); }
+    15%, 34% { background-position: var(--left-frame); }
+    35%, 54% { background-position: var(--back-frame); }
+    55%, 74% { background-position: var(--right-frame); }
+    75%, 90% { background-position: var(--left-frame); }
+    91%, 100% { background-position: var(--idle-frame); }
+  }
+
+  @keyframes room-ambient-read {
+    0%, 100% { background-position: var(--right-frame); transform: translate3d(-50%, 0, 0); }
+    50% { background-position: -473px -202px; transform: translate3d(-50%, -1px, 0) rotate(-1deg); }
+  }
+
+  @keyframes room-ambient-focus {
+    0%, 100% { background-position: -448px -126px; transform: translate3d(-50%, 0, 0); }
+    50% { background-position: -473px -202px; transform: translate3d(-50%, -1px, 0) rotate(1deg); }
+  }
+
+  @keyframes room-ambient-rest {
+    0%, 100% { background-position: var(--rest-frame); transform: translate3d(-50%, 0, 0) rotate(-1deg); }
+    50% { background-position: var(--rest-frame); transform: translate3d(-50%, 1px, 0) rotate(1deg); }
   }
 
   @keyframes room-wander-sprite {

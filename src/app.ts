@@ -404,6 +404,7 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
   stage.setAttribute('aria-label', '温暖的像素房间：包含日记桌、任务板、日历、书架工作台、窗边床铺和生活分身。所有功能也能通过普通导航进入。');
   const scene = node('div', 'room-scene');
   const hour = new Date().getHours();
+  const ambientAction = roomAmbientAction();
   scene.classList.add(snapshotDate ? 'is-day' : hour < 6 ? 'is-night' : hour < 12 ? 'is-morning' : hour < 18 ? 'is-day' : 'is-evening');
   if (cue) scene.classList.add(`is-cue-${cue}`);
   scene.setAttribute('aria-hidden', 'true');
@@ -420,7 +421,7 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
     const plant = node('div', `room-plant is-${position}${plantState ? ` is-${plantState.growth}` : ''}${plantState?.habitId === celebratingHabit ? ' is-celebrating' : ''}`);
     scene.append(plant);
   });
-  const character = node('div', `room-character is-${avatar ?? 'neutral'}${celebratingCharacter ? ' is-celebrating' : ''}${welcoming ? ' is-welcoming' : ''}${cue === 'rest' ? ' is-resting' : ''}`);
+  const character = node('div', `room-character is-${avatar ?? 'neutral'} is-ambient-${ambientAction}${celebratingCharacter ? ' is-celebrating' : ''}${welcoming ? ' is-welcoming' : ''}${cue === 'rest' || ambientAction === 'rest' ? ' is-resting' : ''}`);
   if (avatar) {
     character.classList.add('has-motion');
     character.style.backgroundImage = `url("${motionAsset(avatar)}")`;
@@ -435,29 +436,6 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
     const roomMotionReduced = settings.reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const characterPanelId = `character-panel-${crypto.randomUUID()}`;
     const characterBubbleId = `character-bubble-${crypto.randomUUID()}`;
-    if (avatar && !roomMotionReduced) {
-      const wander = node('button', 'room-wander-button');
-      wander.type = 'button';
-      wander.setAttribute('aria-label', `让${companionName || '小栖'}在房间里走走`);
-      wander.append(pixelIcon('character'), node('span', '', '散步'));
-      wander.addEventListener('click', () => {
-        if (actionPending) return;
-        actionPending = true;
-        stage.classList.add('is-character-moving');
-        stage.setAttribute('aria-busy', 'true');
-        wander.classList.add('is-active');
-        character.classList.add('is-wandering');
-        actionTimer = window.setTimeout(() => {
-          character.classList.remove('is-wandering');
-          wander.classList.remove('is-active');
-          stage.classList.remove('is-character-moving');
-          stage.removeAttribute('aria-busy');
-          actionPending = false;
-          actionTimer = undefined;
-        }, 2600);
-      });
-      stage.append(wander);
-    }
     const hotspots: Array<[string, string, Route | null, PixelIcon]> = [
       ['desk', '记录', { name: 'record' }, 'desk'],
       ['board', '任务', { name: 'tasks' }, 'board'],
@@ -522,8 +500,9 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
           const week = node('button', 'button button-secondary', '看本周');
           week.type = 'button';
           week.addEventListener('click', () => go({ name: 'calendar' }));
-          const why = node('button', 'button button-secondary', hasMainQuest ? '为什么给我这个主线？' : '安排今天的主线');
+          const why = node('button', 'button button-secondary', hasMainQuest ? '主线说明' : '安排主线');
           why.type = 'button';
+          why.setAttribute('aria-label', hasMainQuest ? '为什么给我这个主线？' : '安排今天的主线');
           why.addEventListener('click', () => go({ name: 'tasks' }));
           actions.append(record, why, week);
           created.append(actions);
@@ -551,6 +530,14 @@ function timestampLocalDate(timestamp: string): string {
 function roomCueFor(state?: ResolvedDimensionState): RoomCue | null {
   if (!state || state.value >= 45) return null;
   return ({ energy: 'rest', mind: 'rest', connection: null, progress: 'focus', play: 'play' } as const)[state.dimension];
+}
+
+function roomAmbientAction(now = new Date()): 'rest' | 'walk' | 'focus' | 'read' {
+  const hour = now.getHours() + now.getMinutes() / 60;
+  if (hour < 6 || hour >= 22) return 'rest';
+  if (hour < 9 || (hour >= 14 && hour < 17)) return 'walk';
+  if (hour < 12 || (hour >= 17 && hour < 20)) return 'read';
+  return 'focus';
 }
 
 async function openStateDetail(dimension: (typeof DIMENSIONS)[number], observation?: ResolvedDimensionState, referenceDate = localDate()): Promise<void> {
