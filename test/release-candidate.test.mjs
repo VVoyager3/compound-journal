@@ -199,6 +199,19 @@ test('production backend container is minimal, non-root, and never copies local 
   assert.equal(packageJson.scripts['check:deployment'], 'node scripts/deployment-check.mjs');
 });
 
+test('manual release workflow verifies the app, publishes the server image, and keeps the APK', async () => {
+  const workflow = await read('.github/workflows/release-candidate.yml');
+  assert.match(workflow, /^\s*workflow_dispatch:\s*$/m);
+  assert.match(workflow, /^\s*packages:\s*write\s*$/m);
+  for (const command of ['npm ci', 'npm run check', 'npm run check:release', 'npm run eval:ai', 'npm run test:e2e']) {
+    assert(workflow.includes(command), `release workflow must run ${command}`);
+  }
+  assert.match(workflow, /docker build[\s\S]*docker push/);
+  assert.match(workflow, /\.\/gradlew assembleDebug/);
+  assert.match(workflow, /actions\/upload-artifact@v4/);
+  assert(!workflow.includes('MINIMAX_API_KEY'), 'release builds must not require or expose the model key');
+});
+
 test('native production output contains its explicit HTTPS AI service origin', { skip: process.env.QIGUANG_NATIVE_RELEASE !== '1' }, async () => {
   const origin = new URL(process.env.VITE_API_ORIGIN);
   assert.equal(origin.protocol, 'https:');
