@@ -122,6 +122,15 @@ test('daily request accepts only the documented privacy envelope', () => {
   assert.throws(() => parseDailyAnalysisRequest(unknown), /未知字段/);
 });
 
+test('request time zones accept UTC and reject unknown IANA identifiers', () => {
+  const utc = validRequest();
+  utc.timeZone = 'UTC';
+  assert.equal(parseDailyAnalysisRequest(utc).timeZone, 'UTC');
+  const invalid = validRequest();
+  invalid.timeZone = 'Unknown/Nowhere';
+  assert.throws(() => parseDailyAnalysisRequest(invalid), /时区无效/);
+});
+
 test('disabled context permissions require their payloads to be empty', () => {
   const daily = validRequest();
   daily.permissions.includeGoals = false;

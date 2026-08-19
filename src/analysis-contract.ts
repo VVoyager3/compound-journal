@@ -313,7 +313,6 @@ export interface GoalDecompositionResponse {
 }
 
 const LOCAL_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_ZONE_PATTERN = /^[A-Za-z_]+(?:\/[A-Za-z0-9_+\-]+)+$/;
 
 function objectValue(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label}必须是对象。`);
@@ -368,6 +367,13 @@ function localDateValue(value: unknown, label: string): string {
   return result;
 }
 
+function timeZoneValue(value: unknown): string {
+  const result = textValue(value, '时区', 100);
+  try { new Intl.DateTimeFormat('en-US', { timeZone: result }).format(0); }
+  catch { throw new Error('时区无效。'); }
+  return result;
+}
+
 function uniqueStrings(value: unknown, label: string, maxItems: number, maxLength = 200): string[] {
   const result = arrayValue(value, label, maxItems).map((item, index) => textValue(item, `${label}第${index + 1}项`, maxLength));
   if (new Set(result).size !== result.length) throw new Error(`${label}不能重复。`);
@@ -391,8 +397,7 @@ export function parseDailyAnalysisRequest(value: unknown): DailyAnalysisRequest 
   if (root.operation !== 'daily_analysis') throw new Error('不支持的整理操作。');
   if (root.locale !== 'zh-CN') throw new Error('只支持 zh-CN。');
   const requestId = textValue(root.requestId, '请求 ID', 200);
-  const timeZone = textValue(root.timeZone, '时区', 100);
-  if (!TIME_ZONE_PATTERN.test(timeZone)) throw new Error('时区无效。');
+  const timeZone = timeZoneValue(root.timeZone);
   const localDate = localDateValue(root.localDate, '整理日期');
 
   const input = objectValue(root.userInput, '用户输入');
@@ -479,8 +484,7 @@ export function parseTaskFeedbackRequest(value: unknown): TaskFeedbackRequest {
   if (root.contractVersion !== ANALYSIS_CONTRACT_VERSION) throw new Error('UNSUPPORTED_CONTRACT');
   if (root.operation !== 'task_feedback') throw new Error('不支持的反馈操作。');
   if (root.locale !== 'zh-CN') throw new Error('只支持 zh-CN。');
-  const timeZone = textValue(root.timeZone, '时区', 100);
-  if (!TIME_ZONE_PATTERN.test(timeZone)) throw new Error('时区无效。');
+  const timeZone = timeZoneValue(root.timeZone);
   const input = objectValue(root.userInput, '用户输入');
   exactKeys(input, ['questId', 'questTitle', 'minimumAction', 'currentDifficulty', 'feedbackText'], '用户输入');
   const questId = textValue(input.questId, '任务 ID', 200);
@@ -511,8 +515,7 @@ export function parseWeeklyReviewRequest(value: unknown): WeeklyReviewRequest {
   if (root.contractVersion !== ANALYSIS_CONTRACT_VERSION) throw new Error('UNSUPPORTED_CONTRACT');
   if (root.operation !== 'weekly_review') throw new Error('不支持的复盘操作。');
   if (root.locale !== 'zh-CN') throw new Error('只支持 zh-CN。');
-  const timeZone = textValue(root.timeZone, '时区', 100);
-  if (!TIME_ZONE_PATTERN.test(timeZone)) throw new Error('时区无效。');
+  const timeZone = timeZoneValue(root.timeZone);
   const period = objectValue(root.period, '复盘周期');
   exactKeys(period, ['start', 'end'], '复盘周期');
   const start = localDateValue(period.start, '周期开始日期');
@@ -627,8 +630,7 @@ export function parseSystemCandidateReviewRequest(value: unknown): SystemCandida
   if (root.contractVersion !== ANALYSIS_CONTRACT_VERSION) throw new Error('UNSUPPORTED_CONTRACT');
   if (root.operation !== 'system_candidate_review') throw new Error('不支持的系统候选操作。');
   if (root.locale !== 'zh-CN') throw new Error('只支持 zh-CN。');
-  const timeZone = textValue(root.timeZone, '时区', 100);
-  if (!TIME_ZONE_PATTERN.test(timeZone)) throw new Error('时区无效。');
+  const timeZone = timeZoneValue(root.timeZone);
   const input = objectValue(root.userInput, '用户输入');
   exactKeys(input, ['candidates'], '用户输入');
   const candidates = arrayValue(input.candidates, '系统候选', 30).map((value, index) => {
@@ -667,8 +669,7 @@ export function parseGoalDecompositionRequest(value: unknown): GoalDecomposition
   if (root.contractVersion !== ANALYSIS_CONTRACT_VERSION) throw new Error('UNSUPPORTED_CONTRACT');
   if (root.operation !== 'goal_decomposition') throw new Error('不支持的目标拆解操作。');
   if (root.locale !== 'zh-CN') throw new Error('只支持 zh-CN。');
-  const timeZone = textValue(root.timeZone, '时区', 100);
-  if (!TIME_ZONE_PATTERN.test(timeZone)) throw new Error('时区无效。');
+  const timeZone = timeZoneValue(root.timeZone);
 
   const input = objectValue(root.userInput, '用户输入');
   exactKeys(input, ['result', 'why', 'completionEvidence'], '用户输入');
