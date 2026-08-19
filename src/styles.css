@@ -1991,7 +1991,7 @@ input[type="range"] {
 
 .record-prompt-actions .button,
 .quest-adjust-shortcuts .button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 6px 10px;
 }
 
@@ -2408,6 +2408,22 @@ input[type="range"] {
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 430px) {
+  .review-period-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-period {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .review-period-nav .button {
+    width: 100%;
+  }
 }
 
 .review-intro,
@@ -3169,7 +3185,20 @@ noscript {
 
 @media (max-width: 560px) {
   .update-notice {
-    grid-template-columns: 1fr;
+    inset: auto 8px calc(78px + env(safe-area-inset-bottom));
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .update-notice > div {
+    grid-column: 1 / -1;
+  }
+
+  .update-notice .button {
+    min-height: 44px;
+    padding: 7px 10px;
+    box-shadow: var(--shadow-small);
   }
 }
 

@@ -99,6 +99,35 @@ test('first use selects a companion, records, edits, and undoes locally', async 
   }
 });
 
+test('all core pages survive 200 percent text at 320px with touch-safe actions', async () => {
+  const { context, page } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    for (const route of ['today', 'calendar', 'record', 'growth', 'system', 'tasks', 'review']) {
+      await page.goto(`${baseUrl}/#/${route}`);
+      await assert.doesNotReject(() => page.locator('#main-content').waitFor());
+      const layout = await page.evaluate(() => ({
+        viewport: innerWidth,
+        content: document.documentElement.scrollWidth,
+        offenders: [...document.querySelectorAll('body *')].filter((element) => {
+          const box = element.getBoundingClientRect();
+          return box.width > 0 && (box.left < -1 || box.right > innerWidth + 1);
+        }).slice(0, 6).map((element) => `${element.tagName.toLowerCase()}.${element.className}`),
+      }));
+      assert.ok(layout.content <= layout.viewport, `${route} overflows at 200% text: ${layout.content}/${layout.viewport} ${layout.offenders.join(', ')}`);
+    }
+    await page.goto(`${baseUrl}/#/record`);
+    const promptSizes = await page.locator('.record-prompt-actions button').evaluateAll((buttons) => buttons.map((button) => {
+      const box = button.getBoundingClientRect();
+      return { width: box.width, height: box.height };
+    }));
+    assert(promptSizes.length === 4 && promptSizes.every((box) => box.width >= 44 && box.height >= 44), 'record prompts must remain touch-safe');
+  } finally {
+    await context.close();
+  }
+});
+
 test('success diary prompts stay optional and AI goal decomposition requires confirmation', async () => {
   const { context, page, apiRequests } = await freshPage();
   try {
