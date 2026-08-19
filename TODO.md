@@ -60,6 +60,7 @@
 - [x] 完成发送前预览、事件证据、事实/推断确认和状态候选
 - [x] 完成口述文字反馈解析、周复盘和系统记忆候选
 - [x] 将“成功日记”融入自由记录和每日复盘：用 1–5 条有记录证据的小成功呈现真实进展，不强制凑数
+- [x] 未连接远程模型时，用户明确写下的“小小成功”仍会在某日回顾中形成完全本地的成功日记；AI 入口明确停用但不影响手动目标、任务反馈和成长闭环
 - [x] 新建目标时可在发送范围确认后由 AI 拆成 2–5 个可验证里程碑，并选择是否安排今天的最小下一步
 - [x] 将已确认的长期记忆整理为可读的“我的行动说明书”，候选内容仍需用户逐条确认
 - [x] 验证 AI 只能提供任务草案，不能自动启用 BONUS 或修改计划
@@ -80,7 +81,7 @@
 - [x] 用栖光品牌资源替换 Capacitor 默认桌面图标与启动页，并消除 Android 深色模式冷启动黑屏
 - [ ] 进行十四天封闭使用，再决定图片、同步、原生壳等扩展
 
-当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。v0.6.2 保留成功日记、目标拆解与小屏优化，并补齐 Android WebView 的显式 HTTPS 服务配置、来源白名单和发布检查；未配置时会明确停用远程整理，不再误连 `localhost`。当前 `npm run check` 76 项通过（2 项发布模式检查按常规模式跳过）、`npm run check:release` 7 项通过（Android 地址检查跳过）、验证地址下 `npm run check:android-release` 8/8、`npm run eval:ai` 17/17、浏览器端到端流程 20/20。v0.6.2 Android 调试 APK 已重新生成，包名 `com.vvoyager3.qiguang`、versionCode 602、targetSdk 36，并通过 APK v2 签名校验；它可验证本地记录、任务和成长，正式启用 AI 前仍需部署服务并执行 PowerShell 命令 `$env:VITE_API_ORIGIN='https://…'; npm run check:android-release`。新版本真机回归仍按计划留到设备重新连接后执行；既有 Android 16 验证记录保留。真实模型密钥评估、远程服务部署与十四天封闭使用仍需在对应外部条件具备后完成，因此 I4 保持未完成；iPhone/iOS 不纳入当前版本验收范围。
+当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。v0.6.3 在成功日记、目标拆解和 Android HTTPS 服务配置基础上，增加完全本地的明确成功汇总，并在未配置远程模型时停用所有误导性入口。当前 `npm run check` 76 项通过（2 项发布模式检查按常规模式跳过）、`npm run check:release` 7 项通过（Android 地址检查跳过）、验证地址下 `npm run check:android-release` 8/8、`npm run eval:ai` 17/17、浏览器端到端流程 21/21。v0.6.3 Android 调试 APK 已重新生成，包名 `com.vvoyager3.qiguang`、versionCode 603、targetSdk 36，通过 APK v2 签名校验且不含测试服务地址。正式启用 AI 前仍需部署服务并执行 PowerShell 命令 `$env:VITE_API_ORIGIN='https://…'; npm run check:android-release`。新版本真机回归仍按计划留到设备重新连接后执行；既有 Android 16 验证记录保留。真实模型密钥评估、远程服务部署与十四天封闭使用仍需在对应外部条件具备后完成，因此 I4 保持未完成；iPhone/iOS 不纳入当前版本验收范围。
 
 ## 当前不做
 

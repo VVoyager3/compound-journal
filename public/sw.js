@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qiguang-shell-v0.6.2';
+const CACHE_NAME = 'qiguang-shell-v0.6.3';
 const CORE = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-180.png', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (event) => {

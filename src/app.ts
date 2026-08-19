@@ -62,6 +62,7 @@ interface InstallPromptEvent extends Event {
 
 const DRAFT_KEY = 'qiguang.record-drafts.v2';
 const INTERRUPTED_TAKEOVER_MS = 2 * 60_000;
+const SUCCESS_PROMPT = '今天做成或推进了什么？哪怕很小：';
 const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN ?? '').replace(/\/$/, '');
 const NATIVE_AI_UNAVAILABLE = '此安装包未连接远程整理服务；记录、任务和成长数据仍可在本机使用。';
 const NATIVE_AI_READY = !Capacitor.isNativePlatform() || (() => {
@@ -71,6 +72,19 @@ const NATIVE_AI_READY = !Capacitor.isNativePlatform() || (() => {
 function apiUrl(path: '/api/analyze' | '/api/health'): string {
   if (!NATIVE_AI_READY) throw new Error(NATIVE_AI_UNAVAILABLE);
   return `${API_ORIGIN}${path}`;
+}
+
+function explicitSuccessCredits(entries: JournalEntry[]): string[] {
+  const values = entries.flatMap((entry) => {
+    const lines = entry.body.split(/\r?\n/);
+    return lines.flatMap((line, index) => {
+      if (!line.trimStart().startsWith(SUCCESS_PROMPT)) return [];
+      const inline = line.slice(line.indexOf(SUCCESS_PROMPT) + SUCCESS_PROMPT.length).trim();
+      const value = inline || lines[index + 1]?.trim();
+      return value ? [value] : [];
+    });
+  });
+  return [...new Set(values)].slice(0, 5);
 }
 const appRoot = document.querySelector<HTMLElement>('#app');
 if (!appRoot) throw new Error('页面缺少应用容器。');
@@ -783,11 +797,12 @@ async function openQuestFeedbackDialog(quest: Quest): Promise<void> {
   const status = node('p', 'save-state');
   const aiPanel = node('section', 'feedback-ai-panel');
   aiPanel.append(
-    node('strong', '', 'AI 理解反馈（可选）'),
-    node('p', 'caption', '发送范围见下方；结果需你确认。'),
+    node('strong', '', NATIVE_AI_READY ? 'AI 理解反馈（可选）' : 'AI 理解反馈未连接'),
+    node('p', 'caption', NATIVE_AI_READY ? '发送范围见下方；结果需你确认。' : '可直接手动选择完成情况并保存，不影响反馈和经验。'),
   );
-  const understand = node('button', 'button button-secondary', 'AI 理解这段反馈');
+  const understand = node('button', 'button button-secondary', NATIVE_AI_READY ? 'AI 理解这段反馈' : '远程服务未连接');
   understand.type = 'button';
+  understand.disabled = !NATIVE_AI_READY;
   understand.addEventListener('click', async () => {
     if (!actual.value.trim()) {
       status.textContent = '请先写下实际完成了什么。';
@@ -1100,6 +1115,7 @@ function focusQuestOnPage(questId: string): void {
 
 function openDailyCloseout(date: string, entries: JournalEntry[], quests: Quest[], analysis?: DailyAnalysis): void {
   const { dialog, content, actions } = dialogShell('收束今天');
+  const localSuccesses = explicitSuccessCredits(entries);
   const pending = quests.filter((item) => item.status === 'pending');
   const completed = quests.filter((item) => item.status === 'completed' || item.status === 'partial');
   const checklist = node('div', 'closeout-checklist');
@@ -1113,10 +1129,16 @@ function openDailyCloseout(date: string, entries: JournalEntry[], quests: Quest[
     const taskButton = node('button', 'button button-secondary', '处理待反馈行动');
     taskButton.type = 'button'; taskButton.addEventListener('click', () => { dialog.close(); go({ name: 'tasks' }); }); task.append(taskButton);
   }
-  const review = node('section', `closeout-item${analysis ? ' is-done' : ''}`);
-  review.append(node('strong', '', analysis ? '今天已经整理成可回看的章节' : '今天还没有生成整理'), node('p', 'caption', analysis ? '小成功、关键事件和明天最小一步都可以继续核对。' : entries.length ? 'AI 只会生成候选；发送前仍由你检查范围。' : '先有一条原始记录，再考虑整理。'));
-  const reviewButton = node('button', 'button button-secondary', analysis ? '查看今天的整理' : entries.length ? '检查范围并整理' : '先去记录');
-  reviewButton.type = 'button'; reviewButton.addEventListener('click', () => { dialog.close(); go(entries.length ? { name: 'day', date } : { name: 'record' }); }); review.append(reviewButton);
+  const review = node('section', `closeout-item${analysis || localSuccesses.length ? ' is-done' : ''}`);
+  review.append(
+    node('strong', '', analysis ? '今天已经整理成可回看的章节' : localSuccesses.length ? `已写下 ${localSuccesses.length} 条小成功` : '今天还没有写下小成功'),
+    node('p', 'caption', analysis ? '小成功、关键事件和明天最小一步都可以继续核对。' : localSuccesses.length ? '这是你明确写下的事实，不依赖 AI 推断。' : entries.length && NATIVE_AI_READY ? 'AI 只会生成候选；发送前仍由你检查范围。' : '一句具体的小推进也算。'),
+  );
+  const reviewButton = node('button', 'button button-secondary', analysis || localSuccesses.length ? '查看成功日记' : entries.length && NATIVE_AI_READY ? '检查范围并整理' : '写下一条小成功');
+  reviewButton.type = 'button'; reviewButton.addEventListener('click', () => {
+    dialog.close();
+    go(analysis || localSuccesses.length || (entries.length && NATIVE_AI_READY) ? { name: 'day', date } : { name: 'record', date });
+  }); review.append(reviewButton);
   checklist.append(record, task, review);
   content.append(node('p', 'muted', '结束一天不是清空清单，而是把事实、已有推进和未完成的选择都安放好。'), checklist);
   const close = node('button', 'button button-primary', '今天先到这里'); close.type = 'button'; close.addEventListener('click', () => dialog.close());
@@ -1329,7 +1351,7 @@ function recordPage(route: Route): HTMLElement {
   );
   const promptActions = node('div', 'record-prompt-actions');
   for (const [label, prompt] of [
-    ['小小成功', '今天做成或推进了什么？哪怕很小：'],
+    ['小小成功', SUCCESS_PROMPT],
     ['发生的事', '今天发生了什么：'],
     ['感受', '当时我的感受是：'],
     ['想记住', '今天值得记住的是：'],
@@ -1613,6 +1635,7 @@ function appendStoredRequestPreview(content: HTMLElement, request: DailyAnalysis
 }
 
 async function openAnalysisPreview(date: string, entries: JournalEntry[], retryJob?: AnalysisJob): Promise<void> {
+  if (!NATIVE_AI_READY) { showToast(NATIVE_AI_UNAVAILABLE, 'error'); return; }
   const { dialog, content, actions } = dialogShell(retryJob ? '检查并重试整理' : '检查本次发送范围');
   if (retryJob) {
     if (retryJob.operation !== 'daily_analysis') throw new Error('这不是每日整理任务。');
@@ -1914,12 +1937,12 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[]): Prom
   ]);
   const dailyJobs = jobs.filter((item) => item.operation === 'daily_analysis');
   const section = node('section', 'surface daily-analysis');
-  const heading = node('div', 'section-heading');
-  heading.append(node('div', '', undefined));
-  heading.firstElementChild?.append(node('p', 'eyebrow', 'AI 整理 · 证据优先'), node('h2', '', '这一天的整理'));
-  section.append(heading);
   const latestJob = dailyJobs[0];
   const ready = analyses.find((item) => item.status === 'ready');
+  const heading = node('div', 'section-heading');
+  heading.append(node('div', '', undefined));
+  heading.firstElementChild?.append(node('p', 'eyebrow', ready || NATIVE_AI_READY ? 'AI 整理 · 证据优先' : '本地成功日记 · 明确记录'), node('h2', '', '这一天的整理'));
+  section.append(heading);
 
   if (latestJob?.status === 'safety-review') {
     const safety = node('aside', 'safety-review');
@@ -1942,16 +1965,27 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[]): Prom
     const state = node('div', `analysis-job-state is-${latestJob.status}`);
     state.append(node('strong', '', latestJob.status === 'queued' ? '已保存在本机，等待你继续' : '整理尚未完成'));
     state.append(node('p', '', latestJob.errorCode ? analysisErrorCopy(latestJob.errorCode, latestJob.errorMessage) : '不会自动联网上传；由你检查范围后继续。'));
-    const retry = node('button', 'button button-primary', navigator.onLine ? '检查范围并重试' : '当前离线');
+    const retry = node('button', 'button button-primary', !NATIVE_AI_READY ? '远程服务未连接' : navigator.onLine ? '检查范围并重试' : '当前离线');
     retry.type = 'button';
-    retry.disabled = !navigator.onLine;
+    retry.disabled = !navigator.onLine || !NATIVE_AI_READY;
     retry.addEventListener('click', () => { void openAnalysisPreview(date, entries, latestJob); });
     state.append(retry);
     section.append(state);
   }
 
   if (!ready) {
+    const successes = explicitSuccessCredits(entries);
+    const successBlock = node('section', 'success-evidence');
+    successBlock.append(node('strong', '', '你明确写下的小成功'));
+    if (successes.length) {
+      const list = node('ul', 'success-list');
+      successes.forEach((item) => list.append(node('li', '', item)));
+      successBlock.append(list, node('p', 'caption', '直接来自你的“小小成功”记录，不做额外推断。'));
+    } else successBlock.append(node('p', 'caption', '还没有明确写下；一句具体的小推进也算。'));
+    successBlock.append(iconButton(successes.length ? '再写一条小成功' : '写下一条小成功', null, () => go({ name: 'record', date }), 'button button-secondary'));
+    section.append(successBlock);
     if (!entries.length) section.append(node('p', 'muted', '有原始记录后，才可以主动选择发送并整理。'));
+    else if (!NATIVE_AI_READY) section.append(node('p', 'caption', '远程整理尚未连接；本地成功日记、原始记录、任务与成长仍可完整使用。'));
     else if (!latestJob || !['queued', 'processing', 'failed', 'safety-review'].includes(latestJob.status)) {
       section.append(node('p', '', 'AI 只会返回候选；明确事实可撤销，推断确认前不会改变状态或经验。'));
       section.append(primaryButton('检查范围并整理', () => { void openAnalysisPreview(date, entries); }));
@@ -2226,6 +2260,7 @@ async function submitWeeklyReviewJob(job: AnalysisJob, resumeInterrupted = false
 }
 
 async function openWeeklyReviewPreview(period: { start: string; end: string }, retryJob?: AnalysisJob): Promise<void> {
+  if (!NATIVE_AI_READY) { showToast(NATIVE_AI_UNAVAILABLE, 'error'); return; }
   const { dialog, content, actions } = dialogShell(retryJob ? '检查并重试周复盘' : '检查周复盘发送范围');
   if (retryJob) {
     if (retryJob.operation !== 'weekly_review') throw new Error('这不是周复盘任务。');
@@ -2354,7 +2389,8 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   if (!review) {
     const intro = node('section', 'surface review-intro');
     intro.append(node('p', 'eyebrow', 'WEEKLY REVIEW'), node('h2', '', '用证据决定下一周'));
-    if (job?.status === 'processing') {
+    if (!NATIVE_AI_READY) intro.append(node('p', '', '远程周复盘尚未连接；本地记录、任务反馈、成长证据和成功日记仍会保留。'));
+    else if (job?.status === 'processing') {
       const state = node('div', 'analysis-job-state is-running');
       state.append(
         node('p', '', '正在生成；可以离开本页。另一标签也可能仍在处理。'),
@@ -2427,6 +2463,7 @@ async function requestGoalDecomposition(
   branch: GrowthBranch,
   memories: SystemMemory[],
 ): Promise<GoalDecompositionResult | null> {
+  if (!NATIVE_AI_READY) { showToast(NATIVE_AI_UNAVAILABLE, 'error'); return null; }
   const { dialog, content, actions } = dialogShell('检查目标拆解发送范围');
   content.append(node('p', 'privacy-boundary', '只发送下面列出的目标草案、所选领域/分支和你已确认的系统记忆。AI 只返回可编辑草案，不会直接创建目标或任务。'));
   const scope = node('div', 'analysis-preview-scope');
@@ -2532,9 +2569,9 @@ async function openGoalDialog(): Promise<void> {
   const status = node('p', 'save-state');
   const assistant = node('section', 'goal-decomposition-assistant');
   assistant.append(node('strong', '', '需要帮你把目标变小吗？'), node('p', 'caption', 'AI 可以提出 2—5 个可验证里程碑和今天能开始的一步；生成后仍由你编辑和确认。'));
-  const decompose = node('button', 'button button-secondary', navigator.onLine ? 'AI 帮我拆成小目标' : '联网后可用 AI 拆解');
+  const decompose = node('button', 'button button-secondary', !NATIVE_AI_READY ? '远程拆解服务未连接' : navigator.onLine ? 'AI 帮我拆成小目标' : '联网后可用 AI 拆解');
   decompose.type = 'button';
-  decompose.disabled = !navigator.onLine;
+  decompose.disabled = !navigator.onLine || !NATIVE_AI_READY;
   assistant.append(decompose);
   const plan = node('section', 'goal-plan-editor');
   plan.hidden = true;
@@ -2582,7 +2619,7 @@ async function openGoalDialog(): Promise<void> {
     if (!selectedArea || !selectedBranch) return;
     decompose.disabled = true;
     const draft = await requestGoalDecomposition({ result: result.value, why: why.value, evidence: evidence.value }, selectedArea, selectedBranch, memories);
-    decompose.disabled = !navigator.onLine;
+    decompose.disabled = !navigator.onLine || !NATIVE_AI_READY;
     if (draft) { showPlan(draft); status.textContent = '拆解草案已回填；请修改后再建立目标。'; }
   });
   content.append(
@@ -3484,6 +3521,7 @@ async function openMemoryDecision(memory: SystemMemory): Promise<void> {
 }
 
 async function openSystemCandidateReview(memories: SystemMemory[], events: JournalEvent[]): Promise<void> {
+  if (!NATIVE_AI_READY) { showToast(NATIVE_AI_UNAVAILABLE, 'error'); return; }
   const available = memories.filter((item) => item.status !== 'forgotten');
   if (available.length < 2) { showToast('至少需要两条候选或已确认记忆才能检查重复。'); return; }
   const { dialog, content, actions } = dialogShell('检查重复系统候选');
@@ -3611,7 +3649,10 @@ function memorySettings(memories: SystemMemory[], events: JournalEvent[]): HTMLE
   candidates.forEach((memory) => appendMemory(pending, memory, '待确认'));
   if (!candidates.length) pending.append(node('p', 'muted', '暂时没有候选。'));
   section.append(pending);
-  if (candidates.length + confirmed.length >= 2) section.append(iconButton('检查重复候选', null, () => { void openSystemCandidateReview([...candidates, ...confirmed], events); }, 'button button-secondary'));
+  if (candidates.length + confirmed.length >= 2) {
+    if (NATIVE_AI_READY) section.append(iconButton('检查重复候选', null, () => { void openSystemCandidateReview([...candidates, ...confirmed], events); }, 'button button-secondary'));
+    else section.append(node('p', 'caption', '远程候选去重未连接；仍可逐条核对、编辑或忘记。'));
+  }
   return section;
 }
 
@@ -3621,9 +3662,13 @@ function aiPermissionSettings(): HTMLElement {
   const permission = node('label', 'setting-row');
   const input = node('input');
   input.type = 'checkbox';
-  input.checked = settings.aiAllowed;
+  input.checked = NATIVE_AI_READY && settings.aiAllowed;
+  input.disabled = !NATIVE_AI_READY;
   const copy = node('span');
-  copy.append(node('strong', '', '允许主动整理'), node('span', 'caption', '每次发送前确认范围。'));
+  copy.append(
+    node('strong', '', NATIVE_AI_READY ? '允许主动整理' : '远程整理未连接'),
+    node('span', 'caption', NATIVE_AI_READY ? '每次发送前确认范围。' : '本地功能不受影响；此版本不会发送内容。'),
+  );
   permission.append(copy, input);
   input.addEventListener('change', async () => {
     input.disabled = true;

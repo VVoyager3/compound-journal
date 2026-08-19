@@ -25,8 +25,9 @@ after(async () => {
   if (server?.listening) await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
 
-async function freshPage() {
+async function freshPage({ native = false } = {}) {
   const context = await browser.newContext({ viewport: { width: 320, height: 800 }, serviceWorkers: 'block' });
+  if (native) await context.addInitScript(() => { window.androidBridge = { postMessage() {} }; });
   const page = await context.newPage();
   const apiRequests = [];
   page.on('request', (request) => {
@@ -135,6 +136,11 @@ test('success diary prompts stay optional and AI goal decomposition requires con
     const input = page.getByRole('textbox', { name: '发生了什么' });
     await page.getByRole('button', { name: '小小成功' }).click();
     assert.match(await input.inputValue(), /今天做成或推进了什么？哪怕很小/);
+    await input.fill(`${await input.inputValue()}完成并核对了一次本地回归`);
+    await page.getByRole('button', { name: '仅保存本页记录' }).click();
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '这一天的整理' }).waitFor());
+    await assert.doesNotReject(() => page.getByText('完成并核对了一次本地回归', { exact: true }).waitFor());
+    await assert.doesNotReject(() => page.getByText('直接来自你的“小小成功”记录，不做额外推断。').waitFor());
     assert.deepEqual(apiRequests, []);
 
     await page.goto(`${baseUrl}/#/tasks`);
@@ -167,6 +173,41 @@ test('success diary prompts stay optional and AI goal decomposition requires con
     await assert.doesNotReject(() => page.getByRole('heading', { name: '今天的节奏' }).waitFor());
     await page.getByRole('button', { name: '开始收束今天' }).click();
     await assert.doesNotReject(() => page.getByRole('dialog', { name: '收束今天' }).waitFor());
+  } finally {
+    await context.close();
+  }
+});
+
+test('Android without a remote AI service keeps the local success and action loop usable', async () => {
+  const { context, page, apiRequests } = await freshPage({ native: true });
+  try {
+    await finishOnboarding(page);
+    const input = page.getByRole('textbox', { name: '发生了什么' });
+    await page.getByRole('button', { name: '小小成功' }).click();
+    await input.fill(`${await input.inputValue()}完成了今天最小的一步`);
+    await page.getByRole('button', { name: '仅保存本页记录' }).click();
+    await assert.doesNotReject(() => page.getByText('本地成功日记 · 明确记录').waitFor());
+    await assert.doesNotReject(() => page.getByText('完成了今天最小的一步', { exact: true }).waitFor());
+    assert.equal(await page.getByRole('button', { name: '检查范围并整理' }).count(), 0);
+
+    await page.goto(`${baseUrl}/#/tasks`);
+    await page.getByRole('button', { name: '新建目标' }).click();
+    const goalDialog = page.getByRole('dialog', { name: '建立一个真实目标' });
+    assert.equal(await goalDialog.getByRole('button', { name: '远程拆解服务未连接' }).isDisabled(), true);
+    await goalDialog.getByRole('textbox', { name: '想形成的结果' }).fill('完成一个本地目标');
+    await goalDialog.getByRole('textbox', { name: '为什么' }).fill('验证离线核心闭环');
+    await goalDialog.getByRole('textbox', { name: '完成证据' }).fill('任务板显示目标');
+    await goalDialog.getByRole('textbox', { name: '下一步' }).fill('写下第一步');
+    await goalDialog.getByRole('button', { name: '建立目标' }).click();
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '完成一个本地目标' }).waitFor());
+
+    await page.goto(`${baseUrl}/#/review`);
+    await assert.doesNotReject(() => page.getByText(/远程周复盘尚未连接/).waitFor());
+    await page.goto(`${baseUrl}/#/system`);
+    assert.equal(await page.getByRole('button', { name: '检查整理服务' }).isDisabled(), true);
+    assert.equal(await page.getByRole('checkbox', { name: /远程整理未连接/ }).isDisabled(), true);
+    await assert.doesNotReject(() => page.getByText(/此安装包未连接远程整理服务/).waitFor());
+    assert.deepEqual(apiRequests, []);
   } finally {
     await context.close();
   }
