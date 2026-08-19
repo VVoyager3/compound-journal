@@ -18,6 +18,6 @@ if (build.status !== 0) {
 }
 
 const tests = spawnSync(process.execPath, [
-  '--experimental-strip-types', '--test', 'test/release-candidate.test.mjs',
+  '--experimental-strip-types', 'test/release-candidate.test.mjs',
 ], { stdio: 'inherit', env: { ...process.env, QIGUANG_RELEASE_BUILD: '1', QIGUANG_NATIVE_RELEASE: native ? '1' : '0' } });
 process.exit(tests.status ?? 1);
