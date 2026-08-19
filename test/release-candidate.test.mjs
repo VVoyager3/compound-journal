@@ -208,6 +208,7 @@ test('manual release workflow verifies the app, publishes the server image, and 
     assert(workflow.includes(command), `release workflow must run ${command}`);
   }
   assert.match(workflow, /docker build[\s\S]*docker push/);
+  assert.match(workflow, /docker run[\s\S]*\.State\.Health\.Status/);
   assert.match(workflow, /\.\/gradlew assembleDebug/);
   assert.match(workflow, /actions\/upload-artifact@v4/);
   assert(!workflow.includes('MINIMAX_API_KEY'), 'release builds must not require or expose the model key');

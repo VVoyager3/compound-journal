@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build and publish server image
+      - name: Build, smoke-test, and publish server image
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -38,6 +38,19 @@ jobs:
           version="$(node -p "require('./package.json').version")"
           echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" -t "$image:$version" -t "$image:$GITHUB_SHA" .
+          container="$(docker run --rm --detach --name qiguang-server-smoke -p 127.0.0.1:4173:4173 -e QIGUANG_APP_ORIGIN=https://localhost "$image:$version")"
+          trap 'docker logs "$container"; docker stop "$container"' EXIT
+          for attempt in {1..30}; do
+            status="$(docker inspect --format '{{.State.Health.Status}}' "$container")"
+            [ "$status" = healthy ] && break
+            [ "$status" = unhealthy ] && exit 1
+            sleep 1
+          done
+          [ "$(docker inspect --format '{{.State.Health.Status}}' "$container")" = healthy ]
+          curl --fail --silent http://127.0.0.1:4173/api/health | grep --quiet '"contractVersion":"1.0"'
+          curl --silent --dump-header - --output /dev/null --request OPTIONS -H 'Origin: https://localhost' -H 'Access-Control-Request-Method: POST' http://127.0.0.1:4173/api/analyze | tr -d '\r' | grep --ignore-case --quiet '^access-control-allow-origin: https://localhost$'
+          docker stop "$container"
+          trap - EXIT
           docker push "$image:$version"
           docker push "$image:$GITHUB_SHA"
 
