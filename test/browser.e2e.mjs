@@ -140,7 +140,7 @@ test('success diary prompts stay optional and AI goal decomposition requires con
     await page.getByRole('button', { name: '仅保存本页记录' }).click();
     await assert.doesNotReject(() => page.getByRole('heading', { name: '这一天的整理' }).waitFor());
     await assert.doesNotReject(() => page.getByText('完成并核对了一次本地回归', { exact: true }).waitFor());
-    await assert.doesNotReject(() => page.getByText('直接来自你的“小小成功”记录，不做额外推断。').waitFor());
+    await assert.doesNotReject(() => page.getByText('来自你的“小小成功”记录和已确认行动反馈，不做额外推断。').waitFor());
     assert.deepEqual(apiRequests, []);
 
     await page.goto(`${baseUrl}/#/tasks`);
@@ -526,6 +526,14 @@ test('completed action is traceable from its growth branch at 320px', async () =
     await page.getByRole('textbox', { name: '最小动作' }).fill('完成一个可验证步骤');
     await page.getByRole('button', { name: '安排到今天' }).click();
     await page.getByRole('button', { name: '完成：证据测试行动' }).click();
+    const today = await page.evaluate(() => {
+      const value = new Date();
+      return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    });
+    await page.goto(`${baseUrl}/#/day/${today}`);
+    const successDiary = page.locator('.success-evidence');
+    await assert.doesNotReject(() => successDiary.getByText('完成：证据测试行动', { exact: true }).waitFor());
+    await assert.doesNotReject(() => successDiary.getByText('来自你的“小小成功”记录和已确认行动反馈，不做额外推断。').waitFor());
     await page.goto(`${baseUrl}/#/growth`);
     const branch = page.getByRole('article').filter({ hasText: '健康资本' }).first();
     await branch.getByText('查看证据与关联').click();

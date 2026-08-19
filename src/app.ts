@@ -86,6 +86,17 @@ function explicitSuccessCredits(entries: JournalEntry[]): string[] {
   });
   return [...new Set(values)].slice(0, 5);
 }
+
+function successCredits(entries: JournalEntry[], quests: Quest[] = [], aiCredits = ''): string[] {
+  const confirmedActions = quests.flatMap((quest) => quest.status === 'completed'
+    ? [`完成：${quest.title}`]
+    : quest.status === 'partial' ? [`推进：${quest.title}`] : []);
+  return [...new Set([
+    ...explicitSuccessCredits(entries),
+    ...confirmedActions,
+    ...aiCredits.split('•').map((item) => item.trim()).filter(Boolean),
+  ])].slice(0, 5);
+}
 const appRoot = document.querySelector<HTMLElement>('#app');
 if (!appRoot) throw new Error('页面缺少应用容器。');
 const root: HTMLElement = appRoot;
@@ -1115,7 +1126,7 @@ function focusQuestOnPage(questId: string): void {
 
 function openDailyCloseout(date: string, entries: JournalEntry[], quests: Quest[], analysis?: DailyAnalysis): void {
   const { dialog, content, actions } = dialogShell('收束今天');
-  const localSuccesses = explicitSuccessCredits(entries);
+  const localSuccesses = successCredits(entries, quests, analysis?.result.reflection.specificCredit);
   const pending = quests.filter((item) => item.status === 'pending');
   const completed = quests.filter((item) => item.status === 'completed' || item.status === 'partial');
   const checklist = node('div', 'closeout-checklist');
@@ -1131,8 +1142,8 @@ function openDailyCloseout(date: string, entries: JournalEntry[], quests: Quest[
   }
   const review = node('section', `closeout-item${analysis || localSuccesses.length ? ' is-done' : ''}`);
   review.append(
-    node('strong', '', analysis ? '今天已经整理成可回看的章节' : localSuccesses.length ? `已写下 ${localSuccesses.length} 条小成功` : '今天还没有写下小成功'),
-    node('p', 'caption', analysis ? '小成功、关键事件和明天最小一步都可以继续核对。' : localSuccesses.length ? '这是你明确写下的事实，不依赖 AI 推断。' : entries.length && NATIVE_AI_READY ? 'AI 只会生成候选；发送前仍由你检查范围。' : '一句具体的小推进也算。'),
+    node('strong', '', analysis ? '今天已经整理成可回看的章节' : localSuccesses.length ? `已留下 ${localSuccesses.length} 条成功证据` : '今天还没有留下成功证据'),
+    node('p', 'caption', analysis ? '小成功、关键事件和明天最小一步都可以继续核对。' : localSuccesses.length ? '来自你写下的内容或已经确认的行动反馈，不依赖 AI 推断。' : entries.length && NATIVE_AI_READY ? 'AI 只会生成候选；发送前仍由你检查范围。' : '完成、推进、坚持或照顾好自己，都可以算。'),
   );
   const reviewButton = node('button', 'button button-secondary', analysis || localSuccesses.length ? '查看成功日记' : entries.length && NATIVE_AI_READY ? '检查范围并整理' : '写下一条小成功');
   reviewButton.type = 'button'; reviewButton.addEventListener('click', () => {
@@ -1339,15 +1350,15 @@ function recordPage(route: Route): HTMLElement {
   const textarea = node('textarea', 'journal-input');
   textarea.name = 'body';
   textarea.maxLength = 12_000;
-  textarea.placeholder = '写下今天真实发生的一件事。';
+  textarea.placeholder = '先写一件今天做成、推进或照顾好的小事；也可以继续记录经历和感受。';
   textarea.value = readDraft(targetDate);
   const counter = node('span', 'character-count', `${textarea.value.length}/12000`);
   bodyLabel.append(textarea, counter);
 
   const prompts = node('section', 'record-prompts');
   prompts.append(
-    node('strong', '', '不知道从哪里说起？选一句继续'),
-    node('p', 'caption', '这些只是开头，不是必须填写的分类。小成功也可以只是开始了、坚持了或照顾好了自己。'),
+    node('strong', '', '从一条真实的小成功开始'),
+    node('p', 'caption', '完成、推进、坚持、求助、休息或守住边界都算；建议记 1–5 条，但不强制凑数。其他按钮也只是开头，不是必填分类。'),
   );
   const promptActions = node('div', 'record-prompt-actions');
   for (const [label, prompt] of [
@@ -1931,7 +1942,7 @@ function eventCard(item: JournalEvent): HTMLElement {
   return card;
 }
 
-async function dailyAnalysisSection(date: string, entries: JournalEntry[]): Promise<HTMLElement> {
+async function dailyAnalysisSection(date: string, entries: JournalEntry[], quests: Quest[]): Promise<HTMLElement> {
   const [analyses, jobs, events, tomorrowQuests] = await Promise.all([
     db.listDailyAnalyses(date), db.listAnalysisJobs(date), db.listJournalEvents(date), db.listQuests(shiftDate(date, 1)),
   ]);
@@ -1974,17 +1985,17 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[]): Prom
   }
 
   if (!ready) {
-    const successes = explicitSuccessCredits(entries);
+    const successes = successCredits(entries, quests);
     const successBlock = node('section', 'success-evidence');
-    successBlock.append(node('strong', '', '你明确写下的小成功'));
+    successBlock.append(node('strong', '', '今天的成功证据'));
     if (successes.length) {
       const list = node('ul', 'success-list');
       successes.forEach((item) => list.append(node('li', '', item)));
-      successBlock.append(list, node('p', 'caption', '直接来自你的“小小成功”记录，不做额外推断。'));
-    } else successBlock.append(node('p', 'caption', '还没有明确写下；一句具体的小推进也算。'));
+      successBlock.append(list, node('p', 'caption', '来自你的“小小成功”记录和已确认行动反馈，不做额外推断。'));
+    } else successBlock.append(node('p', 'caption', '还没有留下；一句具体的小推进也算。'));
     successBlock.append(iconButton(successes.length ? '再写一条小成功' : '写下一条小成功', null, () => go({ name: 'record', date }), 'button button-secondary'));
     section.append(successBlock);
-    if (!entries.length) section.append(node('p', 'muted', '有原始记录后，才可以主动选择发送并整理。'));
+    if (!entries.length) section.append(node('p', 'muted', successes.length ? '行动反馈已经进入成功日记；有原始记录后还可以继续做 AI 整理。' : '有原始记录后，才可以主动选择发送并整理。'));
     else if (!NATIVE_AI_READY) section.append(node('p', 'caption', '远程整理尚未连接；本地成功日记、原始记录、任务与成长仍可完整使用。'));
     else if (!latestJob || !['queued', 'processing', 'failed', 'safety-review'].includes(latestJob.status)) {
       section.append(node('p', '', 'AI 只会返回候选；明确事实可撤销，推断确认前不会改变状态或经验。'));
@@ -2007,13 +2018,13 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[]): Prom
 
   const reflection = node('section', 'daily-reflection');
   reflection.append(node('h3', '', '成功日记与复盘'));
-  const successes = ready.result.reflection.specificCredit.split('•').map((item) => item.trim()).filter(Boolean);
+  const successes = successCredits(entries, quests, ready.result.reflection.specificCredit);
   const successBlock = node('section', 'success-evidence');
   successBlock.append(node('strong', '', '今日小成功'));
   if (successes.length) {
     const list = node('ul', 'success-list');
     successes.forEach((item) => list.append(node('li', '', item)));
-    successBlock.append(list, node('p', 'caption', '只保留记录中能支持的具体行动；小推进也算。'));
+    successBlock.append(list, node('p', 'caption', '只保留原始记录、已确认行动反馈或 AI 有证据整理支持的具体行动。'));
   } else successBlock.append(node('p', 'caption', '今天没有足够具体的成功证据，不强行凑数。'));
   reflection.append(successBlock);
   const reflectionRows: Array<[string, string]> = [
@@ -2080,7 +2091,7 @@ async function dayPage(date: string): Promise<HTMLElement> {
   const summary = node('section', 'day-summary');
   summary.append(node('h2', '', entries.length ? `这一天留下了 ${entries.length} 条真实记录` : '这一天安静地留白'));
   if (!entries.length) summary.append(node('p', '', '没有记录。'));
-  main.append(summary, await dailyAnalysisSection(date, entries), statusSummary(observations, date));
+  main.append(summary, await dailyAnalysisSection(date, entries, quests), statusSummary(observations, date));
   if (!Object.keys(observations).length) {
     const prompt = node('aside', 'notice inline-notice');
     prompt.append(node('strong', '', '五维状态仍是“待了解”'));
