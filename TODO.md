@@ -74,11 +74,12 @@
 - [x] 用栖光品牌资源替换 Capacitor 默认桌面图标与启动页，并消除 Android 深色模式冷启动黑屏
 - [ ] 进行十四天封闭使用，再决定图片、同步、原生壳等扩展
 
-当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。当前 `npm run check` 通过，`npm run check:release` 7/7 通过，`npm run eval:ai` 16/16 通过，端到端流程 18/18 通过。Android 16 内置浏览器真机验证记录仍保留；Capacitor Android 原生壳、`android:sync`/`android:debug` 脚本和 `VITE_API_ORIGIN` 已接入，前端资源同步通过。当前环境已使用 D 盘 Microsoft OpenJDK 21.0.12、Android SDK Platform 36、AGP 8.13.0 和 Gradle 8.14.3 成功执行 `assembleDebug`；生成的 v0.5.28 APK 包名为 `com.vvoyager3.qiguang`、targetSdk 36，并通过 APK v2 签名校验。真实模型密钥评估、iPhone 回归与十四天封闭使用仍需在对应外部条件具备后完成，因此 I4 保持未完成。
+当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。当前 `npm run check` 通过，`npm run check:release` 7/7 通过，`npm run eval:ai` 16/16 通过，端到端流程 18/18 通过。Android 16 内置浏览器真机验证记录仍保留；Capacitor Android 原生壳、`android:sync`/`android:debug` 脚本和 `VITE_API_ORIGIN` 已接入，前端资源同步通过。当前环境已使用 D 盘 Microsoft OpenJDK 21.0.12、Android SDK Platform 36、AGP 8.13.0 和 Gradle 8.14.3 成功执行 `assembleDebug`；生成的 v0.5.28 APK 包名为 `com.vvoyager3.qiguang`、targetSdk 36，并通过 APK v2 签名校验。真实模型密钥评估与十四天封闭使用仍需在对应外部条件具备后完成，因此 I4 保持未完成；iPhone/iOS 不纳入当前版本验收范围。
 
 ## 当前不做
 
 - 账户、云同步、多租户后台和跨设备冲突
+- iPhone/iOS 构建、真机回归与 App Store 上架
 - 自建录音与语音识别
 - 自由地图、家具摆放、背包、战斗、NPC 和经营系统
 - 排行榜、社交、公会、抽卡、商店和虚拟货币
