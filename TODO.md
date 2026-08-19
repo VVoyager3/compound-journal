@@ -75,6 +75,7 @@
 - [x] 完成减少动画、键盘、屏幕阅读器语义与移动端检查
 - [x] 接入 Capacitor Android 原生壳、构建同步脚本和可配置 HTTPS AI 服务基址
 - [x] 提供非 root、分阶段构建的生产 OCI 容器，以及可验证健康状态、Android CORS、请求校验和恶意来源拒绝的线上检查命令
+- [x] GitHub 发布候选流水线在 Node 22.18/UTC 环境完成全量检查，真实启动并烟雾验证容器后发布到 GHCR，同时生成可下载 Android APK 工件
 - [ ] 部署实际 HTTPS 整理服务，并用同一地址通过 Android 发布配置检查
 - [x] 在当前环境重新生成并验收 Android 调试 APK
 - [x] 完成 Android 原生壳安装与真机回归
@@ -82,7 +83,7 @@
 - [x] 用栖光品牌资源替换 Capacitor 默认桌面图标与启动页，并消除 Android 深色模式冷启动黑屏
 - [ ] 进行十四天封闭使用，再决定图片、同步、原生壳等扩展
 
-当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。v0.6.4 将成功日记扩展为自由记录、明确完成/部分完成行动与 AI 有证据整理的统一入口，并补齐非 root 生产容器及 `npm run check:deployment -- https://…` 线上验收命令。当前 `npm run check` 80 项通过（2 项发布模式检查按常规模式跳过）、`npm run check:release` 8/8（Android 地址检查跳过）、验证地址下 `npm run check:android-release` 9/9、`npm run eval:ai` 17/17、浏览器端到端流程 21/21。v0.6.4 Android 调试 APK 已重新生成，包名 `com.vvoyager3.qiguang`、versionCode 604、targetSdk 36，通过 APK v2 签名校验且不含验证服务地址。当前 Docker 守护进程未运行，容器定义已通过静态发布检查，但实际镜像构建与 HTTPS 部署仍需在确认 Docker 缓存位于 D 盘或使用远程构建平台后执行。正式启用 AI 前仍需部署服务并依次执行 `npm run check:deployment -- https://…` 与 PowerShell 命令 `$env:VITE_API_ORIGIN='https://…'; npm run check:android-release`。新版本真机回归仍按计划留到设备重新连接后执行；既有 Android 16 验证记录保留。真实模型密钥评估、远程服务部署与十四天封闭使用仍需在对应外部条件具备后完成，因此 I4 保持未完成；iPhone/iOS 不纳入当前版本验收范围。
+当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。v0.6.4 将成功日记扩展为自由记录、明确完成/部分完成行动与 AI 有证据整理的统一入口，并补齐非 root 生产容器及 `npm run check:deployment -- https://…` 线上验收命令。当前 `npm run check` 82 项通过（2 项发布模式检查按常规模式跳过）、`npm run check:release` 9 项通过（1 项 Android 地址检查按常规模式跳过）、验证地址下 `npm run check:android-release` 10/10、`npm run eval:ai` 17/17、浏览器端到端流程 21/21。GitHub Actions 运行 `32214510055` 的验证、容器和 Android 三项任务全部通过；容器已实际启动并通过健康/CORS 烟雾检查后发布为 `ghcr.io/vvoyager3/compound-journal-server:0.6.4`（digest `sha256:c54096777a5fb49282ffa9573ed49b142634b6d829505e104c351f75806cb177`），Android 工件 `qiguang-android-v0.6.4` 已上传。v0.6.4 本地 Android 调试 APK 包名 `com.vvoyager3.qiguang`、versionCode 604、targetSdk 36，通过 APK v2 签名校验且不含验证服务地址；远端构建工件也已核对同一包名、版本和签名方案。正式启用 AI 前仍需提供模型密钥与容器托管平台，部署实际 HTTPS 地址后依次执行 `npm run check:deployment -- https://…` 与 PowerShell 命令 `$env:VITE_API_ORIGIN='https://…'; npm run check:android-release`。当前仓库没有部署变量或模型密钥，且 `adb devices -l` 没有连接设备；因此新版本真机回归、真实模型评估、实际远程服务和十四天封闭使用仍需对应外部条件，I4 保持未完成。既有 Android 16 验证记录保留；iPhone/iOS 不纳入当前版本验收范围。
 
 ## 当前不做
 
