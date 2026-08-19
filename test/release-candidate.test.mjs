@@ -125,6 +125,8 @@ test('client has no microphone capability, unsafe HTML sink, or third-party trac
   assert.equal(fetchCalls.length, 6, 'only the six audited AI and health requests may use the network');
   assert.match(clientSource, /function apiUrl\(path: '\/api\/analyze' \| '\/api\/health'\)/, 'API helper must restrict paths to the audited allowlist');
   assert.equal((clientSource.match(/fetch\(apiUrl\(/g) ?? []).length, fetchCalls.length, 'every client fetch must use the audited API helper');
+  assert.match(clientSource, /NATIVE_AI_READY[\s\S]*new URL\(API_ORIGIN\)\.protocol === 'https:'/,
+    'native AI must reject a missing or non-HTTPS service origin');
 
   const manifest = await read('public/manifest.webmanifest');
   assert(!/microphone|audio-capture|getUserMedia/i.test(manifest));
@@ -181,4 +183,12 @@ test('fresh production output contains no secret, source map, or oversized initi
       assert(!/\.innerHTML\s*=|insertAdjacentHTML\s*\(/.test(source), `${path.relative(dist, file)} contains an unsafe HTML sink`);
     }
   }
+});
+
+test('native production output contains its explicit HTTPS AI service origin', { skip: process.env.QIGUANG_NATIVE_RELEASE !== '1' }, async () => {
+  const origin = new URL(process.env.VITE_API_ORIGIN);
+  assert.equal(origin.protocol, 'https:');
+  const sources = await Promise.all((await filesBelow(path.join(root, 'dist')))
+    .filter((file) => file.endsWith('.js')).map((file) => readFile(file, 'utf8')));
+  assert(sources.some((source) => source.includes(origin.href.replace(/\/$/, ''))), 'native bundle is missing VITE_API_ORIGIN');
 });

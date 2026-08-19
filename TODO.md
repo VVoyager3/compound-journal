@@ -73,13 +73,14 @@
 - [x] 完成 CSP、隐私说明、Android 16 真机兼容和离线重载
 - [x] 完成减少动画、键盘、屏幕阅读器语义与移动端检查
 - [x] 接入 Capacitor Android 原生壳、构建同步脚本和可配置 HTTPS AI 服务基址
+- [ ] 部署实际 HTTPS 整理服务，并用同一地址通过 Android 发布配置检查
 - [x] 在当前环境重新生成并验收 Android 调试 APK
 - [x] 完成 Android 原生壳安装与真机回归
 - [x] 完成浏览器备份“导出→删除→导入→恢复”闭环，并在 Android 原生壳通过系统分享面板导出真实文件
 - [x] 用栖光品牌资源替换 Capacitor 默认桌面图标与启动页，并消除 Android 深色模式冷启动黑屏
 - [ ] 进行十四天封闭使用，再决定图片、同步、原生壳等扩展
 
-当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。v0.6.1 保留成功日记与目标拆解闭环，并将小屏更新提示收紧为底部导航上方的两行提示条。当前 `npm run check` 75 项通过（1 项发布体积检查按常规模式跳过）、`npm run check:release` 7/7、`npm run eval:ai` 17/17、浏览器端到端流程 20/20；Android 调试 APK 已重新生成，包名 `com.vvoyager3.qiguang`、versionCode 601、targetSdk 36，并通过 APK v2 签名校验。新版本真机回归仍按计划留到设备重新连接后执行；既有 Android 16 验证记录保留。真实模型密钥评估与十四天封闭使用仍需在对应外部条件具备后完成，因此 I4 保持未完成；iPhone/iOS 不纳入当前版本验收范围。
+当前实现：Manifest、180/192/512 图标、版本化 Service Worker、API network-only、用户确认更新、安装入口、持久存储说明、全局离线播报、严格 CSP/Permissions-Policy 与更新安全缓存头已完成；客户端业务请求通过类型化白名单只允许 AI 整理与手动健康检查。v0.6.2 保留成功日记、目标拆解与小屏优化，并补齐 Android WebView 的显式 HTTPS 服务配置、来源白名单和发布检查；未配置时会明确停用远程整理，不再误连 `localhost`。当前 `npm run check` 76 项通过（2 项发布模式检查按常规模式跳过）、`npm run check:release` 7 项通过（Android 地址检查跳过）、验证地址下 `npm run check:android-release` 8/8、`npm run eval:ai` 17/17、浏览器端到端流程 20/20。v0.6.2 Android 调试 APK 已重新生成，包名 `com.vvoyager3.qiguang`、versionCode 602、targetSdk 36，并通过 APK v2 签名校验；它可验证本地记录、任务和成长，正式启用 AI 前仍需部署服务并执行 PowerShell 命令 `$env:VITE_API_ORIGIN='https://…'; npm run check:android-release`。新版本真机回归仍按计划留到设备重新连接后执行；既有 Android 16 验证记录保留。真实模型密钥评估、远程服务部署与十四天封闭使用仍需在对应外部条件具备后完成，因此 I4 保持未完成；iPhone/iOS 不纳入当前版本验收范围。
 
 ## 当前不做
 

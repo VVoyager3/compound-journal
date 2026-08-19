@@ -148,6 +148,11 @@ function fail(response, status, code, message, headers) {
   json(response, status, { error: { code, message } }, headers);
 }
 
+function appOriginAllowed(request) {
+  const configured = String(process.env.QIGUANG_APP_ORIGIN ?? '').replace(/\/$/, '');
+  return Boolean(configured && request.headers.origin === configured);
+}
+
 function clientAddress(request) {
   return `${request.socket.remoteAddress ?? 'unknown'}:${request.socket.localPort ?? 'unknown'}`;
 }
@@ -448,7 +453,7 @@ async function handleAnalyze(request, response) {
   const origin = request.headers.origin;
   let crossSite = request.headers['sec-fetch-site'] === 'cross-site';
   try { if (origin && new URL(origin).host !== request.headers.host) crossSite = true; } catch { crossSite = true; }
-  if (crossSite) {
+  if (crossSite && !appOriginAllowed(request)) {
     fail(response, 403, 'CROSS_SITE_REQUEST', '不接受跨站整理请求。');
     return;
   }
@@ -562,6 +567,18 @@ async function serveStatic(request, response) {
 export function startServer(port = Number(process.env.PORT || 4173), host = process.env.HOST || '127.0.0.1') {
   const server = createServer(async (request, response) => {
     const pathname = new URL(request.url ?? '/', 'http://localhost').pathname;
+    const apiRoute = pathname === '/api/health' || pathname === '/api/analyze';
+    if (apiRoute && appOriginAllowed(request)) {
+      response.setHeader('Access-Control-Allow-Origin', request.headers.origin);
+      response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      response.setHeader('Vary', 'Origin');
+    }
+    if (apiRoute && request.method === 'OPTIONS') {
+      if (!appOriginAllowed(request)) fail(response, 403, 'CROSS_SITE_REQUEST', '不接受未授权应用来源。');
+      else response.writeHead(204, { 'Access-Control-Max-Age': '600' }).end();
+      return;
+    }
     if (pathname === '/api/health') {
       json(response, 200, {
         configured: Boolean(process.env.MINIMAX_API_KEY),

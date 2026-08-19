@@ -244,6 +244,37 @@ test('server rejects cross-site envelopes, shares concurrent work, and stops mod
   assert.equal(upstreamCalls, 2);
 });
 
+test('server allows only the explicitly configured Android WebView origin', async (t) => {
+  const nativeFetch = globalThis.fetch.bind(globalThis);
+  const originalOrigin = process.env.QIGUANG_APP_ORIGIN;
+  process.env.QIGUANG_APP_ORIGIN = 'https://localhost';
+  const server = startServer(0, '127.0.0.1');
+  await once(server, 'listening');
+  const base = `http://127.0.0.1:${server.address().port}`;
+  t.after(async () => {
+    if (originalOrigin === undefined) delete process.env.QIGUANG_APP_ORIGIN;
+    else process.env.QIGUANG_APP_ORIGIN = originalOrigin;
+    server.close(); await once(server, 'close');
+  });
+
+  const preflight = await nativeFetch(`${base}/api/analyze`, {
+    method: 'OPTIONS', headers: { Origin: 'https://localhost', 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'content-type' },
+  });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get('access-control-allow-origin'), 'https://localhost');
+  assert.match(preflight.headers.get('access-control-allow-methods'), /POST/);
+
+  const accepted = await nativeFetch(`${base}/api/analyze`, {
+    method: 'POST', headers: { Origin: 'https://localhost', 'Content-Type': 'application/json' }, body: '{}',
+  });
+  assert.equal(accepted.status, 400);
+  assert.equal(accepted.headers.get('access-control-allow-origin'), 'https://localhost');
+
+  const rejected = await nativeFetch(`${base}/api/analyze`, { method: 'OPTIONS', headers: { Origin: 'https://evil.example' } });
+  assert.equal(rejected.status, 403);
+  assert.equal(rejected.headers.get('access-control-allow-origin'), null);
+});
+
 test('same-origin fixture routes auxiliary AI operations through their strict contracts', async (t) => {
   const nativeFetch = globalThis.fetch.bind(globalThis);
   const original = { nodeEnv: process.env.NODE_ENV, fixture: process.env.QIGUANG_TEST_AI, key: process.env.MINIMAX_API_KEY };

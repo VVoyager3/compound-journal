@@ -63,8 +63,13 @@ interface InstallPromptEvent extends Event {
 const DRAFT_KEY = 'qiguang.record-drafts.v2';
 const INTERRUPTED_TAKEOVER_MS = 2 * 60_000;
 const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN ?? '').replace(/\/$/, '');
+const NATIVE_AI_UNAVAILABLE = '此安装包未连接远程整理服务；记录、任务和成长数据仍可在本机使用。';
+const NATIVE_AI_READY = !Capacitor.isNativePlatform() || (() => {
+  try { return new URL(API_ORIGIN).protocol === 'https:'; } catch { return false; }
+})();
 
 function apiUrl(path: '/api/analyze' | '/api/health'): string {
+  if (!NATIVE_AI_READY) throw new Error(NATIVE_AI_UNAVAILABLE);
   return `${API_ORIGIN}${path}`;
 }
 const appRoot = document.querySelector<HTMLElement>('#app');
@@ -224,6 +229,11 @@ async function analysisContext(date: string): Promise<{
 
 async function submitAnalysisJob(job: AnalysisJob, resumeInterrupted = false): Promise<void> {
   if (job.operation !== 'daily_analysis') throw new Error('这不是每日整理任务。');
+  if (!NATIVE_AI_READY) {
+    showToast(NATIVE_AI_UNAVAILABLE, 'error');
+    await render();
+    return;
+  }
   if (!settings.aiAllowed) {
     showToast('AI 权限已关闭；没有发送任何内容。', 'error');
     await render();
@@ -2166,6 +2176,11 @@ function weeklyPreview(content: HTMLElement, request: WeeklyReviewRequest): void
 
 async function submitWeeklyReviewJob(job: AnalysisJob, resumeInterrupted = false): Promise<void> {
   if (job.operation !== 'weekly_review') throw new Error('这不是周复盘任务。');
+  if (!NATIVE_AI_READY) {
+    showToast(NATIVE_AI_UNAVAILABLE, 'error');
+    await render();
+    return;
+  }
   if (!settings.aiAllowed || !navigator.onLine) {
     showToast(!settings.aiAllowed ? 'AI 权限已关闭；没有发送任何内容。' : '已保存在本机；联网后由你手动重试。', !settings.aiAllowed ? 'error' : 'normal');
     await render();
@@ -3622,9 +3637,10 @@ function aiPermissionSettings(): HTMLElement {
       input.disabled = false;
     }
   });
-  const health = node('p', 'caption', '发送前始终显示范围。');
+  const health = node('p', 'caption', NATIVE_AI_READY ? '发送前始终显示范围。' : NATIVE_AI_UNAVAILABLE);
   const check = node('button', 'button button-secondary', '检查整理服务');
   check.type = 'button';
+  check.disabled = !NATIVE_AI_READY;
   check.addEventListener('click', async () => {
     check.disabled = true;
     try {
