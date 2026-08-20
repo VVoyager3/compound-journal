@@ -13,6 +13,7 @@ ENV NODE_ENV=production HOST=0.0.0.0 PORT=4173
 WORKDIR /app
 COPY server.mjs ./
 COPY src/analysis-contract.ts ./src/analysis-contract.ts
+COPY src/ai-engine.ts ./src/ai-engine.ts
 COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 4173

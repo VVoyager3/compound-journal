@@ -201,6 +201,7 @@ test('production backend container is minimal, non-root, and never copies local 
   assert.equal((dockerfile.match(/^FROM /gm) ?? []).length, 2, 'container must discard build dependencies');
   assert.match(dockerfile, /^USER node$/m);
   assert.match(dockerfile, /^HEALTHCHECK /m);
+  assert.match(dockerfile, /^COPY src\/ai-engine\.ts \.\/src\/ai-engine\.ts$/m);
   assert.match(dockerfile, /COPY --from=build \/app\/dist \.\/dist/);
   assert(!/COPY\s+\.\s/m.test(dockerfile), 'container must copy only audited files');
   assert.match(dockerignore, /^\.env\*$/m);
