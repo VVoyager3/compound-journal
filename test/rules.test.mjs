@@ -4,14 +4,38 @@ import test from 'node:test';
 import {
   canAddQuest,
   clampDailyStateDelta,
+  chooseDailyDirection,
   habitMomentum,
   levelFromXp,
   levelRequirement,
+  monthlyAreaSignal,
   questXp,
   resolvedStateValue,
   resolveStateTimeline,
   totalXp,
 } from '../src/rules.ts';
+import { buildWidgetSnapshot, consumeWidgetAction } from '../src/widget.ts';
+
+test('daily direction chooses one explainable starting point by priority', () => {
+  assert.equal(chooseDailyDirection({ mainQuest: null, recoveryAvailable: true, activeGoalAvailable: true, previousStepAvailable: true }).kind, 'recovery');
+  assert.equal(chooseDailyDirection({ mainQuest: { status: 'pending' }, recoveryAvailable: true, activeGoalAvailable: true, previousStepAvailable: true }).kind, 'recovery');
+  assert.match(chooseDailyDirection({ mainQuest: { status: 'pending', deadlineRisk: true }, recoveryAvailable: false, activeGoalAvailable: false, previousStepAvailable: false }).reason, /截止/);
+  assert.match(chooseDailyDirection({ mainQuest: { status: 'pending', carriedFromPreviousDay: true }, recoveryAvailable: false, activeGoalAvailable: false, previousStepAvailable: false }).reason, /昨天反馈/);
+  assert.equal(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: true }).kind, 'goal');
+  assert.equal(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: false, previousStepAvailable: false }).kind, 'explore');
+  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, milestoneDue: true }).reason, /里程碑/);
+  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, stagnantGoal: true }).reason, /7 天/);
+  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, areaBalanceNeeded: true }).reason, /推进证据较少/);
+  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, goalMode: 'maintain' }).reason, /稳定维持/);
+});
+
+test('monthly area signal compares real evidence without scoring a whole life', () => {
+  assert.equal(monthlyAreaSignal('build', 2, 1, '2026-07-31', '2026-08-20'), 'progress');
+  assert.equal(monthlyAreaSignal('maintain', 3, 1, '2026-07-31', '2026-08-20'), 'maintain');
+  assert.equal(monthlyAreaSignal('build', 0, 2, '2026-07-31', '2026-08-20'), 'decline');
+  assert.equal(monthlyAreaSignal('build', 0, 2, '2026-08-31', '2026-08-20'), 'missing');
+  assert.equal(monthlyAreaSignal('pause', 0, 2, '2026-07-31', '2026-08-20'), 'paused');
+});
 
 test('difficulty, partial completion, and no-penalty results use the fixed XP table', () => {
   assert.equal(questXp('light', 'completed'), 5);
@@ -85,4 +109,35 @@ test('daily quest limits stay at one main, three BONUS, and two side quests', ()
   assert.equal(canAddQuest('bonus', ['bonus', 'bonus']), true);
   assert.equal(canAddQuest('bonus', ['bonus', 'bonus', 'bonus']), false);
   assert.equal(canAddQuest('side', ['side', 'side']), false);
+});
+
+test('widget snapshot exposes only the current actionable summary', () => {
+  const snapshot = buildWidgetSnapshot({
+    profile: { companionName: '小栖', avatar: 'female' },
+    localDate: '2026-08-19', generatedAt: '2026-08-19T08:00:00.000Z',
+    companionState: '指导',
+    reduceMotion: true,
+    quests: [
+      { id: 'main', type: 'main', status: 'pending', title: '推进主线', minimumAction: '先做五分钟' },
+      { id: 'bonus-1', type: 'bonus', status: 'pending', title: '散步', minimumAction: '走两分钟' },
+    ],
+    ledger: [{ settlementKey: 'q1', finalXp: 25 }],
+  });
+  assert.equal(snapshot.main?.title, '推进主线');
+  assert.equal(snapshot.bonus[0].title, '散步');
+  assert.equal(snapshot.xp.totalXp, 25);
+  assert.equal(snapshot.version, 1);
+  assert.equal(snapshot.companionState, '指导');
+  assert.equal(snapshot.reduceMotion, true);
+});
+
+test('widget task deep link keeps the MAIN identity for direct focus', () => {
+  const previousWindow = globalThis.window;
+  globalThis.window = { qiguangWidgetBridge: { consumeAction: () => JSON.stringify({ type: 'open', route: 'tasks', questId: 'main' }) } };
+  try {
+    assert.deepEqual(consumeWidgetAction(), { type: 'open', route: 'tasks', questId: 'main' });
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
 });

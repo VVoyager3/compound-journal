@@ -185,6 +185,14 @@ test('fresh production output contains no secret, source map, or oversized initi
   }
 });
 
+test('user-facing product vocabulary has one name per concept', async () => {
+  const source = await read('src/app.ts');
+  for (const legacy of ['关注领域', '唯一成长分支', '目标位置', '小目标']) {
+    assert.equal(source.includes(legacy), false, `replace legacy label: ${legacy}`);
+  }
+  for (const current of ['人生领域', '成长方向', '推进优先级', '里程碑']) assert(source.includes(current), `missing current label: ${current}`);
+});
+
 test('production backend container is minimal, non-root, and never copies local secrets', async () => {
   const dockerfile = await read('Dockerfile');
   const dockerignore = await read('.dockerignore');
@@ -220,4 +228,26 @@ test('native production output contains its explicit HTTPS AI service origin', {
   const sources = await Promise.all((await filesBelow(path.join(root, 'dist')))
     .filter((file) => file.endsWith('.js')).map((file) => readFile(file, 'utf8')));
   assert(sources.some((source) => source.includes(origin.href.replace(/\/$/, ''))), 'native bundle is missing VITE_API_ORIGIN');
+});
+
+test('Android widget ships three responsive layouts without overlay or notification permissions', async () => {
+  const manifest = await read('android/app/src/main/AndroidManifest.xml');
+  for (const forbidden of ['SYSTEM_ALERT_WINDOW', 'POST_NOTIFICATIONS']) assert(!manifest.includes(forbidden), `unexpected Android permission: ${forbidden}`);
+  assert.match(manifest, /QiguangWidgetProvider/);
+  assert.match(manifest, /qiguang_widget_info/);
+  for (const size of ['small', 'medium', 'large']) {
+    const layout = await read(`android/app/src/main/res/layout/widget_qiguang_${size}.xml`);
+    for (const id of ['widget_root', 'widget_name', 'widget_main', 'widget_minimum', 'widget_xp', 'widget_complete']) assert(layout.includes(`@+id/${id}`), `${size} widget lacks ${id}`);
+  }
+  const provider = await read('android/app/src/main/java/com/vvoyager3/qiguang/QiguangWidgetProvider.java');
+  for (const action of ['COMPLETE_MAIN', 'OPEN_ROUTE', 'TOGGLE_PRIVACY']) assert(provider.includes(action), `widget lacks ${action}`);
+  assert.match(provider, /avatar-.*-original-/s, 'widget must reuse the selected companion portrait from the packaged assets');
+});
+
+test('native release check validates, syncs, and builds the Android package in one command', async () => {
+  const packageJson = JSON.parse(await read('package.json'));
+  const script = await read('scripts/release-check.mjs');
+  assert.equal(packageJson.scripts['check:android-release'], 'node scripts/release-check.mjs --native');
+  assert.match(script, /\['cap', 'sync', 'android'\]/);
+  assert.match(script, /\['assembleDebug'\]/);
 });

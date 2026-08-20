@@ -78,8 +78,8 @@ function goalDecompositionEnvelope() {
     userInput: { result: '发布一篇文章', why: '沉淀经验', completionEvidence: '文章有可访问链接' },
     context: {
       area: { areaId: 'area-1', name: '创造与作品', mode: 'build' },
-      branch: { branchId: 'branch-1', name: '写作实践' }, memories: [],
-    }, permissions: { memoryIds: [] },
+      branch: { branchId: 'branch-1', name: '写作实践' }, currentGoals: [], executionEvidence: [], memories: [],
+    }, permissions: { memoryIds: [], questIds: [], goalIds: [] },
   };
 }
 

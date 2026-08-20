@@ -4,4 +4,17 @@
     <string name="title_activity_main">栖光</string>
     <string name="package_name">com.vvoyager3.qiguang</string>
     <string name="custom_url_scheme">com.vvoyager3.qiguang</string>
+    <string name="widget_description">查看今天的 MAIN、BONUS 和成长经验</string>
+    <string name="widget_name_default">小栖</string>
+    <string name="widget_privacy">隐私</string>
+    <string name="widget_private_small">隐私模式已开启</string>
+    <string name="widget_private_medium">隐私模式已开启 · 点击隐私可恢复</string>
+    <string name="widget_private_large">隐私模式已开启\n任务内容已隐藏</string>
+    <string name="widget_no_main">今天还没有 MAIN</string>
+    <string name="widget_complete">完成</string>
+    <string name="widget_complete_main">完成 MAIN</string>
+    <string name="widget_tasks_short">任务</string>
+    <string name="widget_tasks">查看任务</string>
+    <string name="widget_record_short">记录</string>
+    <string name="widget_record">开始记录</string>
 </resources>

@@ -280,19 +280,30 @@ export interface GoalDecompositionRequest {
   context: {
     area: { areaId: string; name: string; mode: 'build' | 'maintain' | 'explore' | 'pause' };
     branch: { branchId: string; name: string };
+    currentGoals: Array<{ goalId: string; result: string; role: 'main' | 'secondary' }>;
+    executionEvidence: Array<{
+      questId: string;
+      title: string;
+      result: 'completed' | 'partial' | 'skipped' | 'exempt';
+      actual: string;
+      completedDate: string;
+    }>;
     memories: Array<{
       memoryId: string;
       type: MemoryCandidate['type'];
       statement: string;
     }>;
   };
-  permissions: { memoryIds: string[] };
+  permissions: { memoryIds: string[]; questIds: string[]; goalIds: string[] };
 }
 
 export interface GoalDecompositionResult {
   refinedResult: string;
   completionEvidence: string;
   rationale: string;
+  currentStage: string;
+  estimatedInvestment: string;
+  risks: string[];
   milestones: Array<{ title: string; evidence: string }>;
   nextStep: {
     title: string;
@@ -674,11 +685,29 @@ export function parseGoalDecompositionRequest(value: unknown): GoalDecomposition
   const input = objectValue(root.userInput, '用户输入');
   exactKeys(input, ['result', 'why', 'completionEvidence'], '用户输入');
   const context = objectValue(root.context, '上下文');
-  exactKeys(context, ['area', 'branch', 'memories'], '上下文');
+  exactKeys(context, ['area', 'branch', 'currentGoals', 'executionEvidence', 'memories'], '上下文');
   const area = objectValue(context.area, '关注领域');
   exactKeys(area, ['areaId', 'name', 'mode'], '关注领域');
   const branch = objectValue(context.branch, '成长分支');
   exactKeys(branch, ['branchId', 'name'], '成长分支');
+  const currentGoals = arrayValue(context.currentGoals, '当前目标', 3).map((value, index) => {
+    const item = objectValue(value, `当前目标${index + 1}`);
+    exactKeys(item, ['goalId', 'result', 'role'], `当前目标${index + 1}`);
+    return { goalId: textValue(item.goalId, '目标 ID', 200), result: textValue(item.result, '目标结果', 160), role: enumValue(item.role, ['main', 'secondary'] as const, '目标角色') };
+  });
+  if (new Set(currentGoals.map((item) => item.goalId)).size !== currentGoals.length) throw new Error('当前目标不能重复。');
+  const executionEvidence = arrayValue(context.executionEvidence, '执行证据', 20).map((value, index) => {
+    const item = objectValue(value, `执行证据${index + 1}`);
+    exactKeys(item, ['questId', 'title', 'result', 'actual', 'completedDate'], `执行证据${index + 1}`);
+    return {
+      questId: textValue(item.questId, '任务 ID', 200),
+      title: textValue(item.title, '任务标题', 160),
+      result: enumValue(item.result, ['completed', 'partial', 'skipped', 'exempt'] as const, '任务结果'),
+      actual: textValue(item.actual, '实际结果', 500, true),
+      completedDate: localDateValue(item.completedDate, '实际完成日期'),
+    };
+  });
+  if (new Set(executionEvidence.map((item) => item.questId)).size !== executionEvidence.length) throw new Error('执行证据不能重复。');
   const memories = arrayValue(context.memories, '系统记忆', 20).map((value, index) => {
     const memory = objectValue(value, `系统记忆${index + 1}`);
     exactKeys(memory, ['memoryId', 'type', 'statement'], `系统记忆${index + 1}`);
@@ -690,9 +719,13 @@ export function parseGoalDecompositionRequest(value: unknown): GoalDecomposition
   });
   if (new Set(memories.map((item) => item.memoryId)).size !== memories.length) throw new Error('系统记忆不能重复。');
   const permissions = objectValue(root.permissions, '发送权限');
-  exactKeys(permissions, ['memoryIds'], '发送权限');
+  exactKeys(permissions, ['memoryIds', 'questIds', 'goalIds'], '发送权限');
   const memoryIds = uniqueStrings(permissions.memoryIds, '允许发送的记忆 ID', 20);
+  const questIds = uniqueStrings(permissions.questIds, '允许发送的任务 ID', 20);
+  const goalIds = uniqueStrings(permissions.goalIds, '允许发送的目标 ID', 3);
   if (memoryIds.length !== memories.length || memories.some((item) => !memoryIds.includes(item.memoryId))) throw new Error('发送权限与系统记忆范围不一致。');
+  if (questIds.length !== executionEvidence.length || executionEvidence.some((item) => !questIds.includes(item.questId))) throw new Error('发送权限与执行证据范围不一致。');
+  if (goalIds.length !== currentGoals.length || currentGoals.some((item) => !goalIds.includes(item.goalId))) throw new Error('发送权限与当前目标范围不一致。');
   return {
     contractVersion: ANALYSIS_CONTRACT_VERSION,
     operation: 'goal_decomposition',
@@ -701,8 +734,8 @@ export function parseGoalDecompositionRequest(value: unknown): GoalDecomposition
     timeZone,
     userInput: {
       result: textValue(input.result, '目标结果', 160),
-      why: textValue(input.why, '目标理由', 500),
-      completionEvidence: textValue(input.completionEvidence, '完成证据', 500),
+      why: textValue(input.why, '目标理由', 500, true),
+      completionEvidence: textValue(input.completionEvidence, '完成证据', 500, true),
     },
     context: {
       area: {
@@ -714,9 +747,11 @@ export function parseGoalDecompositionRequest(value: unknown): GoalDecomposition
         branchId: textValue(branch.branchId, '分支 ID', 200),
         name: textValue(branch.name, '分支名称', 60),
       },
+      currentGoals,
+      executionEvidence,
       memories,
     },
-    permissions: { memoryIds },
+    permissions: { memoryIds, questIds, goalIds },
   };
 }
 
@@ -1040,7 +1075,7 @@ export function parseGoalDecompositionResponse(value: unknown, request: GoalDeco
     throw new Error('响应信封与请求不一致。');
   }
   const result = objectValue(root.result, '目标拆解结果');
-  exactKeys(result, ['refinedResult', 'completionEvidence', 'rationale', 'milestones', 'nextStep', 'assumptions'], '目标拆解结果');
+  exactKeys(result, ['refinedResult', 'completionEvidence', 'rationale', 'currentStage', 'estimatedInvestment', 'risks', 'milestones', 'nextStep', 'assumptions'], '目标拆解结果');
   const milestones = arrayValue(result.milestones, '目标里程碑', 5).map((value, index) => {
     const milestone = objectValue(value, `目标里程碑${index + 1}`);
     exactKeys(milestone, ['title', 'evidence'], `目标里程碑${index + 1}`);
@@ -1053,23 +1088,40 @@ export function parseGoalDecompositionResponse(value: unknown, request: GoalDeco
   if (new Set(milestones.map((item) => item.title)).size !== milestones.length) throw new Error('目标里程碑不能重复。');
   const nextStep = objectValue(result.nextStep, '目标下一步');
   exactKeys(nextStep, ['title', 'why', 'minimumAction', 'estimatedMinutes', 'difficulty'], '目标下一步');
+  const refinedResult = textValue(result.refinedResult, '优化后的目标结果', 160);
+  const completionEvidence = textValue(result.completionEvidence, '完成证据', 500);
+  const risks = uniqueStrings(result.risks, '关键风险', 5, 300);
+  const assumptions = uniqueStrings(result.assumptions, '待确认假设', 5, 300);
+  const nextTitle = textValue(nextStep.title, '下一步标题', 160);
+  const minimumAction = textValue(nextStep.minimumAction, '下一步最小动作', 200);
+  const vagueOrOverbroad = /变得?更好|提升自己|全面发展|所有方面|全部做好|彻底改变|成为最好的/.test(request.userInput.result);
+  if (vagueOrOverbroad && !request.userInput.completionEvidence && !assumptions.length) throw new Error('模糊或过大的目标必须列出待确认假设。');
+  if (request.context.currentGoals.some((goal) => goal.role === 'main') && !risks.length && !assumptions.length) throw new Error('存在当前主目标时必须说明优先级风险或假设。');
+  const deadlinePattern = /(?:[一二三四五六七八九十百两\d]+\s*(?:天|周|个月|月|年)(?:内|后|前)|月底|年底|截止)/;
+  if (!deadlinePattern.test(request.userInput.result) && deadlinePattern.test(refinedResult)) throw new Error('不能为没有截止时间的目标擅自添加期限。');
+  if ([request.userInput.result, refinedResult].includes(nextTitle) || [request.userInput.result, refinedResult, nextTitle].includes(minimumAction)) {
+    throw new Error('下一步必须比完整目标更小且可执行。');
+  }
   return {
     contractVersion: ANALYSIS_CONTRACT_VERSION,
     requestId: request.requestId,
     operation: 'goal_decomposition',
     result: {
-      refinedResult: textValue(result.refinedResult, '优化后的目标结果', 160),
-      completionEvidence: textValue(result.completionEvidence, '完成证据', 500),
+      refinedResult,
+      completionEvidence,
       rationale: textValue(result.rationale, '拆解说明', 500),
+      currentStage: textValue(result.currentStage, '当前阶段', 300),
+      estimatedInvestment: textValue(result.estimatedInvestment, '预计投入', 300),
+      risks,
       milestones,
       nextStep: {
-        title: textValue(nextStep.title, '下一步标题', 160),
+        title: nextTitle,
         why: textValue(nextStep.why, '下一步理由', 500),
-        minimumAction: textValue(nextStep.minimumAction, '下一步最小动作', 200),
+        minimumAction,
         estimatedMinutes: integerValue(nextStep.estimatedMinutes, '下一步预计时间', 1, 240),
         difficulty: enumValue(nextStep.difficulty, ['light', 'standard', 'hard', 'challenge'] as const, '下一步难度'),
       },
-      assumptions: uniqueStrings(result.assumptions, '待确认假设', 5, 300),
+      assumptions,
     },
     warnings: uniqueStrings(root.warnings, '警告', 10, 200),
   };

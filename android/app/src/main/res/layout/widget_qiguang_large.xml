@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="14dp" android:background="@drawable/widget_background" tools:ignore="ButtonStyle">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:id="@+id/widget_avatar" android:layout_width="42dp" android:layout_height="42dp" android:src="@mipmap/ic_launcher_round" android:scaleType="centerCrop" android:contentDescription="@null" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="10dp" android:orientation="vertical">
+            <TextView android:id="@+id/widget_name" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/widget_name_default" android:textStyle="bold" android:textColor="@color/widget_foreground" android:textSize="16sp" />
+            <TextView android:id="@+id/widget_xp" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/widget_foreground" android:textSize="12sp" />
+        </LinearLayout>
+        <Button android:id="@+id/widget_privacy_toggle" android:layout_width="wrap_content" android:layout_height="42dp" android:background="@drawable/widget_button_secondary" android:text="@string/widget_privacy" android:textColor="@color/widget_foreground" android:textSize="11sp" />
+    </LinearLayout>
+    <TextView android:id="@+id/widget_private" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center" android:text="@string/widget_private_large" android:textColor="@color/widget_foreground" android:textStyle="bold" android:textSize="16sp" android:visibility="gone" />
+    <TextView android:id="@+id/widget_main" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:maxLines="2" android:ellipsize="end" android:text="@string/widget_no_main" android:textColor="@color/widget_foreground" android:textStyle="bold" android:textSize="18sp" />
+    <TextView android:id="@+id/widget_minimum" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:maxLines="2" android:ellipsize="end" android:textColor="@color/widget_foreground" android:textSize="13sp" />
+    <TextView android:id="@+id/widget_bonus" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="10dp" android:maxLines="4" android:ellipsize="end" android:textColor="@color/widget_foreground" android:textSize="13sp" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <Button android:id="@+id/widget_complete" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:background="@drawable/widget_button" android:text="@string/widget_complete_main" android:textColor="@color/widget_foreground" android:textSize="12sp" />
+        <Button android:id="@+id/widget_tasks" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:layout_marginStart="8dp" android:background="@drawable/widget_button_secondary" android:text="@string/widget_tasks" android:textColor="@color/widget_foreground" android:textSize="12sp" />
+        <Button android:id="@+id/widget_record" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:layout_marginStart="8dp" android:background="@drawable/widget_button_secondary" android:text="@string/widget_record" android:textColor="@color/widget_foreground" android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>

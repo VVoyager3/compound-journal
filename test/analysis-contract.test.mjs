@@ -324,14 +324,17 @@ test('goal decomposition stays a bounded editable draft with matching memory per
     context: {
       area: { areaId: 'area-1', name: '创造与作品', mode: 'build' },
       branch: { branchId: 'branch-1', name: '写作实践' },
+      currentGoals: [{ goalId: 'goal-main', result: '完成现有主项目', role: 'main' }],
+      executionEvidence: [{ questId: 'quest-1', title: '一次写完整稿', result: 'partial', actual: '完成了三个要点', completedDate: '2026-08-19' }],
       memories: [{ memoryId: 'memory-1', type: 'constraint', statement: '长时间连续写作容易耗尽注意力。' }],
     },
-    permissions: { memoryIds: ['memory-1'] },
+    permissions: { memoryIds: ['memory-1'], questIds: ['quest-1'], goalIds: ['goal-main'] },
   });
   const response = parseGoalDecompositionResponse({
     contractVersion: '1.0', requestId: request.requestId, operation: 'goal_decomposition',
     result: {
       refinedResult: '发布一篇有公开链接的文章', completionEvidence: '文章可以通过公开链接阅读', rationale: '先形成初稿，再用一次反馈修订。',
+      currentStage: '已有主题，还没有形成提纲。', estimatedInvestment: '每周两次，每次三十分钟，预计三周。', risks: ['连续写作时间过长会耗尽注意力。'],
       milestones: [
         { title: '完成文章初稿', evidence: '保存一份包含开头、正文和结尾的初稿。' },
         { title: '完成一次反馈修订', evidence: '保留反馈和修订后的版本。' },
@@ -342,11 +345,72 @@ test('goal decomposition stays a bounded editable draft with matching memory per
   }, request);
   assert.equal(response.result.milestones.length, 2);
   assert.equal(response.result.nextStep.minimumAction, '只列三个要点');
+  assert.equal(response.result.currentStage, '已有主题，还没有形成提纲。');
+  assert.deepEqual(response.result.risks, ['连续写作时间过长会耗尽注意力。']);
 
   const unauthorized = structuredClone(request);
   unauthorized.permissions.memoryIds = [];
   assert.throws(() => parseGoalDecompositionRequest(unauthorized), /权限与系统记忆范围不一致/);
+  const missingExecutionPermission = structuredClone(request);
+  missingExecutionPermission.permissions.questIds = [];
+  assert.throws(() => parseGoalDecompositionRequest(missingExecutionPermission), /执行证据范围不一致/);
+  const missingGoalPermission = structuredClone(request);
+  missingGoalPermission.permissions.goalIds = [];
+  assert.throws(() => parseGoalDecompositionRequest(missingGoalPermission), /当前目标范围不一致/);
   const tooLarge = structuredClone(response);
   tooLarge.result.nextStep.estimatedMinutes = 241;
   assert.throws(() => parseGoalDecompositionResponse(tooLarge, request), /预计时间/);
+  const duplicateRisk = structuredClone(response);
+  duplicateRisk.result.risks.push(duplicateRisk.result.risks[0]);
+  assert.throws(() => parseGoalDecompositionResponse(duplicateRisk, request), /不能重复/);
+
+  const oneSentence = parseGoalDecompositionRequest({
+    ...request, requestId: 'goal-plan-minimal',
+    userInput: { result: '完成一次 5 公里跑', why: '', completionEvidence: '' },
+  });
+  assert.equal(oneSentence.userInput.why, '');
+  assert.equal(oneSentence.userInput.completionEvidence, '');
+});
+
+test('goal decomposition rejects vague, conflicting, invented-deadline, oversized, and non-actionable plans', () => {
+  const requestFor = (result, currentGoals = []) => parseGoalDecompositionRequest({
+    contractVersion: '1.0', operation: 'goal_decomposition', requestId: `edge-${result}`, locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    userInput: { result, why: '', completionEvidence: '' },
+    context: { area: { areaId: 'area-1', name: '生活', mode: 'explore' }, branch: { branchId: 'branch-1', name: '实践' }, currentGoals, executionEvidence: [], memories: [] },
+    permissions: { memoryIds: [], questIds: [], goalIds: currentGoals.map((goal) => goal.goalId) },
+  });
+  const responseFor = (request) => ({
+    contractVersion: '1.0', requestId: request.requestId, operation: 'goal_decomposition',
+    result: {
+      refinedResult: request.userInput.result, completionEvidence: '留下一份可检查成果', rationale: '先缩小范围。', currentStage: '尚未开始。',
+      estimatedInvestment: '先投入二十分钟。', risks: [],
+      milestones: [{ title: '完成结构', evidence: '三个要点齐全' }, { title: '形成成果', evidence: '成果可以查看' }],
+      nextStep: { title: '列出三个要点', why: '降低开始成本', minimumAction: '只写第一个要点', estimatedMinutes: 10, difficulty: 'light' }, assumptions: [],
+    }, warnings: [],
+  });
+
+  const vague = requestFor('我想全面发展');
+  const vagueResponse = responseFor(vague);
+  assert.throws(() => parseGoalDecompositionResponse(vagueResponse, vague), /待确认假设/);
+  vagueResponse.result.assumptions = ['需要先选择本阶段最重要的一个方面。'];
+  assert.doesNotThrow(() => parseGoalDecompositionResponse(vagueResponse, vague));
+
+  const conflicting = requestFor('开始一个新项目', [{ goalId: 'main-1', result: '完成现有项目', role: 'main' }]);
+  const conflictResponse = responseFor(conflicting);
+  assert.throws(() => parseGoalDecompositionResponse(conflictResponse, conflicting), /优先级风险/);
+  conflictResponse.result.risks = ['新旧项目会竞争同一段可用时间。'];
+  assert.doesNotThrow(() => parseGoalDecompositionResponse(conflictResponse, conflicting));
+
+  const noDeadline = requestFor('发布一篇文章');
+  const inventedDeadline = responseFor(noDeadline);
+  inventedDeadline.result.refinedResult = '两周内发布一篇文章';
+  assert.throws(() => parseGoalDecompositionResponse(inventedDeadline, noDeadline), /擅自添加期限/);
+
+  const oversized = responseFor(noDeadline);
+  oversized.result.milestones = Array.from({ length: 6 }, (_, index) => ({ title: `阶段 ${index + 1}`, evidence: `证据 ${index + 1}` }));
+  assert.throws(() => parseGoalDecompositionResponse(oversized, noDeadline), /里程碑无效/);
+
+  const nonActionable = responseFor(noDeadline);
+  nonActionable.result.nextStep.title = nonActionable.result.refinedResult;
+  assert.throws(() => parseGoalDecompositionResponse(nonActionable, noDeadline), /比完整目标更小/);
 });

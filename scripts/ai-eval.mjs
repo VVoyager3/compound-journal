@@ -193,9 +193,11 @@ function validateRequest(request) {
     assert.deepEqual(new Set(request.permissions.memoryIds), new Set(request.context.memories.map((item) => item.memoryId)));
   } else if (request.operation === 'goal_decomposition') {
     exactKeys(request.userInput, new Set(['result', 'why', 'completionEvidence']), 'goal userInput');
-    exactKeys(request.context, new Set(['area', 'branch', 'memories']), 'goal context');
-    exactKeys(request.permissions, new Set(['memoryIds']), 'goal permissions');
+    exactKeys(request.context, new Set(['area', 'branch', 'currentGoals', 'executionEvidence', 'memories']), 'goal context');
+    exactKeys(request.permissions, new Set(['memoryIds', 'questIds', 'goalIds']), 'goal permissions');
     assert.deepEqual(new Set(request.permissions.memoryIds), new Set(request.context.memories.map((item) => item.memoryId)));
+    assert.deepEqual(new Set(request.permissions.questIds), new Set(request.context.executionEvidence.map((item) => item.questId)));
+    assert.deepEqual(new Set(request.permissions.goalIds), new Set(request.context.currentGoals.map((item) => item.goalId)));
   } else if (request.operation === 'task_feedback') {
     assert.match(request.localDate, /^\d{4}-\d{2}-\d{2}$/);
     exactKeys(request.userInput, new Set(['questId', 'questTitle', 'minimumAction', 'currentDifficulty', 'feedbackText']), 'feedback userInput');

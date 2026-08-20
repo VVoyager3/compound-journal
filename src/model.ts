@@ -26,6 +26,15 @@ export type QuestType = 'main' | 'bonus' | 'side';
 export type QuestStatus = 'pending' | 'completed' | 'partial' | 'skipped' | 'exempt';
 export type HabitStatus = 'active' | 'paused' | 'ended';
 
+/**
+ * Canonical product vocabulary. Keep UI copy and persistence fields aligned:
+ * area = life context; state = recent capacity signal; goal = desired result;
+ * milestone = verifiable phase; habit = repeatable behavior; quest = dated action;
+ * growth evidence = confirmed proof of change; system memory = user-confirmed rule.
+ * A quest always carries sourceType/sourceId when generated and its feedback is
+ * the only completion evidence that can settle XP.
+ */
+
 export interface BaseEntity {
   id: string;
   createdAt: string;
@@ -82,6 +91,7 @@ export interface AppSettings extends BaseEntity {
   onboardingSeen: boolean;
   aiAllowed: boolean;
   previewBeforeSend: boolean;
+  guidanceTone: 'gentle' | 'direct';
 }
 
 export interface Profile extends ImportableEntity {
@@ -95,6 +105,7 @@ export interface Profile extends ImportableEntity {
 }
 
 export interface Area extends ImportableEntity {
+  /** User-facing “人生领域”; separate from the five recent-state sensors. */
   name: string;
   mode: AreaMode;
   order: number;
@@ -102,6 +113,7 @@ export interface Area extends ImportableEntity {
 }
 
 export interface GrowthBranch extends ImportableEntity {
+  /** Internal entity behind the user-facing “成长方向”. */
   rootAsset: AssetKey;
   parentId?: string;
   name: string;
@@ -124,10 +136,14 @@ export interface Goal extends ImportableEntity {
 
 export interface Milestone extends ImportableEntity {
   goalId: string;
+  /** Stable sequence inside the confirmed plan; legacy records may omit it. */
+  order?: number;
   description: string;
   evidence: string;
-  status: 'pending' | 'completed';
+  status: 'pending' | 'completed' | 'superseded';
   completedAt?: string;
+  /** Present only when a confirmed task completion settled this milestone. */
+  completionSourceQuestId?: string;
   xpSettled: boolean;
 }
 
@@ -136,12 +152,19 @@ export interface Quest extends ImportableEntity {
   type: QuestType;
   sourceType: 'goal' | 'habit' | 'recovery' | 'manual';
   sourceId?: string;
+  /** Explicit milestone provenance; actionId remains the idempotency key. */
+  milestoneId?: string;
+  /** Confirmed action that produced this derived follow-up. */
+  predecessorQuestId?: string;
   actionId: string;
   settlementVersion: number;
   title: string;
   reason: string;
   minimumAction: string;
+  /** The smallest observable evidence that counts as completion. */
+  completionCriteria?: string;
   estimatedMinutes: number;
+  deadlineAt?: string;
   difficulty: import('./rules.ts').Difficulty;
   dimension?: Dimension;
   branchId?: string;
@@ -240,6 +263,8 @@ export interface SystemMemory extends ImportableEntity {
   confidence: import('./analysis-contract.ts').Confidence;
   recommendedAction: 'observe' | 'review';
   status: 'candidate' | 'confirmed' | 'forgotten';
+  /** Keep the memory visible while excluding it from proactive AI reminders. */
+  reminderMuted?: boolean;
   confirmedAt?: string;
   forgottenAt?: string;
   userEdited: boolean;
@@ -251,6 +276,8 @@ export interface QuestFeedback extends ImportableEntity {
   note: string;
   actual: string;
   settlementVersion: number;
+  /** The day the user says the action actually happened; absent on legacy feedback. */
+  completedDate?: string;
   undoneAt?: string;
 }
 

@@ -574,6 +574,38 @@ test('build areas and active goal roles keep their documented caps', async (t) =
   assert.equal(overflow.status, 'idea');
 });
 
+test('user-authored companion memory stays editable and can stop proactive reminders without being forgotten', async (t) => {
+  const db = await withDatabase(t, 'user-authored-memory');
+  const memory = await db.addConfirmedMemory('constraint', '连续会议后不要立刻安排高专注任务。');
+  assert.equal(memory.status, 'confirmed');
+  assert.deepEqual(memory.evidenceIds, []);
+  const muted = await db.setMemoryReminder(memory.id, true);
+  assert.equal(muted.reminderMuted, true);
+  const edited = await db.decideMemory(memory.id, 'confirmed', '连续会议后先留十分钟恢复时间。');
+  assert.equal(edited.statement, '连续会议后先留十分钟恢复时间。');
+  assert.equal(edited.reminderMuted, true);
+  const backup = await db.exportBundle();
+  assert.doesNotThrow(() => parseBackup(JSON.stringify(backup)));
+  assert.equal((await db.listMemories('confirmed'))[0].status, 'confirmed');
+});
+
+test('a goal can start from one sentence while optional context stays editable', async (t) => {
+  const db = await withDatabase(t, 'minimal-goal');
+  await db.ensureI2Defaults();
+  const [areas, branches] = await Promise.all([db.listAreas(), db.listBranches()]);
+  const goal = await db.addGoal({
+    result: '完成第一次公开分享', why: '', evidence: '', nextStep: '先写三个要点',
+    role: 'main',
+  });
+  assert.equal(goal.areaId, areas.at(0).id);
+  assert.equal(goal.branchId, branches.at(0).id);
+  assert.equal(goal.why, '');
+  assert.equal(goal.evidence, '');
+  assert.equal((await db.saveGoal(goal.id, { why: '记录真实经验' })).why, '记录真实经验');
+  const backup = parseBackup(JSON.stringify(await db.exportBundle())).data.goals[0];
+  assert.equal(backup.evidence, '');
+});
+
 test('goals and habits can be edited or paused without deleting their history', async (t) => {
   const db = await withDatabase(t, 'i2-edit-pause');
   await db.ensureI2Defaults();
@@ -598,6 +630,78 @@ test('goals and habits can be edited or paused without deleting their history', 
   await db.saveHabit(habit.id, { name: '晚饭后散步', status: 'paused' });
   assert.equal((await db.listHabits())[0].name, '晚饭后散步');
   assert.equal((await db.ensureTodayBonusQuests('2026-08-14')).length, 0);
+});
+
+test('goal status transitions close related pending tasks', async (t) => {
+  const db = await withDatabase(t, 'i2-goal-close-tasks');
+  await db.ensureI2Defaults();
+  const area = (await db.listAreas())[0];
+  const branch = (await db.listBranches())[0];
+  const goal = await db.addGoal({
+    result: '形成真实作品', why: '可验证成果', evidence: '真实输出', nextStep: '先写提纲',
+    areaId: area.id, branchId: branch.id, role: 'main',
+  });
+  const mainQuest = await db.addQuest({
+    localDate: '2026-08-14', type: 'main', sourceType: 'goal', sourceId: goal.id, branchId: branch.id,
+    title: '写下第一版', reason: '完成目标下一步', minimumAction: '用十分钟快速起草', estimatedMinutes: 20,
+    difficulty: 'standard',
+  });
+  const sideQuest = await db.addQuest({
+    localDate: '2026-08-15', type: 'side', sourceType: 'goal', sourceId: goal.id, branchId: branch.id,
+    title: '补充结构', reason: '避免重复', minimumAction: '列三条论点', estimatedMinutes: 15,
+    difficulty: 'standard',
+  });
+  const unrelated = await db.addQuest({
+    localDate: '2026-08-14', type: 'side', sourceType: 'manual',
+    title: '独立任务', reason: '不应受目标状态影响', minimumAction: '先处理', estimatedMinutes: 10,
+    difficulty: 'light',
+  });
+
+  await db.saveGoal(goal.id, { status: 'paused' });
+  const quests = await db.listQuests('2026-08-14');
+  const closedMain = quests.find((item) => item.id === mainQuest.id);
+  const untouched = quests.find((item) => item.id === unrelated.id);
+  assert.equal(closedMain?.status, 'skipped');
+  assert.equal(untouched?.status, 'pending');
+
+  const nextDayQuests = await db.listQuests('2026-08-15');
+  const closedSide = nextDayQuests.find((item) => item.id === sideQuest.id);
+  assert.equal(closedSide?.status, 'skipped');
+});
+
+test('confirmed replanning preserves history and retires the old action path atomically', async (t) => {
+  const db = await withDatabase(t, 'goal-replan');
+  await db.ensureI2Defaults();
+  const area = (await db.listAreas())[0];
+  const branch = (await db.listBranches())[0];
+  const goal = await db.addGoal({
+    result: '发布作品', why: '积累真实成果', evidence: '公开链接', nextStep: '一次写完整稿',
+    areaId: area.id, branchId: branch.id, role: 'main',
+  });
+  const oldMilestone = await db.addMilestone(goal.id, '一次完成初稿', '保存完整初稿');
+  const oldQuest = await db.addQuest({
+    localDate: '2026-08-14', type: 'main', sourceType: 'goal', sourceId: goal.id, milestoneId: oldMilestone.id, branchId: branch.id,
+    title: '一次写完', reason: '旧计划', minimumAction: '先写一小时', estimatedMinutes: 60, difficulty: 'hard',
+  });
+
+  const replaced = await db.replaceGoalPlan(goal.id, {
+    result: '分两次完成并发布作品', evidence: '公开链接和校对记录', nextStep: '先列三个要点',
+  }, [
+    { description: '完成结构', evidence: '三个要点齐全' },
+    { description: '发布校对稿', evidence: '留下公开链接' },
+  ], goal.version);
+
+  assert.equal(replaced.goal.nextStep, '先列三个要点');
+  assert.equal(replaced.milestones.length, 2);
+  assert.equal((await db.listMilestones(goal.id)).find((item) => item.id === oldMilestone.id)?.status, 'superseded');
+  assert.equal((await db.listQuests('2026-08-14')).find((item) => item.id === oldQuest.id)?.status, 'exempt');
+  await assert.rejects(() => db.completeMilestone(oldMilestone.id), /新计划替换/);
+  await assert.rejects(() => db.replaceGoalPlan(goal.id, {
+    result: '过期草案', evidence: '不应覆盖', nextStep: '不应执行',
+  }, [
+    { description: '旧步骤一', evidence: '旧证据一' },
+    { description: '旧步骤二', evidence: '旧证据二' },
+  ], goal.version), /目标已经改变/);
 });
 
 test('task feedback is atomic, editable, undoable, and XP stays idempotent', async (t) => {
@@ -667,6 +771,22 @@ test('pending daily quests never exceed one main, three BONUS, and two side ques
   assert.deepEqual((await db.listQuests('2026-08-14')).map((item) => item.type), ['main', 'bonus', 'bonus', 'bonus', 'side', 'side']);
 });
 
+test('overdue pending actions stay user-decided and late XP uses the real completion date', async (t) => {
+  const db = await withDatabase(t, 'i2-overdue-actions');
+  await db.ensureI2Defaults();
+  const branch = (await db.listBranches())[0];
+  const quest = await db.addQuest({
+    localDate: '2026-08-14', type: 'main', sourceType: 'manual', branchId: branch.id,
+    title: '晚完成的行动', reason: '验证跨日处理', minimumAction: '做五分钟', estimatedMinutes: 5,
+    difficulty: 'standard',
+  });
+  assert.deepEqual((await db.listPendingBefore('2026-08-15')).map((item) => item.id), [quest.id]);
+  await db.feedbackQuest(quest.id, 'completed', '', '', undefined, 0, '2026-08-15');
+  assert.equal((await db.listPendingBefore('2026-08-15')).length, 0);
+  assert.equal((await db.listQuestFeedback(quest.id))[0].completedDate, '2026-08-15');
+  assert.equal((await db.listXpLedger(branch.id))[0].localDate, '2026-08-15');
+});
+
 test('pending quests can be shrunk, replaced, or moved without bypassing daily caps', async (t) => {
   const db = await withDatabase(t, 'i2-adjust-quest');
   await db.ensureI2Defaults();
@@ -676,10 +796,12 @@ test('pending quests can be shrunk, replaced, or moved without bypassing daily c
   });
   const adjusted = await db.savePendingQuest(quest.id, {
     localDate: '2026-08-15', title: '更适合的行动', minimumAction: '只做五分钟', estimatedMinutes: 5, difficulty: 'light',
+    deadlineAt: '2026-08-15T12:00:00.000Z',
   });
   assert.deepEqual({ date: adjusted.localDate, title: adjusted.title, minutes: adjusted.estimatedMinutes, modified: adjusted.userModified }, {
     date: '2026-08-15', title: '更适合的行动', minutes: 5, modified: true,
   });
+  assert.equal(adjusted.deadlineAt, '2026-08-15T12:00:00.000Z');
   await db.addQuest({
     localDate: '2026-08-16', type: 'main', sourceType: 'manual', title: '已有主线', reason: '占用当天名额',
     minimumAction: '做一步', estimatedMinutes: 5, difficulty: 'light',
@@ -703,8 +825,10 @@ test('only user-enabled habits create BONUS quests and momentum does not reset a
   await assert.rejects(() => makeHabit('第四个启用习惯'), /最多三个/);
   await makeHabit('未启用的候选', false);
 
+  await db.ensureTodayBonusQuests('2026-08-13');
   assert.equal((await db.ensureTodayBonusQuests('2026-08-14')).length, 3);
   assert.equal((await db.ensureTodayBonusQuests('2026-08-14')).length, 0);
+  assert.equal((await db.listQuests('2026-08-13')).filter((item) => item.status === 'pending').length, 3);
   const first = (await db.listQuests('2026-08-14')).find((item) => item.sourceId === habit.id);
   await db.feedbackQuest(first.id, 'completed');
   for (const [date, result] of [
@@ -733,6 +857,54 @@ test('a milestone adds 50 XP once and undo reverses it', async (t) => {
   assert.equal((await db.branchProgress(branch.id)).totalXp, 50);
   await db.undoMilestone(milestone.id);
   assert.equal((await db.branchProgress(branch.id)).totalXp, 0);
+});
+
+test('a completed goal action creates one next-milestone quest without duplicating it', async (t) => {
+  const db = await withDatabase(t, 'i2-goal-follow-up');
+  await db.ensureI2Defaults();
+  const area = (await db.listAreas())[0];
+  const branch = (await db.listBranches())[0];
+  const goal = await db.addGoal({
+    result: '完成公开作品', why: '留下真实成果', evidence: '公开链接', nextStep: '先完成结构',
+    areaId: area.id, branchId: branch.id, role: 'main',
+  });
+  const firstMilestone = await db.addMilestone(goal.id, '完成结构', '有三个清晰要点');
+  const milestone = await db.addMilestone(goal.id, '完成可校对初稿', '有一份完整初稿');
+  const quest = await db.addQuest({
+    localDate: '2026-08-14', type: 'main', sourceType: 'goal', sourceId: goal.id, milestoneId: firstMilestone.id, branchId: branch.id,
+    title: '先完成结构', reason: '降低开始成本', minimumAction: '列三个要点', completionCriteria: firstMilestone.evidence, estimatedMinutes: 10, difficulty: 'light',
+  });
+  await db.feedbackQuest(quest.id, 'completed', '', '', undefined, 0, '2026-08-14');
+  const progression = await db.createGoalFollowUpQuest(quest.id, '2026-08-14');
+  assert.equal(progression.followUp?.actionId, `goal:${goal.id}:after:${quest.id}:milestone:${milestone.id}`);
+  assert.equal(progression.followUp?.milestoneId, milestone.id);
+  assert.equal(progression.followUp?.type, 'main');
+  assert.equal(progression.milestoneCompleted?.id, firstMilestone.id);
+  assert.equal((await db.listMilestones(goal.id)).find((item) => item.id === firstMilestone.id)?.status, 'completed');
+  assert.equal((await db.createGoalFollowUpQuest(quest.id, '2026-08-14')).followUp, null);
+  assert.equal((await db.listQuests('2026-08-14')).filter((item) => item.status === 'pending').length, 1);
+  assert.equal((await db.branchProgress(branch.id)).totalXp, 55);
+  await db.undoQuestFeedback(quest.id);
+  assert.equal((await db.listMilestones(goal.id)).find((item) => item.id === firstMilestone.id)?.status, 'pending');
+  assert.equal((await db.listQuests('2026-08-14')).find((item) => item.id === progression.followUp?.id)?.status, 'exempt');
+  assert.equal((await db.branchProgress(branch.id)).totalXp, 0);
+});
+
+test('a partially completed goal creates one smaller continuation action', async (t) => {
+  const db = await withDatabase(t, 'i2-goal-partial-follow-up');
+  await db.ensureI2Defaults();
+  const area = (await db.listAreas())[0];
+  const branch = (await db.listBranches())[0];
+  const goal = await db.addGoal({ result: '完成作品', why: '留下成果', evidence: '公开链接', nextStep: '先写结构', areaId: area.id, branchId: branch.id, role: 'main' });
+  const milestone = await db.addMilestone(goal.id, '完成初稿', '有完整初稿');
+  const quest = await db.addQuest({ localDate: '2026-08-14', type: 'main', sourceType: 'goal', sourceId: goal.id, branchId: branch.id, title: '先写结构', reason: '降低开始成本', minimumAction: '列三个要点', estimatedMinutes: 10, difficulty: 'light' });
+  await db.feedbackQuest(quest.id, 'partial', '完成开头', '列出三个要点', undefined, 0, '2026-08-14');
+  const continuation = await db.createGoalFollowUpQuest(quest.id, '2026-08-14', 'partial');
+  assert.equal(continuation.followUp?.actionId, `goal:${goal.id}:after:${quest.id}:milestone:${milestone.id}:partial`);
+  assert.equal(continuation.followUp?.milestoneId, milestone.id);
+  assert.match(continuation.followUp?.title ?? '', /^缩小继续：/);
+  assert.equal(continuation.milestoneCompleted, null);
+  assert.equal((await db.createGoalFollowUpQuest(quest.id, '2026-08-14', 'partial')).followUp, null);
 });
 
 test('I2 goals, feedback, habits, and XP survive exact backup restore', async (t) => {
@@ -921,7 +1093,7 @@ test('an empty database restores an export without changing its data', async (t)
   const entry = await db.addEntry('portable journal', '2026-08-14');
   await db.editEntry(entry.id, 1, 'portable journal, edited');
   await db.saveAssessment({ energy: 64, play: 81 }, '2026-08-14');
-  await db.saveSettings({ onboardingSeen: true, reduceMotion: true });
+  await db.saveSettings({ onboardingSeen: true, reduceMotion: true, guidanceTone: 'direct' });
   const before = await db.exportBundle();
 
   await db.clearAll();
@@ -931,6 +1103,7 @@ test('an empty database restores an export without changing its data', async (t)
   await db.importBundle(JSON.stringify(before));
   const restored = await db.exportBundle();
   assert.deepEqual(restored.data, before.data);
+  assert.equal((await db.getSettings()).guidanceTone, 'direct');
 });
 
 test('invalid backup is rejected before it can change existing data', async (t) => {
@@ -989,6 +1162,11 @@ test('invalid backup is rejected before it can change existing data', async (t) 
   const invalidSettings = structuredClone(before);
   invalidSettings.data.settings[0].reduceMotion = 'sometimes';
   await assert.rejects(() => db.importBundle(JSON.stringify(invalidSettings)));
+  assert.deepEqual((await db.exportBundle()).data, before.data);
+
+  const invalidTone = structuredClone(before);
+  invalidTone.data.settings[0].guidanceTone = 'dramatic';
+  await assert.rejects(() => db.importBundle(JSON.stringify(invalidTone)));
   assert.deepEqual((await db.exportBundle()).data, before.data);
 });
 

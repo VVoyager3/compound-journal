@@ -556,8 +556,8 @@ export function parseBackup(text: string): BackupBundle {
   goals.forEach((item) => {
     assertCommonRecord(item, '目标');
     assertText(item.result, '目标结果', 160);
-    assertText(item.why, '目标意义', 500);
-    assertText(item.evidence, '目标证据', 500);
+    assertText(item.why, '目标意义', 500, true);
+    assertText(item.evidence, '目标证据', 500, true);
     assertText(item.nextStep, '目标下一步', 160);
     if (!areaIds.has(item.areaId) || !branchIds.has(item.branchId)) throw new Error('目标领域或成长分支无效。');
     assertOneOf(item.role, ['main', 'secondary', 'wishlist'], '目标角色');
@@ -578,8 +578,10 @@ export function parseBackup(text: string): BackupBundle {
     if (!goalIds.has(item.goalId)) throw new Error('备份存在孤立的里程碑。');
     assertText(item.description, '里程碑描述', 200);
     assertText(item.evidence, '里程碑证据', 500);
-    assertOneOf(item.status, ['pending', 'completed'], '里程碑状态');
+    if (item.order !== undefined) assertInteger(item.order, 0, 10_000, '里程碑顺序');
+    assertOneOf(item.status, ['pending', 'completed', 'superseded'], '里程碑状态');
     if (item.completedAt !== undefined) assertTimestamp(item.completedAt, '里程碑完成时间');
+    if (item.completionSourceQuestId !== undefined) assertText(item.completionSourceQuestId, '里程碑完成来源', 200);
     if (typeof item.xpSettled !== 'boolean') throw new Error('里程碑结算状态无效。');
   });
   uniqueIds(milestones, '里程碑');
@@ -610,12 +612,16 @@ export function parseBackup(text: string): BackupBundle {
     assertOneOf(item.sourceType, ['goal', 'habit', 'recovery', 'manual'], '任务来源');
     if (item.sourceType === 'goal' && (!item.sourceId || !goalIds.has(item.sourceId))) throw new Error('目标任务来源无效。');
     if (item.sourceType === 'habit' && (!item.sourceId || !habitIds.has(item.sourceId))) throw new Error('习惯任务来源无效。');
+    if (item.milestoneId !== undefined && !milestoneIds.has(item.milestoneId)) throw new Error('任务关联的里程碑不存在。');
+    if (item.milestoneId !== undefined && item.sourceType !== 'goal') throw new Error('里程碑只能关联目标任务。');
     assertText(item.actionId, '现实行动 ID', 120);
     assertInteger(item.settlementVersion, 0, Number.MAX_SAFE_INTEGER, '任务结算版本');
     assertText(item.title, '任务标题', 160);
     assertText(item.reason, '任务理由', 500);
     assertText(item.minimumAction, '任务最小动作', 200);
+    if (item.completionCriteria !== undefined) assertText(item.completionCriteria, '任务完成标准', 500);
     assertInteger(item.estimatedMinutes, 1, 24 * 60, '任务预计时间');
+    if (item.deadlineAt !== undefined) assertTimestamp(item.deadlineAt, '任务截止时间');
     assertOneOf(item.difficulty, Object.keys(DIFFICULTY_XP), '任务难度');
     if (item.dimension !== undefined && !dimensionKeys.has(item.dimension)) throw new Error('任务状态维度无效。');
     if (item.branchId !== undefined && !branchIds.has(item.branchId)) throw new Error('任务成长分支无效。');
@@ -624,6 +630,13 @@ export function parseBackup(text: string): BackupBundle {
   });
   uniqueIds(quests, '任务');
   const questIds = new Set(quests.map((item) => item.id));
+  quests.forEach((item) => {
+    if (item.predecessorQuestId !== undefined && (!questIds.has(item.predecessorQuestId) || item.predecessorQuestId === item.id)) throw new Error('任务前序来源无效。');
+  });
+  const questById = new Map(quests.map((item) => [item.id, item]));
+  milestones.forEach((item) => {
+    if (item.completionSourceQuestId !== undefined && (item.status !== 'completed' || questById.get(item.completionSourceQuestId)?.milestoneId !== item.id)) throw new Error('里程碑完成来源无效。');
+  });
   for (const date of new Set(quests.map((item) => item.localDate))) {
     const types = quests.filter((item) => item.localDate === date && item.status === 'pending').map((item) => item.type);
     if (types.filter((item) => item === 'main').length > 1 || types.filter((item) => item === 'bonus').length > 3 || types.filter((item) => item === 'side').length > 2) throw new Error('每日任务数量超过上限。');
@@ -637,6 +650,7 @@ export function parseBackup(text: string): BackupBundle {
     assertText(item.note, '任务反馈', 2_000, true);
     assertText(item.actual, '实际完成内容', 2_000, true);
     assertInteger(item.settlementVersion, 1, Number.MAX_SAFE_INTEGER, '任务反馈结算版本');
+    if (item.completedDate !== undefined && !isLocalDate(item.completedDate)) throw new Error('任务实际完成日期无效。');
     if (item.undoneAt !== undefined) assertTimestamp(item.undoneAt, '任务反馈撤销时间');
   });
   uniqueIds(feedback, '任务反馈');
@@ -729,7 +743,9 @@ export function parseBackup(text: string): BackupBundle {
     assertOneOf(item.confidence, ['high', 'medium', 'low'], '系统记忆确定程度');
     assertOneOf(item.recommendedAction, ['observe', 'review'], '系统记忆建议');
     assertOneOf(item.status, ['candidate', 'confirmed', 'forgotten'], '系统记忆状态');
-    if (item.status === 'confirmed' && !item.evidenceIds.some((id) => events.some((event) => event.id === id && event.active && event.confirmation === 'confirmed'))) {
+    if (item.reminderMuted !== undefined && typeof item.reminderMuted !== 'boolean') throw new Error('系统记忆提醒状态无效。');
+    const userAuthored = item.userEdited && !item.analysisId && !item.reviewId && item.evidenceIds.length === 0;
+    if (item.status === 'confirmed' && !userAuthored && !item.evidenceIds.some((id) => events.some((event) => event.id === id && event.active && event.confirmation === 'confirmed'))) {
       throw new Error('已确认系统记忆缺少有效证据。');
     }
     if (item.confirmedAt !== undefined) assertTimestamp(item.confirmedAt, '系统记忆确认时间');
@@ -773,6 +789,8 @@ export function parseBackup(text: string): BackupBundle {
     if (item.id !== 'app' || typeof item.reduceMotion !== 'boolean' || typeof item.onboardingSeen !== 'boolean' || typeof item.aiAllowed !== 'boolean' || typeof item.previewBeforeSend !== 'boolean') {
       throw new Error('设置数据无效。');
     }
+    if (item.guidanceTone === undefined) item.guidanceTone = 'gentle';
+    assertOneOf(item.guidanceTone, ['gentle', 'direct'], '指导语气');
   });
 
   return { ...bundle, formatVersion: BACKUP_FORMAT_VERSION } as BackupBundle;
@@ -1639,6 +1657,35 @@ export class QiguangDb {
     return values.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   }
 
+  async addConfirmedMemory(type: SystemMemory['type'], statement: string): Promise<SystemMemory> {
+    assertOneOf(type, ['preference', 'pattern', 'principle', 'strength', 'constraint'], '系统记忆类型');
+    assertText(statement, '系统记忆内容', 500);
+    const timestamp = nowIso();
+    const memory: SystemMemory = {
+      id: crypto.randomUUID(), type, statement: statement.trim(), evidenceIds: [], counterEvidence: [], confidence: 'high',
+      recommendedAction: 'observe', status: 'confirmed', confirmedAt: timestamp, reminderMuted: false, userEdited: true,
+      createdAt: timestamp, updatedAt: timestamp, version: 1,
+    };
+    const transaction = this.database.transaction('memories', 'readwrite');
+    transaction.objectStore('memories').add(memory);
+    await transactionDone(transaction);
+    return memory;
+  }
+
+  async setMemoryReminder(id: string, reminderMuted: boolean): Promise<SystemMemory> {
+    const transaction = this.database.transaction('memories', 'readwrite');
+    const store = transaction.objectStore('memories');
+    const current = await requestResult(store.get(id)) as SystemMemory | undefined;
+    if (!current || current.status !== 'confirmed') {
+      transaction.abort();
+      throw new Error('只有已确认记忆可以调整提醒。');
+    }
+    const updated = { ...current, reminderMuted, updatedAt: nowIso(), version: current.version + 1 };
+    store.put(updated);
+    await transactionDone(transaction);
+    return updated;
+  }
+
   async decideMemory(id: string, status: SystemMemory['status'], statement?: string): Promise<SystemMemory> {
     if (statement !== undefined) assertText(statement, '系统记忆内容', 500);
     const transaction = this.database.transaction(['memories', 'events'], 'readwrite');
@@ -1648,7 +1695,7 @@ export class QiguangDb {
       transaction.abort();
       throw new Error('系统候选不存在。');
     }
-    if (status === 'confirmed') {
+    if (status === 'confirmed' && !(current.userEdited && !current.analysisId && !current.reviewId && current.evidenceIds.length === 0)) {
       const evidence = await Promise.all(current.evidenceIds.map((eventId) => requestResult(transaction.objectStore('events').get(eventId)) as Promise<JournalEvent | undefined>));
       if (!evidence.some((event) => event?.active && event.confirmation === 'confirmed')) {
         transaction.abort();
@@ -1716,15 +1763,15 @@ export class QiguangDb {
     const transaction = this.database.transaction('settings', 'readonly');
     const saved = await requestResult(transaction.objectStore('settings').get('app')) as AppSettings | undefined;
     await transactionDone(transaction);
-    if (saved) return saved;
+    if (saved) return { ...saved, guidanceTone: saved.guidanceTone ?? 'gentle' };
     const timestamp = nowIso();
     return {
-      id: 'app', reduceMotion: false, onboardingSeen: false, aiAllowed: false, previewBeforeSend: true,
+      id: 'app', reduceMotion: false, onboardingSeen: false, aiAllowed: false, previewBeforeSend: true, guidanceTone: 'gentle',
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
   }
 
-  async saveSettings(patch: Partial<Pick<AppSettings, 'reduceMotion' | 'onboardingSeen' | 'aiAllowed' | 'previewBeforeSend'>>): Promise<AppSettings> {
+  async saveSettings(patch: Partial<Pick<AppSettings, 'reduceMotion' | 'onboardingSeen' | 'aiAllowed' | 'previewBeforeSend' | 'guidanceTone'>>): Promise<AppSettings> {
     const current = await this.getSettings();
     const updated = { ...current, ...patch, updatedAt: nowIso() };
     const transaction = this.database.transaction('settings', 'readwrite');
@@ -1777,7 +1824,8 @@ export class QiguangDb {
   async saveProfile(patch: Partial<Pick<Profile, 'userName' | 'companionName' | 'avatar' | 'chapterTitle' | 'chapterStartedOn'>>): Promise<Profile> {
     const current = await this.getProfile();
     if (!current) throw new Error('个人资料尚未初始化。');
-    const updated = { ...current, ...patch, updatedAt: nowIso(), version: current.version + 1 };
+    const timestamp = nowIso();
+    const updated = { ...current, ...patch, updatedAt: timestamp, version: current.version + 1 };
     assertText(updated.userName, '用户称呼', 40, true);
     assertText(updated.companionName, '生活分身称呼', 40);
     assertText(updated.chapterTitle, '人生章节', 80);
@@ -1907,22 +1955,41 @@ export class QiguangDb {
     return goals.sort((left, right) => roleOrder[left.role] - roleOrder[right.role] || right.updatedAt.localeCompare(left.updatedAt));
   }
 
-  async addGoal(input: Pick<Goal, 'result' | 'why' | 'evidence' | 'nextStep' | 'areaId' | 'branchId'> & Partial<Pick<Goal, 'startDate' | 'targetDate' | 'role'>>): Promise<Goal> {
+  async addGoal(input: Pick<Goal, 'result' | 'why' | 'evidence' | 'nextStep'> & Partial<Pick<Goal, 'areaId' | 'branchId' | 'startDate' | 'targetDate' | 'role'>>): Promise<Goal> {
     assertText(input.result, '目标结果', 160);
-    assertText(input.why, '目标意义', 500);
-    assertText(input.evidence, '目标证据', 500);
+    assertText(input.why, '目标意义', 500, true);
+    assertText(input.evidence, '目标证据', 500, true);
     assertText(input.nextStep, '目标下一步', 160);
     if (input.startDate !== undefined && !isLocalDate(input.startDate)) throw new Error('目标开始日期无效。');
     if (input.targetDate !== undefined && !isLocalDate(input.targetDate)) throw new Error('目标日期无效。');
     assertOneOf(input.role ?? 'wishlist', ['main', 'secondary', 'wishlist'], '目标角色');
     const transaction = this.database.transaction(['goals', 'areas', 'branches'], 'readwrite');
     const goals = transaction.objectStore('goals');
-    const [allGoals, area, branch] = await Promise.all([
+    const [allGoals, allAreas, allBranches] = await Promise.all([
       requestResult(goals.getAll()) as Promise<Goal[]>,
-      requestResult(transaction.objectStore('areas').get(input.areaId)) as Promise<Area | undefined>,
-      requestResult(transaction.objectStore('branches').get(input.branchId)) as Promise<GrowthBranch | undefined>,
+      requestResult(transaction.objectStore('areas').getAll()) as Promise<Area[]>,
+      requestResult(transaction.objectStore('branches').getAll()) as Promise<GrowthBranch[]>,
     ]);
-    if (!area || !branch) {
+    if (!allAreas.length || !allBranches.length) {
+      transaction.abort();
+      throw new Error('目标的领域或成长分支不存在。');
+    }
+    const chosenArea = input.areaId ? allAreas.find((item) => item.id === input.areaId) : undefined;
+    const chosenBranch = input.branchId ? allBranches.find((item) => item.id === input.branchId) : undefined;
+    if (input.areaId && !chosenArea) {
+      transaction.abort();
+      throw new Error('目标的领域或成长分支不存在。');
+    }
+    if (input.branchId && !chosenBranch) {
+      transaction.abort();
+      throw new Error('目标的领域或成长分支不存在。');
+    }
+    const fallbackArea = allAreas.find((item) => item.isDefault) ?? [...allAreas].sort((left, right) => left.order - right.order || left.createdAt.localeCompare(right.createdAt))[0];
+    const fallbackBranch = [...allBranches].sort((left, right) => {
+      if (left.status === right.status) return left.order - right.order || left.createdAt.localeCompare(right.createdAt);
+      return left.status === 'active' ? -1 : 1;
+    })[0];
+    if (!fallbackArea || !fallbackBranch) {
       transaction.abort();
       throw new Error('目标的领域或成长分支不存在。');
     }
@@ -1934,7 +2001,7 @@ export class QiguangDb {
     const timestamp = nowIso();
     const goal: Goal = {
       id: crypto.randomUUID(), result: input.result.trim(), why: input.why.trim(), evidence: input.evidence.trim(),
-      nextStep: input.nextStep.trim(), areaId: input.areaId, branchId: input.branchId,
+      nextStep: input.nextStep.trim(), areaId: chosenArea?.id ?? fallbackArea.id, branchId: chosenBranch?.id ?? fallbackBranch.id,
       startDate: input.startDate, targetDate: input.targetDate, role, status: role === 'wishlist' ? 'idea' : 'active',
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
@@ -1944,8 +2011,9 @@ export class QiguangDb {
   }
 
   async saveGoal(id: string, patch: Partial<Pick<Goal, 'result' | 'why' | 'evidence' | 'nextStep' | 'areaId' | 'branchId' | 'startDate' | 'targetDate' | 'role' | 'status'>>): Promise<Goal> {
-    const transaction = this.database.transaction(['goals', 'areas', 'branches'], 'readwrite');
+    const transaction = this.database.transaction(['goals', 'areas', 'branches', 'quests'], 'readwrite');
     const goals = transaction.objectStore('goals');
+    const quests = transaction.objectStore('quests');
     const [current, allGoals] = await Promise.all([
       requestResult(goals.get(id)) as Promise<Goal | undefined>,
       requestResult(goals.getAll()) as Promise<Goal[]>,
@@ -1956,8 +2024,8 @@ export class QiguangDb {
     }
     const updated = { ...current, ...patch, updatedAt: nowIso(), version: current.version + 1 };
     assertText(updated.result, '目标结果', 160);
-    assertText(updated.why, '目标意义', 500);
-    assertText(updated.evidence, '目标证据', 500);
+    assertText(updated.why, '目标意义', 500, true);
+    assertText(updated.evidence, '目标证据', 500, true);
     assertText(updated.nextStep, '目标下一步', 160);
     assertOneOf(updated.role, ['main', 'secondary', 'wishlist'], '目标角色');
     assertOneOf(updated.status, ['idea', 'active', 'paused', 'completed', 'abandoned'], '目标状态');
@@ -1967,6 +2035,15 @@ export class QiguangDb {
     }
     if (updated.startDate !== undefined && !isLocalDate(updated.startDate)) throw new Error('目标开始日期无效。');
     if (updated.targetDate !== undefined && !isLocalDate(updated.targetDate)) throw new Error('目标日期无效。');
+    const closedStatus: Array<Goal['status']> = ['paused', 'completed', 'abandoned'];
+    const timestamp = updated.updatedAt;
+    const shouldCloseQuestFlow = closedStatus.includes(updated.status);
+    if (shouldCloseQuestFlow) {
+      const allQuests = await requestResult(quests.getAll()) as Quest[];
+      for (const quest of allQuests.filter((item) => item.sourceType === 'goal' && item.sourceId === id && item.status === 'pending')) {
+        quests.put({ ...quest, status: 'skipped', updatedAt: timestamp, version: quest.version + 1 });
+      }
+    }
     if (!['completed', 'abandoned'].includes(updated.status)) {
       const otherActive = allGoals.filter((item) => item.id !== id && !['completed', 'abandoned'].includes(item.status));
       if (updated.role === 'main' && otherActive.some((item) => item.role === 'main')) {
@@ -1988,23 +2065,73 @@ export class QiguangDb {
     const store = transaction.objectStore('milestones');
     const values = await requestResult(goalId ? store.index('byGoalId').getAll(goalId) : store.getAll()) as Milestone[];
     await transactionDone(transaction);
-    return values.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+    return values.sort((left, right) => (left.order ?? -1) - (right.order ?? -1) || left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+  }
+
+  async replaceGoalPlan(
+    goalId: string,
+    patch: Pick<Goal, 'result' | 'evidence' | 'nextStep'>,
+    replacements: Array<{ description: string; evidence: string }>,
+    expectedGoalVersion?: number,
+  ): Promise<{ goal: Goal; milestones: Milestone[] }> {
+    assertText(patch.result, '目标结果', 160);
+    assertText(patch.evidence, '目标证据', 500);
+    assertText(patch.nextStep, '目标下一步', 160);
+    if (replacements.length < 2 || replacements.length > 5) throw new Error('重新拆解需要保留 2—5 个里程碑。');
+    replacements.forEach((item) => { assertText(item.description, '里程碑描述', 200); assertText(item.evidence, '里程碑证据', 500); });
+    if (new Set(replacements.map((item) => item.description.trim())).size !== replacements.length) throw new Error('里程碑不能重复。');
+    const transaction = this.database.transaction(['goals', 'milestones', 'quests'], 'readwrite');
+    const goals = transaction.objectStore('goals');
+    const milestones = transaction.objectStore('milestones');
+    const quests = transaction.objectStore('quests');
+    const current = await requestResult(goals.get(goalId)) as Goal | undefined;
+    if (!current) {
+      transaction.abort();
+      throw new Error('目标不存在。');
+    }
+    if (expectedGoalVersion !== undefined && current.version !== expectedGoalVersion) {
+      transaction.abort();
+      throw new Error('目标已经改变，请重新生成拆解草案。');
+    }
+    const timestamp = nowIso();
+    const goal: Goal = {
+      ...current, result: patch.result.trim(), evidence: patch.evidence.trim(), nextStep: patch.nextStep.trim(),
+      updatedAt: timestamp, version: current.version + 1,
+    };
+    const priorMilestones = await requestResult(milestones.index('byGoalId').getAll(goalId)) as Milestone[];
+    priorMilestones.filter((item) => item.status === 'pending').forEach((item) => milestones.put({
+      ...item, status: 'superseded', updatedAt: timestamp, version: item.version + 1,
+    }));
+    const created = replacements.map((item, order): Milestone => ({
+      id: crypto.randomUUID(), goalId, order, description: item.description.trim(), evidence: item.evidence.trim(), status: 'pending', xpSettled: false,
+      createdAt: timestamp, updatedAt: timestamp, version: 1,
+    }));
+    created.forEach((item) => milestones.add(item));
+    const allQuests = await requestResult(quests.getAll()) as Quest[];
+    allQuests.filter((item) => item.sourceType === 'goal' && item.sourceId === goalId && item.status === 'pending').forEach((item) => quests.put({
+      ...item, status: 'exempt', reason: `${item.reason}（目标已由你确认重新拆解，此旧行动不再安排。）`, updatedAt: timestamp, version: item.version + 1,
+    }));
+    goals.put(goal);
+    await transactionDone(transaction);
+    return { goal, milestones: created };
   }
 
   async addMilestone(goalId: string, description: string, evidence: string): Promise<Milestone> {
     assertText(description, '里程碑描述', 200);
     assertText(evidence, '里程碑证据', 500);
     const transaction = this.database.transaction(['goals', 'milestones'], 'readwrite');
+    const milestoneStore = transaction.objectStore('milestones');
     if (!await requestResult(transaction.objectStore('goals').get(goalId))) {
       transaction.abort();
       throw new Error('目标不存在。');
     }
+    const existing = await requestResult(milestoneStore.index('byGoalId').getAll(goalId)) as Milestone[];
     const timestamp = nowIso();
     const milestone: Milestone = {
-      id: crypto.randomUUID(), goalId, description: description.trim(), evidence: evidence.trim(),
+      id: crypto.randomUUID(), goalId, order: Math.max(-1, ...existing.map((item, index) => item.order ?? index)) + 1, description: description.trim(), evidence: evidence.trim(),
       status: 'pending', xpSettled: false, createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
-    transaction.objectStore('milestones').add(milestone);
+    milestoneStore.add(milestone);
     await transactionDone(transaction);
     return milestone;
   }
@@ -2017,6 +2144,10 @@ export class QiguangDb {
     if (!current) {
       transaction.abort();
       throw new Error('里程碑不存在。');
+    }
+    if (current.status === 'superseded') {
+      transaction.abort();
+      throw new Error('这个里程碑已被新计划替换。');
     }
     if (current.status === 'completed' && current.xpSettled) {
       await transactionDone(transaction);
@@ -2037,7 +2168,7 @@ export class QiguangDb {
         createdAt: timestamp, updatedAt: timestamp, version: 1,
       } satisfies XpLedger);
     }
-    const updated = { ...current, status: 'completed' as const, completedAt: timestamp, xpSettled: true, updatedAt: timestamp, version: current.version + 1 };
+    const updated = { ...current, status: 'completed' as const, completedAt: timestamp, completionSourceQuestId: undefined, xpSettled: true, updatedAt: timestamp, version: current.version + 1 };
     milestones.put(updated);
     await transactionDone(transaction);
     return updated;
@@ -2055,7 +2186,7 @@ export class QiguangDb {
     const ledger = transaction.objectStore('xpLedger');
     const settlement = await requestResult(ledger.index('bySettlementKey').get(`${id}:1`)) as XpLedger | undefined;
     if (settlement && !settlement.reversedAt) ledger.put({ ...settlement, reversedAt: timestamp, updatedAt: timestamp, version: settlement.version + 1 });
-    const updated = { ...current, status: 'pending' as const, completedAt: undefined, xpSettled: false, updatedAt: timestamp, version: current.version + 1 };
+    const updated = { ...current, status: 'pending' as const, completedAt: undefined, completionSourceQuestId: undefined, xpSettled: false, updatedAt: timestamp, version: current.version + 1 };
     milestones.put(updated);
     await transactionDone(transaction);
     return updated;
@@ -2157,7 +2288,16 @@ export class QiguangDb {
     return quests.sort((left, right) => typeOrder[left.type] - typeOrder[right.type] || left.createdAt.localeCompare(right.createdAt));
   }
 
-  async addQuest(input: Pick<Quest, 'localDate' | 'type' | 'sourceType' | 'title' | 'reason' | 'minimumAction' | 'estimatedMinutes' | 'difficulty'> & Partial<Pick<Quest, 'sourceId' | 'actionId' | 'dimension' | 'branchId' | 'aiSuggested' | 'userModified'>>): Promise<Quest> {
+  /** Pending actions from earlier planned days need one explicit user decision; they never fail silently. */
+  async listPendingBefore(date = localDate()): Promise<Quest[]> {
+    if (!isLocalDate(date)) throw new Error('任务日期无效。');
+    const quests = await this.listQuests();
+    return quests
+      .filter((quest) => quest.status === 'pending' && quest.localDate < date)
+      .sort((left, right) => left.localDate.localeCompare(right.localDate) || left.createdAt.localeCompare(right.createdAt));
+  }
+
+  async addQuest(input: Pick<Quest, 'localDate' | 'type' | 'sourceType' | 'title' | 'reason' | 'minimumAction' | 'estimatedMinutes' | 'difficulty'> & Partial<Pick<Quest, 'sourceId' | 'actionId' | 'dimension' | 'branchId' | 'milestoneId' | 'completionCriteria' | 'aiSuggested' | 'userModified' | 'deadlineAt'>>): Promise<Quest> {
     if (!isLocalDate(input.localDate)) throw new Error('任务日期无效。');
     assertOneOf(input.type, ['main', 'bonus', 'side'], '任务类型');
     assertOneOf(input.sourceType, ['goal', 'habit', 'recovery', 'manual'], '任务来源');
@@ -2166,8 +2306,10 @@ export class QiguangDb {
     assertText(input.title, '任务标题', 160);
     assertText(input.reason, '任务理由', 500);
     assertText(input.minimumAction, '任务最小动作', 200);
+    if (input.completionCriteria !== undefined) assertText(input.completionCriteria, '任务完成标准', 500);
     assertInteger(input.estimatedMinutes, 1, 24 * 60, '任务预计时间');
-    const transaction = this.database.transaction(['quests', 'goals', 'habits', 'branches'], 'readwrite');
+    if (input.deadlineAt !== undefined) assertTimestamp(input.deadlineAt, '任务截止时间');
+    const transaction = this.database.transaction(['quests', 'goals', 'habits', 'branches', 'milestones'], 'readwrite');
     const quests = transaction.objectStore('quests');
     const existing = await requestResult(quests.index('byLocalDate').getAll(input.localDate)) as Quest[];
     if (!canAddQuest(input.type, existing.filter((item) => item.status === 'pending').map((item) => item.type))) {
@@ -2182,6 +2324,13 @@ export class QiguangDb {
       transaction.abort();
       throw new Error('任务所属习惯不存在。');
     }
+    if (input.milestoneId) {
+      const milestone = await requestResult(transaction.objectStore('milestones').get(input.milestoneId)) as Milestone | undefined;
+      if (!milestone || input.sourceType !== 'goal' || milestone.goalId !== input.sourceId) {
+        transaction.abort();
+        throw new Error('任务关联的里程碑与目标不一致。');
+      }
+    }
     if (input.branchId && !await requestResult(transaction.objectStore('branches').get(input.branchId))) {
       transaction.abort();
       throw new Error('任务成长分支不存在。');
@@ -2189,9 +2338,10 @@ export class QiguangDb {
     const timestamp = nowIso();
     const quest: Quest = {
       id: crypto.randomUUID(), localDate: input.localDate, type: input.type, sourceType: input.sourceType,
-      sourceId: input.sourceId, actionId: input.actionId ?? crypto.randomUUID(), settlementVersion: 0,
-      title: input.title.trim(), reason: input.reason.trim(), minimumAction: input.minimumAction.trim(),
+      sourceId: input.sourceId, milestoneId: input.milestoneId, actionId: input.actionId ?? crypto.randomUUID(), settlementVersion: 0,
+      title: input.title.trim(), reason: input.reason.trim(), minimumAction: input.minimumAction.trim(), completionCriteria: input.completionCriteria?.trim() || input.minimumAction.trim(),
       estimatedMinutes: input.estimatedMinutes, difficulty: input.difficulty, dimension: input.dimension,
+      deadlineAt: input.deadlineAt,
       branchId: input.branchId, status: 'pending', aiSuggested: input.aiSuggested ?? false, userModified: input.userModified ?? true,
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
@@ -2200,7 +2350,7 @@ export class QiguangDb {
     return quest;
   }
 
-  async savePendingQuest(id: string, patch: Partial<Pick<Quest, 'localDate' | 'title' | 'reason' | 'minimumAction' | 'estimatedMinutes' | 'difficulty'>>): Promise<Quest> {
+  async savePendingQuest(id: string, patch: Partial<Pick<Quest, 'localDate' | 'title' | 'reason' | 'minimumAction' | 'estimatedMinutes' | 'difficulty' | 'deadlineAt'>>): Promise<Quest> {
     const transaction = this.database.transaction('quests', 'readwrite');
     const quests = transaction.objectStore('quests');
     const current = await requestResult(quests.get(id)) as Quest | undefined;
@@ -2218,6 +2368,7 @@ export class QiguangDb {
     assertText(updated.minimumAction, '任务最小动作', 200);
     assertInteger(updated.estimatedMinutes, 1, 24 * 60, '任务预计时间');
     assertOneOf(updated.difficulty, Object.keys(DIFFICULTY_XP), '任务难度');
+    if (updated.deadlineAt !== undefined) assertTimestamp(updated.deadlineAt, '任务截止时间');
     const destination = await requestResult(quests.index('byLocalDate').getAll(updated.localDate)) as Quest[];
     if (!canAddQuest(updated.type, destination.filter((item) => item.id !== id && item.status === 'pending').map((item) => item.type))) {
       transaction.abort();
@@ -2256,11 +2407,12 @@ export class QiguangDb {
     return created;
   }
 
-  async feedbackQuest(id: string, result: FeedbackResult, note = '', actual = '', difficulty?: Difficulty, stateDelta = 0): Promise<QuestFeedback> {
+  async feedbackQuest(id: string, result: FeedbackResult, note = '', actual = '', difficulty?: Difficulty, stateDelta = 0, completedDate = localDate()): Promise<QuestFeedback> {
     assertOneOf(result, ['completed', 'partial', 'skipped', 'exempt'], '任务反馈结果');
     assertText(note, '任务反馈', 2_000, true);
     assertText(actual, '实际完成内容', 2_000, true);
     assertInteger(stateDelta, -15, 15, '状态变化');
+    if (!isLocalDate(completedDate)) throw new Error('任务实际完成日期无效。');
     if (result === 'skipped' || result === 'exempt') stateDelta = 0;
     const transaction = this.database.transaction(['quests', 'questFeedback', 'habitLogs', 'xpLedger', 'observations'], 'readwrite');
     const quests = transaction.objectStore('quests');
@@ -2293,14 +2445,14 @@ export class QiguangDb {
       const value: XpLedger = {
         id: existingSettlement?.id ?? crypto.randomUUID(), settlementKey, sourceType: 'quest', sourceId: id,
         branchId: quest.branchId, baseXp: DIFFICULTY_XP[finalDifficulty], ratio: result === 'partial' ? 0.5 : 1,
-        finalXp: xp, difficulty: finalDifficulty, localDate: quest.localDate,
+        finalXp: xp, difficulty: finalDifficulty, localDate: completedDate,
         createdAt: existingSettlement?.createdAt ?? timestamp, updatedAt: timestamp, version: (existingSettlement?.version ?? 0) + 1,
       };
       existingSettlement ? ledgerStore.put(value) : ledgerStore.add(value);
     }
 
     const feedback: QuestFeedback = {
-      id: crypto.randomUUID(), questId: id, result, note, actual, settlementVersion,
+      id: crypto.randomUUID(), questId: id, result, note, actual, settlementVersion, completedDate,
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
     feedbackStore.add(feedback);
@@ -2327,8 +2479,80 @@ export class QiguangDb {
     return feedback;
   }
 
+  /** Settle a confirmed milestone action and create at most one editable next action. */
+  async createGoalFollowUpQuest(id: string, date = localDate(), mode: 'completed' | 'partial' = 'completed'): Promise<{
+    followUp: Quest | null;
+    milestoneCompleted: Milestone | null;
+    goalReady: boolean;
+  }> {
+    if (!isLocalDate(date)) throw new Error('任务日期无效。');
+    const empty = { followUp: null, milestoneCompleted: null, goalReady: false };
+    const transaction = this.database.transaction(['quests', 'goals', 'milestones', 'xpLedger'], 'readwrite');
+    const quests = transaction.objectStore('quests');
+    const quest = await requestResult(quests.get(id)) as Quest | undefined;
+    if (!quest || (quest.status !== 'completed' && !(mode === 'partial' && quest.status === 'partial')) || quest.sourceType !== 'goal' || !quest.sourceId) {
+      await transactionDone(transaction);
+      return empty;
+    }
+    const goal = await requestResult(transaction.objectStore('goals').get(quest.sourceId)) as Goal | undefined;
+    if (!goal || goal.status !== 'active') {
+      await transactionDone(transaction);
+      return empty;
+    }
+    const milestoneStore = transaction.objectStore('milestones');
+    const milestones = (await requestResult(milestoneStore.index('byGoalId').getAll(goal.id)) as Milestone[])
+      .sort((left, right) => (left.order ?? -1) - (right.order ?? -1) || left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+    let milestoneCompleted: Milestone | null = null;
+    const linked = quest.milestoneId ? milestones.find((item) => item.id === quest.milestoneId && item.status === 'pending') : undefined;
+    if (mode === 'completed' && linked) {
+      const timestamp = nowIso();
+      const settlementKey = `${linked.id}:1`;
+      const ledger = transaction.objectStore('xpLedger');
+      if (!await requestResult(ledger.index('bySettlementKey').get(settlementKey))) {
+        ledger.add({
+          id: crypto.randomUUID(), settlementKey, sourceType: 'milestone', sourceId: linked.id,
+          branchId: goal.branchId, baseXp: 50, ratio: 1, finalXp: 50, difficulty: 'milestone', localDate: date,
+          createdAt: timestamp, updatedAt: timestamp, version: 1,
+        } satisfies XpLedger);
+      }
+      milestoneCompleted = { ...linked, status: 'completed', completedAt: timestamp, completionSourceQuestId: quest.id, xpSettled: true, updatedAt: timestamp, version: linked.version + 1 };
+      milestoneStore.put(milestoneCompleted);
+    }
+    const next = milestones.find((item) => item.status === 'pending' && item.id !== milestoneCompleted?.id);
+    if (!next) {
+      await transactionDone(transaction);
+      return { followUp: null, milestoneCompleted, goalReady: milestones.length > 0 && !milestones.some((item) => item.status === 'pending' && item.id !== milestoneCompleted?.id) };
+    }
+    const actionId = `goal:${goal.id}:after:${quest.id}:milestone:${next.id}${mode === 'partial' ? ':partial' : ''}`;
+    const allQuests = await requestResult(quests.getAll()) as Quest[];
+    if (allQuests.some((item) => item.actionId === actionId)) {
+      await transactionDone(transaction);
+      return { followUp: null, milestoneCompleted, goalReady: false };
+    }
+    const current = await requestResult(quests.index('byLocalDate').getAll(date)) as Quest[];
+    const pendingTypes = current.filter((item) => item.status === 'pending').map((item) => item.type);
+    const type: QuestType | null = goal.role === 'main' && canAddQuest('main', pendingTypes)
+      ? 'main' : canAddQuest('side', pendingTypes) ? 'side' : null;
+    if (!type) {
+      await transactionDone(transaction);
+      return { followUp: null, milestoneCompleted, goalReady: false };
+    }
+    const timestamp = nowIso();
+    const title = `${mode === 'partial' ? '缩小继续' : '推进'}：${next.description}`.slice(0, 160);
+    const followUp: Quest = {
+      id: crypto.randomUUID(), localDate: date, type, sourceType: 'goal', sourceId: goal.id,
+      milestoneId: next.id, predecessorQuestId: quest.id, actionId, settlementVersion: 0, title, reason: mode === 'partial' ? `上一行动已有部分进展；先缩小推进目标“${goal.result}”。` : `上一行动已完成；这是目标“${goal.result}”的下一个可验证阶段。`,
+      minimumAction: `先用 5 分钟推进“${next.description}”。`.slice(0, 200), completionCriteria: next.evidence, estimatedMinutes: 10,
+      difficulty: 'light', branchId: goal.branchId, status: 'pending', aiSuggested: false, userModified: false,
+      createdAt: timestamp, updatedAt: timestamp, version: 1,
+    };
+    quests.add(followUp);
+    await transactionDone(transaction);
+    return { followUp, milestoneCompleted, goalReady: false };
+  }
+
   async undoQuestFeedback(id: string): Promise<void> {
-    const transaction = this.database.transaction(['quests', 'questFeedback', 'habitLogs', 'xpLedger', 'observations'], 'readwrite');
+    const transaction = this.database.transaction(['quests', 'questFeedback', 'habitLogs', 'xpLedger', 'observations', 'milestones'], 'readwrite');
     const quests = transaction.objectStore('quests');
     const quest = await requestResult(quests.get(id)) as Quest | undefined;
     if (!quest || quest.status === 'pending') {
@@ -2351,6 +2575,18 @@ export class QiguangDb {
     const ledger = await requestResult(ledgerStore.getAll()) as XpLedger[];
     ledger.filter((item) => item.sourceType === 'quest' && item.sourceId === id && !item.reversedAt)
       .forEach((item) => ledgerStore.put({ ...item, reversedAt: timestamp, updatedAt: timestamp, version: item.version + 1 }));
+    if (quest.milestoneId) {
+      const milestones = transaction.objectStore('milestones');
+      const milestone = await requestResult(milestones.get(quest.milestoneId)) as Milestone | undefined;
+      if (milestone?.status === 'completed' && milestone.completionSourceQuestId === quest.id) {
+        ledger.filter((item) => item.sourceType === 'milestone' && item.sourceId === milestone.id && !item.reversedAt)
+          .forEach((item) => ledgerStore.put({ ...item, reversedAt: timestamp, updatedAt: timestamp, version: item.version + 1 }));
+        milestones.put({ ...milestone, status: 'pending', completedAt: undefined, completionSourceQuestId: undefined, xpSettled: false, updatedAt: timestamp, version: milestone.version + 1 });
+      }
+      (await requestResult(quests.getAll()) as Quest[])
+        .filter((item) => item.status === 'pending' && item.predecessorQuestId === quest.id)
+        .forEach((item) => quests.put({ ...item, status: 'exempt', reason: `${item.reason}（来源反馈已撤销，此后续行动不再安排。）`, updatedAt: timestamp, version: item.version + 1 }));
+    }
     if (quest.sourceType === 'habit' && quest.sourceId) {
       transaction.objectStore('habitLogs').index('byHabitDate').getKey([quest.sourceId, quest.localDate]).addEventListener('success', (event) => {
         const key = (event.target as IDBRequest<IDBValidKey | undefined>).result;
@@ -2590,7 +2826,10 @@ export class QiguangDb {
       }));
     }
     for (const milestone of bundle.data.milestones) {
-      stores.milestones.add(imported(milestone, idMaps.milestones, { goalId: idMaps.goals.get(milestone.goalId) ?? milestone.goalId }));
+      stores.milestones.add(imported(milestone, idMaps.milestones, {
+        goalId: idMaps.goals.get(milestone.goalId) ?? milestone.goalId,
+        completionSourceQuestId: milestone.completionSourceQuestId ? idMaps.quests.get(milestone.completionSourceQuestId) ?? milestone.completionSourceQuestId : undefined,
+      }));
     }
 
     let bonusSlots = Math.max(0, 3 - (existing.habits as Habit[]).filter((item) => item.status === 'active' && item.bonusEnabled).length);
@@ -2622,6 +2861,8 @@ export class QiguangDb {
         : quest.sourceType === 'habit' && quest.sourceId ? idMaps.habits.get(quest.sourceId) : quest.sourceId;
       stores.quests.add(imported(quest, idMaps.quests, {
         sourceId,
+        milestoneId: quest.milestoneId ? idMaps.milestones.get(quest.milestoneId) : undefined,
+        predecessorQuestId: quest.predecessorQuestId ? idMaps.quests.get(quest.predecessorQuestId) : undefined,
         actionId: actionIdMap.get(quest.actionId) ?? quest.actionId,
         branchId: quest.branchId ? idMaps.branches.get(quest.branchId) : undefined,
         status,

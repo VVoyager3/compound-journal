@@ -1019,15 +1019,65 @@ p {
 .character-actions {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
+
+.room-achievement {
+  position: absolute;
+  z-index: 3;
+  left: 14%;
+  bottom: 44%;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  background: var(--yellow);
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 900;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.room-achievement.is-golden {
+  background: var(--coral);
+}
+
+.character-state {
+  position: absolute;
+  z-index: 6;
+  right: 9%;
+  bottom: 47%;
+  padding: 4px 7px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-size: .72rem;
+  font-weight: 850;
+  pointer-events: none;
+}
+
+.character-state.is-celebrating { background: var(--yellow); }
+.character-state.is-recovering { background: #d9eef3; }
+.character-state.is-thinking { background: #dcebd0; }
+.character-state.is-playing { background: var(--coral-soft); }
+.character-state.is-guiding { background: var(--yellow); }
+.character-state.is-reviewing { background: #d9d0f2; }
+
+.review-companion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.review-companion .character-portrait { width: 56px; height: 56px; }
+.review-companion p { margin: 0; }
 
 .character-actions .button {
   min-width: 0;
   padding: 5px 3px;
   font-size: .72rem;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .avatar-line {
@@ -1185,6 +1235,25 @@ p {
 .daily-guide { border-top-color: var(--coral); }
 .daily-closeout { border-top-color: var(--blue); }
 .daily-closeout.is-current { background: #e7f6fa; }
+
+.overdue-quests {
+  display: grid;
+  gap: 10px;
+  border-top: 5px solid var(--warn);
+  box-shadow: var(--shadow-small);
+}
+
+.overdue-quest-list,
+.overdue-quest-row {
+  display: grid;
+  gap: 8px;
+}
+
+.overdue-quest-row {
+  padding: 11px;
+  border: 2px solid var(--ink);
+  background: var(--paper-deep);
+}
 
 .closeout-checklist,
 .goal-plan-editor,
@@ -1420,6 +1489,22 @@ p {
   gap: 10px;
   padding-top: 13px;
 }
+
+.monthly-snapshot {
+  display: grid;
+  gap: 8px;
+}
+
+.monthly-area-row {
+  margin: 0;
+  padding: 9px 10px;
+  border-left: 4px solid var(--ink);
+  background: var(--paper-deep);
+  font-weight: 800;
+}
+
+.monthly-area-row.is-progress { border-color: var(--green); }
+.monthly-area-row.is-decline { border-color: var(--warn); }
 
 .legend {
   display: inline-flex;
@@ -2065,9 +2150,12 @@ input[type="range"] {
   background: #eef5d9;
 }
 
+.quest-card.is-deadline-passed {
+  border-color: var(--red);
+}
+
 .quest-heading,
-.quest-actions,
-.home-shortcuts {
+.quest-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -2092,14 +2180,71 @@ input[type="range"] {
   padding: 7px 11px;
 }
 
-.home-shortcuts .button {
-  flex: 1 1 180px;
-}
-
 .goal-row {
   display: grid;
   gap: 8px;
   padding: 15px 2px;
+}
+
+.quest-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 7px 11px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.quest-check input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--green);
+}
+
+.trail-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.trail-tab {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 13px;
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  background: var(--paper);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.trail-tab.is-active,
+.trail-tab:focus-visible {
+  background: var(--yellow);
+}
+
+.status-one-line {
+  margin: 0;
+  font-weight: 800;
+}
+
+.status-details {
+  margin-top: 10px;
+}
+
+.status-details summary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .goal-decomposition-assistant {
@@ -2114,6 +2259,8 @@ input[type="range"] {
   padding-top: 10px;
   border-top: 3px solid var(--ink);
 }
+
+.goal-plan-editor[hidden] { display: none; }
 
 .goal-plan-step {
   display: grid;
@@ -2168,6 +2315,22 @@ input[type="range"] {
 .branch-details > summary {
   min-height: 44px;
   display: flex;
+  align-items: center;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.growth-maintenance > summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.system-advanced > summary {
+  display: flex;
+  min-height: 44px;
   align-items: center;
   font-weight: 850;
   cursor: pointer;

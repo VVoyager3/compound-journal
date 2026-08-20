@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="10dp" android:background="@drawable/widget_background" tools:ignore="ButtonStyle">
+    <TextView android:id="@+id/widget_name" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/widget_name_default" android:textStyle="bold" android:textColor="@color/widget_foreground" android:textSize="13sp" />
+    <TextView android:id="@+id/widget_private" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center_vertical" android:text="@string/widget_private_small" android:textColor="@color/widget_foreground" android:textStyle="bold" android:visibility="gone" />
+    <TextView android:id="@+id/widget_main" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:maxLines="2" android:ellipsize="end" android:text="@string/widget_no_main" android:textColor="@color/widget_foreground" android:textStyle="bold" android:textSize="15sp" />
+    <TextView android:id="@+id/widget_minimum" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:ellipsize="end" android:textColor="@color/widget_foreground" android:textSize="11sp" />
+    <TextView android:id="@+id/widget_xp" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/widget_foreground" android:textSize="11sp" />
+    <TextView android:id="@+id/widget_bonus" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="end">
+        <Button android:id="@+id/widget_complete" android:layout_width="0dp" android:layout_height="40dp" android:layout_weight="1" android:background="@drawable/widget_button" android:text="@string/widget_complete" android:textColor="@color/widget_foreground" android:textSize="11sp" />
+        <Button android:id="@+id/widget_privacy_toggle" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginStart="6dp" android:background="@drawable/widget_button_secondary" android:text="@string/widget_privacy" android:textColor="@color/widget_foreground" android:textSize="11sp" />
+    </LinearLayout>
+    <Button android:id="@+id/widget_tasks" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone" />
+    <Button android:id="@+id/widget_record" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone" />
+</LinearLayout>

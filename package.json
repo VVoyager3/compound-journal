@@ -13,6 +13,7 @@
     "serve": "npm run build && node --env-file-if-exists=.env --experimental-strip-types server.mjs",
     "eval:ai": "node --experimental-strip-types scripts/ai-eval.mjs",
     "test:e2e": "npm run build && node scripts/e2e.mjs",
+    "test:14-day": "npm run build && node --experimental-strip-types --test test/closed-use.test.mjs",
     "check:release": "node scripts/release-check.mjs",
     "check:android-release": "node scripts/release-check.mjs --native",
     "check:deployment": "node scripts/deployment-check.mjs",

@@ -123,13 +123,16 @@ const GOAL_DECOMPOSITION_SYSTEM_PROMPT = `你是“栖光”的目标拆解助�
 硬性规则：
 1. 顶层只能有 contractVersion、requestId、operation、result、warnings。
 2. 保留用户真正想形成的结果；只把模糊表述改成可验证结果，不擅自扩大范围或添加截止日期。
-3. completionEvidence 必须是可观察证据；milestones 给 2—5 个按先后可验证的小目标，每项都有独立完成证据。
-4. nextStep 必须今天即可开始，预计 1—240 分钟，并提供更小的 minimumAction；低成本优先。
-5. 系统记忆只能作为已确认的偏好、优势或约束参考，不能推导人格或能力上限。
-6. 信息不足写入 assumptions，最多五条，不把假设写成事实。
+3. completionEvidence 必须是可观察证据；currentStage 只描述请求中可确认的当前起点；milestones 给 2—5 个按先后可验证的里程碑，每项都有独立完成证据。
+4. estimatedInvestment 用自然语言给出保守的时间投入范围；risks 最多五条，只写会影响执行的具体风险。
+5. nextStep 必须今天即可开始，预计 1—240 分钟，并提供更小的 minimumAction；低成本优先。
+6. 当前目标只用于识别投入或优先级冲突；不能自动替换主目标，冲突必须写入 risks 或 assumptions 交给用户确认。
+7. 执行证据只用于判断原路径哪里有效或受阻；跳过不等于懒惰，不能据此推导人格。
+8. 系统记忆只能作为已确认的偏好、优势或约束参考，不能推导人格或能力上限。
+9. 信息不足写入 assumptions，最多五条，不把假设写成事实。
 
 严格输出形状：
-{"contractVersion":"1.0","requestId":"与请求完全一致","operation":"goal_decomposition","result":{"refinedResult":"","completionEvidence":"","rationale":"","milestones":[{"title":"","evidence":""},{"title":"","evidence":""}],"nextStep":{"title":"","why":"","minimumAction":"","estimatedMinutes":20,"difficulty":"light|standard|hard|challenge"},"assumptions":[]},"warnings":[]}`;
+{"contractVersion":"1.0","requestId":"与请求完全一致","operation":"goal_decomposition","result":{"refinedResult":"","completionEvidence":"","rationale":"","currentStage":"","estimatedInvestment":"","risks":[],"milestones":[{"title":"","evidence":""},{"title":"","evidence":""}],"nextStep":{"title":"","why":"","minimumAction":"","estimatedMinutes":20,"difficulty":"light|standard|hard|challenge"},"assumptions":[]},"warnings":[]}`;
 
 function json(response, status, body, headers = {}) {
   const payload = JSON.stringify(body);
@@ -208,7 +211,7 @@ export function hasImmediateDangerSignal(request) {
         ? [request.userInput.note, ...request.context.events.map((event) => `${event.title} ${event.description}`)].join('\n')
         : request.operation === 'system_candidate_review'
           ? request.userInput.candidates.map((item) => item.statement).join('\n')
-          : [request.userInput.result, request.userInput.why, request.userInput.completionEvidence, ...request.context.memories.map((item) => item.statement)].join('\n');
+          : [request.userInput.result, request.userInput.why, request.userInput.completionEvidence, ...request.context.currentGoals.map((item) => item.result), ...request.context.executionEvidence.flatMap((item) => [item.title, item.actual]), ...request.context.memories.map((item) => item.statement)].join('\n');
   return /(?:我(?:现在|马上|今晚)?(?:想|要|准备|打算)(?:自杀|伤害自己|伤害别人|杀人)|(?:现在|马上|今晚).{0,12}(?:自杀|伤害自己|伤害他人))/u.test(text);
 }
 
@@ -384,17 +387,26 @@ function fixtureSystemCandidateReview(request) {
 }
 
 function fixtureGoalDecomposition(request) {
+  const replanning = request.context.executionEvidence.length > 0;
   return {
     contractVersion: '1.0', requestId: request.requestId, operation: 'goal_decomposition',
     result: {
       refinedResult: request.userInput.result,
-      completionEvidence: request.userInput.completionEvidence,
-      rationale: '先用可验证的小目标降低开始成本。',
-      milestones: [
+      completionEvidence: request.userInput.completionEvidence || `留下一份可检查的“${request.userInput.result}”成果。`,
+      rationale: replanning ? '根据真实执行反馈缩小原路径。' : '先用可验证的里程碑降低开始成本。',
+      currentStage: replanning ? '已经尝试过原路径，正在根据反馈调整。' : '目标已经明确，尚未形成第一份可检查成果。',
+      estimatedInvestment: '先投入 20 分钟完成第一步，再根据真实反馈调整后续投入。',
+      risks: [replanning ? '继续照搬原计划会忽略已经出现的执行阻力。' : '一次把范围铺得过大，导致迟迟无法开始。'],
+      milestones: replanning ? [
+        { title: '完成缩小后的可检查成果', evidence: '留下一份范围更小但可以查看的成果。' },
+        { title: '根据新路径完成一次修订', evidence: '保存新路径的反馈和修订结果。' },
+      ] : [
         { title: '完成第一段可检查成果', evidence: '留下一份可以查看或使用的初版成果。' },
         { title: '根据一次真实反馈完成修订', evidence: '保存反馈内容和对应的修订结果。' },
       ],
-      nextStep: { title: '写下第一版结构', why: request.userInput.why, minimumAction: '只列出三个要点。', estimatedMinutes: 20, difficulty: 'light' },
+      nextStep: replanning
+        ? { title: '把原行动缩小一半', why: '执行反馈说明原路径需要降低开始成本。', minimumAction: '只保留最关键的一个要点。', estimatedMinutes: 10, difficulty: 'light' }
+        : { title: '写下第一版结构', why: request.userInput.why || '先降低开始成本。', minimumAction: '只列出三个要点。', estimatedMinutes: 20, difficulty: 'light' },
       assumptions: ['当前尚未提供明确截止日期。'],
     },
     warnings: ['桌面测试夹具，不代表真实模型质量。'],
