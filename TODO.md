@@ -1198,6 +1198,6 @@ Android 常驻悬浮桌宠、Windows/macOS 桌宠和跨设备同步只有在桌�
 
 - 已清理：删除 Capacitor 自带的 `2 + 2` 与错误包名样例测试，替换为栖光正式包名、MiniMax HTTPS 地址和模型配置的原生单元测试，以及正式包名的真机仪器测试。
 - 已完成：新增 `npm run test:android-device`；命令固定 D 盘缓存与 Android SDK/JDK 21，只接受一台真实设备，拒绝模拟器，以 `adb install -r` 保留本地数据，启动应用并执行 `connectedDebugAndroidTest`。
-- 安全边界：覆盖安装签名不一致时立即停止并要求先导出备份；脚本不执行 `adb uninstall`，也不会在没有真机时继续构建或安装。
+- 安全边界：覆盖安装签名不一致时立即停止并要求先导出备份；脚本不执行 `adb uninstall`，也不会在没有真机时继续构建或安装。个人调试签名固定保存在被 Git 忽略的 `.android-user/debug.keystore`，首次安装后必须与数据备份一起保管。
 - 验证：无设备门禁自测通过；原生单元测试、AndroidTest Lint、完整 Lint 与 APK 构建通过（233 项 Gradle 任务，0 errors、18 个既有警告）；`npm run check` 与 `npm run check:release` 全部通过；提交 `878f504` 的 GitHub Actions 运行 `32343579225` 中 verify、Android 和容器三项全绿，APK 制品已上传。
 - 仍待用户安排：连接真机后运行该命令，并人工观察小/中/大组件、断网重启、后台回收、200% 字体、深色模式、减少动画、MiniMax 联网恢复和系统分享备份。

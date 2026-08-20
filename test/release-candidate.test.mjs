@@ -266,11 +266,14 @@ test('native release check validates, syncs, and builds the Android package in o
 test('deferred Android device check accepts one real device and preserves installed data', async () => {
   const packageJson = JSON.parse(await read('package.json'));
   const script = await read('scripts/android-device-check.ps1');
+  const gitignore = await read('.gitignore');
   assert.match(packageJson.scripts['test:android-device'], /android-device-check\.ps1/);
   assert.match(script, /\$online\.Count -ne 1/);
   assert.match(script, /ro\.kernel\.qemu/);
   assert.match(script, /install -r \$apk/);
   assert.match(script, /connectedDebugAndroidTest/);
   assert(script.includes('D:\\tmp\\qiguang-device-check'));
+  assert.match(script, /ANDROID_USER_HOME.*\.android-user/);
+  assert.match(gitignore, /^\.android-user\/$/m);
   assert.doesNotMatch(script, /adb.*uninstall/i);
 });

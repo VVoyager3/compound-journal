@@ -37,8 +37,9 @@ if (-not (Test-Path -LiteralPath (Join-Path $env:JAVA_HOME 'bin\java.exe'))) {
 }
 $env:ANDROID_HOME = $androidSdk
 $env:ANDROID_SDK_ROOT = $androidSdk
+$env:ANDROID_USER_HOME = Join-Path $workspace '.android-user'
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
-New-Item -ItemType Directory -Force -Path $env:TEMP, $env:GRADLE_USER_HOME, $env:KOTLIN_DAEMON_RUN_FILES_PATH | Out-Null
+New-Item -ItemType Directory -Force -Path $env:TEMP, $env:GRADLE_USER_HOME, $env:KOTLIN_DAEMON_RUN_FILES_PATH, $env:ANDROID_USER_HOME | Out-Null
 
 Push-Location $workspace
 try {
@@ -76,6 +77,7 @@ try {
 2. 添加小/中/大组件，检查隐私、完成 MAIN、任务定位和开始记录。
 3. 断网重启后完成本地记录与任务，再联网验证 MiniMax。
 4. 检查 200% 字体、深色模式、减少动画、后台回收和系统分享备份。
+5. 备份项目内 .android-user/debug.keystore；丢失后将无法覆盖升级已安装版本。
 '@
 } finally {
     Pop-Location
