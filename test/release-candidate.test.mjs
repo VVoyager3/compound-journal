@@ -218,7 +218,7 @@ test('manual release workflow verifies the app, publishes the server image, and 
   }
   assert.match(workflow, /docker build[\s\S]*docker push/);
   assert.match(workflow, /docker run[\s\S]*\.State\.Health\.Status/);
-  assert.match(workflow, /\.\/gradlew assembleDebug/);
+  assert.match(workflow, /\.\/gradlew testDebugUnitTest lintDebug assembleDebug/);
   assert.match(workflow, /actions\/upload-artifact@v4/);
   assert(!workflow.includes('MINIMAX_API_KEY'), 'release builds must not require or expose the model key');
 });
@@ -261,4 +261,16 @@ test('native release check validates, syncs, and builds the Android package in o
   assert.equal(packageJson.scripts['check:android-release'], 'node --env-file-if-exists=.env scripts/release-check.mjs --native');
   assert.match(script, /\['cap', 'sync', 'android'\]/);
   assert.match(script, /\['assembleDebug'\]/);
+});
+
+test('deferred Android device check accepts one real device and preserves installed data', async () => {
+  const packageJson = JSON.parse(await read('package.json'));
+  const script = await read('scripts/android-device-check.ps1');
+  assert.match(packageJson.scripts['test:android-device'], /android-device-check\.ps1/);
+  assert.match(script, /\$online\.Count -ne 1/);
+  assert.match(script, /ro\.kernel\.qemu/);
+  assert.match(script, /install -r \$apk/);
+  assert.match(script, /connectedDebugAndroidTest/);
+  assert(script.includes('D:\\tmp\\qiguang-device-check'));
+  assert.doesNotMatch(script, /adb.*uninstall/i);
 });

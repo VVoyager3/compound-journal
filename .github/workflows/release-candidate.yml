@@ -72,11 +72,11 @@ jobs:
           cache: gradle
       - run: npm ci
       - run: npm run android:sync
-      - name: Build debug APK
+      - name: Test, lint, and build debug APK
         run: |
           chmod +x android/gradlew
           cd android
-          ./gradlew assembleDebug
+          ./gradlew testDebugUnitTest lintDebug assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: qiguang-android-v0.6.4
