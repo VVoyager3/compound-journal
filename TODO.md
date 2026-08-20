@@ -1201,3 +1201,7 @@ Android 常驻悬浮桌宠、Windows/macOS 桌宠和跨设备同步只有在桌�
 - 安全边界：覆盖安装签名不一致时立即停止并要求先导出备份；脚本不执行 `adb uninstall`，也不会在没有真机时继续构建或安装。个人调试签名固定保存在被 Git 忽略的 `.android-user/debug.keystore`，首次安装后必须与数据备份一起保管。
 - 验证：无设备门禁自测通过；原生单元测试、AndroidTest Lint、完整 Lint 与 APK 构建通过（233 项 Gradle 任务，0 errors、18 个既有警告）；本机稳定调试签名生成并通过 APK 证书校验；`npm run check` 与 `npm run check:release` 全部通过；提交 `f2502f7` 的 GitHub Actions 运行 `32344055006` 中 verify、Android 和容器三项全绿，APK 制品已上传。
 - 仍待用户安排：连接真机后运行该命令，并人工观察小/中/大组件、断网重启、后台回收、200% 字体、深色模式、减少动画、MiniMax 联网恢复和系统分享备份。
+
+### 2026-08-20：GitHub 操作规则
+
+- 已更新项目规则：GitHub 远端交互默认使用 `gh`；纯本地状态、差异、提交和分支操作继续使用 `git`，仅在 `gh` 无对应能力或失败时回退到 `git` 远端命令。
