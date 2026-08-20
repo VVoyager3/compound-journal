@@ -845,7 +845,7 @@ Android 常驻悬浮桌宠、Windows/macOS 桌宠和跨设备同步只有在桌�
 - [x] 男生和女生原创头像、动作 Sprite、像素房间和时间状态动作。
 - [x] PWA、IndexedDB、Service Worker、CSP、持久存储说明和离线降级。
 - [x] Capacitor Android 原生壳、品牌图标、启动页、APK 和 GitHub 发布流水线。
-- [x] 当前自动检查基线：`npm run check` 83 项通过，`npm run check:release` 9 项通过，验证地址模式 10/10，AI 固定评估 17/17，浏览器端到端流程 21/21。
+- [x] 当前自动检查基线：`npm run check`、`npm run check:release`、AI 固定评估 17/17 和浏览器端到端流程 23/23 均通过；常规测试已包含 14 天闭环模拟。
 - [x] 当前容器镜像：`ghcr.io/vvoyager3/compound-journal-server:0.6.4`。
 - [x] 当前 Android 包名：`com.vvoyager3.qiguang`，versionCode 604，targetSdk 36。
 
@@ -1179,3 +1179,4 @@ Android 常驻悬浮桌宠、Windows/macOS 桌宠和跨设备同步只有在桌�
 
 - 用户决定暂不进行真机实验，重启、离线、后台限制、字体/深色模式、桌面尺寸、小组件和完整核心闭环统一留到后续真机验收批次。
 - 当前批次继续以浏览器回归、Android 编译、Lint、APK 和远程 CI 作为工程证据，但不把它们写成真机通过。
+- 远程证据：提交 `dca46d8` 的 GitHub Actions 运行 `32329605246` 全部通过；verify、服务容器构建/冒烟/发布、Android 同步/APK 构建与制品上传均成功。
