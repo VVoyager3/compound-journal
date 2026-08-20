@@ -122,11 +122,11 @@ test('client has no microphone capability, unsafe HTML sink, or third-party trac
   const fetchCalls = [...clientSource.matchAll(/\bfetch\s*\(/g)];
   const literalFetches = [...clientSource.matchAll(/\bfetch\s*\(\s*(['"])([^'"]+)\1/g)];
   assert.equal(literalFetches.length, 0, 'client fetches must use the typed API allowlist');
-  assert.equal(fetchCalls.length, 6, 'only the six audited AI and health requests may use the network');
+  assert.equal(fetchCalls.length, 2, 'only the audited proxy fallback and health requests may use browser fetch');
   assert.match(clientSource, /function apiUrl\(path: '\/api\/analyze' \| '\/api\/health'\)/, 'API helper must restrict paths to the audited allowlist');
   assert.equal((clientSource.match(/fetch\(apiUrl\(/g) ?? []).length, fetchCalls.length, 'every client fetch must use the audited API helper');
-  assert.match(clientSource, /NATIVE_AI_READY[\s\S]*new URL\(API_ORIGIN\)\.protocol === 'https:'/,
-    'native AI must reject a missing or non-HTTPS service origin');
+  assert.match(clientSource, /registerPlugin<NativeAiBridge>\('QiguangAi'\)/, 'personal Android AI must use the audited native bridge');
+  assert(!clientSource.includes('Authorization'), 'the web bundle must never add the model authorization header');
 
   const manifest = await read('public/manifest.webmanifest');
   assert(!/microphone|audio-capture|getUserMedia/i.test(manifest));
@@ -222,12 +222,22 @@ test('manual release workflow verifies the app, publishes the server image, and 
   assert(!workflow.includes('MINIMAX_API_KEY'), 'release builds must not require or expose the model key');
 });
 
-test('native production output contains its explicit HTTPS AI service origin', { skip: process.env.QIGUANG_NATIVE_RELEASE !== '1' }, async () => {
-  const origin = new URL(process.env.VITE_API_ORIGIN);
-  assert.equal(origin.protocol, 'https:');
+test('native production output supports personal direct AI without exposing its key to web assets', { skip: process.env.QIGUANG_NATIVE_RELEASE !== '1' }, async () => {
   const sources = await Promise.all((await filesBelow(path.join(root, 'dist')))
     .filter((file) => file.endsWith('.js')).map((file) => readFile(file, 'utf8')));
-  assert(sources.some((source) => source.includes(origin.href.replace(/\/$/, ''))), 'native bundle is missing VITE_API_ORIGIN');
+  const key = process.env.MINIMAX_API_KEY?.trim();
+  if (key) {
+    assert(sources.every((source) => !source.includes(key)), 'native web bundle exposes the personal model key');
+    const gradle = await read('android/app/build.gradle');
+    const plugin = await read('android/app/src/main/java/com/vvoyager3/qiguang/QiguangAiPlugin.java');
+    assert.match(gradle, /buildConfigField "String", "QIGUANG_MINIMAX_API_KEY"/);
+    assert.match(plugin, /BuildConfig\.QIGUANG_MINIMAX_API_KEY/);
+    assert.match(plugin, /"Authorization", "Bearer " \+ BuildConfig\.QIGUANG_MINIMAX_API_KEY/);
+  } else {
+    const origin = new URL(process.env.VITE_API_ORIGIN);
+    assert.equal(origin.protocol, 'https:');
+    assert(sources.some((source) => source.includes(origin.href.replace(/\/$/, ''))), 'native bundle is missing VITE_API_ORIGIN');
+  }
 });
 
 test('Android widget ships three responsive layouts without overlay or notification permissions', async () => {
@@ -247,7 +257,7 @@ test('Android widget ships three responsive layouts without overlay or notificat
 test('native release check validates, syncs, and builds the Android package in one command', async () => {
   const packageJson = JSON.parse(await read('package.json'));
   const script = await read('scripts/release-check.mjs');
-  assert.equal(packageJson.scripts['check:android-release'], 'node scripts/release-check.mjs --native');
+  assert.equal(packageJson.scripts['check:android-release'], 'node --env-file-if-exists=.env scripts/release-check.mjs --native');
   assert.match(script, /\['cap', 'sync', 'android'\]/);
   assert.match(script, /\['assembleDebug'\]/);
 });

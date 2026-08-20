@@ -332,7 +332,7 @@ test('confirmed feedback changes the next day recommendation', async () => {
   }
 });
 
-test('Android without a remote AI service keeps the local success and action loop usable', async () => {
+test('Android without a MiniMax key keeps the local success and action loop usable', async () => {
   const { context, page, apiRequests } = await freshPage({ native: true });
   try {
     await finishOnboarding(page);
@@ -347,18 +347,18 @@ test('Android without a remote AI service keeps the local success and action loo
     await page.goto(`${baseUrl}/#/tasks`);
     await page.getByRole('button', { name: '新建目标' }).click();
     const goalDialog = page.getByRole('dialog', { name: '建立一个真实目标' });
-    assert.equal(await goalDialog.getByRole('button', { name: '远程拆解服务未连接' }).isDisabled(), true);
+    assert.equal(await goalDialog.getByRole('button', { name: 'MiniMax 未配置' }).isDisabled(), true);
     await goalDialog.getByRole('textbox', { name: '你想让什么事情发生？' }).fill('完成一个本地目标');
     await goalDialog.getByRole('button', { name: '建立目标' }).click();
     await assert.doesNotReject(() => page.getByRole('heading', { name: '完成一个本地目标', exact: true }).waitFor());
     await assert.doesNotReject(() => page.getByRole('heading', { name: /花 5 分钟写下“完成一个本地目标”的第一步/ }).waitFor());
 
     await page.goto(`${baseUrl}/#/review`);
-    await assert.doesNotReject(() => page.getByText(/远程周复盘尚未连接/).waitFor());
+    await assert.doesNotReject(() => page.getByText(/MiniMax 尚未配置/).waitFor());
     await page.goto(`${baseUrl}/#/system`);
-    assert.equal(await page.getByRole('button', { name: '检查整理服务' }).isDisabled(), true);
-    assert.equal(await page.getByRole('checkbox', { name: /远程整理未连接/ }).isDisabled(), true);
-    await assert.doesNotReject(() => page.getByText(/此安装包未连接远程整理服务/).waitFor());
+    assert.equal(await page.getByRole('button', { name: '检查 AI 配置' }).isDisabled(), true);
+    assert.equal(await page.getByRole('checkbox', { name: /MiniMax 未配置/ }).isDisabled(), true);
+    await assert.doesNotReject(() => page.getByText(/此安装包尚未配置 MiniMax 密钥/).waitFor());
     assert.deepEqual(apiRequests, []);
   } finally {
     await context.close();
@@ -753,9 +753,13 @@ test('selected companion uses the supplied portrait and matching room sprite', a
     assert.match(await roomSprite.evaluate((element) => getComputedStyle(element).backgroundImage), /character-motion-female/);
     const spriteLayout = await roomSprite.evaluate((element) => {
       const style = getComputedStyle(element);
-      return { backgroundPosition: style.backgroundPosition, mixBlendMode: style.mixBlendMode };
+      return { backgroundPosition: style.backgroundPosition, backgroundSize: style.backgroundSize, mixBlendMode: style.mixBlendMode };
     });
-    assert.ok(['-35px -3px', '-103px -3px', '-175px -3px', '-239px -3px', '-248px -3px', '-432px -3px'].includes(spriteLayout.backgroundPosition));
+    const frame = spriteLayout.backgroundPosition.match(/^(-?\d+(?:\.\d+)?)px (-?\d+(?:\.\d+)?)px$/);
+    assert(frame, `unexpected sprite frame: ${spriteLayout.backgroundPosition}`);
+    assert.equal(spriteLayout.backgroundSize, '538px 358px');
+    assert(Number(frame[1]) <= 0 && Number(frame[1]) >= -482);
+    assert(Number(frame[2]) <= 0 && Number(frame[2]) >= -274);
     assert.equal(spriteLayout.mixBlendMode, 'normal');
     const geometry = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
     assert.ok(geometry.scrollWidth <= geometry.width);

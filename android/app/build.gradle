@@ -1,14 +1,34 @@
 apply plugin: 'com.android.application'
 
+def qiguangEnv = [:]
+def qiguangEnvFile = rootProject.file('../.env')
+if (qiguangEnvFile.exists()) {
+    qiguangEnvFile.eachLine('UTF-8') { line ->
+        def value = line.trim()
+        if (value && !value.startsWith('#') && value.contains('=')) {
+            def separator = value.indexOf('=')
+            qiguangEnv[value.substring(0, separator).trim()] = value.substring(separator + 1).trim()
+        }
+    }
+}
+def qiguangEnvValue = { name, fallback -> System.getenv(name) ?: qiguangEnv[name] ?: fallback }
+def qiguangBuildString = { value -> '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"' }
+
 android {
     namespace = "com.vvoyager3.qiguang"
     compileSdk = rootProject.ext.compileSdkVersion
+    buildFeatures {
+        buildConfig = true
+    }
     defaultConfig {
         applicationId "com.vvoyager3.qiguang"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 604
         versionName "0.6.4"
+        buildConfigField "String", "QIGUANG_MINIMAX_API_KEY", qiguangBuildString(qiguangEnvValue('MINIMAX_API_KEY', ''))
+        buildConfigField "String", "QIGUANG_MINIMAX_API_URL", qiguangBuildString(qiguangEnvValue('MINIMAX_API_URL', 'https://api.minimaxi.com/v1/chat/completions'))
+        buildConfigField "String", "QIGUANG_MINIMAX_MODEL", qiguangBuildString(qiguangEnvValue('MINIMAX_MODEL', 'MiniMax-M3'))
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

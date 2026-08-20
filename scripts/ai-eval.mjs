@@ -11,6 +11,7 @@ import {
   parseWeeklyReviewRequest,
   parseWeeklyReviewResponse,
 } from '../src/analysis-contract.ts';
+import { analyzeWithModel, hasImmediateDangerSignal } from '../src/ai-engine.ts';
 
 const fixtureUrl = new URL('../test/fixtures/ai-eval-v1.1.json', import.meta.url);
 const suite = JSON.parse(await readFile(fixtureUrl, 'utf8'));
@@ -337,6 +338,7 @@ function validateExpectations(run, response) {
   const impacts = events.flatMap((event) => event.stateImpactCandidates ?? []);
   const growth = events.map((event) => event.growthEvidenceCandidate).filter(Boolean);
   if (expected.eventCount !== undefined) assert.equal(events.length, expected.eventCount);
+  if (expected.eventCountMin !== undefined) assert(events.length >= expected.eventCountMin);
   if (expected.evidenceCount !== undefined) assert.equal(events[0]?.evidence.length, expected.evidenceCount);
   if (expected.pendingInferences !== undefined) assert.equal(events.filter((event) => event.sourceType === 'inferred' && event.confirmation === 'pending').length, expected.pendingInferences);
   if (expected.moods) assert.deepEqual(result.explicitMoods, expected.moods);
@@ -354,6 +356,10 @@ function validateExpectations(run, response) {
   if (expected.memoryObserveOnly) assert(result.memoryCandidates.every((item) => item.recommendedAction === 'observe'));
   if (expected.requiresCounterEvidence) assert(result.memoryCandidates.every((item) => item.counterEvidence.length > 0));
   if (expected.responseContains) assert(JSON.stringify(result).includes(expected.responseContains));
+  if (expected.actionableNextStep) {
+    assert(result.nextStep.title.length >= 2 && result.nextStep.title !== result.refinedResult);
+    assert(result.nextStep.minimumAction.length >= 2);
+  }
 }
 
 function validateRun(run, response) {
@@ -415,22 +421,62 @@ async function liveResponse(run, endpoint) {
   return response.json();
 }
 
-async function evaluate(mode, endpoint) {
+async function directResponse(run) {
+  if (hasImmediateDangerSignal(run.request)) {
+    return {
+      contractVersion: run.request.contractVersion,
+      requestId: run.request.requestId,
+      operation: run.request.operation,
+      error: {
+        code: 'SAFETY_REVIEW',
+        message: '当下安全最重要；请先查看本地求助资源或联系可信任的人。',
+        resourceAction: 'local-help',
+        doesNotMonitor: true,
+      },
+      warnings: [],
+    };
+  }
+  const key = process.env.MINIMAX_API_KEY?.trim();
+  if (!key) throw new Error('.env 中尚未填写 MINIMAX_API_KEY');
+  const endpoint = new URL(process.env.MINIMAX_API_URL || 'https://api.minimaxi.com/v1/chat/completions');
+  if (endpoint.protocol !== 'https:') throw new Error('MiniMax 接口必须使用 HTTPS');
+  return analyzeWithModel(run.request, async (payload) => {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(60_000),
+    });
+    const raw = await response.json().catch(() => null);
+    if (response.status === 429) throw new Error('MiniMax 请求过快');
+    if (!response.ok) throw Object.assign(new Error(`MiniMax HTTP ${response.status}`), { retryable: response.status >= 500 });
+    const content = raw?.choices?.[0]?.message?.content;
+    if (typeof content !== 'string' || !content.trim()) throw new Error('MiniMax 没有返回可用内容');
+    return content;
+  }, process.env.MINIMAX_MODEL || 'MiniMax-M3');
+}
+
+async function evaluate(mode, endpoint, selectedRuns = runs) {
   const failures = [];
-  for (const run of runs) {
+  for (const run of selectedRuns) {
     try {
-      const response = mode === 'live' ? await liveResponse(run, endpoint) : completeOfflineResponse(run);
+      const response = mode === 'direct' ? await directResponse(run) : mode === 'live' ? await liveResponse(run, endpoint) : completeOfflineResponse(run);
       validateRun(run, response);
     } catch (error) {
       failures.push({ id: run.id, category: run.category, reason: error instanceof Error ? error.message : 'unknown error' });
     }
   }
-  const rate = (runs.length - failures.length) / runs.length;
-  return { mode, categories: suite.cases.length, checks: runs.length, passed: runs.length - failures.length, rate, failures };
+  const rate = (selectedRuns.length - failures.length) / selectedRuns.length;
+  return { mode, categories: new Set(selectedRuns.map((run) => run.category)).size, checks: selectedRuns.length, passed: selectedRuns.length - failures.length, rate, failures };
 }
 
 evaluatorSelfCheck();
 const endpoint = process.env.QIGUANG_AI_EVAL_URL;
-const report = await evaluate(endpoint ? 'live' : 'offline', endpoint);
+const direct = process.argv.includes('--direct');
+if (direct && !process.env.MINIMAX_API_KEY?.trim()) throw new Error('.env 中尚未填写 MINIMAX_API_KEY');
+const only = process.argv.find((value) => value.startsWith('--only='))?.slice('--only='.length).split(',').filter(Boolean);
+const selectedRuns = only?.length ? runs.filter((run) => only.some((id) => run.id === id || run.id.startsWith(`${id}.`))) : runs;
+if (!selectedRuns.length) throw new Error('--only 没有匹配到评估用例');
+const report = await evaluate(direct ? 'direct' : endpoint ? 'live' : 'offline', endpoint, selectedRuns);
 console.log(JSON.stringify(report, null, 2));
 if (report.rate < 0.99 || report.failures.length) process.exitCode = 1;

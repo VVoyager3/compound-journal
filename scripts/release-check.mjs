@@ -2,11 +2,20 @@ import { spawnSync } from 'node:child_process';
 
 const native = process.argv.includes('--native');
 if (native) {
-  let origin;
-  try { origin = new URL(process.env.VITE_API_ORIGIN ?? ''); } catch { /* checked below */ }
-  if (origin?.protocol !== 'https:' || !origin.host || origin.pathname !== '/' || origin.search || origin.hash) {
-    console.error('Android 发布检查需要 VITE_API_ORIGIN 指向根路径 HTTPS 整理服务。');
-    process.exit(1);
+  if (process.env.MINIMAX_API_KEY?.trim()) {
+    let endpoint;
+    try { endpoint = new URL(process.env.MINIMAX_API_URL || 'https://api.minimaxi.com/v1/chat/completions'); } catch { /* checked below */ }
+    if (endpoint?.protocol !== 'https:' || !endpoint.host) {
+      console.error('Android 个人版需要有效的 MiniMax HTTPS 接口。');
+      process.exit(1);
+    }
+  } else {
+    let origin;
+    try { origin = new URL(process.env.VITE_API_ORIGIN ?? ''); } catch { /* checked below */ }
+    if (origin?.protocol !== 'https:' || !origin.host || origin.pathname !== '/' || origin.search || origin.hash) {
+      console.error('Android 发布检查需要 .env 中的 MINIMAX_API_KEY；旧代理模式则需要根路径 HTTPS VITE_API_ORIGIN。');
+      process.exit(1);
+    }
   }
 }
 

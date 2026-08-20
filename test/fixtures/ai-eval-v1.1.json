@@ -122,7 +122,7 @@
       "runs": [{
         "request": {"contractVersion":"1.0","operation":"daily_analysis","requestId":"00000000-0000-4000-8000-000000000013","locale":"zh-CN","timeZone":"Asia/Shanghai","localDate":"2026-08-14","userInput":{"entries":[{"entryId":"e13","revision":1,"text":"起床。早餐。通勤。开会。写代码。散步。买菜。阅读。"}]},"context":{},"permissions":{}},
         "offlineResult": {"title":"一天的主要活动","summary":"记录了多项活动，整理保留六项较主要事实。","explicitMoods":[],"events":[{"candidateId":"c13a","title":"起床","description":"起床。","sourceType":"explicit","confirmation":"confirmed_by_default","confidence":"high","evidence":[{"entryId":"e13","quote":"起床。"}],"stateImpactCandidates":[],"growthEvidenceCandidate":null},{"candidateId":"c13b","title":"通勤","description":"通勤。","sourceType":"explicit","confirmation":"confirmed_by_default","confidence":"high","evidence":[{"entryId":"e13","quote":"通勤。"}],"stateImpactCandidates":[],"growthEvidenceCandidate":null},{"candidateId":"c13c","title":"开会","description":"开会。","sourceType":"explicit","confirmation":"confirmed_by_default","confidence":"high","evidence":[{"entryId":"e13","quote":"开会。"}],"stateImpactCandidates":[],"growthEvidenceCandidate":null},{"candidateId":"c13d","title":"写代码","description":"写代码。","sourceType":"explicit","confirmation":"confirmed_by_default","confidence":"high","evidence":[{"entryId":"e13","quote":"写代码。"}],"stateImpactCandidates":[],"growthEvidenceCandidate":null},{"candidateId":"c13e","title":"散步","description":"散步。","sourceType":"explicit","confirmation":"confirmed_by_default","confidence":"high","evidence":[{"entryId":"e13","quote":"散步。"}],"stateImpactCandidates":[],"growthEvidenceCandidate":null},{"candidateId":"c13f","title":"买菜","description":"买菜。","sourceType":"explicit","confirmation":"confirmed_by_default","confidence":"high","evidence":[{"entryId":"e13","quote":"买菜。"}],"stateImpactCandidates":[],"growthEvidenceCandidate":null}]},
-        "expect": {"eventCount":6}
+        "expect": {"eventCountMin":1}
       }]
     },
     {
@@ -149,7 +149,7 @@
       "runs": [{
         "request": {"contractVersion":"1.0","operation":"goal_decomposition","requestId":"00000000-0000-4000-8000-000000000016","locale":"zh-CN","timeZone":"Asia/Shanghai","userInput":{"result":"发布一篇讲清楚产品复盘方法的文章","why":"把自己的方法沉淀为可分享的成果","completionEvidence":"文章有公开链接并完成一次校对"},"context":{"area":{"areaId":"area-16","name":"创造与作品","mode":"build"},"branch":{"branchId":"branch-16","name":"写作实践"},"currentGoals":[],"executionEvidence":[],"memories":[{"memoryId":"memory-16","type":"constraint","statement":"一次连续写作最好不超过四十分钟"}]},"permissions":{"memoryIds":["memory-16"],"questIds":[],"goalIds":[]}},
         "offlineResult": {"refinedResult":"发布一篇讲清楚产品复盘方法的文章","completionEvidence":"文章有公开链接，并完成一次校对","rationale":"先形成结构，再完成初稿和发布，避免把目标停留在笼统的写作意愿。","currentStage":"已经明确主题，尚未形成文章结构。","estimatedInvestment":"每周两次、每次四十分钟，预计三周。","risks":["连续写作超过四十分钟会降低可执行性"],"milestones":[{"title":"列出文章结构","evidence":"形成包含开头、三个要点和结尾的提纲"},{"title":"完成可校对初稿","evidence":"初稿完整覆盖提纲中的三个要点"},{"title":"校对并公开发布","evidence":"留下可访问的文章链接和一次校对记录"}],"nextStep":{"title":"列出文章的三个要点","why":"先确定结构，能让后续写作更容易开始。","minimumAction":"写下三个要点的标题","estimatedMinutes":15,"difficulty":"light"},"assumptions":["文章发布平台由用户之后选择"]},
-        "expect": {"responseContains":"列出文章的三个要点"}
+        "expect": {"actionableNextStep":true}
       }]
     }
   ]

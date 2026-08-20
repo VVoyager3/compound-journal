@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         SplashScreen.installSplashScreen(this);
+        registerPlugin(QiguangAiPlugin.class);
         super.onCreate(savedInstanceState);
         bridge.getWebView().addJavascriptInterface(new QiguangWidgetBridge(this), "qiguangWidgetBridge");
     }

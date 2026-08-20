@@ -187,8 +187,9 @@ test('model output cannot add final XP, auto-confirmed memory, or unknown fields
   assert.throws(() => parseDailyAnalysisResponse(response, parseDailyAnalysisRequest(validRequest())), /未知字段/);
 });
 
-test('model JSON parser removes reasoning and a single JSON fence', () => {
+test('model JSON parser removes reasoning, fences, and one prose wrapper', () => {
   assert.deepEqual(parseModelJson('<think>private reasoning</think>\n```json\n{"ok":true}\n```'), { ok: true });
+  assert.deepEqual(parseModelJson('以下是结果：\n{"ok":true}\n请查收。'), { ok: true });
   assert.throws(() => parseModelJson('not json'), /可解析的 JSON/);
 });
 

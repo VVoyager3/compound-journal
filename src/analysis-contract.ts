@@ -1133,6 +1133,11 @@ export function parseModelJson(text: string): unknown {
   try {
     return JSON.parse(fenced);
   } catch {
+    const start = fenced.indexOf('{');
+    const end = fenced.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      try { return JSON.parse(fenced.slice(start, end + 1)); } catch { /* handled below */ }
+    }
     throw new Error('模型没有返回可解析的 JSON。');
   }
 }

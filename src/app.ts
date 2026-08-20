@@ -47,6 +47,8 @@ import {
 } from './analysis-contract.ts';
 import { DIFFICULTY_XP, chooseDailyDirection, monthlyAreaSignal, type Difficulty, type FeedbackResult, type QuestType } from './rules.ts';
 import { buildWidgetSnapshot, consumeWidgetAction, saveWidgetSnapshot } from './widget.ts';
+import { analyzeWithNativeAi, nativeAiConfiguration } from './direct-ai.ts';
+import type { AnalysisRequest } from './ai-engine.ts';
 import { Capacitor } from '@capacitor/core';
 import maleAvatarImage from '../design-assets/pre-development/avatar-male-original.jpg';
 import femaleAvatarImage from '../design-assets/pre-development/avatar-female-original.jpg';
@@ -67,14 +69,49 @@ const DRAFT_KEY = 'qiguang.record-drafts.v2';
 const INTERRUPTED_TAKEOVER_MS = 2 * 60_000;
 const SUCCESS_PROMPT = '今天做成或推进了什么？哪怕很小：';
 const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN ?? '').replace(/\/$/, '');
-const NATIVE_AI_UNAVAILABLE = '此安装包未连接远程整理服务；记录、任务和成长数据仍可在本机使用。';
-const NATIVE_AI_READY = !Capacitor.isNativePlatform() || (() => {
+const NATIVE_AI_UNAVAILABLE = '此安装包尚未配置 MiniMax 密钥；记录、任务和成长数据仍可在本机使用。';
+let NATIVE_DIRECT_AI_READY = false;
+let NATIVE_AI_MODEL = 'MiniMax-M3';
+let NATIVE_AI_READY = !Capacitor.isNativePlatform() || (() => {
   try { return new URL(API_ORIGIN).protocol === 'https:'; } catch { return false; }
 })();
 
 function apiUrl(path: '/api/analyze' | '/api/health'): string {
   if (!NATIVE_AI_READY) throw new Error(NATIVE_AI_UNAVAILABLE);
   return `${API_ORIGIN}${path}`;
+}
+
+async function initializeNativeAi(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+  const configuration = await nativeAiConfiguration();
+  NATIVE_DIRECT_AI_READY = configuration.configured;
+  NATIVE_AI_MODEL = configuration.model;
+  if (configuration.configured) NATIVE_AI_READY = true;
+}
+
+function directAiErrorResponse(error: unknown): Response {
+  const code = (error as { code?: AnalysisErrorCode })?.code ?? 'SERVICE_UNAVAILABLE';
+  const status = code === 'INPUT_TOO_LARGE' ? 413 : code === 'RATE_LIMITED' ? 429 : code === 'SAFETY_REVIEW' ? 422 : code === 'UNSUPPORTED_CONTRACT' ? 426 : 503;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (code === 'RATE_LIMITED') headers['Retry-After'] = '60';
+  const body = code === 'SAFETY_REVIEW'
+    ? { error: { code, message: errorMessage(error), resourceAction: 'local-help', doesNotMonitor: true } }
+    : { error: { code, message: errorMessage(error) } };
+  return new Response(JSON.stringify(body), { status, headers });
+}
+
+async function requestAnalysis(request: AnalysisRequest, signal: AbortSignal): Promise<Response> {
+  if (NATIVE_DIRECT_AI_READY) {
+    try {
+      const result = await analyzeWithNativeAi(request, NATIVE_AI_MODEL);
+      return new Response(JSON.stringify(result), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    } catch (error) {
+      return directAiErrorResponse(error);
+    }
+  }
+  return fetch(apiUrl('/api/analyze'), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request), signal,
+  });
 }
 
 function explicitSuccessCredits(entries: JournalEntry[]): string[] {
@@ -218,7 +255,7 @@ function analysisErrorCopy(code: AnalysisErrorCode | undefined, fallback = ''): 
     INPUT_TOO_LARGE: '本次发送超过 20000 个字符，请减少记录范围。',
     RATE_LIMITED: '整理请求过快，请稍后手动重试。',
     MODEL_TIMEOUT: '模型响应超时；原文仍在本机，可手动重试。',
-    INVALID_MODEL_OUTPUT: '模型连续两次未返回合约格式；结果没有写入正式数据。',
+    INVALID_MODEL_OUTPUT: '模型连续三次未返回合约格式；结果没有写入正式数据。',
     UNSUPPORTED_CONTRACT: '当前整理合约不受服务端支持，请更新应用。',
     SAFETY_REVIEW: '当下安全最重要；普通任务、经验和游戏化反馈已暂停。',
     SERVICE_UNAVAILABLE: '整理服务暂时不可用；本地记录与任务不受影响。',
@@ -290,12 +327,7 @@ async function submitAnalysisJob(job: AnalysisJob, resumeInterrupted = false): P
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 50_000);
   try {
-    const response = await fetch(apiUrl('/api/analyze'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(processing.request),
-      signal: controller.signal,
-    });
+    const response = await requestAnalysis(processing.request, controller.signal);
     const body = await response.json().catch(() => null) as { error?: { code?: AnalysisErrorCode; message?: string } } | null;
     if (!response.ok) {
       const apiError = new Error(body?.error?.message || '整理服务暂时不可用。') as Error & { code?: AnalysisErrorCode; nextAttemptAt?: string };
@@ -908,7 +940,7 @@ async function openQuestFeedbackDialog(quest: Quest): Promise<void> {
     node('strong', '', NATIVE_AI_READY ? 'AI 理解反馈（可选）' : 'AI 理解反馈未连接'),
     node('p', 'caption', NATIVE_AI_READY ? '发送范围见下方；结果需你确认。' : '可直接手动选择完成情况并保存，不影响反馈和经验。'),
   );
-  const understand = node('button', 'button button-secondary', NATIVE_AI_READY ? 'AI 理解这段反馈' : '远程服务未连接');
+  const understand = node('button', 'button button-secondary', NATIVE_AI_READY ? 'AI 理解这段反馈' : 'MiniMax 未配置');
   understand.type = 'button';
   understand.disabled = !NATIVE_AI_READY;
   understand.addEventListener('click', async () => {
@@ -954,9 +986,7 @@ async function openQuestFeedbackDialog(quest: Quest): Promise<void> {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 50_000);
     try {
-      const response = await fetch(apiUrl('/api/analyze'), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request), signal: controller.signal,
-      });
+      const response = await requestAnalysis(request, controller.signal);
       const body = await response.json().catch(() => null) as unknown;
       if (!response.ok) {
         const errorBody = body as { error?: { message?: string } } | null;
@@ -2332,7 +2362,7 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[], quest
     const state = node('div', `analysis-job-state is-${latestJob.status}`);
     state.append(node('strong', '', latestJob.status === 'queued' ? '已保存在本机，等待你继续' : '整理尚未完成'));
     state.append(node('p', '', latestJob.errorCode ? analysisErrorCopy(latestJob.errorCode, latestJob.errorMessage) : '不会自动联网上传；由你检查范围后继续。'));
-    const retry = node('button', 'button button-primary', !NATIVE_AI_READY ? '远程服务未连接' : navigator.onLine ? '检查范围并重试' : '当前离线');
+    const retry = node('button', 'button button-primary', !NATIVE_AI_READY ? 'MiniMax 未配置' : navigator.onLine ? '检查范围并重试' : '当前离线');
     retry.type = 'button';
     retry.disabled = !navigator.onLine || !NATIVE_AI_READY;
     retry.addEventListener('click', () => { void openAnalysisPreview(date, entries, latestJob); });
@@ -2352,7 +2382,7 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[], quest
     successBlock.append(iconButton(successes.length ? '再写一条小成功' : '写下一条小成功', null, () => go({ name: 'record', date }), 'button button-secondary'));
     section.append(successBlock);
     if (!entries.length) section.append(node('p', 'muted', successes.length ? '行动反馈已经进入成功日记；有原始记录后还可以继续做 AI 整理。' : '有原始记录后，才可以主动选择发送并整理。'));
-    else if (!NATIVE_AI_READY) section.append(node('p', 'caption', '远程整理尚未连接；本地成功日记、原始记录、任务与成长仍可完整使用。'));
+    else if (!NATIVE_AI_READY) section.append(node('p', 'caption', 'MiniMax 尚未配置；本地成功日记、原始记录、任务与成长仍可完整使用。'));
     else if (!latestJob || !['queued', 'processing', 'failed', 'safety-review'].includes(latestJob.status)) {
       section.append(node('p', '', 'AI 只会返回候选；明确事实可撤销，推断确认前不会改变状态或经验。'));
       section.append(primaryButton('检查范围并整理', () => { void openAnalysisPreview(date, entries); }));
@@ -2599,7 +2629,7 @@ async function submitWeeklyReviewJob(job: AnalysisJob, resumeInterrupted = false
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 50_000);
   try {
-    const response = await fetch(apiUrl('/api/analyze'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(processing.request), signal: controller.signal });
+    const response = await requestAnalysis(processing.request, controller.signal);
     const body = await response.json().catch(() => null) as { error?: { code?: AnalysisErrorCode; message?: string } } | null;
     if (!response.ok) {
       const apiError = new Error(body?.error?.message || '周复盘服务暂时不可用。') as Error & { code?: AnalysisErrorCode; nextAttemptAt?: string };
@@ -2764,7 +2794,7 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   if (!review) {
     const intro = node('section', 'surface review-intro');
     intro.append(node('p', 'eyebrow', 'WEEKLY REVIEW'), node('h2', '', '用证据决定下一周'));
-    if (!NATIVE_AI_READY) intro.append(node('p', '', '远程周复盘尚未连接；本地记录、任务反馈、成长证据和成功日记仍会保留。'));
+    if (!NATIVE_AI_READY) intro.append(node('p', '', 'MiniMax 尚未配置；本地记录、任务反馈、成长证据和成功日记仍会保留。'));
     else if (job?.status === 'processing') {
       const state = node('div', 'analysis-job-state is-running');
       state.append(
@@ -2945,9 +2975,7 @@ async function requestGoalDecomposition(
         const timeout = window.setTimeout(() => controller.abort(), 50_000);
         let response: Response;
         try {
-          response = await fetch(apiUrl('/api/analyze'), {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request), signal: controller.signal,
-          });
+          response = await requestAnalysis(request, controller.signal);
         } finally { window.clearTimeout(timeout); }
         const body = await response.json().catch(() => null) as unknown;
         if (!response.ok) throw new Error((body as { error?: { message?: string } } | null)?.error?.message || '目标拆解服务暂时不可用。');
@@ -3035,7 +3063,7 @@ async function openGoalDialog(): Promise<void> {
   const status = node('p', 'save-state');
   const assistant = node('section', 'goal-decomposition-assistant');
   assistant.append(node('strong', '', '需要帮你把目标变小吗？'), node('p', 'caption', 'AI 可以提出 2—5 个可验证里程碑和今天能开始的一步；生成后仍由你编辑和确认。'));
-  const decompose = node('button', 'button button-secondary', !NATIVE_AI_READY ? '远程拆解服务未连接' : navigator.onLine ? 'AI 帮我拆成里程碑' : '联网后可用 AI 拆解');
+  const decompose = node('button', 'button button-secondary', !NATIVE_AI_READY ? 'MiniMax 未配置' : navigator.onLine ? 'AI 帮我拆成里程碑' : '联网后可用 AI 拆解');
   decompose.type = 'button';
   decompose.disabled = !navigator.onLine || !NATIVE_AI_READY;
   assistant.append(decompose);
@@ -4211,7 +4239,7 @@ async function openSystemCandidateReview(memories: SystemMemory[], events: Journ
       const timeout = window.setTimeout(() => controller.abort(), 50_000);
       let response: Response;
       try {
-        response = await fetch(apiUrl('/api/analyze'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request), signal: controller.signal });
+        response = await requestAnalysis(request, controller.signal);
       } finally { window.clearTimeout(timeout); }
       const body = await response.json().catch(() => null) as unknown;
       if (!response.ok) throw new Error((body as { error?: { message?: string } } | null)?.error?.message || '候选检查服务暂时不可用。');
@@ -4342,7 +4370,7 @@ function aiPermissionSettings(): HTMLElement {
   input.disabled = !NATIVE_AI_READY;
   const copy = node('span');
   copy.append(
-    node('strong', '', NATIVE_AI_READY ? '允许主动整理' : '远程整理未连接'),
+    node('strong', '', NATIVE_AI_READY ? '允许主动整理' : 'MiniMax 未配置'),
     node('span', 'caption', NATIVE_AI_READY ? '每次发送前确认范围。' : '本地功能不受影响；此版本不会发送内容。'),
   );
   permission.append(copy, input);
@@ -4358,20 +4386,24 @@ function aiPermissionSettings(): HTMLElement {
       input.disabled = false;
     }
   });
-  const health = node('p', 'caption', NATIVE_AI_READY ? '发送前始终显示范围。' : NATIVE_AI_UNAVAILABLE);
-  const check = node('button', 'button button-secondary', '检查整理服务');
+  const health = node('p', 'caption', NATIVE_AI_READY ? (NATIVE_DIRECT_AI_READY ? `个人直连已配置 · ${NATIVE_AI_MODEL}` : '发送前始终显示范围。') : NATIVE_AI_UNAVAILABLE);
+  const check = node('button', 'button button-secondary', '检查 AI 配置');
   check.type = 'button';
   check.disabled = !NATIVE_AI_READY;
   check.addEventListener('click', async () => {
     check.disabled = true;
     try {
+      if (NATIVE_DIRECT_AI_READY) {
+        health.textContent = `个人直连已配置 · ${NATIVE_AI_MODEL} · 合约 ${ANALYSIS_CONTRACT_VERSION}`;
+        return;
+      }
       const response = await fetch(apiUrl('/api/health'), { cache: 'no-store' });
       const value = await response.json() as { configured?: boolean; model?: string; contractVersion?: string };
       health.textContent = value.configured
         ? `服务已配置 · ${value.model ?? '模型未标识'} · 合约 ${value.contractVersion ?? '未知'}`
         : '同源服务可用，但尚未配置服务端密钥。';
     } catch {
-      health.textContent = '当前页面没有连接同源整理服务；本地功能仍可完整使用。';
+      health.textContent = '当前页面没有可用的 AI 配置；本地功能仍可完整使用。';
     } finally {
       check.disabled = false;
     }
@@ -4660,6 +4692,7 @@ function renderDatabaseFailure(error: unknown): void {
 
 async function start(): Promise<void> {
   try {
+    await initializeNativeAi();
     db = await QiguangDb.open();
     await db.ensureI2Defaults();
     settings = await db.getSettings();
