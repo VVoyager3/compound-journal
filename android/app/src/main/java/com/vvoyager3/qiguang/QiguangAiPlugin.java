@@ -30,27 +30,33 @@ public class QiguangAiPlugin extends Plugin {
     @PluginMethod
     public void request(PluginCall call) {
         JSObject payload = call.getObject("payload");
-        if (BuildConfig.QIGUANG_MINIMAX_API_KEY.trim().isEmpty()) {
-            call.reject("这台设备尚未配置 MiniMax 密钥。");
-            return;
-        }
         if (payload == null) {
             call.reject("模型请求不能为空。");
             return;
         }
+        final String requestApiKey = payload.optString("apiKey").trim();
+        final String effectiveApiKey = requestApiKey.isEmpty() ? BuildConfig.QIGUANG_MINIMAX_API_KEY.trim() : requestApiKey;
+        if (effectiveApiKey.isEmpty()) {
+            call.reject("这台设备尚未配置 MiniMax 密钥。");
+            return;
+        }
+        final String requestedModel = payload.optString("model").trim();
         executor.execute(() -> {
             try {
-                call.resolve(send(payload));
+                call.resolve(send(payload, effectiveApiKey, requestedModel));
             } catch (Exception error) {
                 call.reject("MiniMax 中国区接口暂时无法连接。", error);
             }
         });
     }
 
-    private JSObject send(JSObject payload) throws Exception {
+    private JSObject send(JSObject payload, String apiKey, String model) throws Exception {
         URL url = new URL(BuildConfig.QIGUANG_MINIMAX_API_URL);
         if (!"https".equalsIgnoreCase(url.getProtocol())) throw new IllegalArgumentException("MiniMax 接口必须使用 HTTPS。");
-        payload.put("model", BuildConfig.QIGUANG_MINIMAX_MODEL);
+        if (payload.has("apiKey")) {
+            payload.remove("apiKey");
+        }
+        payload.put("model", model.isEmpty() ? BuildConfig.QIGUANG_MINIMAX_MODEL : model);
         byte[] requestBody = payload.toString().getBytes(StandardCharsets.UTF_8);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         try {
@@ -58,7 +64,7 @@ public class QiguangAiPlugin extends Plugin {
             connection.setConnectTimeout(15_000);
             connection.setReadTimeout(50_000);
             connection.setDoOutput(true);
-            connection.setRequestProperty("Authorization", "Bearer " + BuildConfig.QIGUANG_MINIMAX_API_KEY);
+            connection.setRequestProperty("Authorization", "Bearer " + apiKey);
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
             connection.setRequestProperty("Accept", "application/json");
             connection.setFixedLengthStreamingMode(requestBody.length);

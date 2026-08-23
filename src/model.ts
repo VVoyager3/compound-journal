@@ -92,6 +92,8 @@ export interface AppSettings extends BaseEntity {
   aiAllowed: boolean;
   previewBeforeSend: boolean;
   guidanceTone: 'gentle' | 'direct';
+  aiModel?: 'MiniMax-M3' | 'MiniMax-M2.7';
+  aiApiKey?: string;
 }
 
 export interface Profile extends ImportableEntity {

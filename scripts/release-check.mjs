@@ -35,5 +35,5 @@ const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 const sync = spawnSync(npx, ['cap', 'sync', 'android'], { stdio: 'inherit', shell: process.platform === 'win32' });
 if (sync.status !== 0) process.exit(sync.status ?? 1);
 const gradle = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
-const android = spawnSync(gradle, ['assembleDebug'], { cwd: 'android', stdio: 'inherit', shell: process.platform === 'win32' });
+const android = spawnSync(gradle, [':app:assembleDebug'], { cwd: 'android', stdio: 'inherit', shell: process.platform === 'win32' });
 process.exit(android.status ?? 1);

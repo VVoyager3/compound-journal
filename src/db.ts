@@ -53,7 +53,7 @@ import { DIFFICULTY_XP, canAddQuest, habitMomentum, levelFromXp, questXp, resolv
 export const DB_NAME = 'qiguang';
 export const DB_VERSION = 4;
 export const BACKUP_FORMAT_VERSION = 4;
-export const APP_VERSION = '0.6.4';
+export const APP_VERSION = '0.6.9';
 
 const STORE_NAMES = [
   'profile',
@@ -791,6 +791,12 @@ export function parseBackup(text: string): BackupBundle {
     }
     if (item.guidanceTone === undefined) item.guidanceTone = 'gentle';
     assertOneOf(item.guidanceTone, ['gentle', 'direct'], '指导语气');
+    if (item.aiModel === undefined) item.aiModel = 'MiniMax-M3';
+    if (item.aiModel !== 'MiniMax-M3' && item.aiModel !== 'MiniMax-M2.7') throw new Error('设置数据无效。');
+    if (item.aiApiKey !== undefined && typeof item.aiApiKey !== 'string') throw new Error('设置数据无效。');
+    if (typeof item.aiApiKey === 'string' && item.aiApiKey.length > 4_096) {
+      throw new Error('设置数据无效。');
+    }
   });
 
   return { ...bundle, formatVersion: BACKUP_FORMAT_VERSION } as BackupBundle;
@@ -1763,15 +1769,16 @@ export class QiguangDb {
     const transaction = this.database.transaction('settings', 'readonly');
     const saved = await requestResult(transaction.objectStore('settings').get('app')) as AppSettings | undefined;
     await transactionDone(transaction);
-    if (saved) return { ...saved, guidanceTone: saved.guidanceTone ?? 'gentle' };
+    if (saved) return { ...saved, guidanceTone: saved.guidanceTone ?? 'gentle', aiModel: saved.aiModel ?? 'MiniMax-M3' };
     const timestamp = nowIso();
     return {
       id: 'app', reduceMotion: false, onboardingSeen: false, aiAllowed: false, previewBeforeSend: true, guidanceTone: 'gentle',
+      aiModel: 'MiniMax-M3',
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
   }
 
-  async saveSettings(patch: Partial<Pick<AppSettings, 'reduceMotion' | 'onboardingSeen' | 'aiAllowed' | 'previewBeforeSend' | 'guidanceTone'>>): Promise<AppSettings> {
+  async saveSettings(patch: Partial<Pick<AppSettings, 'reduceMotion' | 'onboardingSeen' | 'aiAllowed' | 'previewBeforeSend' | 'guidanceTone' | 'aiModel' | 'aiApiKey'>>): Promise<AppSettings> {
     const current = await this.getSettings();
     const updated = { ...current, ...patch, updatedAt: nowIso() };
     const transaction = this.database.transaction('settings', 'readwrite');

@@ -104,6 +104,7 @@ test('service worker is versioned, keeps AI network-only, and waits for an expli
   }
 
   const app = await read('src/app.ts');
+  assert.match(app, /import\.meta\.env\.DEV \|\| Capacitor\.isNativePlatform\(\)[\s\S]*serviceWorker\.getRegistrations\(\)[\s\S]*qiguang-shell-/, 'development and the embedded Android shell must remove stale PWA caches');
   assert.match(app, /serviceWorker\.register\(['"]\/sw\.js['"]/);
   assert.match(app, /updatefound/);
   assert.match(app, /SKIP_WAITING/);
@@ -260,7 +261,8 @@ test('native release check validates, syncs, and builds the Android package in o
   const script = await read('scripts/release-check.mjs');
   assert.equal(packageJson.scripts['check:android-release'], 'node --env-file-if-exists=.env scripts/release-check.mjs --native');
   assert.match(script, /\['cap', 'sync', 'android'\]/);
-  assert.match(script, /\['assembleDebug'\]/);
+  assert.match(script, /\[':app:assembleDebug'\]/);
+  assert.match(packageJson.scripts['android:debug'], /gradlew\.bat :app:assembleDebug/);
 });
 
 test('deferred Android device check accepts one real device and preserves installed data', async () => {

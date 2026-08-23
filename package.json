@@ -1,6 +1,6 @@
 {
   "name": "qiguang",
-  "version": "0.6.4",
+  "version": "0.6.9",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "android:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",
-    "android:debug": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "android:debug": "npm run android:sync && cd android && gradlew.bat :app:assembleDebug",
     "test:android-device": "pwsh -NoProfile -File scripts/android-device-check.ps1",
     "serve": "npm run build && node --env-file-if-exists=.env --experimental-strip-types server.mjs",
     "eval:ai": "node --experimental-strip-types scripts/ai-eval.mjs",

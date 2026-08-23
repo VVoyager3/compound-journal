@@ -13,7 +13,7 @@ interface NativeAiResponse { status: number; data: string }
 interface MiniMaxResponse { input_sensitive?: boolean; choices?: Array<{ message?: { content?: string } }> }
 interface NativeAiBridge {
   configuration(): Promise<NativeAiConfiguration>;
-  request(options: { payload: ModelPayload }): Promise<NativeAiResponse>;
+  request(options: { payload: ModelPayload & { apiKey?: string } }): Promise<NativeAiResponse>;
 }
 
 const nativeAi = registerPlugin<NativeAiBridge>('QiguangAi');
@@ -39,14 +39,14 @@ export async function nativeAiConfiguration(): Promise<NativeAiConfiguration> {
   }
 }
 
-export async function analyzeDirectWithBridge(request: AnalysisRequest, bridge: Pick<NativeAiBridge, 'request'>, model = 'MiniMax-M3') {
+export async function analyzeDirectWithBridge(request: AnalysisRequest, bridge: Pick<NativeAiBridge, 'request'>, model = 'MiniMax-M3', apiKey?: string) {
   const parsed = parseRequest(request);
   if (new TextEncoder().encode(JSON.stringify(parsed)).byteLength > 256 * 1024) throw aiError('请求超过 256KB。', 'INPUT_TOO_LARGE');
   if (hasImmediateDangerSignal(parsed)) throw aiError('当下安全最重要；请先查看本地求助资源或联系可信任的人。', 'SAFETY_REVIEW');
   return analyzeWithModel(parsed, async (payload) => {
     let response: NativeAiResponse;
     try {
-      response = await bridge.request({ payload });
+      response = await bridge.request({ payload: { ...payload, apiKey: apiKey?.trim() || undefined } });
     } catch {
       throw aiError('MiniMax 中国区接口暂时无法连接。', 'SERVICE_UNAVAILABLE', true);
     }
@@ -61,6 +61,6 @@ export async function analyzeDirectWithBridge(request: AnalysisRequest, bridge: 
   }, model);
 }
 
-export function analyzeWithNativeAi(request: AnalysisRequest, model: string) {
-  return analyzeDirectWithBridge(request, nativeAi, model);
+export function analyzeWithNativeAi(request: AnalysisRequest, model: string, apiKey?: string) {
+  return analyzeDirectWithBridge(request, nativeAi, model, apiKey);
 }
