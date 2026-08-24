@@ -55,7 +55,7 @@ final class QiguangWidgetBridge {
 
     @JavascriptInterface
     public boolean requestPinWidget() {
-        if (!canRequestPinWidget() || hasPinnedWidget()) return false;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !canRequestPinWidget() || hasPinnedWidget()) return false;
         return AppWidgetManager.getInstance(context).requestPinAppWidget(
             new ComponentName(context, QiguangWidgetProvider.class),
             null,
