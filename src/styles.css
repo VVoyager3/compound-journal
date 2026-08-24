@@ -580,10 +580,10 @@ p {
   --walk-back-4: -188px -274px;
   --walk-back-5: -239px -274px;
   --walk-back-6: -278px -274px;
-  --inspect-frame: -350px -165px;
-  --listen-frame: -424px -165px;
-  --read-frame: -415px -92px;
-  --work-frame: -245px -3px;
+  --face-front-frame: -35px -3px;
+  --face-left-frame: -105px -3px;
+  --face-back-frame: -180px -3px;
+  --face-right-frame: -245px -3px;
   --turn-1: var(--walk-1);
   --turn-2: var(--walk-2);
   --turn-3: var(--walk-3);
@@ -618,11 +618,11 @@ p {
 }
 
 .room-character.has-motion.is-action-desk {
-  --action-x: clamp(-132px, -29vw, -92px);
+  --action-x: clamp(-48px, -12vw, -38px);
   --action-y: clamp(-28px, -5vw, -16px);
-  --waypoint-x: clamp(-76px, -18vw, -56px);
+  --waypoint-x: -28px;
   --waypoint-y: -4px;
-  --interaction-frame: var(--read-frame);
+  --interaction-frame: var(--face-left-frame);
   --walk-1: var(--walk-left-1);
   --walk-2: var(--walk-left-2);
   --walk-3: var(--walk-left-3);
@@ -639,10 +639,10 @@ p {
 
 .room-character.has-motion.is-action-board {
   --action-x: -8px;
-  --action-y: -72px;
+  --action-y: -20px;
   --waypoint-x: -4px;
-  --waypoint-y: -38px;
-  --interaction-frame: var(--inspect-frame);
+  --waypoint-y: -10px;
+  --interaction-frame: var(--face-back-frame);
   --walk-1: var(--walk-back-1);
   --walk-2: var(--walk-back-2);
   --walk-3: var(--walk-back-3);
@@ -658,11 +658,11 @@ p {
 }
 
 .room-character.has-motion.is-action-calendar {
-  --action-x: clamp(68px, 20vw, 98px);
-  --action-y: -70px;
+  --action-x: clamp(52px, 16vw, 64px);
+  --action-y: -20px;
   --waypoint-x: 18px;
-  --waypoint-y: -50px;
-  --interaction-frame: var(--inspect-frame);
+  --waypoint-y: -10px;
+  --interaction-frame: var(--face-back-frame);
   --walk-1: var(--walk-back-1);
   --walk-2: var(--walk-back-2);
   --walk-3: var(--walk-back-3);
@@ -690,11 +690,11 @@ p {
 }
 
 .room-character.has-motion.is-action-workbench {
-  --action-x: clamp(84px, 26vw, 125px);
+  --action-x: clamp(42px, 14vw, 58px);
   --action-y: clamp(-28px, -5vw, -16px);
-  --waypoint-x: clamp(54px, 16vw, 76px);
+  --waypoint-x: 30px;
   --waypoint-y: -4px;
-  --interaction-frame: var(--work-frame);
+  --interaction-frame: var(--face-right-frame);
   --walk-1: var(--walk-right-1);
   --walk-2: var(--walk-right-2);
   --walk-3: var(--walk-right-3);
@@ -710,11 +710,11 @@ p {
 }
 
 .room-character.has-motion.is-action-window {
-  --action-x: clamp(-64px, -12vw, -36px);
-  --action-y: clamp(-128px, -26vw, -78px);
+  --action-x: -24px;
+  --action-y: -20px;
   --waypoint-x: -4px;
-  --waypoint-y: -60px;
-  --interaction-frame: var(--listen-frame);
+  --waypoint-y: -10px;
+  --interaction-frame: var(--face-back-frame);
   --walk-1: var(--walk-back-1);
   --walk-2: var(--walk-back-2);
   --walk-3: var(--walk-back-3);
@@ -742,9 +742,9 @@ p {
 }
 
 .room-character.has-motion.is-action-bed {
-  --action-x: clamp(-64px, -14vw, -42px);
+  --action-x: -10px;
   --action-y: clamp(18px, 5vw, 30px);
-  --waypoint-x: -38px;
+  --waypoint-x: -6px;
   --waypoint-y: 4px;
   --interaction-frame: var(--rest-frame);
   --walk-1: var(--walk-left-1);

@@ -563,7 +563,7 @@ test('the companion wanders naturally and walks to furniture before direct navig
     await assert.doesNotReject(() => page.locator('.room-character.is-action-desk.is-interacting').waitFor());
     await assert.doesNotReject(() => page.getByText('坐到椅子上，写下一件真实发生的事。', { exact: true }).waitFor());
     await page.waitForTimeout(120);
-    assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), '-415px -92px');
+    assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), '-105px -3px');
     await page.waitForURL(/#\/record$/);
     assert.deepEqual(apiRequests, []);
   } finally {
@@ -979,11 +979,11 @@ test('selected companion uses the supplied portrait and matching room sprite', a
 test('room furniture walks end at the matching interaction anchors', async () => {
   const { context, page, apiRequests } = await freshPage();
   const destinations = [
-    ['打开记录', 'desk', /#\/record$/, [0.08, 0.25, 0.68, 0.84], '-415px -92px'],
-    ['打开任务', 'board', /#\/tasks$/, [0.42, 0.58, 0.46, 0.73], '-350px -165px'],
-    ['打开日历', 'calendar', /#\/calendar$/, [0.61, 0.88, 0.46, 0.73], '-350px -165px'],
-    ['打开成长', 'workbench', /#\/growth$/, [0.72, 0.94, 0.68, 0.84], '-245px -3px'],
-    ['打开状态', 'window', /#\/system$/, [0.31, 0.44, 0.40, 0.68], '-424px -165px'],
+    ['打开记录', 'desk', /#\/record$/, [0.31, 0.44, 0.68, 0.84], '-105px -3px'],
+    ['打开任务', 'board', /#\/tasks$/, [0.42, 0.58, 0.68, 0.84], '-180px -3px'],
+    ['打开日历', 'calendar', /#\/calendar$/, [0.58, 0.75, 0.68, 0.84], '-180px -3px'],
+    ['打开成长', 'workbench', /#\/growth$/, [0.60, 0.73, 0.68, 0.84], '-245px -3px'],
+    ['打开状态', 'window', /#\/system$/, [0.31, 0.44, 0.68, 0.84], '-180px -3px'],
   ];
   try {
     await finishOnboarding(page);
@@ -1004,7 +1004,7 @@ test('room furniture walks end at the matching interaction anchors', async () =>
       });
       assert.ok(position.x >= minX && position.x <= maxX && position.y >= minY && position.y <= maxY,
         `${action} must align with its furniture, got ${JSON.stringify(position)}`);
-      assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), interactionFrame, `${action} must use its dedicated interaction pose`);
+      assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), interactionFrame, `${action} must use a clean character-only interaction pose`);
       await page.waitForURL(route);
     }
     assert.deepEqual(apiRequests, []);
@@ -1025,6 +1025,13 @@ test('the bed gives a short recovery interaction and returns the companion to th
     await assert.doesNotReject(() => page.getByText('歇一会儿。准备好再继续，也算照顾今天。', { exact: true }).waitFor());
     await page.waitForTimeout(120);
     assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), '-350px -246px');
+    const resting = await character.evaluate((element) => {
+      const room = element.closest('.room-scene').getBoundingClientRect();
+      const box = element.getBoundingClientRect();
+      return { x: (box.left + box.width / 2 - room.left) / room.width, y: (box.bottom - room.top) / room.height };
+    });
+    assert.ok(resting.x >= .40 && resting.x <= .55 && resting.y >= .78 && resting.y <= .94,
+      `rest must stay beside the bed instead of crossing it, got ${JSON.stringify(resting)}`);
     assert.match(page.url(), /#\/today$/);
     await assert.doesNotReject(() => page.locator('.room-character.is-action-bed.is-returning').waitFor());
     await assert.doesNotReject(() => page.locator('.room-character.is-action-bed').waitFor({ state: 'detached' }));
