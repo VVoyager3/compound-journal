@@ -75,7 +75,7 @@ const AVAILABLE_AI_MODELS = ['MiniMax-M3', 'MiniMax-M2.7'] as const;
 type AiModelChoice = (typeof AVAILABLE_AI_MODELS)[number];
 const DEFAULT_AI_MODEL: AiModelChoice = AVAILABLE_AI_MODELS[0];
 const FURNITURE_APPROACH_MS = 760;
-const FURNITURE_USE_MS = 520;
+const FURNITURE_USE_MS = 660;
 const FURNITURE_RETURN_MS = 760;
 const NATIVE_PLATFORM = Capacitor.isNativePlatform();
 const BASE_AI_READY = !NATIVE_PLATFORM || (() => {

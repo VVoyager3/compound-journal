@@ -584,6 +584,19 @@ p {
   --listen-frame: -424px -165px;
   --read-frame: -415px -92px;
   --work-frame: -245px -3px;
+  --turn-1: var(--walk-1);
+  --turn-2: var(--walk-2);
+  --turn-3: var(--walk-3);
+  --turn-4: var(--walk-4);
+  --turn-5: var(--walk-5);
+  --turn-6: var(--walk-6);
+  --return-turn-1: var(--return-1);
+  --return-turn-2: var(--return-2);
+  --return-turn-3: var(--return-3);
+  --return-turn-4: var(--return-4);
+  --return-turn-5: var(--return-5);
+  --return-turn-6: var(--return-6);
+  --arrival-frame: var(--turn-6);
 }
 
 .room-character.has-motion::before {
@@ -607,6 +620,8 @@ p {
 .room-character.has-motion.is-action-desk {
   --action-x: clamp(-132px, -29vw, -92px);
   --action-y: clamp(-28px, -5vw, -16px);
+  --waypoint-x: clamp(-76px, -18vw, -56px);
+  --waypoint-y: -4px;
   --interaction-frame: var(--read-frame);
   --walk-1: var(--walk-left-1);
   --walk-2: var(--walk-left-2);
@@ -625,6 +640,8 @@ p {
 .room-character.has-motion.is-action-board {
   --action-x: -8px;
   --action-y: -72px;
+  --waypoint-x: -4px;
+  --waypoint-y: -38px;
   --interaction-frame: var(--inspect-frame);
   --walk-1: var(--walk-back-1);
   --walk-2: var(--walk-back-2);
@@ -643,6 +660,8 @@ p {
 .room-character.has-motion.is-action-calendar {
   --action-x: clamp(68px, 20vw, 98px);
   --action-y: -70px;
+  --waypoint-x: 18px;
+  --waypoint-y: -50px;
   --interaction-frame: var(--inspect-frame);
   --walk-1: var(--walk-back-1);
   --walk-2: var(--walk-back-2);
@@ -650,17 +669,31 @@ p {
   --walk-4: var(--walk-back-4);
   --walk-5: var(--walk-back-5);
   --walk-6: var(--walk-back-6);
-  --return-1: var(--walk-front-1);
-  --return-2: var(--walk-front-2);
-  --return-3: var(--walk-front-3);
-  --return-4: var(--walk-front-4);
-  --return-5: var(--walk-front-5);
-  --return-6: var(--walk-front-6);
+  --turn-1: var(--walk-right-1);
+  --turn-2: var(--walk-right-2);
+  --turn-3: var(--walk-right-3);
+  --turn-4: var(--walk-right-4);
+  --turn-5: var(--walk-right-5);
+  --turn-6: var(--walk-right-6);
+  --return-1: var(--walk-left-1);
+  --return-2: var(--walk-left-2);
+  --return-3: var(--walk-left-3);
+  --return-4: var(--walk-left-4);
+  --return-5: var(--walk-left-5);
+  --return-6: var(--walk-left-6);
+  --return-turn-1: var(--walk-front-1);
+  --return-turn-2: var(--walk-front-2);
+  --return-turn-3: var(--walk-front-3);
+  --return-turn-4: var(--walk-front-4);
+  --return-turn-5: var(--walk-front-5);
+  --return-turn-6: var(--walk-front-6);
 }
 
 .room-character.has-motion.is-action-workbench {
   --action-x: clamp(84px, 26vw, 125px);
   --action-y: clamp(-28px, -5vw, -16px);
+  --waypoint-x: clamp(54px, 16vw, 76px);
+  --waypoint-y: -4px;
   --interaction-frame: var(--work-frame);
   --walk-1: var(--walk-right-1);
   --walk-2: var(--walk-right-2);
@@ -679,6 +712,8 @@ p {
 .room-character.has-motion.is-action-window {
   --action-x: clamp(-64px, -12vw, -36px);
   --action-y: clamp(-128px, -26vw, -78px);
+  --waypoint-x: -4px;
+  --waypoint-y: -60px;
   --interaction-frame: var(--listen-frame);
   --walk-1: var(--walk-back-1);
   --walk-2: var(--walk-back-2);
@@ -686,17 +721,31 @@ p {
   --walk-4: var(--walk-back-4);
   --walk-5: var(--walk-back-5);
   --walk-6: var(--walk-back-6);
-  --return-1: var(--walk-front-1);
-  --return-2: var(--walk-front-2);
-  --return-3: var(--walk-front-3);
-  --return-4: var(--walk-front-4);
-  --return-5: var(--walk-front-5);
-  --return-6: var(--walk-front-6);
+  --turn-1: var(--walk-left-1);
+  --turn-2: var(--walk-left-2);
+  --turn-3: var(--walk-left-3);
+  --turn-4: var(--walk-left-4);
+  --turn-5: var(--walk-left-5);
+  --turn-6: var(--walk-left-6);
+  --return-1: var(--walk-right-1);
+  --return-2: var(--walk-right-2);
+  --return-3: var(--walk-right-3);
+  --return-4: var(--walk-right-4);
+  --return-5: var(--walk-right-5);
+  --return-6: var(--walk-right-6);
+  --return-turn-1: var(--walk-front-1);
+  --return-turn-2: var(--walk-front-2);
+  --return-turn-3: var(--walk-front-3);
+  --return-turn-4: var(--walk-front-4);
+  --return-turn-5: var(--walk-front-5);
+  --return-turn-6: var(--walk-front-6);
 }
 
 .room-character.has-motion.is-action-bed {
   --action-x: clamp(-64px, -14vw, -42px);
   --action-y: clamp(18px, 5vw, 30px);
+  --waypoint-x: -38px;
+  --waypoint-y: 4px;
   --interaction-frame: var(--rest-frame);
   --walk-1: var(--walk-left-1);
   --walk-2: var(--walk-left-2);
@@ -704,12 +753,24 @@ p {
   --walk-4: var(--walk-left-4);
   --walk-5: var(--walk-left-5);
   --walk-6: var(--walk-left-6);
-  --return-1: var(--walk-right-1);
-  --return-2: var(--walk-right-2);
-  --return-3: var(--walk-right-3);
-  --return-4: var(--walk-right-4);
-  --return-5: var(--walk-right-5);
-  --return-6: var(--walk-right-6);
+  --turn-1: var(--walk-front-1);
+  --turn-2: var(--walk-front-2);
+  --turn-3: var(--walk-front-3);
+  --turn-4: var(--walk-front-4);
+  --turn-5: var(--walk-front-5);
+  --turn-6: var(--walk-front-6);
+  --return-1: var(--walk-back-1);
+  --return-2: var(--walk-back-2);
+  --return-3: var(--walk-back-3);
+  --return-4: var(--walk-back-4);
+  --return-5: var(--walk-back-5);
+  --return-6: var(--walk-back-6);
+  --return-turn-1: var(--walk-right-1);
+  --return-turn-2: var(--walk-right-2);
+  --return-turn-3: var(--walk-right-3);
+  --return-turn-4: var(--walk-right-4);
+  --return-turn-5: var(--walk-right-5);
+  --return-turn-6: var(--walk-right-6);
 }
 
 .room-character.has-motion.is-resting:not([class*="is-action-"]) {
@@ -3112,25 +3173,28 @@ noscript {
 
   .room-character.has-motion[class*="is-action-"].is-walking {
     animation:
-      room-action 760ms steps(12, end) both,
-      room-walk-cycle 760ms steps(1, end) both;
+      room-action 760ms cubic-bezier(.4, 0, .2, 1) both,
+      room-walk-cycle 760ms steps(1, end) both,
+      room-footfall 760ms steps(1, end) both;
   }
 
   .room-character.has-motion[class*="is-action-"].is-interacting {
     background-position: var(--interaction-frame);
-    animation: room-furniture-use 520ms steps(1, end) both;
+    animation: room-furniture-use 660ms steps(1, end) both;
   }
 
   .room-character.has-motion[class*="is-action-"].is-returning {
     animation:
-      room-return 760ms steps(12, end) both,
-      room-return-walk-cycle 760ms steps(1, end) both;
+      room-return 760ms cubic-bezier(.4, 0, .2, 1) both,
+      room-return-walk-cycle 760ms steps(1, end) both,
+      room-footfall 760ms steps(1, end) both;
   }
 
   .room-character.has-motion.is-ambient-walk:not(.is-resting):not([class*="is-action-"]):not(.is-welcoming):not(.is-celebrating) {
     animation:
-      room-ambient-walk 7200ms steps(5, end) 1 both,
-      room-ambient-walk-sprite 7200ms steps(1, end) 1 both;
+      room-ambient-walk 5200ms cubic-bezier(.4, 0, .2, 1) 1 both,
+      room-ambient-walk-sprite 5200ms steps(1, end) 1 both,
+      room-ambient-footfall 5200ms steps(1, end) 1 both;
   }
 
   .room-character.has-motion.is-ambient-read:not(.is-resting):not([class*="is-action-"]):not(.is-welcoming):not(.is-celebrating) {
@@ -3195,38 +3259,56 @@ noscript {
 
   @keyframes room-action {
     0%, 6% { transform: translate3d(-50%, 0, 0); }
+    48% { transform: translate3d(calc(-50% + var(--waypoint-x)), var(--waypoint-y), 0); }
     88%, 100% { transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); }
   }
 
   @keyframes room-walk-cycle {
     0%, 6% { background-position: var(--idle-frame); clip-path: inset(0); }
-    7%, 13%, 55%, 61% { background-position: var(--walk-1); clip-path: inset(0 8px 22px 4px); }
-    14%, 20%, 62%, 68% { background-position: var(--walk-2); clip-path: inset(0 8px 22px 4px); }
-    21%, 27%, 69%, 75% { background-position: var(--walk-3); clip-path: inset(0 8px 22px 4px); }
-    28%, 34%, 76%, 82% { background-position: var(--walk-4); clip-path: inset(0 8px 22px 4px); }
-    35%, 41%, 83%, 87% { background-position: var(--walk-5); clip-path: inset(0 8px 22px 4px); }
+    7%, 13% { background-position: var(--walk-1); clip-path: inset(0 8px 22px 4px); }
+    14%, 20% { background-position: var(--walk-2); clip-path: inset(0 8px 22px 4px); }
+    21%, 27% { background-position: var(--walk-3); clip-path: inset(0 8px 22px 4px); }
+    28%, 34% { background-position: var(--walk-4); clip-path: inset(0 8px 22px 4px); }
+    35%, 41% { background-position: var(--walk-5); clip-path: inset(0 8px 22px 4px); }
     42%, 54% { background-position: var(--walk-6); clip-path: inset(0 8px 22px 4px); }
-    88%, 100% { background-position: var(--happy-frame); clip-path: inset(0); }
+    55%, 61% { background-position: var(--turn-1); clip-path: inset(0 8px 22px 4px); }
+    62%, 68% { background-position: var(--turn-2); clip-path: inset(0 8px 22px 4px); }
+    69%, 75% { background-position: var(--turn-3); clip-path: inset(0 8px 22px 4px); }
+    76%, 82% { background-position: var(--turn-4); clip-path: inset(0 8px 22px 4px); }
+    83%, 87% { background-position: var(--turn-5); clip-path: inset(0 8px 22px 4px); }
+    88%, 100% { background-position: var(--arrival-frame); clip-path: inset(0 8px 22px 4px); }
+  }
+
+  @keyframes room-footfall {
+    0%, 6%, 14%, 20%, 28%, 34%, 42%, 54%, 62%, 68%, 76%, 82%, 88%, 100% { translate: 0 0; }
+    7%, 13%, 21%, 27%, 35%, 41%, 55%, 61%, 69%, 75%, 83%, 87% { translate: 0 -2px; }
   }
 
   @keyframes room-furniture-use {
-    0%, 100% { background-position: var(--interaction-frame); transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); }
-    45%, 60% { background-position: var(--interaction-frame); transform: translate3d(calc(-50% + var(--action-x)), calc(var(--action-y) - 1px), 0); }
+    0%, 13% { background-position: var(--arrival-frame); transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); translate: 0 0; }
+    14%, 48%, 72%, 100% { background-position: var(--interaction-frame); transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); translate: 0 0; }
+    49%, 71% { background-position: var(--interaction-frame); transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); translate: 0 -1px; }
   }
 
   @keyframes room-return {
     0%, 12% { transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); }
+    52% { transform: translate3d(calc(-50% + var(--waypoint-x)), var(--waypoint-y), 0); }
     94%, 100% { transform: translate3d(-50%, 0, 0); }
   }
 
   @keyframes room-return-walk-cycle {
     0%, 8% { background-position: var(--interaction-frame); clip-path: inset(0); }
-    9%, 16%, 57%, 64% { background-position: var(--return-1); clip-path: inset(0 8px 22px 4px); }
-    17%, 24%, 65%, 72% { background-position: var(--return-2); clip-path: inset(0 8px 22px 4px); }
-    25%, 32%, 73%, 80% { background-position: var(--return-3); clip-path: inset(0 8px 22px 4px); }
-    33%, 40%, 81%, 88% { background-position: var(--return-4); clip-path: inset(0 8px 22px 4px); }
-    41%, 48%, 89%, 93% { background-position: var(--return-5); clip-path: inset(0 8px 22px 4px); }
+    9%, 16% { background-position: var(--return-1); clip-path: inset(0 8px 22px 4px); }
+    17%, 24% { background-position: var(--return-2); clip-path: inset(0 8px 22px 4px); }
+    25%, 32% { background-position: var(--return-3); clip-path: inset(0 8px 22px 4px); }
+    33%, 40% { background-position: var(--return-4); clip-path: inset(0 8px 22px 4px); }
+    41%, 48% { background-position: var(--return-5); clip-path: inset(0 8px 22px 4px); }
     49%, 56% { background-position: var(--return-6); clip-path: inset(0 8px 22px 4px); }
+    57%, 64% { background-position: var(--return-turn-1); clip-path: inset(0 8px 22px 4px); }
+    65%, 72% { background-position: var(--return-turn-2); clip-path: inset(0 8px 22px 4px); }
+    73%, 80% { background-position: var(--return-turn-3); clip-path: inset(0 8px 22px 4px); }
+    81%, 88% { background-position: var(--return-turn-4); clip-path: inset(0 8px 22px 4px); }
+    89%, 93% { background-position: var(--return-turn-5); clip-path: inset(0 8px 22px 4px); }
     94%, 100% { background-position: var(--happy-frame); clip-path: inset(0); }
   }
 
@@ -3249,6 +3331,11 @@ noscript {
     51%, 55% { background-position: var(--walk-right-3); clip-path: inset(0 8px 22px 4px); }
     56%, 59% { background-position: var(--walk-right-4); clip-path: inset(0 8px 22px 4px); }
     60%, 62% { background-position: var(--walk-right-5); clip-path: inset(0 8px 22px 4px); }
+  }
+
+  @keyframes room-ambient-footfall {
+    0%, 4%, 9%, 12%, 17%, 20%, 27%, 40%, 46%, 50%, 56%, 59%, 63%, 74%, 79%, 82%, 87%, 90%, 93%, 100% { translate: 0 0; }
+    5%, 8%, 13%, 16%, 21%, 26%, 41%, 45%, 51%, 55%, 60%, 62%, 75%, 78%, 83%, 86%, 91%, 92% { translate: 0 -2px; }
   }
 
   @keyframes room-ambient-read {

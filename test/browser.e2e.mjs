@@ -548,7 +548,8 @@ test('the companion wanders naturally and walks to furniture before direct navig
     const actionTiming = await character.evaluate((element) => getComputedStyle(element).animationTimingFunction);
     assert.match(actionAnimations, /room-action/);
     assert.match(actionAnimations, /room-walk-cycle/);
-    assert.match(actionTiming, /steps\(12/, 'spatial movement should advance with footfalls instead of gliding linearly');
+    assert.match(actionAnimations, /room-footfall/);
+    assert.match(actionTiming, /cubic-bezier\(0\.4, 0, 0\.2, 1\)/, 'the route should ease through its waypoints instead of jumping or gliding at constant speed');
     assert.doesNotMatch(actionAnimations, /step-weight/);
     await page.waitForTimeout(90);
     const firstStep = await character.evaluate((element) => getComputedStyle(element).backgroundPosition);
@@ -561,6 +562,7 @@ test('the companion wanders naturally and walks to furniture before direct navig
     assert.match(await character.evaluate((element) => getComputedStyle(element).clipPath), /inset\(0px 8px 22px 4px/, 'walking frames should crop adjacent sprites from the atlas on both axes');
     await assert.doesNotReject(() => page.locator('.room-character.is-action-desk.is-interacting').waitFor());
     await assert.doesNotReject(() => page.getByText('坐到椅子上，写下一件真实发生的事。', { exact: true }).waitFor());
+    await page.waitForTimeout(120);
     assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), '-415px -92px');
     await page.waitForURL(/#\/record$/);
     assert.deepEqual(apiRequests, []);
@@ -991,6 +993,7 @@ test('room furniture walks end at the matching interaction anchors', async () =>
       const character = page.locator(`.room-character.is-action-${action}`);
       await assert.doesNotReject(() => character.waitFor());
       await assert.doesNotReject(() => page.locator(`.room-character.is-action-${action}.is-interacting`).waitFor());
+      await page.waitForTimeout(120);
       const position = await character.evaluate((element) => {
         const room = element.closest('.room-scene').getBoundingClientRect();
         const box = element.getBoundingClientRect();
@@ -1020,6 +1023,7 @@ test('the bed gives a short recovery interaction and returns the companion to th
     await assert.doesNotReject(() => page.locator('.room-character.is-action-bed.is-walking').waitFor());
     await assert.doesNotReject(() => page.locator('.room-character.is-action-bed.is-interacting').waitFor());
     await assert.doesNotReject(() => page.getByText('歇一会儿。准备好再继续，也算照顾今天。', { exact: true }).waitFor());
+    await page.waitForTimeout(120);
     assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), '-350px -246px');
     assert.match(page.url(), /#\/today$/);
     await assert.doesNotReject(() => page.locator('.room-character.is-action-bed.is-returning').waitFor());
