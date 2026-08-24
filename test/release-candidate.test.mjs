@@ -265,17 +265,24 @@ test('native release check validates, syncs, and builds the Android package in o
   assert.match(packageJson.scripts['android:debug'], /gradlew\.bat :app:assembleDebug/);
 });
 
-test('deferred Android device check accepts one real device and preserves installed data', async () => {
+test('Android device checks preserve installed data and separate emulator mode', async () => {
   const packageJson = JSON.parse(await read('package.json'));
   const script = await read('scripts/android-device-check.ps1');
   const gitignore = await read('.gitignore');
   assert.match(packageJson.scripts['test:android-device'], /android-device-check\.ps1/);
-  assert.match(script, /\$online\.Count -ne 1/);
+  assert.match(packageJson.scripts['test:android-emulator'], /android-device-check\.ps1 -Emulator/);
+  assert.match(script, /\[switch\]\$Emulator/);
+  assert.match(script, /\$candidates\.Count -ne 1/);
   assert.match(script, /ro\.kernel\.qemu/);
   assert.match(script, /install -r \$apk/);
-  assert.match(script, /connectedDebugAndroidTest/);
+  assert.match(script, /:app:assembleDebugAndroidTest/);
+  assert.match(script, /am instrument -w/);
   assert(script.includes('D:\\tmp\\qiguang-device-check'));
+  assert(script.includes('D:\\tmp\\qiguang-emulator-check'));
+  assert.match(script, /svc wifi disable/);
+  assert.match(script, /svc wifi enable/);
   assert.match(script, /ANDROID_USER_HOME.*\.android-user/);
   assert.match(gitignore, /^\.android-user\/$/m);
+  assert.doesNotMatch(script, /connectedDebugAndroidTest/);
   assert.doesNotMatch(script, /adb.*uninstall/i);
 });

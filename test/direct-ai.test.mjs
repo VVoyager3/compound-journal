@@ -32,7 +32,7 @@ function validGoalResponse(request) {
   };
 }
 
-test('personal direct AI validates, repairs once, and never sends a key through JavaScript', async () => {
+test('personal direct AI validates, repairs once, and scopes a custom key to the native bridge payload', async () => {
   const request = goalRequest();
   const payloads = [];
   const bridge = {
@@ -42,10 +42,12 @@ test('personal direct AI validates, repairs once, and never sends a key through 
       return { status: 200, data: JSON.stringify({ choices: [{ message: { content } }] }) };
     },
   };
-  const response = await analyzeDirectWithBridge(request, bridge, 'MiniMax-M2.7');
+  const response = await analyzeDirectWithBridge(request, bridge, 'MiniMax-M2.7', 'custom-local-key');
   assert.equal(response.result.refinedResult, request.userInput.result);
   assert.equal(payloads.length, 2);
   assert.equal(payloads[0].model, 'MiniMax-M2.7');
+  assert.equal(payloads[0].apiKey, 'custom-local-key');
+  assert.equal(JSON.stringify(payloads[0].messages).includes('custom-local-key'), false);
   assert.equal(payloads[1].messages.length, 4, 'second attempt must include contract repair context');
   assert(!JSON.stringify(payloads).includes('Authorization'));
   assert(!JSON.stringify(payloads).includes('MINIMAX_API_KEY'));

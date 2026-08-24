@@ -74,11 +74,13 @@ const AVAILABLE_AI_MODELS = ['MiniMax-M3', 'MiniMax-M2.7'] as const;
 type AiModelChoice = (typeof AVAILABLE_AI_MODELS)[number];
 const DEFAULT_AI_MODEL: AiModelChoice = AVAILABLE_AI_MODELS[0];
 const CHARACTER_WALK_TO_CLICK_MS = 560;
-let NATIVE_DIRECT_AI_READY = false;
-let NATIVE_AI_MODEL = 'MiniMax-M3';
-let NATIVE_AI_READY = !Capacitor.isNativePlatform() || (() => {
+const NATIVE_PLATFORM = Capacitor.isNativePlatform();
+const BASE_AI_READY = !NATIVE_PLATFORM || (() => {
   try { return new URL(API_ORIGIN).protocol === 'https:'; } catch { return false; }
 })();
+let NATIVE_DIRECT_AI_READY = false;
+let NATIVE_AI_MODEL = 'MiniMax-M3';
+let NATIVE_AI_READY = BASE_AI_READY;
 
 function apiUrl(path: '/api/analyze' | '/api/health'): string {
   if (!NATIVE_AI_READY) throw new Error(NATIVE_AI_UNAVAILABLE);
@@ -94,11 +96,11 @@ function nativeAiConfig(): { model: AiModelChoice; apiKey: string | undefined } 
 }
 
 async function initializeNativeAi(): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return;
+  if (!NATIVE_PLATFORM) return;
   const configuration = await nativeAiConfiguration();
   NATIVE_DIRECT_AI_READY = configuration.configured;
   NATIVE_AI_MODEL = configuration.model;
-  if (configuration.configured) NATIVE_AI_READY = true;
+  syncNativeAiAvailability();
 }
 
 function directAiErrorResponse(error: unknown): Response {
@@ -114,7 +116,7 @@ function directAiErrorResponse(error: unknown): Response {
 
 async function requestAnalysis(request: AnalysisRequest, signal: AbortSignal): Promise<Response> {
   const hasCustomApiKey = Boolean((settings.aiApiKey ?? '').trim());
-  if (NATIVE_AI_READY && (NATIVE_DIRECT_AI_READY || hasCustomApiKey)) {
+  if (NATIVE_PLATFORM && (NATIVE_DIRECT_AI_READY || hasCustomApiKey)) {
     const nativeConfig = nativeAiConfig();
     try {
       const result = await analyzeWithNativeAi(request, nativeConfig.model, nativeConfig.apiKey);
@@ -157,6 +159,9 @@ const root: HTMLElement = appRoot;
 
 let db: QiguangDb;
 let settings: AppSettings;
+function syncNativeAiAvailability(): void {
+  NATIVE_AI_READY = BASE_AI_READY || NATIVE_DIRECT_AI_READY || (NATIVE_PLATFORM && Boolean(settings?.aiApiKey?.trim()));
+}
 let currentRoute = parseRoute();
 let previousRouteKey = routeKey(currentRoute);
 let routeNavigationPending = false;
@@ -4165,6 +4170,7 @@ async function importPreview(text: string): Promise<void> {
     try {
       await db.importBundle(text);
       settings = await db.getSettings();
+      syncNativeAiAvailability();
       applySettings();
       dialog.close();
       showToast('备份已合并到本机；冲突内容已保留两份。');
@@ -4528,10 +4534,15 @@ function aiPermissionSettings(): HTMLElement {
     keyStatus.textContent = hasCustom ? `已保存自定义密钥（长度 ${(settings.aiApiKey ?? '').length}，不回显）` : '未保存自定义密钥。留空将使用安装包密钥。';
     keyInput.placeholder = hasCustom ? '已配置自定义密钥（不回显）' : '输入 MiniMax API Key（可选）';
     modelHint.textContent = `当前模型：${model}。${hasCustom ? '当前使用自定义密钥。' : NATIVE_DIRECT_AI_READY ? '当前使用安装包密钥。' : '安装包未配置密钥，需自定义。'}`;
-    const ready = NATIVE_AI_READY && (NATIVE_DIRECT_AI_READY || hasCustom);
-    health.textContent = ready
-      ? `AI 直连可用 · 模型 ${model} ${NATIVE_DIRECT_AI_READY ? '（安装包）' : '（自定义密钥）'}`
-      : NATIVE_AI_READY ? `AI 配置未就绪 · 模型 ${model}` : NATIVE_AI_UNAVAILABLE;
+    const ready = NATIVE_AI_READY;
+    health.textContent = !NATIVE_PLATFORM
+      ? ready ? 'AI 通过同源服务连接；模型由服务端配置。' : '当前没有可用的同源 AI 服务。'
+      : ready
+        ? `AI 可用 · 模型 ${model} ${NATIVE_DIRECT_AI_READY ? '（安装包）' : hasCustom ? '（自定义密钥）' : '（HTTPS 服务）'}`
+        : NATIVE_AI_UNAVAILABLE;
+    permissionInput.checked = NATIVE_AI_READY && settings.aiAllowed;
+    permissionInput.disabled = !NATIVE_AI_READY;
+    check.disabled = !NATIVE_AI_READY;
   }
 
   saveApiKey.addEventListener('click', async () => {
@@ -4543,6 +4554,7 @@ function aiPermissionSettings(): HTMLElement {
         return;
       }
       settings = await db.saveSettings({ aiApiKey: next });
+      syncNativeAiAvailability();
       keyInput.value = '';
       showToast('自定义密钥已保存；下一次请求会优先使用该密钥。');
       updateAiConfigStatus();
@@ -4556,6 +4568,7 @@ function aiPermissionSettings(): HTMLElement {
     clearApiKey.disabled = true;
     try {
       settings = await db.saveSettings({ aiApiKey: undefined });
+      syncNativeAiAvailability();
       showToast('已清除自定义密钥。');
       updateAiConfigStatus();
     } catch (error) {
@@ -4574,6 +4587,8 @@ function aiPermissionSettings(): HTMLElement {
       if (NATIVE_DIRECT_AI_READY) {
         await initializeNativeAi();
         health.textContent = `安装包配置模型 ${NATIVE_AI_MODEL} · 合约 ${ANALYSIS_CONTRACT_VERSION}`;
+      } else if (NATIVE_PLATFORM && (settings.aiApiKey ?? '').trim()) {
+        health.textContent = `自定义密钥已配置 · 模型 ${canonicalAiModel(settings.aiModel)}`;
       } else {
         const response = await fetch(apiUrl('/api/health'), { cache: 'no-store' });
         const value = await response.json() as { configured?: boolean; model?: string; contractVersion?: string };
@@ -4591,7 +4606,9 @@ function aiPermissionSettings(): HTMLElement {
     }
   });
 
-  section.append(permission, modelRow, keyRow, keyActions, keyStatus, health, check);
+  section.append(permission);
+  if (NATIVE_PLATFORM) section.append(modelRow, keyRow, keyActions, keyStatus);
+  section.append(health, check);
   updateAiConfigStatus();
   return section;
 }
@@ -4848,6 +4865,7 @@ function renderDatabaseFailure(error: unknown): void {
       file.disabled = true;
       db = await QiguangDb.restoreFromBackup(text);
       settings = await db.getSettings();
+      syncNativeAiAvailability();
       applySettings();
       history.replaceState(null, '', '#/today');
       await render();
@@ -4872,6 +4890,7 @@ async function start(): Promise<void> {
     db = await QiguangDb.open();
     await db.ensureI2Defaults();
     settings = await db.getSettings();
+    syncNativeAiAvailability();
     applySettings();
     const widgetAction = consumeWidgetAction();
     let widgetNotice = '';

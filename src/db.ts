@@ -797,6 +797,7 @@ export function parseBackup(text: string): BackupBundle {
     if (typeof item.aiApiKey === 'string' && item.aiApiKey.length > 4_096) {
       throw new Error('设置数据无效。');
     }
+    delete item.aiApiKey;
   });
 
   return { ...bundle, formatVersion: BACKUP_FORMAT_VERSION } as BackupBundle;
@@ -2652,12 +2653,14 @@ export class QiguangDb {
     const transaction = this.database.transaction(STORE_NAMES, 'readonly');
     const values = await Promise.all(STORE_NAMES.map((name) => requestResult(transaction.objectStore(name).getAll())));
     await transactionDone(transaction);
+    const data = Object.fromEntries(STORE_NAMES.map((name, index) => [name, values[index]])) as unknown as BackupData;
+    data.settings = data.settings.map(({ aiApiKey: _localOnly, ...item }) => item);
     return {
       format: 'qiguang-backup',
       formatVersion: BACKUP_FORMAT_VERSION,
       exportedAt: nowIso(),
       appVersion: APP_VERSION,
-      data: Object.fromEntries(STORE_NAMES.map((name, index) => [name, values[index]])) as unknown as BackupData,
+      data,
     };
   }
 

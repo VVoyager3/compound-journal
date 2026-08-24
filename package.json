@@ -10,6 +10,7 @@
     "android:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",
     "android:debug": "npm run android:sync && cd android && gradlew.bat :app:assembleDebug",
+    "test:android-emulator": "pwsh -NoProfile -File scripts/android-device-check.ps1 -Emulator",
     "test:android-device": "pwsh -NoProfile -File scripts/android-device-check.ps1",
     "serve": "npm run build && node --env-file-if-exists=.env --experimental-strip-types server.mjs",
     "eval:ai": "node --experimental-strip-types scripts/ai-eval.mjs",

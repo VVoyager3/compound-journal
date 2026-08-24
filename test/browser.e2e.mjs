@@ -25,9 +25,17 @@ after(async () => {
   if (server?.listening) await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
 
-async function freshPage({ native = false } = {}) {
+async function freshPage({ native = false, now } = {}) {
   const context = await browser.newContext({ viewport: { width: 320, height: 800 }, serviceWorkers: 'block' });
   if (native) await context.addInitScript(() => { window.androidBridge = { postMessage() {} }; });
+  if (now !== undefined) await context.addInitScript(({ current }) => {
+    const NativeDate = Date;
+    class TestDate extends NativeDate {
+      constructor(...args) { super(...(args.length ? args : [current])); }
+      static now() { return current; }
+    }
+    window.Date = TestDate;
+  }, { current: now });
   const page = await context.newPage();
   const apiRequests = [];
   page.on('request', (request) => {
@@ -295,7 +303,7 @@ test('secondary pages stay concise before the user has evidence', async () => {
 });
 
 test('success diary prompts stay optional and AI goal decomposition requires confirmation', async () => {
-  const { context, page, apiRequests } = await freshPage();
+  const { context, page, apiRequests } = await freshPage({ now: new Date().setHours(20, 0, 0, 0) });
   try {
     await finishOnboarding(page);
     const input = page.getByRole('textbox', { name: '发生了什么' });
@@ -475,9 +483,20 @@ test('Android without a MiniMax key keeps the local success and action loop usab
     await assert.doesNotReject(() => page.getByText(/MiniMax 尚未配置/).waitFor());
     await page.goto(`${baseUrl}/#/system`);
     await page.getByText('AI 权限 · 已关闭', { exact: true }).click();
-    assert.equal(await page.getByRole('button', { name: '检查 AI 配置' }).isDisabled(), true);
-    assert.equal(await page.getByRole('checkbox', { name: /MiniMax 未配置/ }).isDisabled(), true);
+    const aiSettings = page.locator('.ai-settings');
+    const permission = aiSettings.getByRole('checkbox', { name: /允许主动整理/ });
+    const check = aiSettings.getByRole('button', { name: '检查 AI 配置' });
+    assert.equal(await check.isDisabled(), true);
+    assert.equal(await permission.isDisabled(), true);
     await assert.doesNotReject(() => page.getByText(/此安装包尚未配置 MiniMax 密钥/).waitFor());
+    await aiSettings.getByRole('textbox', { name: '自定义 API Key' }).fill('test-minimax-key');
+    await aiSettings.getByRole('button', { name: '保存', exact: true }).click();
+    await assert.doesNotReject(() => aiSettings.getByText(/已保存自定义密钥（长度 16/).waitFor());
+    assert.equal(await permission.isDisabled(), false);
+    assert.equal(await check.isDisabled(), false);
+    await aiSettings.getByRole('button', { name: '清除自定义密钥' }).click();
+    await assert.doesNotReject(() => aiSettings.getByText('未保存自定义密钥。留空将使用安装包密钥。', { exact: true }).waitFor());
+    assert.equal(await permission.isDisabled(), true);
     assert.deepEqual(apiRequests, []);
   } finally {
     await context.close();
@@ -517,20 +536,22 @@ test('the companion explains the current direction before offering adjustments',
   try {
     await finishOnboarding(page);
     await page.goto(`${baseUrl}/#/today`);
+    const settings = page.getByRole('button', { name: '进入设置' });
+    await assert.doesNotReject(() => settings.waitFor());
+    const settingsBox = await settings.boundingBox();
+    assert.ok(settingsBox && settingsBox.width >= 44 && settingsBox.height >= 44, 'the page settings action should remain touch-safe');
     await page.getByRole('button', { name: '生活分身' }).click();
     const panel = page.locator('.character-panel');
     await assert.doesNotReject(() => panel.waitFor());
     await assert.doesNotReject(() => panel.getByText('我在。今天想从哪里开始？', { exact: true }).waitFor());
     await assert.doesNotReject(() => panel.getByRole('button', { name: '开始记录' }).waitFor());
     assert.equal(await panel.getByRole('button', { name: '查看今天的行动' }).count(), 0);
-    await assert.doesNotReject(() => panel.getByRole('button', { name: '设置与数据' }).waitFor());
+    assert.equal(await panel.getByRole('button', { name: '设置与数据' }).count(), 0);
     assert.equal(await panel.locator('.button-primary').getAttribute('aria-label') ?? await panel.locator('.button-primary').textContent(), '开始记录');
     const panelBox = await panel.boundingBox();
     const actionBoxes = await panel.locator('.character-actions button').evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().toJSON()));
-    const settingsBox = await panel.getByRole('button', { name: '设置与数据' }).boundingBox();
     assert.ok(panelBox && actionBoxes.every((box) => box.left >= panelBox.x && box.right <= panelBox.x + panelBox.width), 'all companion actions should stay inside the panel');
     assert.ok(actionBoxes.every((box) => box.width >= panelBox.width * .25), 'all companion actions should remain visibly usable');
-    assert.ok(settingsBox && settingsBox.width >= 44 && settingsBox.height >= 44, 'the compact settings action should remain touch-safe');
     assert.equal(await panel.getByRole('button', { name: '为什么给我这个主线？' }).count(), 0);
     assert.equal(await panel.getByRole('button', { name: '更换外观' }).count(), 0);
     assert.equal(await panel.getByRole('button', { name: '看本周' }).count(), 0);

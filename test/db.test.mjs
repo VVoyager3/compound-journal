@@ -1219,6 +1219,16 @@ test('restore after an app reload replaces bootstrap settings when user data is 
   assert.deepEqual((await db.exportBundle()).data.settings, backup.data.settings);
 });
 
+test('backup export never includes the local custom AI key', async (t) => {
+  const db = await withDatabase(t, 'backup-local-ai-key');
+  await db.saveSettings({ aiApiKey: 'secret-local-minimax-key' });
+
+  const backup = await db.exportBundle();
+  assert.equal(backup.data.settings[0].aiApiKey, undefined);
+  assert.equal(JSON.stringify(backup).includes('secret-local-minimax-key'), false);
+  assert.equal((await db.getSettings()).aiApiKey, 'secret-local-minimax-key');
+});
+
 test('import preserves local customisation even when there are no activity records', async (t) => {
   const db = await withDatabase(t, 'merge-custom-empty');
   await db.ensureI2Defaults();
