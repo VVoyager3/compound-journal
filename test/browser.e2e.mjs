@@ -231,6 +231,7 @@ test('today keeps records and habit editing behind compact entry points', async 
     const privateBody = '这段只应在记录与回顾页展开，不应直接铺在首页。';
     await page.getByRole('textbox', { name: '发生了什么' }).fill(privateBody);
     await page.getByRole('button', { name: '保存记录' }).click();
+    await page.waitForURL(/#\/day\/\d{4}-\d{2}-\d{2}$/);
     await page.goto(`${baseUrl}/#/tasks`);
     await page.getByRole('button', { name: '新建习惯' }).click();
     const habitDialog = page.getByRole('dialog', { name: '建立低成本习惯' });
