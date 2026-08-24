@@ -149,7 +149,7 @@ test('all core pages survive 200 percent text at 320px with touch-safe actions',
   try {
     await finishOnboarding(page);
     await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
-    for (const route of ['today', 'calendar', 'record', 'growth', 'system', 'tasks', 'review']) {
+    for (const route of ['today', 'calendar', 'record', 'growth', 'system', 'tasks', 'review', 'day/2026-08-24']) {
       await page.goto(`${baseUrl}/#/${route}`);
       await assert.doesNotReject(() => page.locator('#main-content').waitFor());
       const layout = await page.evaluate(() => ({
@@ -176,6 +176,12 @@ test('all core pages survive 200 percent text at 320px with touch-safe actions',
       });
       assert.deepEqual(accessibility, { missingNames: [], imagesWithoutAlt: 0, duplicateIds: [] }, `${route} must expose stable screen-reader semantics`);
     }
+    const headerActionLines = await page.locator('.page-header > .button').evaluate((button) => {
+      const range = document.createRange();
+      range.selectNodeContents(button);
+      return range.getClientRects().length;
+    });
+    assert.equal(headerActionLines, 1, 'short page-header actions must not wrap one Chinese character per line');
     await page.goto(`${baseUrl}/#/record`);
     const promptSizes = await page.locator('.record-prompt-actions button').evaluateAll((buttons) => buttons.map((button) => {
       const box = button.getBoundingClientRect();
@@ -522,7 +528,16 @@ test('the companion wanders naturally and walks to furniture before direct navig
     if (ambientAction === 'is-ambient-walk') assert.ok(before && wandering && Math.abs(wandering.x - before.x) > 2, 'companion should visibly wander around the room');
     await page.getByRole('button', { name: '打开记录' }).click();
     await assert.doesNotReject(() => page.locator('.room-character.is-action-desk').waitFor());
-    await page.waitForTimeout(400);
+    const actionAnimations = await character.evaluate((element) => getComputedStyle(element).animationName);
+    assert.match(actionAnimations, /room-action/);
+    assert.match(actionAnimations, /room-walk-cycle/);
+    assert.doesNotMatch(actionAnimations, /step-weight/);
+    await page.waitForTimeout(90);
+    const firstStep = await character.evaluate((element) => getComputedStyle(element).backgroundPosition);
+    await page.waitForTimeout(90);
+    const secondStep = await character.evaluate((element) => getComputedStyle(element).backgroundPosition);
+    assert.notEqual(firstStep, secondStep, 'walking must advance through distinct sprite frames');
+    await page.waitForTimeout(220);
     const during = await character.boundingBox();
     assert.ok(before && during && during.x < before.x - 20, 'companion should visibly walk toward the desk');
     await page.waitForURL(/#\/record$/);
@@ -622,7 +637,9 @@ test('room uses one of the documented time palettes', async () => {
     await page.goto(`${baseUrl}/#/today`);
     const phase = await page.locator('.room-scene').getAttribute('class');
     assert.match(phase ?? '', /is-(night|morning|day|evening)/);
-    assert.match(await page.locator('.room-scene').evaluate((element) => getComputedStyle(element).backgroundImage), /linear-gradient/);
+    const background = await page.locator('.room-scene').evaluate((element) => getComputedStyle(element).backgroundImage);
+    assert.match(background, /linear-gradient/);
+    assert.match(background, /room-background/);
     const lampOpacity = Number(await page.locator('.room-lamp').evaluate((element) => getComputedStyle(element).opacity));
     assert.equal(lampOpacity > 0, /is-(night|evening)/.test(phase ?? ''));
   } finally {
@@ -714,9 +731,9 @@ test('installed shell keeps the companion motion sprite available offline', asyn
     const assets = await page.evaluate(async () => {
       const bundles = [...document.scripts].map((script) => script.src).filter(Boolean);
       const source = await Promise.all(bundles.map((bundle) => fetch(bundle).then((response) => response.text())));
-      return [...new Set(source.flatMap((text) => [...text.matchAll(/["'`](\/assets\/(?:avatar|character-motion)-[^"'`]+\.(?:png|jpe?g))["'`]/g)].map((match) => match[1])))].sort();
+      return [...new Set(source.flatMap((text) => [...text.matchAll(/["'`](\/assets\/(?:avatar|character-motion|room-background)-[^"'`]+\.(?:png|jpe?g))["'`]/g)].map((match) => match[1])))].sort();
     });
-    assert.equal(assets.length, 4, 'both portraits and both motion sprites must be built into the shell');
+    assert.equal(assets.length, 5, 'portraits, motion sprites, and the room background must be built into the shell');
     await context.setOffline(true);
     const dialog = page.getByRole('dialog', { name: '选择生活分身' });
     await dialog.getByRole('button', { name: '选择牛纹帽双辫女生' }).click();
@@ -726,7 +743,7 @@ test('installed shell keeps the companion motion sprite available offline', asyn
     const imageUrl = await page.locator('.room-character').evaluate((element) => getComputedStyle(element).backgroundImage.match(/url\("?([^"\)]+)"?\)/)?.[1]);
     assert.ok(imageUrl, 'selected companion must use the motion sprite');
     const cached = await page.evaluate((urls) => Promise.all(urls.map((url) => fetch(url).then((response) => response.ok).catch(() => false))), assets);
-    assert.deepEqual(cached, [true, true, true, true]);
+    assert.deepEqual(cached, [true, true, true, true, true]);
   } finally {
     await context.close();
   }
@@ -762,7 +779,7 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     await assert.doesNotReject(() => page.getByRole('heading', { name: '先补足体力' }).waitFor());
     assert.equal(await page.locator('.room-scene.is-cue-rest').count(), 1);
     assert.equal(await page.locator('.room-character.is-resting').count(), 1);
-    assert.equal(await page.locator('.room-character.is-resting').evaluate((element) => getComputedStyle(element).backgroundPosition), '-432px -3px');
+    assert.equal(await page.locator('.room-character.is-resting').evaluate((element) => getComputedStyle(element).backgroundPosition), '-350px -246px');
     assert.equal(await page.locator('.room-cue').count(), 1);
     await page.getByRole('button', { name: '打开任务', exact: true }).click();
     assert.equal(await page.locator('.room-character.is-action-board').count(), 1);
@@ -909,13 +926,15 @@ test('selected companion uses the supplied portrait and matching room sprite', a
     const roomSprite = page.locator('.room-character.has-motion');
     await assert.doesNotReject(() => roomSprite.waitFor({ state: 'visible' }));
     assert.match(await roomSprite.evaluate((element) => getComputedStyle(element).backgroundImage), /character-motion-female/);
+    assert.equal(await roomSprite.evaluate((element) => element.classList.contains('is-happy')), true);
     const spriteLayout = await roomSprite.evaluate((element) => {
       const style = getComputedStyle(element);
-      return { backgroundPosition: style.backgroundPosition, backgroundSize: style.backgroundSize, mixBlendMode: style.mixBlendMode };
+      return { backgroundPosition: style.backgroundPosition, backgroundSize: style.backgroundSize, idleFrame: style.getPropertyValue('--idle-frame').trim(), mixBlendMode: style.mixBlendMode };
     });
     const frame = spriteLayout.backgroundPosition.match(/^(-?\d+(?:\.\d+)?)px (-?\d+(?:\.\d+)?)px$/);
     assert(frame, `unexpected sprite frame: ${spriteLayout.backgroundPosition}`);
     assert.equal(spriteLayout.backgroundSize, '538px 358px');
+    assert.equal(spriteLayout.idleFrame, '-424px -246px');
     assert(Number(frame[1]) <= 0 && Number(frame[1]) >= -482);
     assert(Number(frame[2]) <= 0 && Number(frame[2]) >= -274);
     assert.equal(spriteLayout.mixBlendMode, 'normal');
@@ -960,6 +979,34 @@ test('an active Android WebView handles widget completion without reloading the 
     assert.equal(await page.evaluate(() => window.__qiguangWidgetPageMarker), marker, 'widget action reloaded the active page');
     assert.equal(await xpLedgerCount(page), 1);
     assert.match(page.url(), /#\/tasks$/);
+    assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Android users can request the desktop companion from settings once', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.evaluate(() => {
+      globalThis.__qiguangPinRequested = 0;
+      window.qiguangWidgetBridge = {
+        updateSnapshot() {},
+        consumeAction() { return ''; },
+        canRequestPinWidget() { return true; },
+        hasPinnedWidget() { return false; },
+        requestPinWidget() { globalThis.__qiguangPinRequested += 1; return true; },
+      };
+      location.hash = '/system';
+    });
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '我的系统' }).waitFor());
+    await page.getByText('桌面伙伴', { exact: true }).click();
+    const add = page.getByRole('button', { name: '添加到桌面' });
+    await add.click();
+    assert.equal(await page.evaluate(() => globalThis.__qiguangPinRequested), 1);
+    await assert.doesNotReject(() => page.getByText('请在系统窗口中确认添加。', { exact: true }).waitFor());
+    assert.equal(await add.isDisabled(), true, 'a pin request must not be submitted repeatedly');
     assert.deepEqual(apiRequests, []);
   } finally {
     await context.close();

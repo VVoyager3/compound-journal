@@ -18,7 +18,13 @@ export type WidgetAction = { type: 'complete'; questId: string } | { type: 'open
 
 declare global {
   interface Window {
-    qiguangWidgetBridge?: { updateSnapshot(value: string): void; consumeAction(): string };
+    qiguangWidgetBridge?: {
+      updateSnapshot(value: string): void;
+      consumeAction(): string;
+      canRequestPinWidget?(): boolean;
+      hasPinnedWidget?(): boolean;
+      requestPinWidget?(): boolean;
+    };
   }
 }
 
@@ -56,4 +62,21 @@ export function consumeWidgetAction(): WidgetAction | null {
     }
   } catch { /* malformed native action is discarded */ }
   return null;
+}
+
+export function widgetPinState(): 'unavailable' | 'available' | 'pinned' {
+  try {
+    if (window.qiguangWidgetBridge?.hasPinnedWidget?.()) return 'pinned';
+    return window.qiguangWidgetBridge?.canRequestPinWidget?.() ? 'available' : 'unavailable';
+  } catch {
+    return 'unavailable';
+  }
+}
+
+export function requestWidgetPin(): boolean {
+  try {
+    return window.qiguangWidgetBridge?.requestPinWidget?.() ?? false;
+  } catch {
+    return false;
+  }
 }

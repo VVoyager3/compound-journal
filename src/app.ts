@@ -46,7 +46,7 @@ import {
   type WeeklyReviewRequest,
 } from './analysis-contract.ts';
 import { DIFFICULTY_XP, chooseDailyDirection, monthlyAreaSignal, type Difficulty, type FeedbackResult, type QuestType } from './rules.ts';
-import { buildWidgetSnapshot, consumeWidgetAction, saveWidgetSnapshot } from './widget.ts';
+import { buildWidgetSnapshot, consumeWidgetAction, requestWidgetPin, saveWidgetSnapshot, widgetPinState } from './widget.ts';
 import { analyzeWithNativeAi, nativeAiConfiguration } from './direct-ai.ts';
 import type { AnalysisRequest } from './ai-engine.ts';
 import { Capacitor } from '@capacitor/core';
@@ -54,6 +54,7 @@ import maleAvatarImage from '../design-assets/pre-development/avatar-male-origin
 import femaleAvatarImage from '../design-assets/pre-development/avatar-female-original.jpg';
 import maleMotionImage from '../design-assets/pre-development/character-motion-male-transparent.png';
 import femaleMotionImage from '../design-assets/pre-development/character-motion-female-transparent.png';
+import roomBackgroundImage from '../design-assets/pre-development/room-background.png';
 
 type RouteName = 'today' | 'calendar' | 'record' | 'tasks' | 'growth' | 'system' | 'day' | 'review';
 type PixelIcon = 'today' | 'calendar' | 'record' | 'growth' | 'system' | 'desk' | 'board' | 'books' | 'window' | 'character';
@@ -73,7 +74,7 @@ const NATIVE_AI_UNAVAILABLE = '此安装包尚未配置 MiniMax 密钥；记录�
 const AVAILABLE_AI_MODELS = ['MiniMax-M3', 'MiniMax-M2.7'] as const;
 type AiModelChoice = (typeof AVAILABLE_AI_MODELS)[number];
 const DEFAULT_AI_MODEL: AiModelChoice = AVAILABLE_AI_MODELS[0];
-const CHARACTER_WALK_TO_CLICK_MS = 560;
+const CHARACTER_WALK_TO_CLICK_MS = 960;
 const NATIVE_PLATFORM = Capacitor.isNativePlatform();
 const BASE_AI_READY = !NATIVE_PLATFORM || (() => {
   try { return new URL(API_ORIGIN).protocol === 'https:'; } catch { return false; }
@@ -521,13 +522,10 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
   const scene = node('div', 'room-scene');
   const hour = new Date().getHours();
   const ambientAction = roomAmbientAction();
+  scene.style.setProperty('--room-background', `url("${roomBackgroundImage}")`);
   scene.classList.add(snapshotDate ? 'is-day' : hour < 6 ? 'is-night' : hour < 12 ? 'is-morning' : hour < 18 ? 'is-day' : 'is-evening');
   if (cue) scene.classList.add(`is-cue-${cue}`);
   scene.setAttribute('aria-hidden', 'true');
-  scene.append(node('div', 'room-floor'));
-  for (const furniture of ['desk', 'board', 'calendar', 'books', 'window'] as const) {
-    scene.append(node('div', `room-furniture is-${furniture}`));
-  }
   scene.append(node('div', 'room-lamp'));
   if (!compact && completedMilestones > 0) {
     const trophy = node('div', `room-achievement${completedMilestones >= 3 ? ' is-golden' : ''}`, '✦');
@@ -549,7 +547,7 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
     const plant = node('div', `room-plant is-${position}${plantState ? ` is-${plantState.growth}` : ''}${plantState?.habitId === celebratingHabit ? ' is-celebrating' : ''}`);
     scene.append(plant);
   });
-  const character = node('div', `room-character is-${avatar ?? 'neutral'} is-ambient-${ambientAction}${celebratingCharacter ? ' is-celebrating' : ''}${welcoming ? ' is-welcoming' : ''}${cue === 'rest' || ambientAction === 'rest' ? ' is-resting' : ''}`);
+  const character = node('div', `room-character is-happy is-${avatar ?? 'neutral'} is-ambient-${ambientAction}${celebratingCharacter ? ' is-celebrating' : ''}${welcoming ? ' is-welcoming' : ''}${cue === 'rest' || ambientAction === 'rest' ? ' is-resting' : ''}`);
   if (avatar) {
     character.classList.add('has-motion');
     character.style.backgroundImage = `url("${motionAsset(avatar)}")`;
@@ -4716,6 +4714,25 @@ async function systemPage(): Promise<HTMLElement> {
   });
   preferences.append(toneLabel);
   main.append(preferences);
+
+  const pinState = widgetPinState();
+  if (pinState !== 'unavailable') {
+    const desktop = settingsDisclosure('桌面伙伴');
+    const desktopStatus = node('p', 'caption', pinState === 'pinned' ? '桌面伙伴已添加。' : '在桌面直接查看今天的任务与经验。');
+    desktop.append(desktopStatus);
+    if (pinState === 'available') {
+      const pin = iconButton('添加到桌面', null, () => {
+        if (requestWidgetPin()) {
+          pin.disabled = true;
+          desktopStatus.textContent = '请在系统窗口中确认添加。';
+        } else {
+          showToast('系统没有打开添加窗口，请从桌面小组件列表添加栖光。', 'error');
+        }
+      }, 'button button-secondary');
+      desktop.append(pin);
+    }
+    main.append(desktop);
+  }
 
   const data = settingsDisclosure('备份与本地数据', 'data-actions');
   const exportButton = iconButton('导出全部数据', null, async () => {

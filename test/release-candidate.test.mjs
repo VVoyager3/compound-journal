@@ -51,6 +51,16 @@ test('room motion sprites use real PNG alpha instead of a painted grid', async (
   }
 });
 
+test('room movement uses sprite frames instead of stretching the whole character', async () => {
+  const styles = await read('src/styles.css');
+  const app = await read('src/app.ts');
+  assert.match(styles, /--walk-right-6:/);
+  assert.match(styles, /--walk-left-6:/);
+  assert.match(styles, /@keyframes room-walk-cycle/);
+  assert.doesNotMatch(styles, /room-step-weight|scale:\s*1\.27|rotate:\s*-?1deg/);
+  assert.match(app, /room-background\.png/);
+});
+
 test('Android launcher and splash use the Qiguang identity instead of Capacitor defaults', async () => {
   const foreground = await read('android/app/src/main/res/drawable-v24/ic_launcher_foreground.xml');
   const background = await read('android/app/src/main/res/values/ic_launcher_background.xml');
@@ -265,6 +275,10 @@ test('Android widget ships three responsive layouts without overlay or notificat
   const provider = await read('android/app/src/main/java/com/vvoyager3/qiguang/QiguangWidgetProvider.java');
   for (const action of ['COMPLETE_MAIN', 'OPEN_ROUTE', 'TOGGLE_PRIVACY']) assert(provider.includes(action), `widget lacks ${action}`);
   assert.match(provider, /avatar-.*-original-/s, 'widget must reuse the selected companion portrait from the packaged assets');
+  const bridge = await read('android/app/src/main/java/com/vvoyager3/qiguang/QiguangWidgetBridge.java');
+  assert.match(bridge, /isRequestPinAppWidgetSupported/);
+  assert.match(bridge, /requestPinAppWidget/);
+  assert.match(bridge, /hasPinnedWidget\(\)/, 'settings must avoid duplicate widget requests');
   const activity = await read('android/app/src/main/java/com/vvoyager3/qiguang/MainActivity.java');
   assert.match(activity, /qiguang-widget-action/);
   assert.doesNotMatch(activity, /getWebView\(\)\.reload\(\)/, 'widget actions must not reload and blank the active WebView');
@@ -291,6 +305,7 @@ test('Android device checks preserve installed data and separate emulator mode',
   assert.match(script, /install -r \$apk/);
   assert.match(script, /:app:assembleDebugAndroidTest/);
   assert.match(script, /am instrument -w/);
+  assert.match(script, /am instrument -w[\s\S]*am force-stop \$packageName[\s\S]*am start -W/, 'instrumentation must leave the app running');
   assert(script.includes('D:\\tmp\\qiguang-device-check'));
   assert(script.includes('D:\\tmp\\qiguang-emulator-check'));
   assert.match(script, /svc wifi disable/);

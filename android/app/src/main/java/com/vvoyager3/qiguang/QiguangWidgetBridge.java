@@ -1,8 +1,11 @@
 package com.vvoyager3.qiguang;
 
 import android.annotation.SuppressLint;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.webkit.JavascriptInterface;
 
 import org.json.JSONObject;
@@ -36,5 +39,27 @@ final class QiguangWidgetBridge {
         String value = preferences.getString(PENDING_ACTION, "");
         if (!value.isEmpty()) preferences.edit().remove(PENDING_ACTION).commit();
         return value;
+    }
+
+    @JavascriptInterface
+    public boolean canRequestPinWidget() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false;
+        return AppWidgetManager.getInstance(context).isRequestPinAppWidgetSupported();
+    }
+
+    @JavascriptInterface
+    public boolean hasPinnedWidget() {
+        int[] ids = AppWidgetManager.getInstance(context).getAppWidgetIds(new ComponentName(context, QiguangWidgetProvider.class));
+        return ids.length > 0;
+    }
+
+    @JavascriptInterface
+    public boolean requestPinWidget() {
+        if (!canRequestPinWidget() || hasPinnedWidget()) return false;
+        return AppWidgetManager.getInstance(context).requestPinAppWidget(
+            new ComponentName(context, QiguangWidgetProvider.class),
+            null,
+            null
+        );
     }
 }

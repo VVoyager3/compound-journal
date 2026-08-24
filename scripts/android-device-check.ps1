@@ -86,10 +86,11 @@ try {
     if ($Emulator) {
         & $adb -s $serial shell svc wifi disable
         & $adb -s $serial shell svc data disable
-        & $adb -s $serial shell am force-stop $packageName
-        & $adb -s $serial shell am start -W -n "$packageName/.MainActivity"
-        if ($LASTEXITCODE -ne 0) { throw '模拟器断网冷启动失败。' }
     }
+
+    & $adb -s $serial shell am force-stop $packageName
+    & $adb -s $serial shell am start -W -n "$packageName/.MainActivity"
+    if ($LASTEXITCODE -ne 0) { throw "$targetLabel 测试后冷启动失败。" }
 
     $appProcessId = ((& $adb -s $serial shell pidof $packageName) -join '').Trim()
     if (-not $appProcessId) { throw '测试后未发现栖光进程。' }
