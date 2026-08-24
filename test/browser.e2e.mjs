@@ -289,6 +289,8 @@ test('secondary pages stay concise before the user has evidence', async () => {
 
     await page.goto(`${baseUrl}/#/system`);
     assert.equal(await page.getByText('本地优先', { exact: true }).count(), 0);
+    assert.equal(await page.locator('.system-overview').count(), 0, 'settings must start with direct choices instead of an internal-model dashboard');
+    assert.equal(await page.locator('.system-advanced[open]').count(), 0, 'internal area controls must stay collapsed by default');
     assert.equal(await page.locator('.assessment-row:visible').count(), 0);
     await assert.doesNotReject(() => page.getByText('校准近期状态 · 0/5', { exact: true }).waitFor());
     const systemHeight = await page.evaluate(() => document.documentElement.scrollHeight);
@@ -528,6 +530,7 @@ test('the companion wanders naturally and walks to furniture before direct navig
     if (ambientAction === 'is-ambient-walk') assert.ok(before && wandering && Math.abs(wandering.x - before.x) > 2, 'companion should visibly wander around the room');
     await page.getByRole('button', { name: '打开记录' }).click();
     await assert.doesNotReject(() => page.locator('.room-character.is-action-desk').waitFor());
+    const actionStart = await character.boundingBox();
     const actionAnimations = await character.evaluate((element) => getComputedStyle(element).animationName);
     assert.match(actionAnimations, /room-action/);
     assert.match(actionAnimations, /room-walk-cycle/);
@@ -539,7 +542,7 @@ test('the companion wanders naturally and walks to furniture before direct navig
     assert.notEqual(firstStep, secondStep, 'walking must advance through distinct sprite frames');
     await page.waitForTimeout(220);
     const during = await character.boundingBox();
-    assert.ok(before && during && during.x < before.x - 20, 'companion should visibly walk toward the desk');
+    assert.ok(actionStart && during && during.x < actionStart.x - 5, 'companion should visibly walk toward the desk');
     await page.waitForURL(/#\/record$/);
     assert.deepEqual(apiRequests, []);
   } finally {
@@ -943,6 +946,41 @@ test('selected companion uses the supplied portrait and matching room sprite', a
     const spriteBounds = await roomSprite.boundingBox();
     assert.ok(spriteBounds && spriteBounds.width >= 68, 'selected companion should remain recognizable at phone width');
     assert.ok(geometry.scrollWidth <= geometry.width);
+    assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('room furniture walks end on the open floor instead of inside furniture', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  const destinations = [
+    ['打开记录', 'desk', /#\/record$/, [0.36, 0.46, 0.68, 0.84]],
+    ['打开任务', 'board', /#\/tasks$/, [0.42, 0.58, 0.46, 0.73]],
+    ['打开日历', 'calendar', /#\/calendar$/, [0.61, 0.78, 0.46, 0.73]],
+    ['打开成长', 'books', /#\/growth$/, [0.57, 0.73, 0.50, 0.75]],
+    ['打开状态', 'window', /#\/system$/, [0.31, 0.44, 0.40, 0.68]],
+  ];
+  try {
+    await finishOnboarding(page);
+    for (const [buttonName, action, route, [minX, maxX, minY, maxY]] of destinations) {
+      await page.goto(`${baseUrl}/#/today`);
+      await page.getByRole('button', { name: buttonName }).click();
+      const character = page.locator(`.room-character.is-action-${action}`);
+      await assert.doesNotReject(() => character.waitFor());
+      await page.waitForTimeout(850);
+      const position = await character.evaluate((element) => {
+        const room = element.closest('.room-scene').getBoundingClientRect();
+        const box = element.getBoundingClientRect();
+        return {
+          x: (box.left + box.width / 2 - room.left) / room.width,
+          y: (box.bottom - room.top) / room.height,
+        };
+      });
+      assert.ok(position.x >= minX && position.x <= maxX && position.y >= minY && position.y <= maxY,
+        `${action} must stop on open floor, got ${JSON.stringify(position)}`);
+      await page.waitForURL(route);
+    }
     assert.deepEqual(apiRequests, []);
   } finally {
     await context.close();

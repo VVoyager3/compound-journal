@@ -607,8 +607,8 @@ p {
 }
 
 .room-character.has-motion.is-action-desk {
-  --action-x: clamp(-122px, -25vw, -88px);
-  --action-y: 13px;
+  --action-x: clamp(-32px, -5vw, -16px);
+  --action-y: clamp(-32px, -5vw, -16px);
   --walk-1: var(--walk-left-1);
   --walk-2: var(--walk-left-2);
   --walk-3: var(--walk-left-3);
@@ -640,8 +640,8 @@ p {
 }
 
 .room-character.has-motion.is-action-books {
-  --action-x: clamp(102px, 29vw, 138px);
-  --action-y: -24px;
+  --action-x: clamp(52px, 14vw, 76px);
+  --action-y: clamp(-88px, -18vw, -54px);
   --walk-1: var(--walk-right-1);
   --walk-2: var(--walk-right-2);
   --walk-3: var(--walk-right-3);
@@ -651,8 +651,8 @@ p {
 }
 
 .room-character.has-motion.is-action-window {
-  --action-x: clamp(-136px, -31vw, -108px);
-  --action-y: -70px;
+  --action-x: clamp(-64px, -12vw, -36px);
+  --action-y: clamp(-128px, -26vw, -78px);
   --walk-1: var(--walk-back-1);
   --walk-2: var(--walk-back-2);
   --walk-3: var(--walk-back-3);
@@ -1533,38 +1533,6 @@ p {
 .settings-disclosure[open] > summary {
   padding-bottom: 10px;
   border-bottom: 2px solid var(--ink);
-}
-
-.system-facts {
-  display: grid;
-  margin: 0;
-}
-
-.system-fact {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px 12px;
-  padding-block: 12px;
-  border-bottom: 2px solid var(--ink);
-}
-
-.system-fact:first-child {
-  border-top: 2px solid var(--ink);
-}
-
-.system-fact dt,
-.system-fact dd {
-  font-weight: 850;
-}
-
-.system-fact dd {
-  margin: 0;
-  color: var(--coral-dark);
-  text-align: right;
-}
-
-.system-fact p {
-  grid-column: 1 / -1;
 }
 
 .assessment-row {

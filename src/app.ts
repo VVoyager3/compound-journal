@@ -4651,31 +4651,13 @@ async function installStorageSettings(): Promise<HTMLElement> {
 }
 
 async function systemPage(): Promise<HTMLElement> {
-  const [observations, profile, areas, goals, habits, memories, events, entries] = await Promise.all([
-    db.latestAssessment(), db.getProfile(), db.listAreas(), db.listGoals(), db.listHabits(), db.listMemories(), db.listJournalEvents(), db.listEntries(),
+  const [observations, profile, areas, memories, events, entries] = await Promise.all([
+    db.latestAssessment(), db.getProfile(), db.listAreas(), db.listMemories(), db.listJournalEvents(), db.listEntries(),
   ]);
   if (!profile) throw new Error('个人系统尚未初始化。');
   const main = node('main', 'page page-system');
   main.append(pageHeader('数据与选择权', '我的系统'));
-
-  const overview = node('section', 'surface settings-section system-overview');
-  overview.append(node('h2', '', '概况'));
-  const facts = node('dl', 'system-facts');
-  const systemRows: Array<[string, string]> = [
-    ['当前章节', profile.chapterTitle],
-    ['人生领域', `${areas.length} 个 · ${areas.filter((item) => item.mode === 'build').length}/2 重点建设`],
-    ['目标与习惯', `${goals.length} 个目标 · ${habits.length} 个习惯`],
-    ['已确认规则与记忆', `${memories.filter((item) => item.status === 'confirmed').length} 条`],
-    ['AI 权限', settings.aiAllowed ? '已开启' : '已关闭'],
-    ['生活分身外观', profile.avatar ? (profile.avatar === 'female' ? '牛纹帽双辫女生' : '鹿角头饰男生') : '尚未选择'],
-  ];
-  for (const [label, value] of systemRows) {
-    const row = node('div', 'system-fact');
-    row.append(node('dt', '', label), node('dd', '', value));
-    facts.append(row);
-  }
-  overview.append(facts);
-  main.append(overview, profileForm(profile), assessmentForm(observations), aiPermissionSettings());
+  main.append(profileForm(profile), assessmentForm(observations), aiPermissionSettings());
   const advancedSystem = node('details', 'system-advanced');
   advancedSystem.append(
     node('summary', '', '高级系统（领域与行动说明书）'),
