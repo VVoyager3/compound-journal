@@ -4884,6 +4884,39 @@ function renderDatabaseFailure(error: unknown): void {
   root.replaceChildren(main);
 }
 
+async function applyPendingWidgetAction(): Promise<string | null> {
+  const widgetAction = consumeWidgetAction();
+  if (!widgetAction) return null;
+  if (widgetAction.type === 'open') {
+    history.replaceState(null, '', `#/${widgetAction.route}`);
+    if (widgetAction.route === 'tasks' && widgetAction.questId) focusAfterRenderSelector = `[data-quest-id="${CSS.escape(widgetAction.questId)}"]`;
+    return '';
+  }
+  const quest = (await db.listQuests()).find((item) => item.id === widgetAction.questId);
+  let notice = '这项任务已经处理过，没有重复结算经验。';
+  if (quest?.status === 'pending') {
+    await db.feedbackQuest(quest.id, 'completed', '由桌面伙伴勾选完成', '', quest.difficulty, 0, localDate());
+    const progression = await createGoalFollowUp(quest, 'completed');
+    notice = goalProgressMessage(progression, 'completed', '已从桌面伙伴完成任务；经验已结算，可在任务板撤销。');
+    sessionStorage.setItem('qiguang.character-celebration', quest.id);
+  }
+  history.replaceState(null, '', '#/tasks');
+  return notice;
+}
+
+async function refreshFromWidgetAction(): Promise<void> {
+  try {
+    const notice = await applyPendingWidgetAction();
+    if (notice === null) return;
+    currentRoute = parseRoute();
+    previousRouteKey = routeKey(currentRoute);
+    await render();
+    if (notice) showToast(notice);
+  } catch (error) {
+    showToast(errorMessage(error), 'error');
+  }
+}
+
 async function start(): Promise<void> {
   try {
     await initializeNativeAi();
@@ -4892,22 +4925,7 @@ async function start(): Promise<void> {
     settings = await db.getSettings();
     syncNativeAiAvailability();
     applySettings();
-    const widgetAction = consumeWidgetAction();
-    let widgetNotice = '';
-    if (widgetAction?.type === 'open') {
-      history.replaceState(null, '', `#/${widgetAction.route}`);
-      if (widgetAction.route === 'tasks' && widgetAction.questId) focusAfterRenderSelector = `[data-quest-id="${CSS.escape(widgetAction.questId)}"]`;
-    }
-    else if (widgetAction?.type === 'complete') {
-      const quest = (await db.listQuests()).find((item) => item.id === widgetAction.questId);
-      if (quest?.status === 'pending') {
-        await db.feedbackQuest(quest.id, 'completed', '由桌面伙伴勾选完成', '', quest.difficulty, 0, localDate());
-        const progression = await createGoalFollowUp(quest, 'completed');
-        widgetNotice = goalProgressMessage(progression, 'completed', '已从桌面伙伴完成任务；经验已结算，可在任务板撤销。');
-        sessionStorage.setItem('qiguang.character-celebration', quest.id);
-      } else widgetNotice = '这项任务已经处理过，没有重复结算经验。';
-      history.replaceState(null, '', '#/tasks');
-    }
+    const widgetNotice = await applyPendingWidgetAction();
     currentRoute = parseRoute();
     previousRouteKey = routeKey(currentRoute);
     await render();
@@ -4917,6 +4935,8 @@ async function start(): Promise<void> {
     renderDatabaseFailure(error);
   }
 }
+
+window.addEventListener('qiguang-widget-action', () => { void refreshFromWidgetAction(); });
 
 window.addEventListener('hashchange', () => {
   sessionStorage.setItem(`qiguang.scroll.${previousRouteKey}`, String(window.scrollY));

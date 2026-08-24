@@ -602,8 +602,7 @@ test('keyboard users can skip the room and open a direct route', async () => {
     await page.goto(`${baseUrl}/#/today`);
     await assert.doesNotReject(() => page.getByRole('button', { name: '开始记录' }).waitFor());
     await page.getByRole('link', { name: '跳到主要内容' }).press('Enter');
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    assert.equal(await page.locator('#main-content').evaluate((element) => element === document.activeElement), true);
+    await page.waitForFunction(() => document.activeElement?.id === 'main-content');
     await page.getByRole('link', { name: '记录', exact: true }).press('Enter');
     await page.waitForURL(/#\/record$/);
     await assert.doesNotReject(() => page.getByRole('textbox', { name: '发生了什么' }).waitFor());
@@ -924,6 +923,43 @@ test('selected companion uses the supplied portrait and matching room sprite', a
     const spriteBounds = await roomSprite.boundingBox();
     assert.ok(spriteBounds && spriteBounds.width >= 68, 'selected companion should remain recognizable at phone width');
     assert.ok(geometry.scrollWidth <= geometry.width);
+    assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('an active Android WebView handles widget completion without reloading the page', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.goto(`${baseUrl}/#/tasks`);
+    const title = `桌面伙伴完成-${Date.now()}`;
+    await page.getByRole('button', { name: '安排任务' }).click();
+    await page.getByText('调整细节（可选）', { exact: true }).click();
+    await page.getByRole('textbox', { name: '我现在想做什么？' }).fill(title);
+    await page.getByRole('textbox', { name: '为什么今天值得做' }).fill('验证桌面伙伴动作不重载当前页面');
+    await page.getByRole('textbox', { name: '最小动作' }).fill('完成一次原生动作回归');
+    await page.getByRole('combobox', { name: '任务类型' }).selectOption('main');
+    await page.getByRole('button', { name: '安排到今天' }).click();
+    const questId = await page.locator('[data-quest-id]').filter({ hasText: title }).getAttribute('data-quest-id');
+    assert.ok(questId);
+
+    const marker = `alive-${Date.now()}`;
+    await page.evaluate(({ id, value }) => {
+      let action = JSON.stringify({ type: 'complete', questId: id });
+      window.qiguangWidgetBridge = {
+        updateSnapshot() {},
+        consumeAction() { const current = action; action = ''; return current; },
+      };
+      window.__qiguangWidgetPageMarker = value;
+      window.dispatchEvent(new Event('qiguang-widget-action'));
+    }, { id: questId, value: marker });
+
+    await assert.doesNotReject(() => page.getByText('已从桌面伙伴完成任务；经验已结算，可在任务板撤销。', { exact: true }).waitFor());
+    assert.equal(await page.evaluate(() => window.__qiguangWidgetPageMarker), marker, 'widget action reloaded the active page');
+    assert.equal(await xpLedgerCount(page), 1);
+    assert.match(page.url(), /#\/tasks$/);
     assert.deepEqual(apiRequests, []);
   } finally {
     await context.close();

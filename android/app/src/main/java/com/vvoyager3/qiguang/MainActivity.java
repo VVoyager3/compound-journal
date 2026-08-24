@@ -19,7 +19,10 @@ public class MainActivity extends BridgeActivity {
         super.onNewIntent(intent);
         setIntent(intent);
         if (intent.getBooleanExtra("from_widget", false) && bridge != null) {
-            bridge.getWebView().post(() -> bridge.getWebView().reload());
+            bridge.getWebView().post(() -> bridge.getWebView().evaluateJavascript(
+                "window.dispatchEvent(new Event('qiguang-widget-action'))",
+                null
+            ));
         }
     }
 }

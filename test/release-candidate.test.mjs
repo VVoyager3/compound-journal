@@ -234,7 +234,8 @@ test('native production output supports personal direct AI without exposing its 
     const plugin = await read('android/app/src/main/java/com/vvoyager3/qiguang/QiguangAiPlugin.java');
     assert.match(gradle, /buildConfigField "String", "QIGUANG_MINIMAX_API_KEY"/);
     assert.match(plugin, /BuildConfig\.QIGUANG_MINIMAX_API_KEY/);
-    assert.match(plugin, /"Authorization", "Bearer " \+ BuildConfig\.QIGUANG_MINIMAX_API_KEY/);
+    assert.match(plugin, /payload\.remove\("apiKey"\)/);
+    assert.match(plugin, /"Authorization", "Bearer " \+ apiKey/);
   } else {
     const origin = new URL(process.env.VITE_API_ORIGIN);
     assert.equal(origin.protocol, 'https:');
@@ -245,6 +246,16 @@ test('native production output supports personal direct AI without exposing its 
 test('Android widget ships three responsive layouts without overlay or notification permissions', async () => {
   const manifest = await read('android/app/src/main/AndroidManifest.xml');
   for (const forbidden of ['SYSTEM_ALERT_WINDOW', 'POST_NOTIFICATIONS']) assert(!manifest.includes(forbidden), `unexpected Android permission: ${forbidden}`);
+  assert.match(manifest, /android:allowBackup="false"/);
+  assert.match(manifest, /android:fullBackupContent="false"/);
+  assert.match(manifest, /android:dataExtractionRules="@xml\/backup_rules"/);
+  const backupRules = await read('android/app/src/main/res/xml/backup_rules.xml');
+  for (const section of ['cloud-backup', 'device-transfer']) {
+    const rules = backupRules.match(new RegExp(`<${section}>([\\s\\S]*?)<\\/${section}>`))?.[1] ?? '';
+    for (const domain of ['root', 'file', 'database', 'sharedpref', 'external', 'device_root', 'device_file', 'device_database', 'device_sharedpref']) {
+      assert(rules.includes(`domain="${domain}" path="."`), `${section} still exposes ${domain}`);
+    }
+  }
   assert.match(manifest, /QiguangWidgetProvider/);
   assert.match(manifest, /qiguang_widget_info/);
   for (const size of ['small', 'medium', 'large']) {
@@ -254,6 +265,9 @@ test('Android widget ships three responsive layouts without overlay or notificat
   const provider = await read('android/app/src/main/java/com/vvoyager3/qiguang/QiguangWidgetProvider.java');
   for (const action of ['COMPLETE_MAIN', 'OPEN_ROUTE', 'TOGGLE_PRIVACY']) assert(provider.includes(action), `widget lacks ${action}`);
   assert.match(provider, /avatar-.*-original-/s, 'widget must reuse the selected companion portrait from the packaged assets');
+  const activity = await read('android/app/src/main/java/com/vvoyager3/qiguang/MainActivity.java');
+  assert.match(activity, /qiguang-widget-action/);
+  assert.doesNotMatch(activity, /getWebView\(\)\.reload\(\)/, 'widget actions must not reload and blank the active WebView');
 });
 
 test('native release check validates, syncs, and builds the Android package in one command', async () => {
