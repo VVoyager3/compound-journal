@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>栖光人物帧人工审查</title>
+  <style>
+    :root { color-scheme: light; font-family: "Microsoft YaHei", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #28241d; background: #f6ebd3; }
+    header { position: sticky; top: 0; z-index: 1; padding: 18px 24px; border-bottom: 3px solid #28241d; background: #ffd765; }
+    h1, h2, p { margin: 0; }
+    h1 { font-size: 24px; }
+    header p { margin-top: 6px; font-size: 14px; }
+    main { padding: 24px; }
+    section + section { margin-top: 36px; }
+    h2 { margin-bottom: 14px; font-size: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+    figure { margin: 0; padding: 12px; border: 2px solid #28241d; background: #fffaf0; box-shadow: 4px 4px 0 #28241d; }
+    .sprite { display: block; width: 180px; height: 240px; margin: auto; image-rendering: pixelated; border: 1px solid #b8a17d; background-color: #fff; background-image: linear-gradient(45deg, #ddd 25%, transparent 25%), linear-gradient(-45deg, #ddd 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ddd 75%), linear-gradient(-45deg, transparent 75%, #ddd 75%); background-position: 0 0, 0 8px, 8px -8px, -8px 0; background-size: 16px 16px; }
+    figcaption { margin-top: 9px; overflow-wrap: anywhere; font: 700 12px/1.35 Consolas, monospace; text-align: center; }
+    .blocked figure { border-color: #a72d25; box-shadow: 4px 4px 0 #a72d25; background: #fff0ed; }
+    .blocked h2 { color: #a72d25; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>人物帧人工审查</h1>
+    <p>候选帧均为 180×240 透明画布。请直接按文件名反馈“保留 / 删除 / 重裁”。本页素材尚未接入 App。</p>
+  </header>
+  <main>
+    <section>
+      <h2>女生候选帧（32）</h2>
+      <div id="female" class="grid"></div>
+    </section>
+    <section>
+      <h2>男生候选帧（32）</h2>
+      <div id="male" class="grid"></div>
+    </section>
+    <section class="blocked">
+      <h2>禁用：包含家具的复合帧</h2>
+      <p style="margin-bottom:14px">这些图片只用于辨认原图问题，不应作为房间人物素材。</p>
+      <div id="blocked" class="grid"></div>
+    </section>
+  </main>
+  <script>
+    const files = [
+      'emotion_calm.png', 'emotion_celebrate.png', 'emotion_sad_front.png', 'emotion_wave.png',
+      'idle_back.png', 'idle_front.png', 'idle_left.png', 'idle_right.png',
+      'interaction_drink.png', 'interaction_listen.png',
+      ...['back', 'front'].flatMap(direction => Array.from({ length: 5 }, (_, index) => `walk_${direction}_${String(index + 1).padStart(2, '0')}.png`)),
+      ...['left', 'right'].flatMap(direction => Array.from({ length: 6 }, (_, index) => `walk_${direction}_${String(index + 1).padStart(2, '0')}.png`))
+    ];
+    const composites = ['embedded_desk_write_DO_NOT_USE.png', 'embedded_board_inspect_DO_NOT_USE.png'];
+
+    function card(src, label) {
+      const figure = document.createElement('figure');
+      figure.innerHTML = `<img class="sprite" src="${src}" alt="${label}"><figcaption>${label}</figcaption>`;
+      return figure;
+    }
+
+    for (const gender of ['female', 'male']) {
+      const grid = document.getElementById(gender);
+      for (const file of files) grid.append(card(`${gender}/candidates/${file}`, file));
+    }
+    const blocked = document.getElementById('blocked');
+    for (const gender of ['female', 'male']) {
+      for (const file of composites) blocked.append(card(`${gender}/review-only-composites/${file}`, `${gender}/${file}`));
+    }
+  </script>
+</body>
+</html>
