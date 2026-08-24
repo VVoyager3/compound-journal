@@ -74,7 +74,9 @@ const NATIVE_AI_UNAVAILABLE = '此安装包尚未配置 MiniMax 密钥；记录�
 const AVAILABLE_AI_MODELS = ['MiniMax-M3', 'MiniMax-M2.7'] as const;
 type AiModelChoice = (typeof AVAILABLE_AI_MODELS)[number];
 const DEFAULT_AI_MODEL: AiModelChoice = AVAILABLE_AI_MODELS[0];
-const CHARACTER_WALK_TO_CLICK_MS = 960;
+const FURNITURE_APPROACH_MS = 760;
+const FURNITURE_USE_MS = 520;
+const FURNITURE_RETURN_MS = 760;
 const NATIVE_PLATFORM = Capacitor.isNativePlatform();
 const BASE_AI_READY = !NATIVE_PLATFORM || (() => {
   try { return new URL(API_ORIGIN).protocol === 'https:'; } catch { return false; }
@@ -460,7 +462,7 @@ function bottomNavigation(route: Route): HTMLElement {
   ];
   for (const [name, label, icon] of items) {
     const active = route.name === name || (name === 'growth' && ['calendar', 'day', 'review'].includes(route.name));
-    const link = node('a', `nav-item${name === 'record' ? ' is-record' : ''}${active ? ' is-active' : ''}`);
+    const link = node('a', `nav-item${active ? ' is-active' : ''}`);
     link.href = `#/${name}`;
     if (active) link.setAttribute('aria-current', 'page');
     link.append(pixelIcon(icon), node('span', '', label));
@@ -476,7 +478,7 @@ function renderShell(main: HTMLElement, route: Route): void {
   const connectivity = networkBadge();
   connectivity.classList.add('shell-network-status');
   shell.append(connectivity, main);
-  if (route.name !== 'record') shell.append(bottomNavigation(route));
+  shell.append(bottomNavigation(route));
   root.replaceChildren(shell);
   if (skipFocusRequested) {
     skipFocusRequested = false;
@@ -562,24 +564,31 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
     let actionTimer: number | undefined;
     const roomMotionReduced = settings.reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const characterPanelId = `character-panel-${crypto.randomUUID()}`;
-    const hotspots: Array<[string, string, Route | null, PixelIcon]> = [
-      ['desk', '记录', { name: 'record' }, 'desk'],
-      ['board', '任务', { name: 'tasks' }, 'board'],
-      ['calendar', '日历', { name: 'calendar' }, 'calendar'],
-      ['books', '成长', { name: 'growth' }, 'books'],
-      ['window', '状态', { name: 'system' }, 'window'],
-      ['character', '生活分身', null, 'character'],
+    const feedback = node('p', 'room-interaction-feedback');
+    feedback.hidden = true;
+    feedback.setAttribute('role', 'status');
+    feedback.setAttribute('aria-live', 'polite');
+    stage.append(feedback);
+    const hotspots: Array<[string, string, Route | null, string]> = [
+      ['desk', '记录', { name: 'record' }, '坐到椅子上，写下一件真实发生的事。'],
+      ['board', '任务', { name: 'tasks' }, '看一眼今天真正要推进的事。'],
+      ['calendar', '日历', { name: 'calendar' }, '翻到想回看的那一天。'],
+      ['workbench', '成长', { name: 'growth' }, '在工作台整理已经留下的成长证据。'],
+      ['window', '状态', { name: 'system' }, '停一下，看看最近的状态。'],
+      ['bed', '休息', null, '歇一会儿。准备好再继续，也算照顾今天。'],
+      ['character', '生活分身', null, ''],
     ];
-    for (const [position, label, destination, icon] of hotspots) {
+    for (const [position, label, destination, response] of hotspots) {
       const button = node('button', `room-hotspot is-${position}`);
       button.type = 'button';
-      button.setAttribute('aria-label', destination ? `打开${label}` : label);
-      button.append(pixelIcon(icon), node('span', 'hotspot-label', label));
+      button.setAttribute('aria-label', position === 'bed' ? '在床边休息' : destination ? `打开${label}` : label);
+      button.append(node('span', 'hotspot-label', label));
       const target = destination;
-      if (target) button.addEventListener('click', () => {
+      if (position !== 'character') button.addEventListener('click', () => {
         if (actionPending) return;
         if (roomMotionReduced || !avatar) {
-          go(target);
+          if (target) go(target);
+          else showToast(response);
           return;
         }
         actionPending = true;
@@ -588,17 +597,38 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
         stage.classList.add('is-character-moving');
         stage.setAttribute('aria-busy', 'true');
         button.classList.add('is-active');
-        character.classList.add(actionClass);
+        character.classList.add(actionClass, 'is-walking');
         actionTimer = window.setTimeout(() => {
-          actionPending = false;
-          button.disabled = false;
-          button.classList.remove('is-active');
-          stage.classList.remove('is-character-moving');
-          stage.removeAttribute('aria-busy');
-          character.classList.remove(actionClass);
-          go(target);
-          actionTimer = undefined;
-        }, CHARACTER_WALK_TO_CLICK_MS);
+          character.classList.remove('is-walking');
+          character.classList.add('is-interacting');
+          feedback.textContent = response;
+          feedback.hidden = false;
+          actionTimer = window.setTimeout(() => {
+            feedback.hidden = true;
+            character.classList.remove('is-interacting');
+            if (target) {
+              actionPending = false;
+              button.disabled = false;
+              button.classList.remove('is-active');
+              stage.classList.remove('is-character-moving');
+              stage.removeAttribute('aria-busy');
+              character.classList.remove(actionClass);
+              go(target);
+              actionTimer = undefined;
+              return;
+            }
+            character.classList.add('is-returning');
+            actionTimer = window.setTimeout(() => {
+              actionPending = false;
+              button.disabled = false;
+              button.classList.remove('is-active');
+              stage.classList.remove('is-character-moving');
+              stage.removeAttribute('aria-busy');
+              character.classList.remove(actionClass, 'is-returning');
+              actionTimer = undefined;
+            }, FURNITURE_RETURN_MS);
+          }, FURNITURE_USE_MS);
+        }, FURNITURE_APPROACH_MS);
       });
       else {
         button.setAttribute('aria-expanded', 'false');
@@ -1708,9 +1738,7 @@ function recordPage(route: Route): HTMLElement {
   const today = localDate();
   const targetDate = route.date ?? today;
   const main = node('main', 'page page-record');
-  const close = node('a', 'text-link', '关闭');
-  close.href = '#/today';
-  main.append(pageHeader('记录', route.date && route.date !== localDate() ? '补记这一天' : '记录今天', close));
+  main.append(pageHeader('记录', route.date && route.date !== localDate() ? '补记这一天' : '记录今天'));
 
   const form = node('form', 'record-form');
   const dateLabel = node('label', 'field-label', '日期');

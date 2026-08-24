@@ -386,9 +386,9 @@ p {
   position: relative;
   aspect-ratio: 1361 / 1156;
   overflow: hidden;
-  border: var(--line) solid var(--ink);
+  border: 0;
   background: #e9c38c;
-  box-shadow: var(--shadow);
+  box-shadow: 0 10px 24px rgb(82 48 26 / 16%);
   image-rendering: pixelated;
 }
 
@@ -410,12 +410,7 @@ p {
 .room-scene.is-night { --window-sky: #485d92; --room-wash: linear-gradient(rgb(32 47 91 / 28%), rgb(39 31 61 / 24%)); --lamp-opacity: 1; }
 
 .room-scene::before {
-  content: "";
-  position: absolute;
-  z-index: 2;
-  inset: 0;
-  border: 5px solid rgb(63 41 28 / 38%);
-  pointer-events: none;
+  content: none;
 }
 
 .room-lamp {
@@ -566,26 +561,29 @@ p {
   --walk-right-3: -137px -91px;
   --walk-right-4: -188px -91px;
   --walk-right-5: -239px -91px;
-  --walk-right-6: -290px -91px;
+  --walk-right-6: -278px -91px;
   --walk-left-1: -35px -154px;
   --walk-left-2: -86px -154px;
   --walk-left-3: -137px -154px;
   --walk-left-4: -188px -154px;
   --walk-left-5: -239px -154px;
-  --walk-left-6: -290px -154px;
+  --walk-left-6: -278px -154px;
   --walk-front-1: -35px -214px;
   --walk-front-2: -86px -214px;
   --walk-front-3: -137px -214px;
   --walk-front-4: -188px -214px;
   --walk-front-5: -239px -214px;
-  --walk-front-6: -290px -214px;
+  --walk-front-6: -278px -214px;
   --walk-back-1: -35px -274px;
   --walk-back-2: -86px -274px;
   --walk-back-3: -137px -274px;
   --walk-back-4: -188px -274px;
   --walk-back-5: -239px -274px;
-  --walk-back-6: -290px -274px;
+  --walk-back-6: -278px -274px;
+  --inspect-frame: -350px -165px;
+  --listen-frame: -424px -165px;
   --read-frame: -415px -92px;
+  --work-frame: -245px -3px;
 }
 
 .room-character.has-motion::before {
@@ -607,58 +605,111 @@ p {
 }
 
 .room-character.has-motion.is-action-desk {
-  --action-x: clamp(-32px, -5vw, -16px);
-  --action-y: clamp(-32px, -5vw, -16px);
+  --action-x: clamp(-132px, -29vw, -92px);
+  --action-y: clamp(-28px, -5vw, -16px);
+  --interaction-frame: var(--read-frame);
   --walk-1: var(--walk-left-1);
   --walk-2: var(--walk-left-2);
   --walk-3: var(--walk-left-3);
   --walk-4: var(--walk-left-4);
   --walk-5: var(--walk-left-5);
   --walk-6: var(--walk-left-6);
+  --return-1: var(--walk-right-1);
+  --return-2: var(--walk-right-2);
+  --return-3: var(--walk-right-3);
+  --return-4: var(--walk-right-4);
+  --return-5: var(--walk-right-5);
+  --return-6: var(--walk-right-6);
 }
 
 .room-character.has-motion.is-action-board {
   --action-x: -8px;
   --action-y: -72px;
+  --interaction-frame: var(--inspect-frame);
   --walk-1: var(--walk-back-1);
   --walk-2: var(--walk-back-2);
   --walk-3: var(--walk-back-3);
   --walk-4: var(--walk-back-4);
   --walk-5: var(--walk-back-5);
   --walk-6: var(--walk-back-6);
+  --return-1: var(--walk-front-1);
+  --return-2: var(--walk-front-2);
+  --return-3: var(--walk-front-3);
+  --return-4: var(--walk-front-4);
+  --return-5: var(--walk-front-5);
+  --return-6: var(--walk-front-6);
 }
 
 .room-character.has-motion.is-action-calendar {
   --action-x: clamp(68px, 20vw, 98px);
   --action-y: -70px;
+  --interaction-frame: var(--inspect-frame);
   --walk-1: var(--walk-back-1);
   --walk-2: var(--walk-back-2);
   --walk-3: var(--walk-back-3);
   --walk-4: var(--walk-back-4);
   --walk-5: var(--walk-back-5);
   --walk-6: var(--walk-back-6);
+  --return-1: var(--walk-front-1);
+  --return-2: var(--walk-front-2);
+  --return-3: var(--walk-front-3);
+  --return-4: var(--walk-front-4);
+  --return-5: var(--walk-front-5);
+  --return-6: var(--walk-front-6);
 }
 
-.room-character.has-motion.is-action-books {
-  --action-x: clamp(52px, 14vw, 76px);
-  --action-y: clamp(-88px, -18vw, -54px);
+.room-character.has-motion.is-action-workbench {
+  --action-x: clamp(84px, 26vw, 125px);
+  --action-y: clamp(-28px, -5vw, -16px);
+  --interaction-frame: var(--work-frame);
   --walk-1: var(--walk-right-1);
   --walk-2: var(--walk-right-2);
   --walk-3: var(--walk-right-3);
   --walk-4: var(--walk-right-4);
   --walk-5: var(--walk-right-5);
   --walk-6: var(--walk-right-6);
+  --return-1: var(--walk-left-1);
+  --return-2: var(--walk-left-2);
+  --return-3: var(--walk-left-3);
+  --return-4: var(--walk-left-4);
+  --return-5: var(--walk-left-5);
+  --return-6: var(--walk-left-6);
 }
 
 .room-character.has-motion.is-action-window {
   --action-x: clamp(-64px, -12vw, -36px);
   --action-y: clamp(-128px, -26vw, -78px);
+  --interaction-frame: var(--listen-frame);
   --walk-1: var(--walk-back-1);
   --walk-2: var(--walk-back-2);
   --walk-3: var(--walk-back-3);
   --walk-4: var(--walk-back-4);
   --walk-5: var(--walk-back-5);
   --walk-6: var(--walk-back-6);
+  --return-1: var(--walk-front-1);
+  --return-2: var(--walk-front-2);
+  --return-3: var(--walk-front-3);
+  --return-4: var(--walk-front-4);
+  --return-5: var(--walk-front-5);
+  --return-6: var(--walk-front-6);
+}
+
+.room-character.has-motion.is-action-bed {
+  --action-x: clamp(-64px, -14vw, -42px);
+  --action-y: clamp(18px, 5vw, 30px);
+  --interaction-frame: var(--rest-frame);
+  --walk-1: var(--walk-left-1);
+  --walk-2: var(--walk-left-2);
+  --walk-3: var(--walk-left-3);
+  --walk-4: var(--walk-left-4);
+  --walk-5: var(--walk-left-5);
+  --walk-6: var(--walk-left-6);
+  --return-1: var(--walk-right-1);
+  --return-2: var(--walk-right-2);
+  --return-3: var(--walk-right-3);
+  --return-4: var(--walk-right-4);
+  --return-5: var(--walk-right-5);
+  --return-6: var(--walk-right-6);
 }
 
 .room-character.has-motion.is-resting:not([class*="is-action-"]) {
@@ -666,8 +717,7 @@ p {
 }
 
 .room-hotspot.is-active {
-  outline: 3px solid var(--coral);
-  outline-offset: 1px;
+  outline: 0;
 }
 
 .room-stage.is-character-moving .room-hotspot:not(.is-active) {
@@ -725,7 +775,7 @@ p {
 .room-plant.is-three { right: 39%; background: var(--warn); }
 
 .room-stage.is-compact {
-  box-shadow: var(--shadow-small);
+  box-shadow: 0 6px 16px rgb(82 48 26 / 13%);
 }
 
 .room-hotspot {
@@ -746,29 +796,7 @@ p {
   font-weight: 950;
 }
 
-.room-hotspot:not(.is-character) .pixel-icon,
 .hotspot-label {
-  border: 2px solid var(--ink);
-  background: var(--surface);
-  box-shadow: 2px 2px 0 var(--ink);
-}
-
-.room-hotspot:not(.is-character) .pixel-icon {
-  width: 20px;
-  height: 20px;
-  padding: 1px;
-}
-
-.hotspot-label {
-  padding: 1px 3px;
-  font-size: 9px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.room-hotspot.is-desk .hotspot-label,
-.room-hotspot.is-board .hotspot-label,
-.room-hotspot.is-books .hotspot-label {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -792,14 +820,19 @@ p {
   top: 7%;
 }
 
-.room-hotspot.is-books {
+.room-hotspot.is-workbench {
   right: 5%;
-  top: 27%;
+  top: 54%;
 }
 
 .room-hotspot.is-window {
   left: 8%;
   top: 10%;
+}
+
+.room-hotspot.is-bed {
+  left: 23%;
+  bottom: 7%;
 }
 
 .room-hotspot.is-character {
@@ -812,7 +845,6 @@ p {
   box-shadow: none;
 }
 
-.room-hotspot.is-character .pixel-icon,
 .room-hotspot.is-character .hotspot-label {
   position: absolute;
   width: 1px;
@@ -832,9 +864,9 @@ p {
   grid-template-columns: 76px minmax(0, 1fr);
   gap: 7px;
   padding: 10px;
-  border: var(--line) solid var(--ink);
+  border: 0;
   background: var(--surface);
-  box-shadow: var(--shadow-small);
+  box-shadow: 0 8px 22px rgb(63 41 28 / 22%);
 }
 
 .character-panel[hidden] {
@@ -954,14 +986,55 @@ p {
   bottom: 48%;
   left: calc(50% + 46px);
   padding: 2px 5px;
-  border: 2px solid var(--ink);
+  border: 0;
   background: var(--paper);
-  box-shadow: 2px 2px 0 rgb(63 41 28 / 42%);
+  box-shadow: 0 3px 9px rgb(63 41 28 / 20%);
   font-size: .6rem;
   font-weight: 850;
   line-height: 1;
   pointer-events: none;
   white-space: nowrap;
+}
+
+.room-interaction-feedback {
+  position: absolute;
+  z-index: 7;
+  right: 12px;
+  bottom: 10px;
+  left: 12px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 0;
+  background: rgb(255 248 229 / 94%);
+  box-shadow: 0 5px 14px rgb(63 41 28 / 22%);
+  font-size: clamp(.68rem, 2.7vw, .8rem);
+  font-weight: 850;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.room-interaction-feedback[hidden] {
+  display: none;
+}
+
+.room-hotspot::after {
+  width: 7px;
+  height: 7px;
+  background: var(--yellow);
+  box-shadow: 7px -5px 0 rgb(255 250 240 / 80%);
+  content: "";
+  opacity: 0;
+}
+
+.room-hotspot:hover::after,
+.room-hotspot:focus-visible::after,
+.room-hotspot.is-active::after {
+  opacity: 1;
+}
+
+.room-hotspot:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .character-state.is-celebrating { background: var(--yellow); }
@@ -970,6 +1043,24 @@ p {
 .character-state.is-playing { background: var(--coral-soft); }
 .character-state.is-guiding { background: var(--yellow); }
 .character-state.is-reviewing { background: #d9d0f2; }
+
+.page-today .surface,
+.page-today .notice,
+.page-today .button {
+  border: 0;
+  box-shadow: 0 5px 15px rgb(82 48 26 / 12%);
+}
+
+.page-today .status-summary,
+.page-today .main-action,
+.page-today .daily-guide,
+.page-today .daily-closeout {
+  border: 0;
+}
+
+.page-today .section-heading {
+  border-bottom-color: rgb(82 48 26 / 14%);
+}
 
 .review-companion {
   display: flex;
@@ -1228,10 +1319,6 @@ p {
   display: grid;
   min-width: 0;
   gap: 16px;
-}
-
-.page-record {
-  padding-bottom: calc(24px + env(safe-area-inset-bottom));
 }
 
 .record-date-settings .field-label {
@@ -1895,8 +1982,9 @@ input[type="range"] {
   width: min(100%, 540px);
   min-height: calc(70px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
-  border-top: var(--line) solid var(--ink);
+  border-top: 0;
   background: rgb(255 250 240 / 97%);
+  box-shadow: 0 -5px 18px rgb(82 48 26 / 12%);
   transform: translateX(-50%);
 }
 
@@ -1909,7 +1997,7 @@ input[type="range"] {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  border-right: 1px solid var(--ink);
+  border-right: 0;
   color: var(--ink);
   font-size: clamp(.7rem, 3vw, .86rem);
   font-weight: 850;
@@ -1928,19 +2016,6 @@ input[type="range"] {
 .nav-item.is-active {
   color: var(--coral-dark);
   background: #ffd9ca;
-}
-
-.nav-item.is-record {
-  margin-top: -10px;
-  min-height: 80px;
-  border: var(--line) solid var(--ink);
-  background: var(--surface);
-  box-shadow: var(--shadow-small);
-}
-
-.nav-item.is-record.is-active {
-  color: #fff;
-  background: var(--coral);
 }
 
 .compact-textarea {
@@ -3035,15 +3110,26 @@ noscript {
     animation: character-idle 5.6s steps(1, end) 1 both;
   }
 
-  .room-character.has-motion[class*="is-action-"] {
+  .room-character.has-motion[class*="is-action-"].is-walking {
     animation:
-      room-action 960ms linear both,
-      room-walk-cycle 960ms steps(1, end) both;
+      room-action 760ms steps(12, end) both,
+      room-walk-cycle 760ms steps(1, end) both;
+  }
+
+  .room-character.has-motion[class*="is-action-"].is-interacting {
+    background-position: var(--interaction-frame);
+    animation: room-furniture-use 520ms steps(1, end) both;
+  }
+
+  .room-character.has-motion[class*="is-action-"].is-returning {
+    animation:
+      room-return 760ms steps(12, end) both,
+      room-return-walk-cycle 760ms steps(1, end) both;
   }
 
   .room-character.has-motion.is-ambient-walk:not(.is-resting):not([class*="is-action-"]):not(.is-welcoming):not(.is-celebrating) {
     animation:
-      room-ambient-walk 7200ms linear 1 both,
+      room-ambient-walk 7200ms steps(5, end) 1 both,
       room-ambient-walk-sprite 7200ms steps(1, end) 1 both;
   }
 
@@ -3059,10 +3145,6 @@ noscript {
   .room-character.has-motion.is-ambient-rest.is-resting:not([class*="is-action-"]):not(.is-welcoming):not(.is-celebrating) {
     background-position: var(--rest-frame);
     animation: room-ambient-rest 5600ms steps(1, end) 1 both;
-  }
-
-  .room-hotspot.is-active {
-    animation: room-hotspot-flash 960ms steps(3, end);
   }
 
   .room-lamp {
@@ -3117,35 +3199,56 @@ noscript {
   }
 
   @keyframes room-walk-cycle {
-    0%, 6% { background-position: var(--idle-frame); }
-    7%, 13%, 55%, 61% { background-position: var(--walk-1); }
-    14%, 20%, 62%, 68% { background-position: var(--walk-2); }
-    21%, 27%, 69%, 75% { background-position: var(--walk-3); }
-    28%, 34%, 76%, 82% { background-position: var(--walk-4); }
-    35%, 41%, 83%, 87% { background-position: var(--walk-5); }
-    42%, 54% { background-position: var(--walk-6); }
-    88%, 100% { background-position: var(--happy-frame); }
+    0%, 6% { background-position: var(--idle-frame); clip-path: inset(0); }
+    7%, 13%, 55%, 61% { background-position: var(--walk-1); clip-path: inset(0 8px 22px 4px); }
+    14%, 20%, 62%, 68% { background-position: var(--walk-2); clip-path: inset(0 8px 22px 4px); }
+    21%, 27%, 69%, 75% { background-position: var(--walk-3); clip-path: inset(0 8px 22px 4px); }
+    28%, 34%, 76%, 82% { background-position: var(--walk-4); clip-path: inset(0 8px 22px 4px); }
+    35%, 41%, 83%, 87% { background-position: var(--walk-5); clip-path: inset(0 8px 22px 4px); }
+    42%, 54% { background-position: var(--walk-6); clip-path: inset(0 8px 22px 4px); }
+    88%, 100% { background-position: var(--happy-frame); clip-path: inset(0); }
+  }
+
+  @keyframes room-furniture-use {
+    0%, 100% { background-position: var(--interaction-frame); transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); }
+    45%, 60% { background-position: var(--interaction-frame); transform: translate3d(calc(-50% + var(--action-x)), calc(var(--action-y) - 1px), 0); }
+  }
+
+  @keyframes room-return {
+    0%, 12% { transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); }
+    94%, 100% { transform: translate3d(-50%, 0, 0); }
+  }
+
+  @keyframes room-return-walk-cycle {
+    0%, 8% { background-position: var(--interaction-frame); clip-path: inset(0); }
+    9%, 16%, 57%, 64% { background-position: var(--return-1); clip-path: inset(0 8px 22px 4px); }
+    17%, 24%, 65%, 72% { background-position: var(--return-2); clip-path: inset(0 8px 22px 4px); }
+    25%, 32%, 73%, 80% { background-position: var(--return-3); clip-path: inset(0 8px 22px 4px); }
+    33%, 40%, 81%, 88% { background-position: var(--return-4); clip-path: inset(0 8px 22px 4px); }
+    41%, 48%, 89%, 93% { background-position: var(--return-5); clip-path: inset(0 8px 22px 4px); }
+    49%, 56% { background-position: var(--return-6); clip-path: inset(0 8px 22px 4px); }
+    94%, 100% { background-position: var(--happy-frame); clip-path: inset(0); }
   }
 
   @keyframes room-ambient-walk {
-    0%, 14% { transform: translate3d(-50%, 0, 0); }
-    34%, 48% { transform: translate3d(calc(-50% - 28px), -10px, 0); }
-    70%, 82% { transform: translate3d(calc(-50% + 24px), -4px, 0); }
-    96%, 100% { transform: translate3d(-50%, 0, 0); }
+    0%, 4% { transform: translate3d(-50%, 0, 0); }
+    26%, 40% { transform: translate3d(calc(-50% - 28px), -10px, 0); }
+    62%, 74% { transform: translate3d(calc(-50% + 24px), -4px, 0); }
+    92%, 100% { transform: translate3d(-50%, 0, 0); }
   }
 
   @keyframes room-ambient-walk-sprite {
-    0%, 14%, 35%, 48%, 71%, 82%, 97%, 100% { background-position: var(--idle-frame); }
-    15%, 18%, 83%, 86% { background-position: var(--walk-left-1); }
-    19%, 22%, 87%, 90% { background-position: var(--walk-left-2); }
-    23%, 26%, 91%, 94% { background-position: var(--walk-left-3); }
-    27%, 30%, 95%, 96% { background-position: var(--walk-left-4); }
-    31%, 34% { background-position: var(--walk-left-5); }
-    49%, 53% { background-position: var(--walk-right-1); }
-    54%, 58% { background-position: var(--walk-right-2); }
-    59%, 63% { background-position: var(--walk-right-3); }
-    64%, 67% { background-position: var(--walk-right-4); }
-    68%, 70% { background-position: var(--walk-right-5); }
+    0%, 4%, 27%, 40%, 63%, 74%, 93%, 100% { background-position: var(--idle-frame); clip-path: inset(0); }
+    5%, 8%, 75%, 78% { background-position: var(--walk-left-1); clip-path: inset(0 8px 22px 4px); }
+    9%, 12%, 79%, 82% { background-position: var(--walk-left-2); clip-path: inset(0 8px 22px 4px); }
+    13%, 16%, 83%, 86% { background-position: var(--walk-left-3); clip-path: inset(0 8px 22px 4px); }
+    17%, 20%, 87%, 90% { background-position: var(--walk-left-4); clip-path: inset(0 8px 22px 4px); }
+    21%, 26%, 91%, 92% { background-position: var(--walk-left-5); clip-path: inset(0 8px 22px 4px); }
+    41%, 45% { background-position: var(--walk-right-1); clip-path: inset(0 8px 22px 4px); }
+    46%, 50% { background-position: var(--walk-right-2); clip-path: inset(0 8px 22px 4px); }
+    51%, 55% { background-position: var(--walk-right-3); clip-path: inset(0 8px 22px 4px); }
+    56%, 59% { background-position: var(--walk-right-4); clip-path: inset(0 8px 22px 4px); }
+    60%, 62% { background-position: var(--walk-right-5); clip-path: inset(0 8px 22px 4px); }
   }
 
   @keyframes room-ambient-read {
@@ -3161,10 +3264,6 @@ noscript {
   @keyframes room-ambient-rest {
     0%, 100% { background-position: var(--rest-frame); transform: translate3d(-50%, 0, 0); }
     48%, 60% { background-position: var(--rest-frame); transform: translate3d(-50%, 1px, 0); }
-  }
-
-  @keyframes room-hotspot-flash {
-    50% { outline-color: var(--paper); }
   }
 
   @keyframes lamp-breathe {
