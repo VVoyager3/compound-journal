@@ -618,8 +618,10 @@ test('keyboard users can skip the room and open a direct route', async () => {
     await assert.doesNotReject(() => page.getByRole('button', { name: '开始记录' }).waitFor());
     await page.getByRole('link', { name: '跳到主要内容' }).press('Enter');
     await page.waitForFunction(() => document.activeElement?.id === 'main-content');
-    await page.getByRole('link', { name: '记录', exact: true }).press('Enter');
-    await page.waitForURL(/#\/record$/);
+    const recordLink = page.getByRole('link', { name: '记录', exact: true });
+    await recordLink.focus();
+    assert.equal(await recordLink.evaluate((element) => element === document.activeElement), true);
+    await Promise.all([page.waitForURL(/#\/record$/), page.keyboard.press('Enter')]);
     await assert.doesNotReject(() => page.getByRole('textbox', { name: '发生了什么' }).waitFor());
     await page.goto(`${baseUrl}/#/status`);
     await assert.doesNotReject(() => page.getByRole('heading', { name: '我的系统' }).waitFor());
