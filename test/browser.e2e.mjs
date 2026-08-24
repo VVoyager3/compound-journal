@@ -116,6 +116,7 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     const roomSprite = await page.locator('.room-character').getAttribute('style');
     assert.match(roomSprite ?? '', /character-motion-female/);
     const status = page.locator('.status-summary');
+    await assert.doesNotReject(() => status.waitFor());
     assert.equal(await status.locator('.status-meter').count(), 5, 'the five life-state meters should be visible directly below the room');
     assert.ok((await page.locator('.home-hero').evaluate((element) => element.getBoundingClientRect().bottom)) <= (await status.evaluate((element) => element.getBoundingClientRect().top)), 'state meters should follow the room before daily actions');
     assert.equal(await status.locator('details').count(), 0, 'the primary life-state view should not hide behind explanatory disclosure');
