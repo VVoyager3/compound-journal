@@ -61,6 +61,14 @@ test('every companion action has its own tightly cropped transparent PNG', async
     const files = (await readdir(directory)).filter((file) => file.endsWith('.png')).sort();
     assert.equal(files.length, 36, `${gender} must provide exactly 36 independent action frames`);
     assert.deepEqual(files.map((file) => Number(file.slice(0, 2))), Array.from({ length: 36 }, (_, index) => index + 1));
+    assert.deepEqual(
+      files.filter((file) => /walk-(?:left|right)-/.test(file)),
+      [
+        ...Array.from({ length: 6 }, (_, index) => `${13 + index}-walk-left-${index + 1}.png`),
+        ...Array.from({ length: 6 }, (_, index) => `${19 + index}-walk-right-${index + 1}.png`),
+      ],
+      `${gender} horizontal files must keep the manually verified visual direction in their names`,
+    );
     for (const file of files) {
       const png = await readFile(path.join(directory, file));
       const width = png.readUInt32BE(16);

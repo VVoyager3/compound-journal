@@ -640,7 +640,7 @@ p {
   --return-turn-4: var(--return-4);
   --return-turn-5: var(--return-5);
   --return-turn-6: var(--return-6);
-  --arrival-frame: var(--turn-6);
+  --arrival-frame: var(--interaction-frame, var(--turn-6));
 }
 
 .room-character.has-motion::before {
@@ -666,8 +666,8 @@ p {
 .room-character.has-motion.is-action-desk {
   --action-x: clamp(-48px, -12vw, -38px);
   --action-y: clamp(-28px, -5vw, -16px);
-  --waypoint-x: -28px;
-  --waypoint-y: -4px;
+  --waypoint-x: var(--action-x);
+  --waypoint-y: 0px;
   --interaction-frame: var(--face-left-frame);
   --walk-1: var(--walk-left-1);
   --walk-2: var(--walk-left-2);
@@ -675,12 +675,24 @@ p {
   --walk-4: var(--walk-left-4);
   --walk-5: var(--walk-left-5);
   --walk-6: var(--walk-left-6);
-  --return-1: var(--walk-right-1);
-  --return-2: var(--walk-right-2);
-  --return-3: var(--walk-right-3);
-  --return-4: var(--walk-right-4);
-  --return-5: var(--walk-right-5);
-  --return-6: var(--walk-right-6);
+  --turn-1: var(--walk-back-1);
+  --turn-2: var(--walk-back-2);
+  --turn-3: var(--walk-back-3);
+  --turn-4: var(--walk-back-4);
+  --turn-5: var(--walk-back-5);
+  --turn-6: var(--walk-back-6);
+  --return-1: var(--walk-front-1);
+  --return-2: var(--walk-front-2);
+  --return-3: var(--walk-front-3);
+  --return-4: var(--walk-front-4);
+  --return-5: var(--walk-front-5);
+  --return-6: var(--walk-front-6);
+  --return-turn-1: var(--walk-right-1);
+  --return-turn-2: var(--walk-right-2);
+  --return-turn-3: var(--walk-right-3);
+  --return-turn-4: var(--walk-right-4);
+  --return-turn-5: var(--walk-right-5);
+  --return-turn-6: var(--walk-right-6);
 }
 
 .room-character.has-motion.is-action-board {
@@ -706,8 +718,8 @@ p {
 .room-character.has-motion.is-action-calendar {
   --action-x: clamp(52px, 16vw, 64px);
   --action-y: -20px;
-  --waypoint-x: 18px;
-  --waypoint-y: -10px;
+  --waypoint-x: 0px;
+  --waypoint-y: var(--action-y);
   --interaction-frame: var(--face-back-frame);
   --walk-1: var(--walk-back-1);
   --walk-2: var(--walk-back-2);
@@ -738,8 +750,8 @@ p {
 .room-character.has-motion.is-action-workbench {
   --action-x: clamp(42px, 14vw, 58px);
   --action-y: clamp(-28px, -5vw, -16px);
-  --waypoint-x: 30px;
-  --waypoint-y: -4px;
+  --waypoint-x: var(--action-x);
+  --waypoint-y: 0px;
   --interaction-frame: var(--face-right-frame);
   --walk-1: var(--walk-right-1);
   --walk-2: var(--walk-right-2);
@@ -747,19 +759,31 @@ p {
   --walk-4: var(--walk-right-4);
   --walk-5: var(--walk-right-5);
   --walk-6: var(--walk-right-6);
-  --return-1: var(--walk-left-1);
-  --return-2: var(--walk-left-2);
-  --return-3: var(--walk-left-3);
-  --return-4: var(--walk-left-4);
-  --return-5: var(--walk-left-5);
-  --return-6: var(--walk-left-6);
+  --turn-1: var(--walk-back-1);
+  --turn-2: var(--walk-back-2);
+  --turn-3: var(--walk-back-3);
+  --turn-4: var(--walk-back-4);
+  --turn-5: var(--walk-back-5);
+  --turn-6: var(--walk-back-6);
+  --return-1: var(--walk-front-1);
+  --return-2: var(--walk-front-2);
+  --return-3: var(--walk-front-3);
+  --return-4: var(--walk-front-4);
+  --return-5: var(--walk-front-5);
+  --return-6: var(--walk-front-6);
+  --return-turn-1: var(--walk-left-1);
+  --return-turn-2: var(--walk-left-2);
+  --return-turn-3: var(--walk-left-3);
+  --return-turn-4: var(--walk-left-4);
+  --return-turn-5: var(--walk-left-5);
+  --return-turn-6: var(--walk-left-6);
 }
 
 .room-character.has-motion.is-action-window {
   --action-x: -24px;
   --action-y: -20px;
-  --waypoint-x: -4px;
-  --waypoint-y: -10px;
+  --waypoint-x: 0px;
+  --waypoint-y: var(--action-y);
   --interaction-frame: var(--face-back-frame);
   --walk-1: var(--walk-back-1);
   --walk-2: var(--walk-back-2);
@@ -790,33 +814,33 @@ p {
 .room-character.has-motion.is-action-bed {
   --action-x: -10px;
   --action-y: clamp(18px, 5vw, 30px);
-  --waypoint-x: -6px;
-  --waypoint-y: 4px;
+  --waypoint-x: 0px;
+  --waypoint-y: var(--action-y);
   --interaction-frame: var(--rest-frame);
-  --walk-1: var(--walk-left-1);
-  --walk-2: var(--walk-left-2);
-  --walk-3: var(--walk-left-3);
-  --walk-4: var(--walk-left-4);
-  --walk-5: var(--walk-left-5);
-  --walk-6: var(--walk-left-6);
-  --turn-1: var(--walk-front-1);
-  --turn-2: var(--walk-front-2);
-  --turn-3: var(--walk-front-3);
-  --turn-4: var(--walk-front-4);
-  --turn-5: var(--walk-front-5);
-  --turn-6: var(--walk-front-6);
-  --return-1: var(--walk-back-1);
-  --return-2: var(--walk-back-2);
-  --return-3: var(--walk-back-3);
-  --return-4: var(--walk-back-4);
-  --return-5: var(--walk-back-5);
-  --return-6: var(--walk-back-6);
-  --return-turn-1: var(--walk-right-1);
-  --return-turn-2: var(--walk-right-2);
-  --return-turn-3: var(--walk-right-3);
-  --return-turn-4: var(--walk-right-4);
-  --return-turn-5: var(--walk-right-5);
-  --return-turn-6: var(--walk-right-6);
+  --walk-1: var(--walk-front-1);
+  --walk-2: var(--walk-front-2);
+  --walk-3: var(--walk-front-3);
+  --walk-4: var(--walk-front-4);
+  --walk-5: var(--walk-front-5);
+  --walk-6: var(--walk-front-6);
+  --turn-1: var(--walk-left-1);
+  --turn-2: var(--walk-left-2);
+  --turn-3: var(--walk-left-3);
+  --turn-4: var(--walk-left-4);
+  --turn-5: var(--walk-left-5);
+  --turn-6: var(--walk-left-6);
+  --return-1: var(--walk-right-1);
+  --return-2: var(--walk-right-2);
+  --return-3: var(--walk-right-3);
+  --return-4: var(--walk-right-4);
+  --return-5: var(--walk-right-5);
+  --return-6: var(--walk-right-6);
+  --return-turn-1: var(--walk-back-1);
+  --return-turn-2: var(--walk-back-2);
+  --return-turn-3: var(--walk-back-3);
+  --return-turn-4: var(--walk-back-4);
+  --return-turn-5: var(--walk-back-5);
+  --return-turn-6: var(--walk-back-6);
 }
 
 .room-character.has-motion.is-resting:not([class*="is-action-"]) {
@@ -3299,18 +3323,19 @@ noscript {
     21%, 27% { background-image: var(--walk-3); translate: 0 -2px; }
     28%, 34% { background-image: var(--walk-4); translate: 0 0; }
     35%, 41% { background-image: var(--walk-5); translate: 0 -2px; }
-    42%, 54% { background-image: var(--walk-6); translate: 0 0; }
-    55%, 61% { background-image: var(--turn-1); translate: 0 -2px; }
-    62%, 68% { background-image: var(--turn-2); translate: 0 0; }
-    69%, 75% { background-image: var(--turn-3); translate: 0 -2px; }
-    76%, 82% { background-image: var(--turn-4); translate: 0 0; }
-    83%, 87% { background-image: var(--turn-5); translate: 0 -2px; }
-    88%, 100% { background-image: var(--arrival-frame); translate: 0 0; }
+    42%, 48% { background-image: var(--walk-6); translate: 0 0; }
+    49%, 55% { background-image: var(--turn-1); translate: 0 -2px; }
+    56%, 62% { background-image: var(--turn-2); translate: 0 0; }
+    63%, 69% { background-image: var(--turn-3); translate: 0 -2px; }
+    70%, 76% { background-image: var(--turn-4); translate: 0 0; }
+    77%, 83% { background-image: var(--turn-5); translate: 0 -2px; }
+    84%, 91% { background-image: var(--turn-6); translate: 0 0; }
+    92%, 100% { background-image: var(--arrival-frame); translate: 0 0; }
   }
 
   @keyframes room-shadow-step {
-    0%, 6%, 14%, 20%, 28%, 34%, 42%, 54%, 62%, 68%, 76%, 82%, 88%, 100% { opacity: .25; transform: translateX(-50%) scaleX(1); }
-    7%, 13%, 21%, 27%, 35%, 41%, 55%, 61%, 69%, 75%, 83%, 87% { opacity: .18; transform: translateX(-50%) translateY(2px) scaleX(.82); }
+    0%, 6%, 14%, 20%, 28%, 34%, 42%, 48%, 56%, 62%, 70%, 76%, 84%, 100% { opacity: .25; transform: translateX(-50%) scaleX(1); }
+    7%, 13%, 21%, 27%, 35%, 41%, 49%, 55%, 63%, 69%, 77%, 83% { opacity: .18; transform: translateX(-50%) translateY(2px) scaleX(.82); }
   }
 
   @keyframes room-furniture-use {

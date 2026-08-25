@@ -599,6 +599,63 @@ test('the companion wanders naturally and walks to furniture before direct navig
   }
 });
 
+test('each clicked furniture route faces the direction of both grid segments', async () => {
+  const { context, page, apiRequests } = await freshPage();
+  const routes = [
+    ['打开记录', 'desk', 'left', 'back'],
+    ['打开任务', 'board', 'back', 'back'],
+    ['打开日历', 'calendar', 'back', 'right'],
+    ['打开成长', 'workbench', 'right', 'back'],
+    ['打开状态', 'window', 'back', 'left'],
+    ['在床边休息', 'bed', 'front', 'left'],
+  ];
+  const directionBetween = (from, to) => {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'front' : 'back');
+  };
+  try {
+    await finishOnboarding(page);
+    for (const [buttonName, action, firstDirection, secondDirection] of routes) {
+      await page.goto(`${baseUrl}/#/today`);
+      await page.reload();
+      await assert.doesNotReject(() => page.locator('.room-character.is-motion-ready').waitFor());
+      await page.getByRole('button', { name: buttonName, exact: true }).click();
+      const character = page.locator(`.room-character.is-action-${action}.is-walking`);
+      await assert.doesNotReject(() => character.waitFor());
+      const motion = await character.evaluate((element) => {
+        const animations = element.getAnimations();
+        const route = animations.find((animation) => animation.animationName === 'room-action');
+        const sprite = animations.find((animation) => animation.animationName === 'room-walk-cycle');
+        if (!route || !sprite) return null;
+        route.pause();
+        sprite.pause();
+        const sample = (time) => {
+          route.currentTime = time;
+          sprite.currentTime = time;
+          const box = element.getBoundingClientRect();
+          return { x: box.left + box.width / 2, y: box.bottom, image: getComputedStyle(element).backgroundImage };
+        };
+        return {
+          start: sample(0),
+          firstFrame: sample(300),
+          waypoint: sample(480),
+          secondFrame: sample(700),
+          end: sample(900),
+        };
+      });
+      assert.ok(motion, `${action} must expose route and sprite animations`);
+      assert.equal(directionBetween(motion.start, motion.waypoint), firstDirection, `${action} first segment must move ${firstDirection}`);
+      assert.equal(directionBetween(motion.waypoint, motion.end), secondDirection, `${action} second segment must move ${secondDirection}`);
+      assert.match(motion.firstFrame.image, new RegExp(`walk-${firstDirection}-`), `${action} must face ${firstDirection} during its first segment`);
+      assert.match(motion.secondFrame.image, new RegExp(`walk-${secondDirection}-`), `${action} must turn toward ${secondDirection} only for its second segment`);
+    }
+    assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
 test('the companion explains the current direction before offering adjustments', async () => {
   const { context, page } = await freshPage();
   try {
