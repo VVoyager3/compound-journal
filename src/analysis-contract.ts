@@ -843,7 +843,7 @@ function parseReflection(value: unknown): DailyReflection {
     whatHappened: textValue(record.whatHappened, '复盘事实', 500),
     specificCredit: textValue(record.specificCredit, '具体肯定', 500, true),
     patternCandidate,
-    nextSmallStep: textValue(record.nextSmallStep, '下一小步', 300),
+    nextSmallStep: textValue(record.nextSmallStep, '下一小步', 300, true),
   };
 }
 

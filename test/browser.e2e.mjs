@@ -476,8 +476,21 @@ test('confirmed feedback changes the next day recommendation', async () => {
     const decision = page.getByRole('dialog', { name: '这条目标路径还值得继续吗？' });
     await assert.doesNotReject(() => decision.getByRole('button', { name: '修改目标或下一步' }).waitFor());
     await assert.doesNotReject(() => decision.getByRole('button', { name: '根据证据重新拆解' }).waitFor());
-    await decision.getByRole('button', { name: '先暂停目标' }).click();
-    await assert.doesNotReject(() => page.getByText('主目标 · 暂停', { exact: true }).waitFor());
+    await decision.getByRole('button', { name: '暂不改变目标' }).click();
+    await page.goto(`${baseUrl}/#/today`);
+    assert.equal(await page.getByRole('button', { name: '确认或调整这一步' }).count(), 0, '今天不做后，同一天不应再次催促同一目标');
+    await page.evaluate((nextDay) => localStorage.setItem('qiguang.e2e-now', String(nextDay)), firstDay + 2 * 86_400_000);
+    await page.reload();
+    const retryGuide = page.locator('.daily-guide');
+    assert.equal(await retryGuide.count(), 1, `次日必须恢复目标处理入口：${await page.locator('#main-content').innerText()}`);
+    assert.match(await retryGuide.innerText(), /重新决定：推进：第二阶段/);
+    await retryGuide.getByRole('button', { name: '确认或调整这一步' }).click();
+    const retryDialog = page.getByRole('dialog', { name: '把下一步安排到今天' });
+    const retryTitle = retryDialog.getByRole('textbox', { name: '我现在想做什么？' });
+    assert.equal(await retryTitle.inputValue(), '推进：第二阶段');
+    await retryTitle.fill('缩小后继续第二阶段');
+    await retryDialog.getByRole('button', { name: '安排到今天' }).click();
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '缩小后继续第二阶段' }).waitFor());
   } finally {
     await context.close();
   }
@@ -534,6 +547,8 @@ test('the companion wanders naturally and walks to furniture before direct navig
     await finishOnboarding(page);
     await page.goto(`${baseUrl}/#/today`);
     const character = page.locator('.room-character');
+    await assert.doesNotReject(() => page.locator('.room-character.is-motion-ready').waitFor());
+    assert.equal(await page.locator('.room-plant').count(), 0, 'the room should not render unexplained habit color blocks');
     const before = await character.boundingBox();
     await assert.doesNotReject(() => page.locator('.room-character[class*="is-ambient-"]').waitFor());
     const ambientAction = await character.evaluate((element) => [...element.classList].find((name) => name.startsWith('is-ambient-')) ?? '');
@@ -551,20 +566,28 @@ test('the companion wanders naturally and walks to furniture before direct navig
     const actionTiming = await character.evaluate((element) => getComputedStyle(element).animationTimingFunction);
     assert.match(actionAnimations, /room-action/);
     assert.match(actionAnimations, /room-walk-cycle/);
-    assert.match(actionAnimations, /room-footfall/);
-    assert.match(actionTiming, /cubic-bezier\(0\.4, 0, 0\.2, 1\)/, 'the route should ease through its waypoints instead of jumping or gliding at constant speed');
+    assert.doesNotMatch(actionAnimations, /room-footfall/);
+    assert.match(actionTiming, /steps\(6, jump-none\)/, 'the route should move on the same discrete beat as its six walking frames');
     assert.doesNotMatch(actionAnimations, /step-weight/);
     assert.match(await character.evaluate((element) => getComputedStyle(element, '::after').animationName), /room-shadow-step/, 'the ground shadow should respond to each footfall');
     assert.match(await page.getByRole('button', { name: '打开记录' }).evaluate((element) => getComputedStyle(element, '::before').animationName), /hotspot-sigil/, 'the active furniture should use a short in-world focus cue');
-    await page.waitForTimeout(90);
-    const firstStep = await character.evaluate((element) => getComputedStyle(element).backgroundImage);
-    await page.waitForTimeout(90);
-    const secondStep = await character.evaluate((element) => getComputedStyle(element).backgroundImage);
-    assert.notEqual(firstStep, secondStep, 'walking must advance through distinct sprite frames');
-    await page.waitForTimeout(220);
+    const samples = await character.evaluate((element) => new Promise((resolve) => {
+      const values = [];
+      const startedAt = performance.now();
+      const sample = () => {
+        values.push({ image: getComputedStyle(element).backgroundImage, x: Math.round(element.getBoundingClientRect().x * 10) / 10 });
+        if (performance.now() - startedAt >= 420) resolve(values);
+        else requestAnimationFrame(sample);
+      };
+      sample();
+    }));
+    const sampledFrames = new Set(samples.map((item) => item.image));
+    const sampledPositions = new Set(samples.map((item) => item.x));
+    assert.ok(sampledFrames.size >= 3 && samples.every((item) => item.image !== 'none'), 'preloaded walking frames must advance without flashing blank');
+    assert.ok(sampledPositions.size >= 3 && sampledPositions.size < samples.length / 2, 'movement must land on repeated discrete positions instead of drifting every render frame');
     const during = await character.boundingBox();
     assert.ok(actionStart && during && during.x < actionStart.x - 5, 'companion should visibly walk toward the desk');
-    assert.equal(await character.evaluate((element) => getComputedStyle(element).clipPath), 'inset(0px)', 'each walking frame should fit its own fixed atlas cell without crop hacks');
+    assert.equal(await character.evaluate((element) => getComputedStyle(element).clipPath), 'none', 'independent frames should not be clipped again while walking');
     await assert.doesNotReject(() => page.locator('.room-character.is-action-desk.is-interacting').waitFor());
     await assert.doesNotReject(() => page.getByText('坐到椅子上，写下一件真实发生的事。', { exact: true }).waitFor());
     await page.waitForTimeout(120);
@@ -879,7 +902,7 @@ test('a day review keeps its own state freshness and excludes future habits', as
     assert.equal(await energyStatus.locator('.status-meter').evaluate((meter) => getComputedStyle(meter).getPropertyValue('--status-level').trim()), '25%');
     assert.equal(await page.getByText('需要更新', { exact: true }).count(), 0);
     assert.equal(await page.locator('.room-stage[data-snapshot-date]').getAttribute('data-snapshot-date'), past);
-    assert.equal(await page.locator('.room-plant.is-empty').count(), 0);
+    assert.equal(await page.locator('.room-plant').count(), 0, 'habits created after this date must not leave empty decorative blocks in the room');
     await energyStatus.click();
     const detail = page.getByRole('dialog', { name: '体力状态依据' });
     await assert.doesNotReject(() => detail.waitFor());
@@ -1185,6 +1208,16 @@ test('an exported backup restores records after deleting all local data', async 
 
 test('daily analysis sends only after range confirmation and keeps inference user-confirmed', async () => {
   const { context, page, apiRequests } = await freshPage();
+  const firstDay = new Date(2026, 7, 20, 10, 0, 0).getTime();
+  await context.addInitScript(({ initial }) => {
+    const NativeDate = Date;
+    const current = () => Number(localStorage.getItem('qiguang.e2e-now')) || initial;
+    class TestDate extends NativeDate {
+      constructor(...args) { super(...(args.length ? args : [current()])); }
+      static now() { return current(); }
+    }
+    window.Date = TestDate;
+  }, { initial: firstDay });
   try {
     await finishOnboarding(page);
     await page.getByRole('textbox', { name: '发生了什么' }).fill('下午连续开会，晚上散步以后平静了一些。');
@@ -1232,6 +1265,17 @@ test('daily analysis sends only after range confirmation and keeps inference use
       includeBonusHabits: false,
       memoryIds: [],
     });
+    await page.evaluate((nextDay) => localStorage.setItem('qiguang.e2e-now', String(nextDay)), firstDay + 86_400_000);
+    await page.goto(`${baseUrl}/#/today`);
+    const guide = page.locator('.daily-guide');
+    await assert.doesNotReject(() => guide.getByRole('heading', { name: '明天安排十分钟低压力过渡。' }).waitFor());
+    assert.equal(await page.getByRole('button', { name: '确认或调整这一步' }).count(), 1, '昨日下一步只保留一个可执行入口');
+    await guide.getByRole('button', { name: '确认或调整这一步' }).click();
+    const questDialog = page.getByRole('dialog', { name: '安排今日任务' });
+    assert.equal(await questDialog.getByRole('textbox', { name: '我现在想做什么？' }).inputValue(), '明天安排十分钟低压力过渡。');
+    await questDialog.getByRole('button', { name: '安排到今天' }).click();
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '明天安排十分钟低压力过渡。' }).waitFor());
+    assert.equal(apiRequests.length, 1, '确认昨日下一步不应再次调用模型');
   } finally {
     await context.close();
   }

@@ -20,9 +20,9 @@ function deleteDatabase(name) {
   });
 }
 
-test('fourteen calendar days close the guidance loop without debt after interruption', async (t) => {
+test('fourteen-day ledger simulation settles feedback without debt after interruption', async (t) => {
   const databaseName = `qiguang-14-day-${crypto.randomUUID()}`;
-  const db = await QiguangDb.open(databaseName);
+  let db = await QiguangDb.open(databaseName);
   t.after(async () => { db.close(); await deleteDatabase(databaseName); });
   await db.ensureI2Defaults();
 
@@ -44,8 +44,7 @@ test('fourteen calendar days close the guidance loop without debt after interrup
     dimension: 'energy', branchId: branch.id, difficulty: 'light', bonusEnabled: true,
   });
 
-  const activeDates = dates.filter((_, index) => index !== 7 && index !== 8);
-  for (const date of activeDates) await db.addEntry(`在 ${date} 留下真实记录；今天至少完成或确认了一件小事。`, date);
+  const recordDay = (date) => db.addEntry(`在 ${date} 留下真实记录；今天至少完成或确认了一件小事。`, date);
   const settleBonus = async (date, result = 'completed') => {
     await db.ensureTodayBonusQuests(date);
     const bonus = (await db.listQuests(date)).find((quest) => quest.sourceId === habit.id);
@@ -58,6 +57,7 @@ test('fourteen calendar days close the guidance loop without debt after interrup
     completionCriteria: milestone.evidence, estimatedMinutes: 10, difficulty: 'light', branchId: branch.id,
   });
 
+  await recordDay(dates[0]);
   const first = await addGoalMain(dates[0], milestones[0]);
   assert.equal(chooseDailyDirection({ mainQuest: first, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false }).kind, 'main');
   await db.feedbackQuest(first.id, 'completed', '完成结构', '列出三个章节', undefined, 2, dates[0]);
@@ -65,6 +65,7 @@ test('fourteen calendar days close the guidance loop without debt after interrup
   assert.equal(dayTwo.followUp?.milestoneId, milestones[1].id);
   await settleBonus(dates[0]);
 
+  await recordDay(dates[1]);
   const carriedDirection = chooseDailyDirection({
     mainQuest: { status: 'pending', carriedFromPreviousDay: Boolean(dayTwo.followUp?.predecessorQuestId) },
     recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false,
@@ -75,10 +76,12 @@ test('fourteen calendar days close the guidance loop without debt after interrup
   assert.match(dayThree.followUp?.title ?? '', /^缩小继续：/);
   await settleBonus(dates[1], 'partial');
 
+  await recordDay(dates[2]);
   await db.feedbackQuest(dayThree.followUp.id, 'skipped', '建议不适合我，需要换一种写法', '', undefined, 0, dates[2]);
   assert.equal((await db.listQuests(dates[3])).filter((quest) => quest.sourceType === 'goal').length, 0, 'rejected advice must not copy itself');
   await settleBonus(dates[2], 'skipped');
 
+  await recordDay(dates[3]);
   await db.saveAssessment({ energy: 30 }, dates[3]);
   const dayFour = await addGoalMain(dates[3], milestones[1], '只补一段最容易写的正文');
   const recovery = chooseDailyDirection({ mainQuest: dayFour, recoveryAvailable: true, activeGoalAvailable: true, previousStepAvailable: false });
@@ -86,21 +89,27 @@ test('fourteen calendar days close the guidance loop without debt after interrup
   await db.feedbackQuest(dayFour.id, 'exempt', '今天状态不足，先恢复且不扣分', '', undefined, 0, dates[3]);
   await settleBonus(dates[3], 'skipped');
 
+  await recordDay(dates[4]);
   const dayFive = await addGoalMain(dates[4], milestones[1], '用最低版本完成剩余正文');
   await db.feedbackQuest(dayFive.id, 'completed', '最低版本完成', '三个章节都有正文', undefined, 2, dates[4]);
   const daySix = await db.createGoalFollowUpQuest(dayFive.id, dates[5]);
   assert.equal(daySix.followUp?.milestoneId, milestones[2].id);
   await settleBonus(dates[4]);
 
+  await recordDay(dates[5]);
   await db.feedbackQuest(daySix.followUp.id, 'completed', '已经试读', '收到一条具体反馈', undefined, 2, dates[5]);
   const daySeven = await db.createGoalFollowUpQuest(daySix.followUp.id, dates[6]);
   assert.equal(daySeven.followUp?.milestoneId, milestones[3].id);
   await settleBonus(dates[5]);
+  await recordDay(dates[6]);
   await settleBonus(dates[6]);
 
   assert.equal((await db.listQuests(dates[7])).length, 0, 'a day not opened must not create BONUS debt');
   assert.equal((await db.listQuests(dates[8])).length, 0, 'a second missed day must stay empty');
+  db.close();
+  db = await QiguangDb.open(databaseName);
   assert.deepEqual((await db.listPendingBefore(dates[9])).map((quest) => quest.id), [daySeven.followUp.id], 'returning should show one unresolved MAIN, not a backlog');
+  await recordDay(dates[9]);
   await db.feedbackQuest(daySeven.followUp.id, 'exempt', '中断后重新判断，不补旧任务', '', undefined, 0, dates[9]);
   const dayTen = await addGoalMain(dates[9], milestones[3], '根据试读反馈完成修订');
   await db.ensureTodayBonusQuests(dates[9]);
@@ -119,6 +128,7 @@ test('fourteen calendar days close the guidance loop without debt after interrup
   let priorManual = null;
   for (let index = 10; index < dates.length; index += 1) {
     const date = dates[index];
+    await recordDay(date);
     const quest = await db.addQuest({
       localDate: date, type: 'main', sourceType: 'manual', actionId: `reflection-${index}`,
       title: index === 10 ? '写下试读后的一个收获' : `完成第 ${index + 1} 天的最小复盘`,
@@ -145,6 +155,7 @@ test('fourteen calendar days close the guidance loop without debt after interrup
   assert((await db.habitMomentum(habit.id, dates[13])) > 0, 'missed days lower momentum without resetting it');
 
   t.diagnostic(JSON.stringify({
+    simulationKind: 'ledger',
     calendarDays: 14, activeDays: entries.length, interruptionDays: 2,
     taskFeedback: Object.fromEntries(['completed', 'partial', 'skipped', 'exempt'].map((result) => [result, feedback.filter((item) => item.result === result).length])),
     milestonesCompleted: 4, totalXp: totalXp(ledger), pendingDebt: 0,

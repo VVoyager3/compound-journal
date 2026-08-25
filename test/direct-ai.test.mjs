@@ -89,7 +89,7 @@ test('model ingress repairs only provable evidence coordinates and optional meta
   assert.deepEqual(parsed.result.events[0].evidence[0], { entryId: 'entry-1', quote: '今天早晨写作很顺利。', start: 1, end: 11 });
   assert.equal(parsed.result.events.length, 1);
   assert.equal(parsed.result.questSuggestions.length, 0);
-  assert.equal(parsed.result.reflection.nextSmallStep, '暂不额外安排。');
+  assert.equal(parsed.result.reflection.nextSmallStep, '');
   assert.deepEqual(parsed.result.memoryCandidates[0].counterEvidence, ['memory-1']);
   assert.equal('description' in parsed.result.memoryCandidates[0], false);
 });

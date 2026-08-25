@@ -269,7 +269,7 @@ function normalizeModelValue(value: unknown, request: AnalysisRequest): unknown 
       if (typeof reflection.whatHappened !== 'string' || !reflection.whatHappened.trim()) reflection.whatHappened = typeof result.summary === 'string' ? result.summary : '本次记录尚不足以整理事实。';
       if (typeof reflection.specificCredit !== 'string') reflection.specificCredit = '';
       if (!('patternCandidate' in reflection)) reflection.patternCandidate = null;
-      if (typeof reflection.nextSmallStep !== 'string' || !reflection.nextSmallStep.trim()) reflection.nextSmallStep = '暂不额外安排。';
+      if (typeof reflection.nextSmallStep !== 'string' || !reflection.nextSmallStep.trim()) reflection.nextSmallStep = '';
       const pattern = recordValue(reflection.patternCandidate);
       if (pattern && (typeof pattern.neededEvidence !== 'string' || !pattern.neededEvidence.trim())) pattern.neededEvidence = '还需要至少两次不同日期的相似证据。';
     }

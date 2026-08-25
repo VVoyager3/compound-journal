@@ -58,11 +58,11 @@ const motionFrameImages = import.meta.glob<string>(
   '../design-assets/pre-development/character-frames/*/*.png',
   { eager: true, query: '?url', import: 'default' },
 );
+const motionFramePreloads = new Map<Exclude<Profile['avatar'], null>, Promise<void>>();
 
 type RouteName = 'today' | 'calendar' | 'record' | 'tasks' | 'growth' | 'system' | 'day' | 'review';
 type PixelIcon = 'today' | 'calendar' | 'record' | 'growth' | 'system' | 'desk' | 'board' | 'books' | 'window' | 'character';
 interface Route { name: RouteName; date?: string }
-interface PlantState { habitId: string; growth: 'empty' | 'started' | 'grown' }
 type RoomCue = 'rest' | 'focus' | 'play';
 interface InstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -188,17 +188,35 @@ function avatarAsset(avatar: Exclude<Profile['avatar'], null>): string {
   return avatar === 'male' ? maleAvatarImage : femaleAvatarImage;
 }
 
-function applyMotionFrames(character: HTMLElement, avatar: Exclude<Profile['avatar'], null>): void {
+function preloadMotionFrames(avatar: Exclude<Profile['avatar'], null>, urls: string[]): Promise<void> {
+  const cached = motionFramePreloads.get(avatar);
+  if (cached) return cached;
+  const preload = Promise.all(urls.map((url) => new Promise<void>((resolve) => {
+    const image = new Image();
+    image.addEventListener('load', () => { void image.decode().catch(() => undefined).finally(resolve); }, { once: true });
+    image.addEventListener('error', () => resolve(), { once: true });
+    image.src = url;
+  }))).then(() => undefined);
+  motionFramePreloads.set(avatar, preload);
+  return preload;
+}
+
+function applyMotionFrames(character: HTMLElement, avatar: Exclude<Profile['avatar'], null>): Promise<void> {
   const directory = `/character-frames/${avatar}/`;
+  const urls: string[] = [];
   for (const [path, url] of Object.entries(motionFrameImages)) {
     if (!path.includes(directory)) continue;
     const frame = path.match(/\/\d{2}-(.+)\.png$/)?.[1];
     if (!frame) continue;
+    urls.push(url);
     const variable = frame.startsWith('walk-') ? frame : frame.startsWith('idle-') ? `face-${frame.slice(5)}-frame` : `${frame}-frame`;
     character.style.setProperty(`--${variable}`, `url("${url}")`);
   }
   character.style.setProperty('--idle-frame', 'var(--face-front-frame)');
   character.style.setProperty('--happy-frame', 'var(--face-front-frame)');
+  const ready = preloadMotionFrames(avatar, urls);
+  void ready.then(() => character.classList.add('is-motion-ready'));
+  return ready;
 }
 
 function node<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text?: string): HTMLElementTagNameMap[K] {
@@ -530,7 +548,7 @@ function companionMessage(welcoming: boolean, cue: RoomCue | null, hasMainQuest:
   return hasMainQuest ? '主线已经在等你了；需要的话，我陪你拆成下一步。' : '我在。今天想从哪里开始？';
 }
 
-function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Profile['avatar'] = null, companionName = '小栖', welcoming = false, cue: RoomCue | null = null, snapshotDate: string | null = null, hasMainQuest = false, completedMilestones = 0, guidance: { title: string; reason: string; settled?: boolean } | null = null, companionContext: string[] = []): HTMLElement {
+function roomStage(compact = false, avatar: Profile['avatar'] = null, companionName = '小栖', welcoming = false, cue: RoomCue | null = null, snapshotDate: string | null = null, hasMainQuest = false, completedMilestones = 0, guidance: { title: string; reason: string; settled?: boolean } | null = null, companionContext: string[] = []): HTMLElement {
   const stage = node('section', `room-stage${compact ? ' is-compact' : ''}`);
   if (snapshotDate) stage.dataset.snapshotDate = snapshotDate;
   stage.setAttribute('aria-label', '温暖的像素房间：包含日记桌、任务板、日历、书架工作台、窗边床铺和生活分身。所有功能也能通过普通导航进入。');
@@ -549,7 +567,6 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
     scene.append(trophy);
   }
   if (cue) scene.append(node('div', `room-cue is-${cue}`));
-  const celebratingHabit = compact ? null : sessionStorage.getItem('qiguang.plant-celebration');
   const celebratingCharacter = !compact && Boolean(sessionStorage.getItem('qiguang.character-celebration'));
   const characterState = celebratingCharacter ? ['celebrating', '庆祝'] as const
     : welcoming ? ['listening', '倾听'] as const
@@ -557,19 +574,14 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
         : cue === 'focus' ? ['thinking', '思考'] as const
           : cue === 'play' ? ['playing', '放松'] as const
             : hasMainQuest ? ['guiding', '指导'] as const : ['present', '在场'] as const;
-  ['one', 'two', 'three'].forEach((position, index) => {
-    const plantState = plantStates[index];
-    const plant = node('div', `room-plant is-${position}${plantState ? ` is-${plantState.growth}` : ''}${plantState?.habitId === celebratingHabit ? ' is-celebrating' : ''}`);
-    scene.append(plant);
-  });
   const character = node('div', `room-character is-happy is-${avatar ?? 'neutral'} is-ambient-${ambientAction}${celebratingCharacter ? ' is-celebrating' : ''}${welcoming ? ' is-welcoming' : ''}${cue === 'rest' || ambientAction === 'rest' ? ' is-resting' : ''}`);
+  let motionReady = Promise.resolve();
   if (avatar) {
     character.classList.add('has-motion');
-    applyMotionFrames(character, avatar);
+    motionReady = applyMotionFrames(character, avatar);
   }
   scene.append(character);
   if (!compact && characterState[0] !== 'present') scene.append(node('span', `character-state is-${characterState[0]}`, characterState[1]));
-  if (celebratingHabit && plantStates.some((item) => item.habitId === celebratingHabit)) sessionStorage.removeItem('qiguang.plant-celebration');
   if (celebratingCharacter) sessionStorage.removeItem('qiguang.character-celebration');
   stage.append(scene);
   if (!compact) {
@@ -597,7 +609,7 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
       button.setAttribute('aria-label', position === 'bed' ? '在床边休息' : destination ? `打开${label}` : label);
       button.append(node('span', 'hotspot-label', label));
       const target = destination;
-      if (position !== 'character') button.addEventListener('click', () => {
+      if (position !== 'character') button.addEventListener('click', async () => {
         if (actionPending) return;
         if (roomMotionReduced || !avatar) {
           if (target) go(target);
@@ -606,6 +618,12 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
         }
         actionPending = true;
         button.disabled = true;
+        await motionReady;
+        if (!button.isConnected || !character.isConnected) {
+          actionPending = false;
+          button.disabled = false;
+          return;
+        }
         const actionClass = `is-action-${position}`;
         stage.classList.add('is-character-moving');
         stage.setAttribute('aria-busy', 'true');
@@ -703,11 +721,6 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
 
 function observationIsStale(observation: { localDate: string }, referenceDate = localDate()): boolean {
   return (parseLocalDate(referenceDate).getTime() - parseLocalDate(observation.localDate).getTime()) / 86_400_000 > 7;
-}
-
-function timestampLocalDate(timestamp: string): string {
-  const value = new Date(timestamp);
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
 }
 
 function localDateTimeInput(timestamp?: string): string {
@@ -886,7 +899,6 @@ async function saveQuickQuestFeedback(quest: Quest, result: Extract<FeedbackResu
     await db.feedbackQuest(quest.id, result, '', '', quest.difficulty, 0);
     const progression = await createGoalFollowUp(quest, result);
     if (result === 'completed') sessionStorage.setItem('qiguang.character-celebration', quest.id);
-    if (quest.sourceType === 'habit' && result === 'completed') sessionStorage.setItem('qiguang.plant-celebration', quest.sourceId ?? '');
     focusAfterRenderSelector = questFeedbackFocusSelector(quest);
     showToast(goalProgressMessage(progression, result, result === 'skipped' ? '今天不做已记下；没有扣分。' : `已记为${FEEDBACK_LABELS[result]}；可以随时撤销。`));
     await render();
@@ -1101,7 +1113,6 @@ async function openQuestFeedbackDialog(quest: Quest): Promise<void> {
       const progression = await createGoalFollowUp(quest, result.value as FeedbackResult);
       if (applyHabitDifficulty?.checked && quest.sourceId) await db.saveHabit(quest.sourceId, { difficulty: difficulty.value as Difficulty });
       if (result.value === 'completed') sessionStorage.setItem('qiguang.character-celebration', quest.id);
-      if (quest.sourceType === 'habit' && result.value === 'completed') sessionStorage.setItem('qiguang.plant-celebration', quest.sourceId ?? '');
       dialog.close();
       focusAfterRenderSelector = questFeedbackFocusSelector(quest);
       showToast(goalProgressMessage(progression, result.value as FeedbackResult, '反馈已保存；可以在任务卡上撤销。'));
@@ -1426,11 +1437,6 @@ function openDailyCloseout(date: string, entries: JournalEntry[], quests: Quest[
   }); review.append(reviewButton);
   const tomorrow = node('section', `closeout-item${nextSmallStep ? ' is-done' : ''}`);
   tomorrow.append(node('strong', '', nextSmallStep ? '明天准备继续的一步' : '明天还没有预先决定'), node('p', 'caption', nextSmallStep || '不用现在规划完整明天；回来时从一件真实小事开始即可。'));
-  if (nextSmallStep) {
-    const tomorrowButton = node('button', 'button button-secondary', '打开任务板决定');
-    tomorrowButton.type = 'button'; tomorrowButton.addEventListener('click', () => { dialog.close(); go({ name: 'tasks' }); });
-    tomorrow.append(tomorrowButton);
-  }
   checklist.append(record, task, review, tomorrow);
   content.append(node('p', 'muted', '结束一天不是清空清单，而是把事实、已有推进和未完成的选择都安放好。'), checklist);
   const close = node('button', 'button button-primary', '今天先到这里'); close.type = 'button'; close.addEventListener('click', () => dialog.close());
@@ -1497,15 +1503,11 @@ function overdueQuestPanel(quests: Quest[]): HTMLElement {
 async function todayPage(): Promise<HTMLElement> {
   const today = localDate();
   await db.ensureTodayBonusQuests(today);
-  const [entries, observations, quests, overdueQuests, allQuests, allFeedback, confirmedMemories, habits, habitLogs, profile, entryHistory, analyses, previousAnalyses, goals, milestones, areas] = await Promise.all([
-    db.listEntries(today), db.resolvedStateAtOrBefore(today), db.listQuests(today), db.listPendingBefore(today), db.listQuests(), db.listQuestFeedback(), db.listMemories('confirmed'), db.listHabits(), db.listHabitLogs(), db.getProfile(), db.listEntries(),
+  const [entries, observations, quests, overdueQuests, allQuests, allFeedback, confirmedMemories, profile, entryHistory, analyses, previousAnalyses, goals, milestones, areas] = await Promise.all([
+    db.listEntries(today), db.resolvedStateAtOrBefore(today), db.listQuests(today), db.listPendingBefore(today), db.listQuests(), db.listQuestFeedback(), db.listMemories('confirmed'), db.getProfile(), db.listEntries(),
     db.listDailyAnalyses(today), db.listDailyAnalyses(shiftDate(today, -1)), db.listGoals(), db.listMilestones(), db.listAreas(),
   ]);
   const bonusQuests = quests.filter((item) => item.type === 'bonus');
-  const plantStates: PlantState[] = habits.filter((item) => item.status === 'active' && item.bonusEnabled).slice(0, 3).map((habit) => {
-    const results = habitLogs.filter((item) => item.habitId === habit.id).map((item) => item.result);
-    return { habitId: habit.id, growth: results.includes('completed') ? 'grown' : results.includes('partial') ? 'started' : 'empty' };
-  });
   const main = node('main', 'page page-today');
   main.append(pageHeader(formatDate(today), '今天', goSystemButton()));
 
@@ -1520,9 +1522,12 @@ async function todayPage(): Promise<HTMLElement> {
     ?? overdueQuests.find((item) => item.sourceType === 'goal');
   const directionQuest = mainQuest ?? carriedGoalQuest;
   const mainDeadlineRisk = Boolean(directionQuest?.deadlineAt && Date.parse(directionQuest.deadlineAt) - Date.now() <= 24 * 60 * 60 * 1000);
-  const blockedGoalIds = new Set(allQuests.filter((item) => item.sourceType === 'goal' && item.status === 'skipped' && item.sourceId).map((item) => item.sourceId as string));
   const goalProgressSince = shiftDate(today, -7);
   const questById = new Map(allQuests.map((item) => [item.id, item]));
+  const blockedGoalIds = new Set(allFeedback.flatMap((item) => {
+    const quest = questById.get(item.questId);
+    return !item.undoneAt && item.result === 'skipped' && (item.completedDate ?? quest?.localDate) === today && quest?.sourceType === 'goal' && quest.sourceId ? [quest.sourceId] : [];
+  }));
   const areaEvidence = (areaId: string): number => allFeedback.filter((item) => {
     const quest = questById.get(item.questId);
     const evidenceDate = item.completedDate ?? quest?.localDate ?? '';
@@ -1536,6 +1541,10 @@ async function todayPage(): Promise<HTMLElement> {
     return modeRank(left) - modeRank(right) || areaEvidence(left.areaId) - areaEvidence(right.areaId) || left.createdAt.localeCompare(right.createdAt);
   });
   const activeGoal = primaryGoal ?? secondaryGoals[0];
+  const latestGoalQuest = activeGoal ? allQuests
+    .filter((item) => item.sourceType === 'goal' && item.sourceId === activeGoal.id)
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] : undefined;
+  const skippedGoalQuest = latestGoalQuest?.status === 'skipped' ? latestGoalQuest : undefined;
   const activeGoalMode = activeGoal ? areas.find((area) => area.id === activeGoal.areaId)?.mode : undefined;
   const milestoneDue = Boolean(activeGoal && milestones.some((item) => item.goalId === activeGoal.id && item.status === 'pending'));
   const stagnantGoal = Boolean(activeGoal && parseLocalDate(today).getTime() - parseLocalDate(activeGoal.startDate ?? today).getTime() >= 7 * 86_400_000
@@ -1561,7 +1570,7 @@ async function todayPage(): Promise<HTMLElement> {
   const guidance = {
     title: direction.kind === 'recovery' ? '先恢复行动力'
       : direction.kind === 'main' ? directionQuest?.title ?? '核对主线'
-        : direction.kind === 'goal' ? activeGoal?.nextStep ?? '推进目标'
+        : direction.kind === 'goal' ? skippedGoalQuest ? `重新决定：${skippedGoalQuest.title}` : activeGoal?.nextStep ?? '推进目标'
           : direction.kind === 'reflection' ? previousReflection?.nextSmallStep ?? '核对昨天的一步'
             : hasDayEvidence ? '今天已经留下证据' : '先讲一件最近发生的事',
     reason: direction.kind === 'explore' && hasDayEvidence ? '没有必须补上的任务，可以回看，也可以停下。' : direction.reason,
@@ -1573,7 +1582,7 @@ async function todayPage(): Promise<HTMLElement> {
   ];
 
   const hero = node('section', 'home-hero');
-  hero.append(roomStage(false, plantStates, profile?.avatar ?? null, profile?.companionName || '小栖', isReturning, roomCueFor(lowest), null, Boolean(directionQuest), milestones.filter((item) => item.status === 'completed').length, guidance, companionContext));
+  hero.append(roomStage(false, profile?.avatar ?? null, profile?.companionName || '小栖', isReturning, roomCueFor(lowest), null, Boolean(directionQuest), milestones.filter((item) => item.status === 'completed').length, guidance, companionContext));
   main.append(hero, statusSummary(observations));
 
   if (overdueQuests.length) main.append(overdueQuestPanel(overdueQuests));
@@ -1595,11 +1604,16 @@ async function todayPage(): Promise<HTMLElement> {
     } else if (direction.kind === 'main' && directionQuest) {
       guide.append(node('h2', '', '这项后续行动已经留下结果'), node('p', '', '接下来可以选择一个 BONUS，或者允许自己停下来。'));
     } else if (direction.kind === 'goal' && activeGoal) {
-      guide.append(node('h2', '', activeGoal.nextStep), node('p', '', direction.reason), node('p', '', `来自目标：${activeGoal.result}`));
-      guide.append(primaryButton('把这一步安排到今天', () => { void openQuestDialog(activeGoal); }));
+      if (skippedGoalQuest) {
+        guide.append(node('h2', '', `重新决定：${skippedGoalQuest.title}`), node('p', '', '上次“今天不做”只停止了当天提醒。现在可以继续、缩小或改写这一步。'), node('p', '', `来自目标：${activeGoal.result}`));
+        guide.append(primaryButton('确认或调整这一步', () => { void openQuestDialog(activeGoal, skippedGoalQuest.title); }));
+      } else {
+        guide.append(node('h2', '', activeGoal.nextStep), node('p', '', direction.reason), node('p', '', `来自目标：${activeGoal.result}`));
+        guide.append(primaryButton('把这一步安排到今天', () => { void openQuestDialog(activeGoal); }));
+      }
     } else if (direction.kind === 'reflection' && previousReflection?.nextSmallStep) {
       guide.append(node('h2', '', previousReflection.nextSmallStep), node('p', '', '这是昨天整理中留下的最小一步；先核对它今天是否仍适合。'));
-      guide.append(primaryButton('打开任务板决定', () => go({ name: 'tasks' })));
+      guide.append(primaryButton('确认或调整这一步', () => { void openQuestDialog(undefined, previousReflection.nextSmallStep); }));
     } else if (hasDayEvidence) {
       guide.append(node('h2', '', '今天已经留下证据'), node('p', '', '没有必须补上的任务。'));
       guide.append(primaryButton('回看今天', () => go({ name: 'day', date: today })));
@@ -1621,7 +1635,7 @@ async function todayPage(): Promise<HTMLElement> {
   if (hasCloseout) {
     const closeout = node('article', 'surface daily-closeout is-current');
     closeout.append(node('h2', '', hasDayEvidence ? '今天已经留下证据' : '把今天安放好'), node('p', '', `${entries.length} 条记录 · ${quests.filter((item) => item.status !== 'pending').length} 项已反馈 · ${quests.filter((item) => item.status === 'pending').length} 项待选择`));
-    closeout.append(iconButton(readyAnalysis ? '回看今天' : '开始收束今天', null, () => openDailyCloseout(today, entries, quests, readyAnalysis, previousReflection?.nextSmallStep ?? ''), 'button button-secondary'));
+    closeout.append(iconButton(readyAnalysis ? '回看今天' : '开始收束今天', null, () => openDailyCloseout(today, entries, quests, readyAnalysis, readyAnalysis?.result.reflection.nextSmallStep ?? ''), 'button button-secondary'));
     rhythm.append(closeout);
   }
   if (rhythm.childElementCount) main.append(rhythm);
@@ -1637,12 +1651,12 @@ async function todayPage(): Promise<HTMLElement> {
     reminderActions.append(recordNow, dismiss); reminder.append(reminderActions); main.append(reminder);
   }
 
-  if (previousReflection?.nextSmallStep && sessionStorage.getItem(`qiguang.previous-step-dismissed.${today}`) !== '1') {
+  if (direction.kind !== 'reflection' && previousReflection?.nextSmallStep && sessionStorage.getItem(`qiguang.previous-step-dismissed.${today}`) !== '1') {
     const reminder = node('aside', 'gentle-reminder previous-step-reminder');
     reminder.append(node('strong', '', '昨天留下了一步'), node('p', '', `“${previousReflection.nextSmallStep}”——今天可以继续、缩小，或者放下，不会自动顺延。`));
     const reminderActions = node('div', 'gentle-reminder-actions');
-    const decide = node('button', 'button button-secondary', '去任务板决定');
-    decide.type = 'button'; decide.addEventListener('click', () => go({ name: 'tasks' }));
+    const decide = node('button', 'button button-secondary', '确认或调整');
+    decide.type = 'button'; decide.addEventListener('click', () => { void openQuestDialog(undefined, previousReflection.nextSmallStep); });
     const later = node('button', 'button button-quiet', '今天先不用');
     later.type = 'button'; later.addEventListener('click', () => { sessionStorage.setItem(`qiguang.previous-step-dismissed.${today}`, '1'); reminder.remove(); });
     reminderActions.append(decide, later); reminder.append(reminderActions); main.append(reminder);
@@ -2554,19 +2568,15 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[], quest
 }
 
 async function dayPage(date: string): Promise<HTMLElement> {
-  const [entries, observations, quests, habits, habitLogs, profile] = await Promise.all([
-    db.listEntries(date), db.resolvedStateAtOrBefore(date), db.listQuests(date), db.listHabits(), db.listHabitLogs(), db.getProfile(),
+  const [entries, observations, quests, profile] = await Promise.all([
+    db.listEntries(date), db.resolvedStateAtOrBefore(date), db.listQuests(date), db.getProfile(),
   ]);
-  const plantStates: PlantState[] = habits.filter((item) => item.bonusEnabled && timestampLocalDate(item.createdAt) <= date).slice(0, 3).map((habit) => {
-    const results = habitLogs.filter((item) => item.habitId === habit.id && item.localDate === date).map((item) => item.result);
-    return { habitId: habit.id, growth: results.includes('completed') ? 'grown' : results.includes('partial') ? 'started' : 'empty' };
-  });
   const known = Object.values(observations);
   const lowest = known.filter((item) => !observationIsStale(item, date)).sort((a, b) => a.value - b.value)[0];
   const main = node('main', 'page page-day');
   const calendarLink = node('a', 'button button-secondary compact-button', '日历');
   calendarLink.href = '#/calendar';
-  main.append(pageHeader('某日回顾', formatDate(date, { year: 'numeric' }), calendarLink), roomStage(true, plantStates, profile?.avatar ?? null, profile?.companionName || '小栖', false, roomCueFor(lowest), date));
+  main.append(pageHeader('某日回顾', formatDate(date, { year: 'numeric' }), calendarLink), roomStage(true, profile?.avatar ?? null, profile?.companionName || '小栖', false, roomCueFor(lowest), date));
 
   if (entries.length || quests.length) main.append(await dailyAnalysisSection(date, entries, quests));
   if (Object.keys(observations).length) main.append(statusSummary(observations, date));
@@ -3499,27 +3509,27 @@ async function openMilestoneDialog(goal: Goal): Promise<void> {
   description.focus();
 }
 
-async function openQuestDialog(goal?: Goal): Promise<void> {
+async function openQuestDialog(goal?: Goal, suggestedTitle = ''): Promise<void> {
   const [branches, milestones] = await Promise.all([db.listBranches(), goal ? db.listMilestones(goal.id) : Promise.resolve([])]);
   const nextMilestone = milestones.find((item) => item.status === 'pending');
   const { dialog, content, actions } = dialogShell(goal ? '把下一步安排到今天' : '安排今日任务');
   if (goal) content.append(node('p', 'muted', `来自目标：${goal.result}`));
   const title = node('input', 'input');
   title.maxLength = 160;
-  title.value = goal?.nextStep ?? '';
+  title.value = suggestedTitle || goal?.nextStep || '';
   const reason = node('textarea', 'input compact-textarea');
   reason.maxLength = 500;
-  reason.value = goal?.why || '这是你今天主动选择的一步。';
+  reason.value = goal?.why || (suggestedTitle ? '来自昨天复盘，由你确认后才加入今天。' : '这是你今天主动选择的一步。');
   const minimum = node('input', 'input');
   minimum.maxLength = 200;
-  minimum.value = goal?.nextStep || '先做 5 分钟。';
+  minimum.value = suggestedTitle || goal?.nextStep || '先做 5 分钟。';
   const minutes = node('input', 'input');
   minutes.type = 'number';
   minutes.min = '1';
   minutes.max = '1440';
   minutes.value = '10';
   const type = node('select', 'input');
-  const suggestedType: QuestType = goal?.role === 'main' ? 'main' : 'side';
+  const suggestedType: QuestType = goal?.role === 'main' || suggestedTitle ? 'main' : 'side';
   type.append(selectOption('main', 'MAIN · 每天最多 1', suggestedType === 'main'), selectOption('side', '支线 · 每天最多 2', suggestedType === 'side'));
   const difficulty = node('select', 'input');
   for (const value of Object.keys(DIFFICULTY_XP) as Difficulty[]) difficulty.append(selectOption(value, `${DIFFICULTY_LABELS[value]} · ${DIFFICULTY_XP[value]} XP`, value === 'standard'));
