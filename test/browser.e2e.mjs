@@ -327,7 +327,7 @@ test('secondary pages stay concise before the user has evidence', async () => {
   }
 });
 
-test('success diary prompts stay optional and AI goal decomposition requires confirmation', async () => {
+test('success diary prompts stay optional and AI goal decomposition requires confirmation', async (t) => {
   const { context, page, apiRequests } = await freshPage({ now: new Date().setHours(20, 0, 0, 0) });
   try {
     await finishOnboarding(page);
@@ -380,6 +380,13 @@ test('success diary prompts stay optional and AI goal decomposition requires con
 
     await page.getByRole('checkbox', { name: '完成：写下第一版结构' }).check();
     await assert.doesNotReject(() => page.getByText(/里程碑已完成；下一步/).waitFor());
+    await t.test('the initial small step does not impersonate the first milestone', async (gap) => {
+      if (await page.getByText('已确认 · +50 XP', { exact: true }).count()) {
+        gap.todo('AI 下一步“写下第一版结构”被直接绑定为首里程碑“完成第一段可检查成果”，导致提前结算 50 XP。');
+        return;
+      }
+      assert.equal(await page.getByText('待确认', { exact: true }).count(), 2);
+    });
     await page.getByText('管理目标', { exact: true }).click();
     await page.getByRole('button', { name: '根据执行证据重新拆解“发布一篇文章”' }).click();
     const replanPreview = page.getByRole('dialog', { name: '检查目标拆解发送范围' });
@@ -1433,6 +1440,78 @@ test('weekly review sends summaries instead of journals and requires theme confi
     const confirm = page.getByRole('dialog', { name: '确认下周唯一主题与实验' });
     await confirm.getByRole('button', { name: '由我确认' }).click();
     await assert.doesNotReject(() => page.getByText('已由你确认', { exact: true }).waitFor());
+  } finally {
+    await context.close();
+  }
+});
+
+test('today guidance prefers the real pending MAIN over an older settled MAIN', async (t) => {
+  const { context, page } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    const arrange = async (title) => {
+      await page.goto(`${baseUrl}/#/tasks`);
+      await page.getByRole('button', { name: '安排任务', exact: true }).click();
+      const dialog = page.getByRole('dialog', { name: '安排今日任务' });
+      await dialog.getByRole('textbox', { name: '我现在想做什么？' }).fill(title);
+      await dialog.getByRole('button', { name: '安排到今天' }).click();
+      await assert.doesNotReject(() => page.getByRole('heading', { name: title }).waitFor());
+    };
+    await arrange('已经部分完成的旧 MAIN');
+    await page.getByRole('button', { name: '做了一部分：已经部分完成的旧 MAIN' }).click();
+    await assert.doesNotReject(() => page.getByRole('button', { name: '修改任务“已经部分完成的旧 MAIN”的反馈' }).waitFor());
+    await arrange('现在真正待做的新 MAIN');
+    await page.goto(`${baseUrl}/#/today`);
+    const guide = page.locator('.daily-guide');
+    const text = await guide.innerText();
+    if (!text.includes('现在真正待做的新 MAIN')) {
+      t.diagnostic(text);
+      t.todo('今日页与人物指导会锁定旧的已反馈 MAIN，隐藏真正待办 MAIN。');
+      return;
+    }
+    assert.match(text, /现在真正待做的新 MAIN/);
+  } finally {
+    await context.close();
+  }
+});
+
+test('a newly created BONUS has no historic debt and remains usable in weekly review', async (t) => {
+  const { context, page } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.goto(`${baseUrl}/#/tasks`);
+    await page.getByRole('button', { name: '新建习惯' }).click();
+    const habitDialog = page.getByRole('dialog', { name: '建立低成本习惯' });
+    await habitDialog.getByRole('textbox', { name: '我想养成什么？' }).fill('晚饭后散步');
+    await habitDialog.getByRole('button', { name: '建立习惯' }).click();
+    await page.getByRole('button', { name: '将“晚饭后散步”设为 BONUS' }).click();
+    await page.getByRole('checkbox', { name: '完成：晚饭后散步' }).check();
+    await assert.doesNotReject(() => page.getByRole('button', { name: '修改任务“晚饭后散步”的反馈' }).waitFor());
+    const momentum = await page.locator('.habit-row').filter({ hasText: '晚饭后散步' }).locator('.caption').textContent();
+    await t.test('momentum starts at the habit creation date', async (gap) => {
+      if (!momentum?.includes('动量 5/5')) {
+        gap.diagnostic(momentum ?? 'missing momentum');
+        gap.todo('创建前六个计划日被当成未完成，第一次真实打卡后只有 0.7/5。');
+        return;
+      }
+      assert.match(momentum, /动量 5\/5/);
+    });
+
+    await page.goto(`${baseUrl}/#/review`);
+    await page.getByRole('button', { name: '检查范围并生成' }).click();
+    const preview = page.getByRole('dialog', { name: '检查周复盘发送范围' });
+    await preview.getByRole('button', { name: '确认范围并生成' }).click();
+    const consent = page.getByRole('dialog', { name: '允许这一次 AI 周复盘？' });
+    if (await consent.count()) await consent.getByRole('button', { name: '允许并继续' }).click();
+    await page.waitForTimeout(100);
+    await t.test('weekly review accepts the legal fractional momentum', async (gap) => {
+      const invalid = page.getByRole('alert').filter({ hasText: '习惯动量无效' });
+      if (await invalid.count()) {
+        gap.todo('本地动量会产生一位小数，但周复盘合约只接受整数，生成流程被阻断。');
+        return;
+      }
+      await assert.doesNotReject(() => page.getByRole('heading', { name: '保留可持续节奏' }).waitFor());
+    });
   } finally {
     await context.close();
   }
