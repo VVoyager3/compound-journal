@@ -47,6 +47,8 @@ test('room motion sprites use real PNG alpha instead of a painted grid', async (
   for (const gender of ['female', 'male']) {
     const png = await readFile(path.join(root, 'design-assets', 'pre-development', `character-motion-${gender}-transparent.png`));
     assert.deepEqual([...png.subarray(1, 4)], [80, 78, 71], `${gender} motion asset must be a PNG`);
+    assert.equal(png.readUInt32BE(16), 1536, `${gender} motion asset must have six fixed-width columns`);
+    assert.equal(png.readUInt32BE(20), 1536, `${gender} motion asset must have six fixed-height rows`);
     assert.equal(png[25], 6, `${gender} motion asset must use RGBA color type`);
   }
 });
@@ -57,6 +59,8 @@ test('room movement uses sprite frames instead of stretching the whole character
   assert.match(styles, /--walk-right-6:/);
   assert.match(styles, /--walk-left-6:/);
   assert.match(styles, /@keyframes room-walk-cycle/);
+  assert.match(styles, /background-size:\s*504px 504px/);
+  assert.doesNotMatch(styles, /inset\(0 8px 22px 4px\)/);
   assert.doesNotMatch(styles, /room-step-weight|scale:\s*1\.27|rotate:\s*-?1deg/);
   assert.match(app, /room-background\.png/);
 });

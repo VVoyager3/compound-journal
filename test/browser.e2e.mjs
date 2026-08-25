@@ -559,11 +559,11 @@ test('the companion wanders naturally and walks to furniture before direct navig
     await page.waitForTimeout(220);
     const during = await character.boundingBox();
     assert.ok(actionStart && during && during.x < actionStart.x - 5, 'companion should visibly walk toward the desk');
-    assert.match(await character.evaluate((element) => getComputedStyle(element).clipPath), /inset\(0px 8px 22px 4px/, 'walking frames should crop adjacent sprites from the atlas on both axes');
+    assert.equal(await character.evaluate((element) => getComputedStyle(element).clipPath), 'inset(0px)', 'each walking frame should fit its own fixed atlas cell without crop hacks');
     await assert.doesNotReject(() => page.locator('.room-character.is-action-desk.is-interacting').waitFor());
     await assert.doesNotReject(() => page.getByText('坐到椅子上，写下一件真实发生的事。', { exact: true }).waitFor());
     await page.waitForTimeout(120);
-    assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), '-105px -3px');
+    assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), '-84px 0px');
     await page.waitForURL(/#\/record$/);
     assert.deepEqual(apiRequests, []);
   } finally {
@@ -807,7 +807,7 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     await assert.doesNotReject(() => page.getByRole('heading', { name: '先补足体力' }).waitFor());
     assert.equal(await page.locator('.room-scene.is-cue-rest').count(), 1);
     assert.equal(await page.locator('.room-character.is-resting').count(), 1);
-    assert.equal(await page.locator('.room-character.is-resting').evaluate((element) => getComputedStyle(element).backgroundPosition), '-350px -246px');
+    assert.equal(await page.locator('.room-character.is-resting').evaluate((element) => getComputedStyle(element).backgroundPosition), '-420px -84px');
     assert.equal(await page.locator('.room-cue').count(), 1);
     await page.getByRole('button', { name: '打开任务', exact: true }).click();
     assert.equal(await page.locator('.room-character.is-action-board').count(), 1);
@@ -961,10 +961,10 @@ test('selected companion uses the supplied portrait and matching room sprite', a
     });
     const frame = spriteLayout.backgroundPosition.match(/^(-?\d+(?:\.\d+)?)px (-?\d+(?:\.\d+)?)px$/);
     assert(frame, `unexpected sprite frame: ${spriteLayout.backgroundPosition}`);
-    assert.equal(spriteLayout.backgroundSize, '538px 358px');
-    assert.equal(spriteLayout.idleFrame, '-424px -246px');
-    assert(Number(frame[1]) <= 0 && Number(frame[1]) >= -482);
-    assert(Number(frame[2]) <= 0 && Number(frame[2]) >= -274);
+    assert.equal(spriteLayout.backgroundSize, '504px 504px');
+    assert.equal(spriteLayout.idleFrame, '0px 0px');
+    assert(Number(frame[1]) <= 0 && Number(frame[1]) >= -420);
+    assert(Number(frame[2]) <= 0 && Number(frame[2]) >= -420);
     assert.equal(spriteLayout.mixBlendMode, 'normal');
     const geometry = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
     const spriteBounds = await roomSprite.boundingBox();
@@ -979,11 +979,11 @@ test('selected companion uses the supplied portrait and matching room sprite', a
 test('room furniture walks end at the matching interaction anchors', async () => {
   const { context, page, apiRequests } = await freshPage();
   const destinations = [
-    ['打开记录', 'desk', /#\/record$/, [0.31, 0.44, 0.68, 0.84], '-105px -3px'],
-    ['打开任务', 'board', /#\/tasks$/, [0.42, 0.58, 0.68, 0.84], '-180px -3px'],
-    ['打开日历', 'calendar', /#\/calendar$/, [0.58, 0.75, 0.68, 0.84], '-180px -3px'],
-    ['打开成长', 'workbench', /#\/growth$/, [0.60, 0.73, 0.68, 0.84], '-245px -3px'],
-    ['打开状态', 'window', /#\/system$/, [0.31, 0.44, 0.68, 0.84], '-180px -3px'],
+    ['打开记录', 'desk', /#\/record$/, [0.31, 0.44, 0.68, 0.84], '-84px 0px'],
+    ['打开任务', 'board', /#\/tasks$/, [0.42, 0.58, 0.68, 0.84], '-168px 0px'],
+    ['打开日历', 'calendar', /#\/calendar$/, [0.58, 0.75, 0.68, 0.84], '-168px 0px'],
+    ['打开成长', 'workbench', /#\/growth$/, [0.60, 0.73, 0.68, 0.84], '-252px 0px'],
+    ['打开状态', 'window', /#\/system$/, [0.31, 0.44, 0.68, 0.84], '-168px 0px'],
   ];
   try {
     await finishOnboarding(page);
@@ -1024,7 +1024,7 @@ test('the bed gives a short recovery interaction and returns the companion to th
     await assert.doesNotReject(() => page.locator('.room-character.is-action-bed.is-interacting').waitFor());
     await assert.doesNotReject(() => page.getByText('歇一会儿。准备好再继续，也算照顾今天。', { exact: true }).waitFor());
     await page.waitForTimeout(120);
-    assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), '-350px -246px');
+    assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), '-420px -84px');
     const resting = await character.evaluate((element) => {
       const room = element.closest('.room-scene').getBoundingClientRect();
       const box = element.getBoundingClientRect();
