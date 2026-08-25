@@ -77,9 +77,9 @@ const NATIVE_AI_UNAVAILABLE = '此安装包尚未配置 MiniMax 密钥；记录�
 const AVAILABLE_AI_MODELS = ['MiniMax-M3', 'MiniMax-M2.7'] as const;
 type AiModelChoice = (typeof AVAILABLE_AI_MODELS)[number];
 const DEFAULT_AI_MODEL: AiModelChoice = AVAILABLE_AI_MODELS[0];
-const FURNITURE_APPROACH_MS = 760;
-const FURNITURE_USE_MS = 660;
-const FURNITURE_RETURN_MS = 760;
+const FURNITURE_APPROACH_MS = 960;
+const FURNITURE_USE_MS = 720;
+const FURNITURE_RETURN_MS = 920;
 const NATIVE_PLATFORM = Capacitor.isNativePlatform();
 const BASE_AI_READY = !NATIVE_PLATFORM || (() => {
   try { return new URL(API_ORIGIN).protocol === 'https:'; } catch { return false; }
@@ -448,9 +448,10 @@ function pageHeader(kicker: string, title: string, action?: HTMLElement): HTMLEl
 }
 
 function goSystemButton(): HTMLButtonElement {
-  const settings = node('button', 'button button-quiet', '设置与数据');
+  const settings = node('button', 'button button-quiet home-settings');
   settings.type = 'button';
   settings.setAttribute('aria-label', '进入设置');
+  settings.append(pixelIcon('system'), node('span', '', '设置'));
   settings.addEventListener('click', () => go({ name: 'system' }));
   return settings;
 }

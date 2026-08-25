@@ -40,6 +40,8 @@ test('manifest provides an installable local-first application identity', async 
   const html = await read('index.html');
   assert.match(html, /rel="manifest" href="\/manifest\.webmanifest"/);
   assert.match(html, /name="theme-color"/);
+  assert.match(html, /class="boot-screen"/);
+  assert.match(html, /正在点亮房间/);
   assert.match(html, /name="viewport"/);
 });
 
@@ -76,6 +78,9 @@ test('room movement uses sprite frames instead of stretching the whole character
   assert.match(styles, /--turn-6:/);
   assert.match(styles, /--return-turn-6:/);
   assert.match(styles, /@keyframes room-walk-cycle/);
+  assert.match(styles, /@keyframes room-shadow-step/);
+  assert.match(styles, /@keyframes hotspot-sigil/);
+  assert.match(styles, /--scene-light:/);
   assert.match(styles, /background-size:\s*contain/);
   assert.match(styles, /background-image:\s*var\(--walk-1\)/);
   assert.doesNotMatch(styles, /inset\(0 8px 22px 4px\)/);
@@ -97,6 +102,8 @@ test('Android launcher and splash use the Qiguang identity instead of Capacitor 
   assert.match(adaptive, /@drawable\/ic_launcher_foreground/);
   assert(!/#26A69A|com\.getcapacitor/i.test(`${foreground}\n${background}`), 'Capacitor starter identity must not ship');
   assert.match(styles, /windowSplashScreenBackground[^\n]+ic_launcher_background/);
+  assert.match(styles, /statusBarColor[^\n]+#F4ECD8/);
+  assert.match(styles, /navigationBarColor[^\n]+#283228/);
   assert.match(styles, /windowSplashScreenAnimatedIcon[^\n]+ic_launcher_foreground/);
   assert.match(styles, /postSplashScreenTheme[^\n]+AppTheme\.NoActionBar/);
   assert.match(styles, /Theme\.AppCompat\.Light\.NoActionBar/);

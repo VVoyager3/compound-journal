@@ -127,12 +127,15 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     const roomChrome = await page.locator('.room-stage').evaluate((element) => ({
       border: getComputedStyle(element).borderTopWidth,
       overlay: getComputedStyle(element.querySelector('.room-scene'), '::before').content,
+      light: getComputedStyle(element.querySelector('.room-scene'), '::before').backgroundImage,
     }));
     assert.equal(roomChrome.border, '0px');
-    assert.equal(roomChrome.overlay, 'none');
+    assert.equal(roomChrome.overlay, '""');
+    assert.match(roomChrome.light, /gradient/, 'the room should share the warm wilderness lighting language without a permanent UI frame');
     const recordHotspot = page.getByRole('button', { name: '打开记录' });
     await recordHotspot.focus();
     assert.notEqual(await recordHotspot.evaluate((element) => getComputedStyle(element).outlineStyle), 'none', 'borderless hotspots still need a visible keyboard focus ring');
+    assert.equal(await recordHotspot.evaluate((element) => getComputedStyle(element, '::before').opacity), '1', 'focused furniture should receive an in-world interaction ring');
     assert.equal(await page.locator('.character-state.is-present').count(), 0, 'the neutral companion pose should not need a floating text label');
     assert.deepEqual(await page.locator('.bottom-nav .nav-item').allTextContents(), ['今日', '任务', '记录', '轨迹']);
     const navigationBounds = await page.locator('.bottom-nav').evaluate((navigation) => {
@@ -551,6 +554,8 @@ test('the companion wanders naturally and walks to furniture before direct navig
     assert.match(actionAnimations, /room-footfall/);
     assert.match(actionTiming, /cubic-bezier\(0\.4, 0, 0\.2, 1\)/, 'the route should ease through its waypoints instead of jumping or gliding at constant speed');
     assert.doesNotMatch(actionAnimations, /step-weight/);
+    assert.match(await character.evaluate((element) => getComputedStyle(element, '::after').animationName), /room-shadow-step/, 'the ground shadow should respond to each footfall');
+    assert.match(await page.getByRole('button', { name: '打开记录' }).evaluate((element) => getComputedStyle(element, '::before').animationName), /hotspot-sigil/, 'the active furniture should use a short in-world focus cue');
     await page.waitForTimeout(90);
     const firstStep = await character.evaluate((element) => getComputedStyle(element).backgroundImage);
     await page.waitForTimeout(90);
@@ -641,7 +646,7 @@ test('keyboard users can skip the room and open a direct route', async () => {
     await page.goto(`${baseUrl}/#/today`);
     await assert.doesNotReject(() => page.getByRole('button', { name: '开始记录' }).waitFor());
     await page.getByRole('link', { name: '跳到主要内容' }).press('Enter');
-    await page.waitForFunction(() => document.activeElement?.id === 'main-content');
+    await page.locator('#main-content:focus').waitFor();
     const recordLink = page.getByRole('link', { name: '记录', exact: true });
     assert.equal(await recordLink.getAttribute('href'), '#/record', 'keyboard users need a native direct-route link');
     await Promise.all([page.waitForURL(/#\/record$/), recordLink.click()]);
