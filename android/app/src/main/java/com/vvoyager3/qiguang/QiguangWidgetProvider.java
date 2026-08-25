@@ -127,9 +127,9 @@ public class QiguangWidgetProvider extends AppWidgetProvider {
     private static Bitmap loadAvatar(Context context, String avatar) {
         if (!"male".equals(avatar) && !"female".equals(avatar)) return null;
         try {
-            String prefix = "avatar-" + avatar + "-original-";
+            String prefix = "avatar-" + avatar + "-cartoon-";
             for (String name : context.getAssets().list("public/assets")) {
-                if (name.startsWith(prefix) && name.endsWith(".jpg")) {
+                if (name.startsWith(prefix) && name.endsWith(".png")) {
                     String path = "public/assets/" + name;
                     BitmapFactory.Options bounds = new BitmapFactory.Options();
                     bounds.inJustDecodeBounds = true;

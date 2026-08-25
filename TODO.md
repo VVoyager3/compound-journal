@@ -233,15 +233,23 @@
 - [x] 2026-08-19 目标创建收敛为一句必填；说明、证据、下一步和系统分类收入可选设置，离线时也会生成并安排最小下一步。
 - [x] 2026-08-19 文档结构收敛：根目录只保留工作基线，历史视觉与交互参考集中到 `docs/archive-unused-md/`，删除已被实现和当前产品逻辑取代的开发前草案。
 - [x] 周复盘、系统记忆候选、事实/推断分离和权限预览。
-- [x] 男生和女生原创头像、动作 Sprite、像素房间和时间状态动作。
+- [x] 由用户原创素描身份参考转化的男女统一卡通头像、动作 Sprite、像素房间和时间状态动作。
 - [x] PWA、IndexedDB、Service Worker、CSP、持久存储说明和离线降级。
 - [x] Capacitor Android 原生壳、品牌图标、启动页、APK 和 GitHub 发布流水线。
 - [x] 当前自动检查基线：`npm run check`、`npm run check:release`、AI 固定评估 17/17 和浏览器端到端流程 30/30 均通过；常规测试已包含 14 天闭环模拟。
 - [x] 真实 MiniMax 中国区直连评估 17/17；Android 原生发布检查 14/14，APK 构建成功且 Web 产物不含密钥。
 - [x] 当前容器镜像：`ghcr.io/vvoyager3/compound-journal-server:0.6.4`。
-- [x] 当前 Android 包名：`com.vvoyager3.qiguang`，0.6.13（versionCode 613），targetSdk 36。
+- [x] 当前 Android 包名：`com.vvoyager3.qiguang`，0.6.14（versionCode 614），targetSdk 36。
 
 ## 工作记录
+
+### 2026-08-25：伙伴素描头像统一替换为卡通版
+
+- 产品逻辑更新：所有用户可见伙伴头像统一使用由用户原创素描身份参考转化的暖色像素卡通版；素描原稿只保留为内部身份参考，不进入 App、设置预览、开发原型或 Android 桌面小组件。
+- 已完成：使用用户原创男女头像与已确认的正面动作帧分别生成 `avatar-female-cartoon.png`、`avatar-male-cartoon.png`；两张头像均为 1254×1254 PNG，统一正面睁眼开心表情、像素线条、暖旧纸背景和安全裁切。
+- 已完成：App 内人物选择、生活分身面板、周复盘、设置预览、开发前可点击原型与 Android 小组件全部切换到卡通 PNG；原生同步产物只包含两张 `avatar-*-cartoon-*.png`，不再打包素描 JPG。
+- 自动验证：`npm run check` 全部通过；`npm run check:release` 15/16（原生密钥条件项按预期跳过）；浏览器端到端 30/30，并同时验证男女卡通头像与对应房间人物身份一致。
+- Android Studio 模拟器验证：0.6.14（versionCode 614）在 API 34 模拟器完成保留数据覆盖安装、仪器测试、断网冷启动；现场截图确认生活分身面板显示卡通头像且无棋盘格、裁切或旧素描残留。
 
 ### 2026-08-25：温暖荒野冒险界面与自然家具互动
 

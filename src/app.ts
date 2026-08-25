@@ -50,8 +50,8 @@ import { buildWidgetSnapshot, consumeWidgetAction, requestWidgetPin, saveWidgetS
 import { analyzeWithNativeAi, nativeAiConfiguration } from './direct-ai.ts';
 import type { AnalysisRequest } from './ai-engine.ts';
 import { Capacitor } from '@capacitor/core';
-import maleAvatarImage from '../design-assets/pre-development/avatar-male-original.jpg';
-import femaleAvatarImage from '../design-assets/pre-development/avatar-female-original.jpg';
+import maleAvatarImage from '../design-assets/pre-development/avatar-male-cartoon.png';
+import femaleAvatarImage from '../design-assets/pre-development/avatar-female-cartoon.png';
 import roomBackgroundImage from '../design-assets/pre-development/room-background.png';
 
 const motionFrameImages = import.meta.glob<string>(

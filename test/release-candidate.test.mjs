@@ -305,7 +305,7 @@ test('Android widget ships three responsive layouts without overlay or notificat
   }
   const provider = await read('android/app/src/main/java/com/vvoyager3/qiguang/QiguangWidgetProvider.java');
   for (const action of ['COMPLETE_MAIN', 'OPEN_ROUTE', 'TOGGLE_PRIVACY']) assert(provider.includes(action), `widget lacks ${action}`);
-  assert.match(provider, /avatar-.*-original-/s, 'widget must reuse the selected companion portrait from the packaged assets');
+  assert.match(provider, /avatar-.*-cartoon-/s, 'widget must reuse the selected cartoon companion portrait from the packaged assets');
   const bridge = await read('android/app/src/main/java/com/vvoyager3/qiguang/QiguangWidgetBridge.java');
   assert.match(bridge, /isRequestPinAppWidgetSupported/);
   assert.match(bridge, /requestPinAppWidget/);

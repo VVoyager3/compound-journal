@@ -950,10 +950,13 @@ test('selected companion uses the supplied portrait and matching room sprite', a
     await finishOnboarding(page);
     await page.goto(`${baseUrl}/#/system`);
     await page.getByText('人物与章节', { exact: true }).click();
-    await page.getByLabel('生活分身外观').selectOption('female');
+    const avatarSelect = page.getByLabel('生活分身外观');
     const preview = page.locator('.avatar-preview');
+    await avatarSelect.selectOption('male');
+    assert.match(await preview.getAttribute('src') ?? '', /avatar-male-cartoon/);
+    await avatarSelect.selectOption('female');
     await assert.doesNotReject(() => preview.waitFor({ state: 'visible' }));
-    assert.match(await preview.getAttribute('src') ?? '', /avatar-female-original/);
+    assert.match(await preview.getAttribute('src') ?? '', /avatar-female-cartoon/);
     await page.getByRole('button', { name: '保存章节设置' }).click();
     await page.goto(`${baseUrl}/#/today`);
     const roomSprite = page.locator('.room-character.has-motion');
