@@ -24,8 +24,8 @@ android {
         applicationId "com.vvoyager3.qiguang"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 616
-        versionName "0.6.16"
+        versionCode 617
+        versionName "0.6.17"
         buildConfigField "String", "QIGUANG_MINIMAX_API_KEY", qiguangBuildString(qiguangEnvValue('MINIMAX_API_KEY', ''))
         buildConfigField "String", "QIGUANG_MINIMAX_API_URL", qiguangBuildString(qiguangEnvValue('MINIMAX_API_URL', 'https://api.minimaxi.com/v1/chat/completions'))
         buildConfigField "String", "QIGUANG_MINIMAX_MODEL", qiguangBuildString(qiguangEnvValue('MINIMAX_MODEL', 'MiniMax-M3'))

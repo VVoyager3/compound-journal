@@ -665,10 +665,18 @@ test('the companion explains the current direction before offering adjustments',
     await assert.doesNotReject(() => settings.waitFor());
     const settingsBox = await settings.boundingBox();
     assert.ok(settingsBox && settingsBox.width >= 44 && settingsBox.height >= 44, 'the page settings action should remain touch-safe');
-    await page.getByRole('button', { name: '生活分身' }).click();
+    const companionButton = page.getByRole('button', { name: '生活分身' });
+    await companionButton.click();
     const panel = page.locator('.character-panel');
     await assert.doesNotReject(() => panel.waitFor());
     await assert.doesNotReject(() => panel.getByText('我在。今天想从哪里开始？', { exact: true }).waitFor());
+    await panel.getByText('我在。今天想从哪里开始？', { exact: true }).click();
+    assert.equal(await panel.isVisible(), true, 'clicking inside the companion panel must keep it open');
+    await page.locator('.daily-guide').click({ position: { x: 8, y: 8 } });
+    await assert.doesNotReject(() => panel.waitFor({ state: 'hidden' }));
+    assert.equal(await companionButton.getAttribute('aria-expanded'), 'false');
+    await companionButton.click();
+    await assert.doesNotReject(() => panel.waitFor());
     await assert.doesNotReject(() => panel.getByRole('button', { name: '开始记录' }).waitFor());
     assert.equal(await panel.getByRole('button', { name: '查看今天的行动' }).count(), 0);
     assert.equal(await panel.getByRole('button', { name: '设置与数据' }).count(), 0);
@@ -696,6 +704,7 @@ test('the companion explains the current direction before offering adjustments',
     assert.equal(await panel.getByText(/依据：今天已经有一条确认过的主线/).count(), 0);
     assert.equal(await panel.locator('.button-primary').textContent(), '查看今天的行动');
     await panel.getByRole('button', { name: '查看今天的行动' }).click();
+    assert.equal(await companionButton.getAttribute('aria-expanded'), 'false');
     await assert.doesNotReject(() => page.locator('.main-action').getByText('这是主线的可追溯理由。', { exact: true }).waitFor());
     await page.goto(`${baseUrl}/#/system`);
     await page.getByText('高级系统（领域与行动说明书）', { exact: true }).click();

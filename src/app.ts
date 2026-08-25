@@ -163,6 +163,17 @@ const appRoot = document.querySelector<HTMLElement>('#app');
 if (!appRoot) throw new Error('页面缺少应用容器。');
 const root: HTMLElement = appRoot;
 
+document.addEventListener('click', (event) => {
+  const panel = root.querySelector<HTMLElement>('.character-panel:not([hidden])');
+  const target = event.target;
+  if (!panel || !(target instanceof Node) || panel.contains(target)) return;
+  if (target instanceof Element && target.closest('.room-hotspot.is-character')) return;
+  const trigger = root.querySelector<HTMLButtonElement>('.room-hotspot.is-character');
+  panel.hidden = true;
+  trigger?.setAttribute('aria-expanded', 'false');
+  if (panel.contains(document.activeElement)) trigger?.focus({ preventScroll: true });
+});
+
 let db: QiguangDb;
 let settings: AppSettings;
 function syncNativeAiAvailability(): void {
@@ -700,6 +711,7 @@ function roomStage(compact = false, avatar: Profile['avatar'] = null, companionN
             guide?.scrollIntoView({ behavior: settings.reduceMotion ? 'auto' : 'smooth', block: 'center' });
             (guide?.querySelector<HTMLButtonElement>('button') ?? guide)?.focus({ preventScroll: true });
             created.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
           });
           const record = node('button', `button ${recordIsPrimary ? 'button-primary' : 'button-quiet'}`, guidance?.settled ? '再记一件事' : '开始记录');
           record.type = 'button';
