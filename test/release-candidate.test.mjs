@@ -53,15 +53,35 @@ test('room motion sprites use real PNG alpha instead of a painted grid', async (
   }
 });
 
+test('every companion action has its own tightly cropped transparent PNG', async () => {
+  for (const gender of ['female', 'male']) {
+    const directory = path.join(root, 'design-assets', 'pre-development', 'character-frames', gender);
+    const files = (await readdir(directory)).filter((file) => file.endsWith('.png')).sort();
+    assert.equal(files.length, 36, `${gender} must provide exactly 36 independent action frames`);
+    assert.deepEqual(files.map((file) => Number(file.slice(0, 2))), Array.from({ length: 36 }, (_, index) => index + 1));
+    for (const file of files) {
+      const png = await readFile(path.join(directory, file));
+      const width = png.readUInt32BE(16);
+      const height = png.readUInt32BE(20);
+      assert.deepEqual([...png.subarray(1, 4)], [80, 78, 71], `${gender}/${file} must be a PNG`);
+      assert.equal(png[25], 6, `${gender}/${file} must keep RGBA transparency`);
+      assert(width > 0 && width < 256 && height > 0 && height < 256, `${gender}/${file} must be tightly cropped inside its source cell`);
+    }
+  }
+});
+
 test('room movement uses sprite frames instead of stretching the whole character', async () => {
   const styles = await read('src/styles.css');
   const app = await read('src/app.ts');
-  assert.match(styles, /--walk-right-6:/);
-  assert.match(styles, /--walk-left-6:/);
+  assert.match(styles, /--turn-6:/);
+  assert.match(styles, /--return-turn-6:/);
   assert.match(styles, /@keyframes room-walk-cycle/);
-  assert.match(styles, /background-size:\s*504px 504px/);
+  assert.match(styles, /background-size:\s*contain/);
+  assert.match(styles, /background-image:\s*var\(--walk-1\)/);
   assert.doesNotMatch(styles, /inset\(0 8px 22px 4px\)/);
   assert.doesNotMatch(styles, /room-step-weight|scale:\s*1\.27|rotate:\s*-?1deg/);
+  assert.match(app, /character-frames\/\*\/\*\.png/);
+  assert.doesNotMatch(app, /character-motion-(?:female|male)-transparent\.png/);
   assert.match(app, /room-background\.png/);
 });
 

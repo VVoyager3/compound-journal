@@ -52,9 +52,12 @@ import type { AnalysisRequest } from './ai-engine.ts';
 import { Capacitor } from '@capacitor/core';
 import maleAvatarImage from '../design-assets/pre-development/avatar-male-original.jpg';
 import femaleAvatarImage from '../design-assets/pre-development/avatar-female-original.jpg';
-import maleMotionImage from '../design-assets/pre-development/character-motion-male-transparent.png';
-import femaleMotionImage from '../design-assets/pre-development/character-motion-female-transparent.png';
 import roomBackgroundImage from '../design-assets/pre-development/room-background.png';
+
+const motionFrameImages = import.meta.glob<string>(
+  '../design-assets/pre-development/character-frames/*/*.png',
+  { eager: true, query: '?url', import: 'default' },
+);
 
 type RouteName = 'today' | 'calendar' | 'record' | 'tasks' | 'growth' | 'system' | 'day' | 'review';
 type PixelIcon = 'today' | 'calendar' | 'record' | 'growth' | 'system' | 'desk' | 'board' | 'books' | 'window' | 'character';
@@ -185,8 +188,17 @@ function avatarAsset(avatar: Exclude<Profile['avatar'], null>): string {
   return avatar === 'male' ? maleAvatarImage : femaleAvatarImage;
 }
 
-function motionAsset(avatar: Exclude<Profile['avatar'], null>): string {
-  return avatar === 'male' ? maleMotionImage : femaleMotionImage;
+function applyMotionFrames(character: HTMLElement, avatar: Exclude<Profile['avatar'], null>): void {
+  const directory = `/character-frames/${avatar}/`;
+  for (const [path, url] of Object.entries(motionFrameImages)) {
+    if (!path.includes(directory)) continue;
+    const frame = path.match(/\/\d{2}-(.+)\.png$/)?.[1];
+    if (!frame) continue;
+    const variable = frame.startsWith('walk-') ? frame : frame.startsWith('idle-') ? `face-${frame.slice(5)}-frame` : `${frame}-frame`;
+    character.style.setProperty(`--${variable}`, `url("${url}")`);
+  }
+  character.style.setProperty('--idle-frame', 'var(--face-front-frame)');
+  character.style.setProperty('--happy-frame', 'var(--face-front-frame)');
 }
 
 function node<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text?: string): HTMLElementTagNameMap[K] {
@@ -552,7 +564,7 @@ function roomStage(compact = false, plantStates: PlantState[] = [], avatar: Prof
   const character = node('div', `room-character is-happy is-${avatar ?? 'neutral'} is-ambient-${ambientAction}${celebratingCharacter ? ' is-celebrating' : ''}${welcoming ? ' is-welcoming' : ''}${cue === 'rest' || ambientAction === 'rest' ? ' is-resting' : ''}`);
   if (avatar) {
     character.classList.add('has-motion');
-    character.style.backgroundImage = `url("${motionAsset(avatar)}")`;
+    applyMotionFrames(character, avatar);
   }
   scene.append(character);
   if (!compact && characterState[0] !== 'present') scene.append(node('span', `character-state is-${characterState[0]}`, characterState[1]));

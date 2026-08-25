@@ -114,7 +114,7 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     await assert.doesNotReject(() => page.locator('#main-content').getByText('电脑自动回归：记录一件真实发生的事。', { exact: true }).waitFor());
     await page.goto(`${baseUrl}/#/today`);
     const roomSprite = await page.locator('.room-character').getAttribute('style');
-    assert.match(roomSprite ?? '', /character-motion-female/);
+    assert.match(roomSprite ?? '', /--face-front-frame:\s*url\([^)]*01-idle-front/);
     const status = page.locator('.status-summary');
     await assert.doesNotReject(() => status.waitFor());
     assert.equal(await status.locator('.status-meter').count(), 5, 'the five life-state meters should be visible directly below the room');
@@ -552,9 +552,9 @@ test('the companion wanders naturally and walks to furniture before direct navig
     assert.match(actionTiming, /cubic-bezier\(0\.4, 0, 0\.2, 1\)/, 'the route should ease through its waypoints instead of jumping or gliding at constant speed');
     assert.doesNotMatch(actionAnimations, /step-weight/);
     await page.waitForTimeout(90);
-    const firstStep = await character.evaluate((element) => getComputedStyle(element).backgroundPosition);
+    const firstStep = await character.evaluate((element) => getComputedStyle(element).backgroundImage);
     await page.waitForTimeout(90);
-    const secondStep = await character.evaluate((element) => getComputedStyle(element).backgroundPosition);
+    const secondStep = await character.evaluate((element) => getComputedStyle(element).backgroundImage);
     assert.notEqual(firstStep, secondStep, 'walking must advance through distinct sprite frames');
     await page.waitForTimeout(220);
     const during = await character.boundingBox();
@@ -563,7 +563,7 @@ test('the companion wanders naturally and walks to furniture before direct navig
     await assert.doesNotReject(() => page.locator('.room-character.is-action-desk.is-interacting').waitFor());
     await assert.doesNotReject(() => page.getByText('坐到椅子上，写下一件真实发生的事。', { exact: true }).waitFor());
     await page.waitForTimeout(120);
-    assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), '-84px 0px');
+    assert.match(await character.evaluate((element) => getComputedStyle(element).backgroundImage), /02-idle-left/);
     await page.waitForURL(/#\/record$/);
     assert.deepEqual(apiRequests, []);
   } finally {
@@ -753,15 +753,15 @@ test('system reduced motion skips room furniture action', async () => {
   }
 });
 
-test('installed shell keeps the companion motion sprite available offline', async () => {
+test('installed shell keeps every independent companion frame available offline', async () => {
   const { context, page } = await offlineShellPage();
   try {
     const assets = await page.evaluate(async () => {
       const bundles = [...document.scripts].map((script) => script.src).filter(Boolean);
       const source = await Promise.all(bundles.map((bundle) => fetch(bundle).then((response) => response.text())));
-      return [...new Set(source.flatMap((text) => [...text.matchAll(/["'`](\/assets\/(?:avatar|character-motion|room-background)-[^"'`]+\.(?:png|jpe?g))["'`]/g)].map((match) => match[1])))].sort();
+      return [...new Set(source.flatMap((text) => [...text.matchAll(/["'`](\/assets\/[^"'`]+\.(?:png|jpe?g))["'`]/g)].map((match) => match[1])))].sort();
     });
-    assert.equal(assets.length, 5, 'portraits, motion sprites, and the room background must be built into the shell');
+    assert.equal(assets.length, 75, 'portraits, 72 independent frames, and the room background must be built into the shell');
     await context.setOffline(true);
     const dialog = page.getByRole('dialog', { name: '选择生活分身' });
     await dialog.getByRole('button', { name: '选择牛纹帽双辫女生' }).click();
@@ -769,9 +769,9 @@ test('installed shell keeps the companion motion sprite available offline', asyn
     await page.waitForURL(/#\/record$/);
     await page.goto(`${baseUrl}/#/today`);
     const imageUrl = await page.locator('.room-character').evaluate((element) => getComputedStyle(element).backgroundImage.match(/url\("?([^"\)]+)"?\)/)?.[1]);
-    assert.ok(imageUrl, 'selected companion must use the motion sprite');
+    assert.match(imageUrl ?? '', /01-idle-front/, 'selected companion must use an independent motion frame');
     const cached = await page.evaluate((urls) => Promise.all(urls.map((url) => fetch(url).then((response) => response.ok).catch(() => false))), assets);
-    assert.deepEqual(cached, [true, true, true, true, true]);
+    assert.equal(cached.every(Boolean), true);
   } finally {
     await context.close();
   }
@@ -807,7 +807,7 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     await assert.doesNotReject(() => page.getByRole('heading', { name: '先补足体力' }).waitFor());
     assert.equal(await page.locator('.room-scene.is-cue-rest').count(), 1);
     assert.equal(await page.locator('.room-character.is-resting').count(), 1);
-    assert.equal(await page.locator('.room-character.is-resting').evaluate((element) => getComputedStyle(element).backgroundPosition), '-420px -84px');
+    assert.match(await page.locator('.room-character.is-resting').evaluate((element) => getComputedStyle(element).backgroundImage), /12-rest/);
     assert.equal(await page.locator('.room-cue').count(), 1);
     await page.getByRole('button', { name: '打开任务', exact: true }).click();
     assert.equal(await page.locator('.room-character.is-action-board').count(), 1);
@@ -953,18 +953,16 @@ test('selected companion uses the supplied portrait and matching room sprite', a
     await page.goto(`${baseUrl}/#/today`);
     const roomSprite = page.locator('.room-character.has-motion');
     await assert.doesNotReject(() => roomSprite.waitFor({ state: 'visible' }));
-    assert.match(await roomSprite.evaluate((element) => getComputedStyle(element).backgroundImage), /character-motion-female/);
+    assert.match(await roomSprite.evaluate((element) => getComputedStyle(element).backgroundImage), /01-idle-front/);
     assert.equal(await roomSprite.evaluate((element) => element.classList.contains('is-happy')), true);
     const spriteLayout = await roomSprite.evaluate((element) => {
       const style = getComputedStyle(element);
-      return { backgroundPosition: style.backgroundPosition, backgroundSize: style.backgroundSize, idleFrame: style.getPropertyValue('--idle-frame').trim(), mixBlendMode: style.mixBlendMode };
+      return { backgroundPosition: style.backgroundPosition, backgroundSize: style.backgroundSize, idleFrame: style.getPropertyValue('--idle-frame').trim(), walkFrame: style.getPropertyValue('--walk-front-1').trim(), mixBlendMode: style.mixBlendMode };
     });
-    const frame = spriteLayout.backgroundPosition.match(/^(-?\d+(?:\.\d+)?)px (-?\d+(?:\.\d+)?)px$/);
-    assert(frame, `unexpected sprite frame: ${spriteLayout.backgroundPosition}`);
-    assert.equal(spriteLayout.backgroundSize, '504px 504px');
-    assert.equal(spriteLayout.idleFrame, '0px 0px');
-    assert(Number(frame[1]) <= 0 && Number(frame[1]) >= -420);
-    assert(Number(frame[2]) <= 0 && Number(frame[2]) >= -420);
+    assert.equal(spriteLayout.backgroundPosition, '50% 100%');
+    assert.equal(spriteLayout.backgroundSize, 'contain');
+    assert.match(spriteLayout.idleFrame, /01-idle-front/);
+    assert.match(spriteLayout.walkFrame, /25-walk-front-1/);
     assert.equal(spriteLayout.mixBlendMode, 'normal');
     const geometry = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
     const spriteBounds = await roomSprite.boundingBox();
@@ -979,11 +977,11 @@ test('selected companion uses the supplied portrait and matching room sprite', a
 test('room furniture walks end at the matching interaction anchors', async () => {
   const { context, page, apiRequests } = await freshPage();
   const destinations = [
-    ['打开记录', 'desk', /#\/record$/, [0.31, 0.44, 0.68, 0.84], '-84px 0px'],
-    ['打开任务', 'board', /#\/tasks$/, [0.42, 0.58, 0.68, 0.84], '-168px 0px'],
-    ['打开日历', 'calendar', /#\/calendar$/, [0.58, 0.75, 0.68, 0.84], '-168px 0px'],
-    ['打开成长', 'workbench', /#\/growth$/, [0.60, 0.73, 0.68, 0.84], '-252px 0px'],
-    ['打开状态', 'window', /#\/system$/, [0.31, 0.44, 0.68, 0.84], '-168px 0px'],
+    ['打开记录', 'desk', /#\/record$/, [0.31, 0.44, 0.68, 0.84], /02-idle-left/],
+    ['打开任务', 'board', /#\/tasks$/, [0.42, 0.58, 0.68, 0.84], /03-idle-back/],
+    ['打开日历', 'calendar', /#\/calendar$/, [0.58, 0.75, 0.68, 0.84], /03-idle-back/],
+    ['打开成长', 'workbench', /#\/growth$/, [0.60, 0.73, 0.68, 0.84], /04-idle-right/],
+    ['打开状态', 'window', /#\/system$/, [0.31, 0.44, 0.68, 0.84], /03-idle-back/],
   ];
   try {
     await finishOnboarding(page);
@@ -1004,7 +1002,7 @@ test('room furniture walks end at the matching interaction anchors', async () =>
       });
       assert.ok(position.x >= minX && position.x <= maxX && position.y >= minY && position.y <= maxY,
         `${action} must align with its furniture, got ${JSON.stringify(position)}`);
-      assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), interactionFrame, `${action} must use a clean character-only interaction pose`);
+      assert.match(await character.evaluate((element) => getComputedStyle(element).backgroundImage), interactionFrame, `${action} must use a clean character-only interaction pose`);
       await page.waitForURL(route);
     }
     assert.deepEqual(apiRequests, []);
@@ -1024,7 +1022,7 @@ test('the bed gives a short recovery interaction and returns the companion to th
     await assert.doesNotReject(() => page.locator('.room-character.is-action-bed.is-interacting').waitFor());
     await assert.doesNotReject(() => page.getByText('歇一会儿。准备好再继续，也算照顾今天。', { exact: true }).waitFor());
     await page.waitForTimeout(120);
-    assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), '-420px -84px');
+    assert.match(await character.evaluate((element) => getComputedStyle(element).backgroundImage), /12-rest/);
     const resting = await character.evaluate((element) => {
       const room = element.closest('.room-scene').getBoundingClientRect();
       const box = element.getBoundingClientRect();
