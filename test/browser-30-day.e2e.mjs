@@ -89,12 +89,13 @@ async function directionTitle(page) {
 async function recordDay(page, day, success = false) {
   const body = `第 ${String(day).padStart(2, '0')} 天：留下当天真实进展。`;
   await page.goto(`${baseUrl}/#/record`);
-  const successIntent = page.getByRole('checkbox', { name: '作为小小成功' });
-  if (success) await successIntent.check();
-  else assert.equal(await successIntent.isChecked(), false);
+  if (success) await page.getByRole('button', { name: '成功记录' }).click();
+  else await page.getByRole('button', { name: '发生的事情' }).click();
+  assert.equal(await page.getByRole('checkbox', { name: '记为成功记录' }).count(), 0);
   await page.getByRole('textbox', { name: '发生了什么' }).fill(body);
   await page.getByRole('button', { name: '保存记录' }).click();
-  await page.waitForURL(new RegExp(`#\/day\/${dayDate(day)}$`));
+  assert.match(page.url(), /#\/record$/);
+  await page.goto(`${baseUrl}/#/day/${dayDate(day)}`);
   await assert.doesNotReject(() => page.locator('.entry-card .entry-body').getByText(body, { exact: true }).waitFor());
 }
 
@@ -205,7 +206,7 @@ async function finishGoal(page) {
 async function adoptWeeklyReview(page) {
   await page.goto(`${baseUrl}/#/review/${dayDate(7)}`);
   await page.getByRole('button', { name: '检查范围并生成' }).click();
-  await page.getByRole('dialog', { name: '检查周复盘发送范围' }).getByRole('button', { name: '确认范围并生成' }).click();
+  await page.getByRole('dialog', { name: '生成本周复盘' }).getByRole('button', { name: '确认并生成' }).click();
   const consent = page.getByRole('dialog', { name: '允许这一次 AI 周复盘？' });
   if (await consent.count()) await consent.getByRole('button', { name: '允许并继续' }).click();
   await page.getByRole('heading', { name: '保留可持续节奏' }).waitFor();

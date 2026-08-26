@@ -1,5 +1,6 @@
 import { QiguangDb, migrateLegacyJournalContent, parseBackup } from './db.ts';
 import {
+  DEFAULT_WEEKLY_REVIEW_SCOPE,
   DIMENSIONS,
   ROOT_ASSETS,
   type Area,
@@ -54,11 +55,10 @@ import { Capacitor } from '@capacitor/core';
 import maleAvatarImage from '../design-assets/pre-development/avatar-male-cartoon.png';
 import femaleAvatarImage from '../design-assets/pre-development/avatar-female-cartoon.png';
 import roomBackgroundImage from '../design-assets/pre-development/room-background.png';
+import maleMotionAtlas from '../design-assets/pre-development/character-motion-male-runtime.png';
+import femaleMotionAtlas from '../design-assets/pre-development/character-motion-female-runtime.png';
 
-const motionFrameImages = import.meta.glob<string>(
-  '../design-assets/pre-development/character-frames/*/*.png',
-  { eager: true, query: '?url', import: 'default' },
-);
+const motionAtlases = { male: maleMotionAtlas, female: femaleMotionAtlas } as const;
 const motionFramePreloads = new Map<Exclude<Profile['avatar'], null>, Promise<void>>();
 
 type RouteName = 'today' | 'calendar' | 'record' | 'tasks' | 'growth' | 'system' | 'day' | 'review';
@@ -77,7 +77,7 @@ interface RecordDraft {
 const DRAFT_KEY = 'qiguang.record-drafts.v2';
 const SEEN_BADGES_KEY = 'qiguang.seen-badges.v1';
 const INTERRUPTED_TAKEOVER_MS = 2 * 60_000;
-const SUCCESS_PROMPT = '今天做成或推进了什么？哪怕很小：';
+const SUCCESS_PROMPT = '今天做成、推进、坚持或照顾好了什么？';
 const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN ?? '').replace(/\/$/, '');
 const NATIVE_AI_UNAVAILABLE = '此安装包尚未配置 MiniMax 密钥；记录、任务和成长数据仍可在本机使用。';
 const AVAILABLE_AI_MODELS = ['MiniMax-M3', 'MiniMax-M2.7'] as const;
@@ -86,6 +86,8 @@ const DEFAULT_AI_MODEL: AiModelChoice = AVAILABLE_AI_MODELS[0];
 const FURNITURE_APPROACH_MS = 960;
 const FURNITURE_USE_MS = 720;
 const FURNITURE_RETURN_MS = 920;
+const AMBIENT_SETTLE_MS = 6_300;
+const IDLE_GESTURE_MS = 900;
 const NATIVE_PLATFORM = Capacitor.isNativePlatform();
 const BASE_AI_READY = !NATIVE_PLATFORM || (() => {
   try { return new URL(API_ORIGIN).protocol === 'https:'; } catch { return false; }
@@ -221,33 +223,23 @@ function resolvedCompanionName(profile: Profile | undefined): string {
   return saved && saved !== '小栖' ? saved : avatarName(profile?.avatar ?? null);
 }
 
-function preloadMotionFrames(avatar: Exclude<Profile['avatar'], null>, urls: string[]): Promise<void> {
+function preloadMotionFrames(avatar: Exclude<Profile['avatar'], null>, url: string): Promise<void> {
   const cached = motionFramePreloads.get(avatar);
   if (cached) return cached;
-  const preload = Promise.all(urls.map((url) => new Promise<void>((resolve) => {
+  const preload = new Promise<void>((resolve) => {
     const image = new Image();
     image.addEventListener('load', () => { void image.decode().catch(() => undefined).finally(resolve); }, { once: true });
     image.addEventListener('error', () => resolve(), { once: true });
     image.src = url;
-  }))).then(() => undefined);
+  });
   motionFramePreloads.set(avatar, preload);
   return preload;
 }
 
 function applyMotionFrames(character: HTMLElement, avatar: Exclude<Profile['avatar'], null>): Promise<void> {
-  const directory = `/character-frames/${avatar}/`;
-  const urls: string[] = [];
-  for (const [path, url] of Object.entries(motionFrameImages)) {
-    if (!path.includes(directory)) continue;
-    const frame = path.match(/\/\d{2}-(.+)\.png$/)?.[1];
-    if (!frame) continue;
-    urls.push(url);
-    const variable = frame.startsWith('walk-') ? frame : frame.startsWith('idle-') ? `face-${frame.slice(5)}-frame` : `${frame}-frame`;
-    character.style.setProperty(`--${variable}`, `url("${url}")`);
-  }
-  character.style.setProperty('--idle-frame', 'var(--face-front-frame)');
-  character.style.setProperty('--happy-frame', 'var(--face-front-frame)');
-  const ready = preloadMotionFrames(avatar, urls);
+  const atlas = motionAtlases[avatar];
+  character.style.setProperty('--motion-atlas', `url("${atlas}")`);
+  const ready = preloadMotionFrames(avatar, atlas);
   void ready.then(() => character.classList.add('is-motion-ready'));
   return ready;
 }
@@ -507,7 +499,7 @@ function openSuccessRecord(date: string): void {
   const draft = readDraft(date);
   if (draft.kind === 'journal' && draft.body.trim()) {
     go({ name: 'record', date });
-    showToast('当前普通记录草稿仍在；请先保存或清空，再写一条小成功。');
+    showToast('当前普通记录草稿仍在；请先保存或清空，再写一条成功记录。');
     return;
   }
   saveDraft(date, draft.body, 'success');
@@ -622,7 +614,7 @@ function roomStage(compact = false, avatar: Profile['avatar'] = null, companionN
   stage.setAttribute('aria-label', '温暖的像素房间：包含日记桌、任务板、日历、书架工作台、窗边床铺和生活分身。所有功能也能通过普通导航进入。');
   const scene = node('div', 'room-scene');
   const hour = new Date().getHours();
-  const ambientAction = roomAmbientAction();
+  const ambientAction = snapshotDate ? null : roomAmbientAction();
   scene.style.setProperty('--room-background', `url("${roomBackgroundImage}")`);
   scene.classList.add(snapshotDate ? 'is-day' : hour < 6 ? 'is-night' : hour < 12 ? 'is-morning' : hour < 18 ? 'is-day' : 'is-evening');
   if (cue) scene.classList.add(`is-cue-${cue}`);
@@ -644,7 +636,7 @@ function roomStage(compact = false, avatar: Profile['avatar'] = null, companionN
         : cue === 'focus' ? ['thinking', '思考'] as const
           : cue === 'play' ? ['playing', '放松'] as const
             : hasMainQuest ? ['guiding', '指导'] as const : ['present', '在场'] as const;
-  const character = node('div', `room-character is-happy is-${avatar ?? 'neutral'} is-ambient-${ambientAction}${celebratingCharacter ? ' is-celebrating' : ''}${welcoming ? ' is-welcoming' : ''}${cue === 'rest' || ambientAction === 'rest' ? ' is-resting' : ''}`);
+  const character = node('div', `room-character is-happy is-${avatar ?? 'neutral'}${ambientAction ? ` is-ambient-${ambientAction}` : ''}${celebratingCharacter ? ' is-celebrating' : ''}${welcoming ? ' is-welcoming' : ''}${cue === 'rest' || ambientAction === 'rest' ? ' is-resting' : ''}`);
   let motionReady = Promise.resolve();
   if (avatar) {
     character.classList.add('has-motion');
@@ -657,6 +649,7 @@ function roomStage(compact = false, avatar: Profile['avatar'] = null, companionN
   if (!compact) {
     let actionPending = false;
     let actionTimer: number | undefined;
+    let idleTimer: number | undefined;
     const roomMotionReduced = settings.reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const characterPanelId = `character-panel-${crypto.randomUUID()}`;
     const feedback = node('p', 'room-interaction-feedback');
@@ -664,6 +657,32 @@ function roomStage(compact = false, avatar: Profile['avatar'] = null, companionN
     feedback.setAttribute('role', 'status');
     feedback.setAttribute('aria-live', 'polite');
     stage.append(feedback);
+    const scheduleIdleGesture = (): void => {
+      idleTimer = window.setTimeout(() => {
+        if (!character.isConnected) return;
+        if (actionPending) {
+          scheduleIdleGesture();
+          return;
+        }
+        const gestures = ['wave', 'calm', 'think', 'read'] as const;
+        const gesture = gestures[Math.floor(Math.random() * gestures.length)] ?? 'wave';
+        character.style.setProperty('--idle-gesture-frame', `var(--${gesture}-frame)`);
+        character.dataset.idleGesture = gesture;
+        character.classList.add('is-idle-gesture');
+        idleTimer = window.setTimeout(() => {
+          character.classList.remove('is-idle-gesture');
+          delete character.dataset.idleGesture;
+          scheduleIdleGesture();
+        }, IDLE_GESTURE_MS);
+      }, 7_000 + Math.random() * 5_000);
+    };
+    if (avatar && ambientAction !== 'rest' && !roomMotionReduced) void motionReady.then(() => {
+      idleTimer = window.setTimeout(() => {
+        if (!character.isConnected) return;
+        if (ambientAction) character.classList.remove(`is-ambient-${ambientAction}`);
+        scheduleIdleGesture();
+      }, AMBIENT_SETTLE_MS);
+    });
     const hotspots: Array<[string, string, Route | null, string]> = [
       ['desk', '记录', { name: 'record' }, '坐到椅子上，写下一件真实发生的事。'],
       ['board', '任务', { name: 'tasks' }, '看一眼今天真正要推进的事。'],
@@ -687,6 +706,8 @@ function roomStage(compact = false, avatar: Profile['avatar'] = null, companionN
           return;
         }
         actionPending = true;
+        character.classList.remove('is-idle-gesture');
+        delete character.dataset.idleGesture;
         button.disabled = true;
         await motionReady;
         if (!button.isConnected || !character.isConnected) {
@@ -741,6 +762,8 @@ function roomStage(compact = false, avatar: Profile['avatar'] = null, companionN
             if (!panel.hidden) panel.querySelector<HTMLButtonElement>('.button-primary')?.focus();
             return;
           }
+          character.classList.remove('is-idle-gesture');
+          delete character.dataset.idleGesture;
           character.classList.add('is-welcoming');
           window.setTimeout(() => character.classList.remove('is-welcoming'), 520);
           const created = node('div', 'character-panel');
@@ -1053,6 +1076,53 @@ async function saveQuickQuestFeedback(quest: Quest, result: Extract<FeedbackResu
   }
 }
 
+function countQuestActions(quest: Quest): HTMLElement {
+  const actions = node('div', 'quest-actions quest-count-actions');
+  const progress = quest.progressCount ?? 0;
+  const target = quest.targetCount ?? 1;
+  const change = async (delta: -1 | 1): Promise<void> => {
+    if (delta === 1 && progress + 1 >= target) {
+      await saveQuickQuestFeedback(quest, 'completed', actions);
+      return;
+    }
+    actions.querySelectorAll<HTMLButtonElement>('button').forEach((button) => { button.disabled = true; });
+    try {
+      await db.changeQuestProgress(quest.id, delta);
+      focusAfterRenderSelector = `[data-quest-id="${CSS.escape(quest.id)}"]`;
+      await render();
+    } catch (error) {
+      showToast(errorMessage(error), 'error');
+      actions.querySelectorAll<HTMLButtonElement>('button').forEach((button) => { button.disabled = false; });
+    }
+  };
+  const minus = node('button', 'button button-quiet', '−1');
+  minus.type = 'button';
+  minus.disabled = progress === 0;
+  minus.setAttribute('aria-label', `减少一次：${quest.title}`);
+  minus.addEventListener('click', () => { void change(-1); });
+  const count = node('output', 'quest-count-progress', `${progress}/${target} ${quest.countUnit}`);
+  count.setAttribute('aria-live', 'polite');
+  const plus = node('button', 'button button-primary', '+1');
+  plus.type = 'button';
+  plus.setAttribute('aria-label', `记录一次：${quest.title}`);
+  plus.addEventListener('click', () => { void change(1); });
+  const skip = node('button', 'button button-quiet', '今天不做');
+  skip.type = 'button';
+  skip.addEventListener('click', () => { void saveQuickQuestFeedback(quest, 'skipped', actions); });
+  const details = node('button', 'button button-quiet', '详细反馈');
+  details.type = 'button';
+  details.addEventListener('click', () => { void openQuestFeedbackDialog(quest); });
+  const adjust = node('button', 'button button-quiet', '调整 / 顺延');
+  adjust.type = 'button';
+  adjust.addEventListener('click', () => { void openQuestAdjustmentDialog(quest); });
+  const more = node('details', 'quest-more-actions');
+  const moreButtons = node('div', 'quest-more-buttons');
+  moreButtons.append(skip, details, adjust);
+  more.append(node('summary', '', '更多'), moreButtons);
+  actions.append(minus, count, plus, more);
+  return actions;
+}
+
 function quickQuestActions(quest: Quest): HTMLElement {
   const actions = node('div', 'quest-actions quest-quick-actions');
   const completeLabel = node('label', 'quest-check');
@@ -1346,6 +1416,13 @@ async function openQuestAdjustmentDialog(quest: Quest): Promise<void> {
   const difficulty = node('select', 'input');
   for (const value of Object.keys(DIFFICULTY_XP) as Difficulty[]) difficulty.append(selectOption(value, questDifficultyLabel(quest, value), value === quest.difficulty));
   const date = node('input', 'input'); date.type = 'date'; date.min = localDate(); date.value = quest.localDate;
+  const completionMode = node('select', 'input');
+  completionMode.append(selectOption('once', '完成一次', !quest.targetCount), selectOption('count', '计数打卡', Boolean(quest.targetCount)));
+  const targetCount = node('input', 'input'); targetCount.type = 'number'; targetCount.min = String(Math.max(2, (quest.progressCount ?? 0) + 1)); targetCount.max = '1000'; targetCount.value = String(quest.targetCount ?? 8);
+  const countUnit = node('input', 'input'); countUnit.maxLength = 20; countUnit.value = quest.countUnit ?? '次';
+  const countFields = node('div', 'count-task-fields'); countFields.hidden = !quest.targetCount;
+  countFields.append(labelledControl('目标次数', targetCount), labelledControl('计数单位', countUnit));
+  completionMode.addEventListener('change', () => { countFields.hidden = completionMode.value !== 'count'; });
   const status = node('p', 'save-state');
   const shortcuts = node('div', 'quest-adjust-shortcuts');
   const shrink = node('button', 'button button-secondary', '缩到 5 分钟'); shrink.type = 'button';
@@ -1392,6 +1469,7 @@ async function openQuestAdjustmentDialog(quest: Quest): Promise<void> {
   content.append(
     node('p', 'muted', '调整不会扣分；只有完成反馈才会结算经验。'), basis, shortcuts,
     labelledControl('行动标题', title), labelledControl('为什么值得做', reason), labelledControl('最小动作', minimum),
+    labelledControl('完成方式', completionMode), countFields,
     labelledControl('预计分钟', minutes), labelledControl('难度', difficulty), labelledControl('可选硬截止（不会自动失败）', deadline), labelledControl(quest.sourceType === 'habit' ? '习惯任务日期由计划日决定' : '安排日期', date), status,
   );
   const cancel = node('button', 'button button-secondary', '取消'); cancel.type = 'button'; cancel.addEventListener('click', () => dialog.close());
@@ -1401,6 +1479,8 @@ async function openQuestAdjustmentDialog(quest: Quest): Promise<void> {
     try {
       const updated = await db.savePendingQuest(quest.id, {
         localDate: date.value, title: title.value, reason: reason.value, minimumAction: minimum.value,
+        targetCount: completionMode.value === 'count' ? Number(targetCount.value) : undefined,
+        countUnit: completionMode.value === 'count' ? countUnit.value : undefined,
         estimatedMinutes: Number(minutes.value), difficulty: difficulty.value as Difficulty, deadlineAt: isoFromDateTimeInput(deadline.value),
       });
       dialog.close();
@@ -1423,13 +1503,14 @@ function questCard(quest: Quest, compact = false, milestone?: { description: str
     node('span', 'caption', questDifficultyLabel(quest)),
   );
   card.append(heading, node('h3', '', quest.title), node('p', compact ? 'caption' : '', quest.reason));
+  if (quest.localDate !== localDate()) card.append(node('p', 'caption', `计划日期：${formatDate(quest.localDate)}`));
   const minimum = node('p', 'quest-minimum', `最小动作：${quest.minimumAction} · 约 ${quest.estimatedMinutes} 分钟`);
   card.append(minimum);
   const completionCriteria = (quest.completionCriteria || quest.minimumAction).trim();
   if (completionCriteria !== quest.minimumAction.trim()) card.append(node('p', 'caption', `完成标准：${completionCriteria}`));
   if (milestone) card.append(node('p', 'caption', `关联里程碑：${milestone.description}`));
   if (quest.deadlineAt) card.append(node('p', deadlinePassed ? 'caption danger-copy' : 'caption', `${deadlinePassed ? '截止已过，仍由你决定' : '可选截止'}：${new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(quest.deadlineAt))}`));
-  if (quest.status === 'pending') card.append(quickQuestActions(quest));
+  if (quest.status === 'pending') card.append(quest.targetCount ? countQuestActions(quest) : quickQuestActions(quest));
   else if (quest.systemRetiredAt) {
     const retiredLabels: Record<NonNullable<Quest['systemRetiredReason']>, string> = {
       elapsed: '计划日已过，系统已无惩罚收束；不会补课或形成欠账。',
@@ -1504,6 +1585,10 @@ function homeHabitCheckin(quest: Quest): HTMLElement {
   row.tabIndex = -1;
   const copy = node('div', 'home-habit-copy');
   copy.append(node('strong', '', quest.title));
+  if (quest.status === 'pending' && quest.targetCount) {
+    row.append(copy, countQuestActions(quest));
+    return row;
+  }
   const actions = node('div', 'quest-actions');
   if (quest.status === 'pending') {
     const complete = node('button', 'button button-primary', '完成打卡');
@@ -1615,7 +1700,7 @@ function openDailyCloseout(date: string, entries: JournalEntry[], quests: Quest[
   const completed = quests.filter((item) => item.status === 'completed' || item.status === 'partial');
   const checklist = node('div', 'closeout-checklist');
   const record = node('section', `closeout-item${entries.length ? ' is-done' : ''}`);
-  record.append(node('strong', '', entries.length ? `已经留下 ${entries.length} 条真实记录` : '还没有留下今天的记录'), node('p', 'caption', entries.length ? '还可以补充一个小成功、感受或值得记住的片段。' : '一句话也可以；先保留事实，不急着完整。'));
+  record.append(node('strong', '', entries.length ? `已经留下 ${entries.length} 条真实记录` : '还没有留下今天的记录'), node('p', 'caption', entries.length ? '还可以补充一条成功记录、感受或值得记住的片段。' : '一句话也可以；先保留事实，不急着完整。'));
   const recordButton = node('button', 'button button-secondary', entries.length ? '追加一条' : '记录今天');
   recordButton.type = 'button'; recordButton.addEventListener('click', () => { dialog.close(); go({ name: 'record' }); }); record.append(recordButton);
   const task = node('section', `closeout-item${pending.length ? '' : ' is-done'}`);
@@ -1627,9 +1712,9 @@ function openDailyCloseout(date: string, entries: JournalEntry[], quests: Quest[
   const review = node('section', `closeout-item${analysis || localSuccesses.length ? ' is-done' : ''}`);
   review.append(
     node('strong', '', analysis ? '今天已经整理成可回看的章节' : localSuccesses.length ? `已留下 ${localSuccesses.length} 条成功证据` : '今天还没有留下成功证据'),
-    node('p', 'caption', analysis ? '小成功、关键事件和明天最小一步都可以继续核对。' : localSuccesses.length ? '来自你写下的内容或已经确认的行动反馈，不依赖 AI 推断。' : entries.length && NATIVE_AI_READY ? 'AI 只会生成候选；发送前仍由你检查范围。' : '完成、推进、坚持或照顾好自己，都可以算。'),
+    node('p', 'caption', analysis ? '成功记录、关键事件和明天最小一步都可以继续核对。' : localSuccesses.length ? '来自你写下的内容或已经确认的行动反馈，不依赖 AI 推断。' : entries.length && NATIVE_AI_READY ? 'AI 只会生成候选；发送前仍由你检查范围。' : '完成、推进、坚持或照顾好自己，都可以算。'),
   );
-  const reviewButton = node('button', 'button button-secondary', analysis || localSuccesses.length ? '查看成功日记' : entries.length && NATIVE_AI_READY ? '检查范围并整理' : '写下一条小成功');
+  const reviewButton = node('button', 'button button-secondary', analysis || localSuccesses.length ? '查看成功日记' : entries.length && NATIVE_AI_READY ? '检查范围并整理' : '写一条成功记录');
   reviewButton.type = 'button'; reviewButton.addEventListener('click', () => {
     dialog.close();
     if (analysis || localSuccesses.length || (entries.length && NATIVE_AI_READY)) go({ name: 'day', date });
@@ -2014,34 +2099,36 @@ function recordPage(route: Route): HTMLElement {
   const counter = node('span', 'character-count', `${textarea.value.length}/12000`);
   bodyLabel.append(textarea, counter);
 
-  const successIntent = node('input');
-  successIntent.type = 'checkbox';
-  successIntent.checked = initialDraft.kind === 'success';
-  const intentControl = node('label', 'setting-row record-intent');
-  intentControl.append(node('span', '', '作为小小成功'), successIntent);
+  let selectedKind: NonNullable<JournalEntry['kind']> = initialDraft.kind;
+  let selectedHeading = selectedKind === 'success' ? '成功记录' : '发生的事情';
+  const kindHeading = node('p', 'record-kind-heading', selectedHeading);
 
   const prompts = node('section', 'record-prompts');
   prompts.setAttribute('aria-label', '快速开头');
   const promptActions = node('div', 'record-prompt-actions');
+  const kindButtons: HTMLButtonElement[] = [];
+  const selectKind = (kind: NonNullable<JournalEntry['kind']>, label: string, prompt: string): void => {
+    selectedKind = kind;
+    selectedHeading = label;
+    kindHeading.textContent = label;
+    textarea.placeholder = prompt;
+    kindButtons.forEach((item) => item.setAttribute('aria-pressed', String(item.textContent === label)));
+    updateDraftState();
+  };
   for (const [label, prompt, kind] of [
-    ['小小成功', SUCCESS_PROMPT, 'success'],
-    ['发生的事', '今天发生了什么？', 'journal'],
+    ['成功记录', SUCCESS_PROMPT, 'success'],
+    ['发生的事情', '今天发生了什么？', 'journal'],
     ['感受', '当时我的感受是什么？', 'journal'],
     ['想记住', '今天有什么值得记住？', 'journal'],
   ] as const) {
     const button = node('button', 'button button-quiet', label);
     button.type = 'button';
+    button.setAttribute('aria-pressed', String(label === selectedHeading));
     button.addEventListener('click', () => {
-      if (kind === 'success' && textarea.value.trim() && !successIntent.checked) {
-        showToast('当前普通记录草稿仍在；请先保存或清空，再写一条小成功。');
-        textarea.focus();
-        return;
-      }
-      textarea.placeholder = prompt;
-      successIntent.checked = kind === 'success';
-      successIntent.dispatchEvent(new Event('change'));
+      selectKind(kind, label, prompt);
       textarea.focus();
     });
+    kindButtons.push(button);
     promptActions.append(button);
   }
   prompts.append(promptActions);
@@ -2052,31 +2139,29 @@ function recordPage(route: Route): HTMLElement {
   submit.type = 'submit';
   const submitBar = node('div', 'record-submit-bar');
   submitBar.append(saveState, submit);
-  form.append(dateSettings, bodyLabel, prompts, intentControl, submitBar);
+  form.append(dateSettings, kindHeading, bodyLabel, prompts, submitBar);
   main.append(form);
 
   let activeDraftDate = targetDate;
   const updateDraftState = (): void => {
     counter.textContent = `${textarea.value.length}/12000`;
-    saveDraft(activeDraftDate, textarea.value, successIntent.checked ? 'success' : 'journal');
+    saveDraft(activeDraftDate, textarea.value, selectedKind);
     saveState.textContent = draftNeedsUnloadWarning ? '浏览器未能保存草稿，请先不要关闭页面' : '草稿已本地保存';
     saveState.classList.toggle('is-error', draftNeedsUnloadWarning);
   };
   textarea.addEventListener('input', updateDraftState);
-  successIntent.addEventListener('change', updateDraftState);
   dateInput.addEventListener('change', () => {
     if (!isLocalDate(dateInput.value)) {
       saveState.textContent = '请选择有效日期；当前草稿已保留。';
       saveState.classList.add('is-error');
       return;
     }
-    saveDraft(activeDraftDate, textarea.value, successIntent.checked ? 'success' : 'journal');
+    saveDraft(activeDraftDate, textarea.value, selectedKind);
     activeDraftDate = dateInput.value;
     dateSummary.textContent = `日期 · ${activeDraftDate === today ? '今天' : formatDate(activeDraftDate, { month: 'numeric', day: 'numeric' })}`;
     const draft = readDraft(activeDraftDate);
     textarea.value = draft.body;
-    textarea.placeholder = draft.kind === 'success' ? SUCCESS_PROMPT : '今天发生了什么？';
-    successIntent.checked = draft.kind === 'success';
+    selectKind(draft.kind, draft.kind === 'success' ? '成功记录' : '发生的事情', draft.kind === 'success' ? SUCCESS_PROMPT : '今天发生了什么？');
     counter.textContent = `${textarea.value.length}/12000`;
     saveState.textContent = textarea.value ? '已恢复这一天的草稿；其他日期草稿仍保留' : '已切换日期；该日期暂无草稿';
     saveState.classList.remove('is-error');
@@ -2087,12 +2172,17 @@ function recordPage(route: Route): HTMLElement {
     submit.textContent = '正在保存…';
     saveState.textContent = '正在写入本地数据库';
     try {
-      const kind = successIntent.checked ? 'success' : 'journal';
-      const saved = await db.addEntry(textarea.value, dateInput.value, 'text', kind);
+      const saved = await db.addEntry(textarea.value, dateInput.value, 'text', selectedKind);
       clearDraft(saved.localDate);
       textarea.value = '';
+      selectKind('journal', '发生的事情', '今天发生了什么？');
+      counter.textContent = '0/12000';
+      submit.disabled = false;
+      submit.textContent = '保存记录';
+      saveState.textContent = '已保存，可以继续记录这一天下一件事';
+      saveState.classList.remove('is-error');
       showToast('已安全保存在本机。');
-      go({ name: 'day', date: saved.localDate });
+      textarea.focus();
     } catch (error) {
       submit.disabled = false;
       submit.textContent = '重试保存';
@@ -2130,9 +2220,121 @@ function trailTabs(active: 'calendar' | 'growth' | 'review'): HTMLElement {
   return nav;
 }
 
+async function openDaySnapshot(date: string, entries: JournalEntry[], allQuests: Quest[], allFeedback: QuestFeedback[], suggestedCaption?: string): Promise<void> {
+  const [observations, profile, caption, analyses] = await Promise.all([
+    db.resolvedStateAtOrBefore(date), db.getProfile(), db.getDayCaption(date), db.listDailyAnalyses(date),
+  ]);
+  const activeFeedback = activeFeedbackByQuest(allFeedback);
+  const quests = allQuests.filter((quest) => activeFeedback.has(quest.id) && questResultDate(quest, activeFeedback) === date);
+  const readyAnalysis = analyses.find((item) => item.status === 'ready');
+  const known = Object.values(observations);
+  const lowest = known.filter((item) => !observationIsStale(item, date)).sort((left, right) => left.value - right.value)[0];
+  const { dialog, content, actions } = dialogShell(formatDate(date, { year: 'numeric' }));
+  dialog.classList.add('day-snapshot-dialog');
+  content.append(roomStage(true, profile?.avatar ?? null, resolvedCompanionName(profile), false, roomCueFor(lowest), date));
+
+  const captionBlock = node('section', 'day-snapshot-block day-caption-block');
+  captionBlock.append(node('h3', '', '当日一句话'));
+  const captionInput = node('textarea', 'input day-caption-input');
+  captionInput.maxLength = 120;
+  captionInput.rows = 2;
+  captionInput.placeholder = '用一句话记住这一天';
+  captionInput.value = suggestedCaption ?? caption?.text ?? '';
+  captionInput.setAttribute('aria-label', '当日一句话');
+  const captionStatus = node('p', 'caption', suggestedCaption ? '已填入 AI 概括，修改后再保存。' : caption ? '已保存，可继续修改。' : '可以自己写，也可以采用 AI 整理后的概括。');
+  captionStatus.setAttribute('role', 'status');
+  const captionActions = node('div', 'day-caption-actions');
+  const useAi = node('button', 'button button-quiet', readyAnalysis ? '采用 AI 概括' : NATIVE_AI_READY ? '让 AI 概括' : 'AI 未配置');
+  useAi.type = 'button';
+  useAi.disabled = !readyAnalysis && (!NATIVE_AI_READY || !entries.length);
+  useAi.addEventListener('click', () => {
+    if (readyAnalysis) {
+      captionInput.value = readyAnalysis.result.summary;
+      captionStatus.textContent = '已填入 AI 概括，修改后再保存。';
+      captionInput.focus();
+      return;
+    }
+    void openAnalysisPreview(date, entries, undefined, (summary) => {
+      if (!dialog.isConnected) {
+        void openDaySnapshot(date, entries, allQuests, allFeedback, summary);
+        return;
+      }
+      captionInput.value = summary;
+      captionStatus.textContent = '已填入 AI 概括，修改后再保存。';
+      captionInput.focus();
+    });
+  });
+  const saveCaption = node('button', 'button button-secondary', '保存一句话');
+  saveCaption.type = 'button';
+  saveCaption.addEventListener('click', async () => {
+    saveCaption.disabled = true;
+    try {
+      const saved = await db.saveDayCaption(date, captionInput.value);
+      captionInput.value = saved?.text ?? '';
+      captionStatus.textContent = saved ? '当日一句话已保存。' : '当日一句话已清除。';
+    } catch (error) {
+      captionStatus.textContent = errorMessage(error);
+      captionStatus.classList.add('is-error');
+    } finally {
+      saveCaption.disabled = false;
+    }
+  });
+  captionActions.append(useAi, saveCaption);
+  captionBlock.append(captionInput, captionActions, captionStatus);
+  content.append(captionBlock);
+
+  const state = node('section', 'day-snapshot-block');
+  state.append(node('h3', '', '当日状态'));
+  const stateGrid = node('div', 'day-snapshot-state');
+  for (const dimension of DIMENSIONS) {
+    const observation = observations[dimension.key];
+    stateGrid.append(node('span', observation ? '' : 'is-unknown', `${dimension.label} ${observation?.value ?? '—'}`));
+  }
+  state.append(stateGrid);
+  content.append(state);
+
+  const records = node('section', 'day-snapshot-block');
+  records.append(node('h3', '', `记录 · ${entries.length}`));
+  if (!entries.length) records.append(node('p', 'empty-copy', '这一天还没有记录。'));
+  for (const entry of entries) {
+    const item = node('article', 'day-snapshot-item');
+    item.append(
+      node('span', `tag${entry.kind === 'success' ? ' is-success' : ''}`, entry.kind === 'success' ? '成功记录' : '记录'),
+      node('p', 'day-snapshot-copy', entry.body),
+    );
+    records.append(item);
+  }
+  content.append(records);
+
+  const results = node('section', 'day-snapshot-block');
+  results.append(node('h3', '', `行动结果 · ${quests.length}`));
+  if (!quests.length) results.append(node('p', 'empty-copy', '这一天还没有行动反馈。'));
+  const resultLabels: Record<QuestFeedback['result'], string> = { completed: '完成', partial: '部分完成', skipped: '今天不做', exempt: '豁免' };
+  for (const quest of quests) {
+    const feedback = activeFeedback.get(quest.id);
+    if (!feedback) continue;
+    const item = node('article', 'day-snapshot-item');
+    item.append(node('span', 'tag', resultLabels[feedback.result]), node('p', 'day-snapshot-copy', quest.title));
+    results.append(item);
+  }
+  content.append(results);
+
+  const close = node('button', 'button button-secondary', '关闭');
+  close.type = 'button';
+  close.addEventListener('click', () => dialog.close());
+  const full = node('button', 'button button-primary', '打开完整回顾');
+  full.type = 'button';
+  full.addEventListener('click', () => { dialog.close(); go({ name: 'day', date }); });
+  actions.append(close, full);
+  dialog.showModal();
+  close.focus();
+}
+
 async function calendarPage(): Promise<HTMLElement> {
   const [entries, areas, goals, allQuests, allFeedback] = await Promise.all([db.listEntries(), db.listAreas(), db.listGoals(), db.listQuests(), db.listQuestFeedback()]);
   const entryDates = new Set(entries.map((entry) => entry.localDate));
+  const entriesByDate = new Map<string, JournalEntry[]>();
+  for (const entry of entries) entriesByDate.set(entry.localDate, [...(entriesByDate.get(entry.localDate) ?? []), entry]);
   const main = node('main', 'page page-calendar');
   main.append(pageHeader('时间线', '日历'));
   main.append(trailTabs('calendar'));
@@ -2159,7 +2361,16 @@ async function calendarPage(): Promise<HTMLElement> {
     if (dateValue === localDate()) button.setAttribute('aria-current', 'date');
     button.append(node('span', '', String(date.getDate())));
     if (entryDates.has(dateValue)) button.append(node('span', 'date-dot', '有记录'));
-    button.addEventListener('click', () => go({ name: 'day', date: dateValue }));
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        await openDaySnapshot(dateValue, entriesByDate.get(dateValue) ?? [], allQuests, allFeedback);
+      } catch (error) {
+        showToast(errorMessage(error), 'error');
+      } finally {
+        if (button.isConnected) button.disabled = false;
+      }
+    });
     grid.append(button);
   }
   panel.append(grid);
@@ -2365,7 +2576,7 @@ function appendStoredRequestPreview(content: HTMLElement, request: DailyAnalysis
   content.append(scope, node('p', 'privacy-boundary', '这些内容将离开设备并发送到已配置的 AI 服务；原文不会进入栖光服务端普通日志。'));
 }
 
-async function openAnalysisPreview(date: string, entries: JournalEntry[], retryJob?: AnalysisJob): Promise<void> {
+async function openAnalysisPreview(date: string, entries: JournalEntry[], retryJob?: AnalysisJob, onSummary?: (summary: string) => void): Promise<void> {
   if (!NATIVE_AI_READY) { showToast(NATIVE_AI_UNAVAILABLE, 'error'); return; }
   const { dialog, content, actions } = dialogShell(retryJob ? '检查并重试整理' : '检查本次发送范围');
   if (retryJob) {
@@ -2478,6 +2689,8 @@ async function openAnalysisPreview(date: string, entries: JournalEntry[], retryJ
       const job = await db.createDailyAnalysisJob(request);
       dialog.close();
       await submitAnalysisJob(job);
+      const ready = (await db.listDailyAnalyses(date)).find((item) => item.status === 'ready');
+      if (ready && onSummary) onSummary(ready.result.summary);
     } catch (error) {
       send.disabled = false;
       status.textContent = errorMessage(error);
@@ -2496,13 +2709,21 @@ async function openEditDialog(entry: JournalEntry): Promise<void> {
   textarea.maxLength = 12_000;
   textarea.value = entry.body;
   bodyLabel.append(textarea);
-  const success = node('input');
-  success.type = 'checkbox';
-  success.checked = entry.kind === 'success';
-  const successControl = node('label', 'setting-row');
-  successControl.append(node('span', '', '作为小小成功'), success);
+  let kind: NonNullable<JournalEntry['kind']> = entry.kind ?? 'journal';
+  const typeControl = node('div', 'record-prompt-actions');
+  typeControl.setAttribute('aria-label', '记录类型');
+  for (const [value, label] of [['journal', '普通记录'], ['success', '成功记录']] as const) {
+    const button = node('button', 'button button-quiet', label);
+    button.type = 'button';
+    button.setAttribute('aria-pressed', String(kind === value));
+    button.addEventListener('click', () => {
+      kind = value;
+      typeControl.querySelectorAll('button').forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+    });
+    typeControl.append(button);
+  }
   const status = node('p', 'save-state', `当前版本 v${entry.version}`);
-  content.append(bodyLabel, successControl, status);
+  content.append(bodyLabel, typeControl, status);
   const cancel = node('button', 'button button-secondary', '取消');
   cancel.type = 'button';
   cancel.addEventListener('click', () => dialog.close());
@@ -2512,7 +2733,7 @@ async function openEditDialog(entry: JournalEntry): Promise<void> {
     save.disabled = true;
     status.textContent = '正在保存修改…';
     try {
-      await db.editEntry(entry.id, entry.version, textarea.value, success.checked ? 'success' : 'journal');
+      await db.editEntry(entry.id, entry.version, textarea.value, kind);
       dialog.close();
       showToast('修改已保存，可撤销一次。');
       await render();
@@ -2718,7 +2939,7 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[], quest
       successes.forEach((item) => list.append(node('li', '', item)));
       successBlock.append(list);
     } else successBlock.append(node('p', 'caption', '还没有留下；一句具体的小推进也算。'));
-    successBlock.append(iconButton(successes.length ? '再写一条小成功' : '写下一条小成功', null, () => openSuccessRecord(date), 'button button-secondary'));
+    successBlock.append(iconButton(successes.length ? '再写一条成功记录' : '写一条成功记录', null, () => openSuccessRecord(date), 'button button-secondary'));
     section.append(successBlock);
     if (!entries.length) section.append(node('p', 'muted', successes.length ? '行动反馈已经进入成功日记；有原始记录后还可以继续做 AI 整理。' : '有原始记录后，才可以主动选择发送并整理。'));
     else if (!NATIVE_AI_READY) section.append(node('p', 'caption', 'MiniMax 尚未配置；本地成功日记、原始记录、任务与成长仍可完整使用。'));
@@ -2756,7 +2977,7 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[], quest
   reflection.append(node('h3', '', '今天留下的证据'));
   const successes = successCredits(entries, quests, events);
   const successBlock = node('section', 'success-evidence');
-  successBlock.append(node('strong', '', '小成功'));
+  successBlock.append(node('strong', '', '成功记录'));
   if (successes.length) {
     const list = node('ul', 'success-list');
     successes.forEach((item) => list.append(node('li', '', item)));
@@ -3040,7 +3261,7 @@ async function submitWeeklyReviewJob(job: AnalysisJob, resumeInterrupted = false
 
 async function openWeeklyReviewPreview(period: { start: string; end: string }, retryJob?: AnalysisJob): Promise<void> {
   if (!NATIVE_AI_READY) { showToast(NATIVE_AI_UNAVAILABLE, 'error'); return; }
-  const { dialog, content, actions } = dialogShell(retryJob ? '检查并重试周复盘' : '检查周复盘发送范围');
+  const { dialog, content, actions } = dialogShell(retryJob ? '检查并重试周复盘' : '生成本周复盘');
   if (retryJob) {
     if (retryJob.operation !== 'weekly_review') throw new Error('这不是周复盘任务。');
     weeklyPreview(content, retryJob.request as WeeklyReviewRequest);
@@ -3054,55 +3275,36 @@ async function openWeeklyReviewPreview(period: { start: string; end: string }, r
   const baseRequest = await weeklyReviewRequest(period, '');
   const note = node('textarea', 'input compact-textarea');
   note.maxLength = 2_000; note.placeholder = '可选：补充这一周只有你知道的现实约束；不会读取其他原文。';
-  const choices = node('section', 'preview-group');
-  choices.append(node('h3', '', '可取消的发送上下文'));
-  const eventOptions = baseRequest.context.events.map((event) => {
-    const option = previewContextRow(`已确认事件 · ${formatDate(event.localDate)}`, `${event.title}：${event.description}`, true);
-    choices.append(option.label);
-    return { event, input: option.input };
-  });
-  const stateOption = previewContextRow('状态摘要', `${baseRequest.context.stateSnapshots.length} 天；不含日记原文`, Boolean(baseRequest.context.stateSnapshots.length));
-  const taskOption = previewContextRow('任务结果', `${baseRequest.context.taskResults.length} 条`, Boolean(baseRequest.context.taskResults.length));
-  const habitOption = previewContextRow('习惯动量', `${baseRequest.context.habits.length} 个`, Boolean(baseRequest.context.habits.length));
-  const growthOption = previewContextRow('成长与 XP 摘要', `${baseRequest.context.growth.length} 个分支`, Boolean(baseRequest.context.growth.length));
-  const goalOption = previewContextRow('当前目标', `${baseRequest.context.goals.length} 个`, Boolean(baseRequest.context.goals.length));
-  const experimentOption = previewContextRow('既有实验', `${baseRequest.context.experiments.length} 个`, Boolean(baseRequest.context.experiments.length));
-  choices.append(stateOption.label, taskOption.label, habitOption.label, growthOption.label, goalOption.label, experimentOption.label);
-  const memoryOptions = baseRequest.context.memories.map((memory) => {
-    const option = previewContextRow(`已确认记忆 · ${memory.type}`, memory.statement, true);
-    choices.append(option.label);
-    return { memory, input: option.input };
-  });
   const preview = node('div');
   const selectedRequest = (): WeeklyReviewRequest => {
     const request = structuredClone(baseRequest);
+    const scope = settings.weeklyReviewScope ?? DEFAULT_WEEKLY_REVIEW_SCOPE;
     request.requestId = crypto.randomUUID();
     request.userInput.note = note.value;
-    request.context.events = eventOptions.filter((item) => item.input.checked).map((item) => item.event);
-    request.context.stateSnapshots = stateOption.input.checked ? baseRequest.context.stateSnapshots : [];
-    request.context.taskResults = taskOption.input.checked ? baseRequest.context.taskResults : [];
-    request.context.habits = habitOption.input.checked ? baseRequest.context.habits : [];
-    request.context.growth = growthOption.input.checked ? baseRequest.context.growth : [];
-    request.context.goals = goalOption.input.checked ? baseRequest.context.goals : [];
-    request.context.experiments = experimentOption.input.checked ? baseRequest.context.experiments : [];
-    request.context.memories = memoryOptions.filter((item) => item.input.checked).map((item) => item.memory);
+    request.context.events = scope.events ? baseRequest.context.events : [];
+    request.context.stateSnapshots = scope.stateSnapshots ? baseRequest.context.stateSnapshots : [];
+    request.context.taskResults = scope.taskResults ? baseRequest.context.taskResults : [];
+    request.context.habits = scope.habits ? baseRequest.context.habits : [];
+    request.context.growth = scope.growth ? baseRequest.context.growth : [];
+    request.context.goals = scope.goals ? baseRequest.context.goals : [];
+    request.context.experiments = scope.experiments ? baseRequest.context.experiments : [];
+    request.context.memories = scope.memories ? baseRequest.context.memories : [];
     if (request.context.sourceVersions && baseRequest.context.sourceVersions) {
-      request.context.sourceVersions.stateObservations = stateOption.input.checked ? baseRequest.context.sourceVersions.stateObservations : [];
-      request.context.sourceVersions.quests = taskOption.input.checked ? baseRequest.context.sourceVersions.quests : [];
-      request.context.sourceVersions.questFeedback = taskOption.input.checked ? baseRequest.context.sourceVersions.questFeedback : [];
-      request.context.sourceVersions.habits = habitOption.input.checked ? baseRequest.context.sourceVersions.habits : [];
-      request.context.sourceVersions.habitLogs = habitOption.input.checked ? baseRequest.context.sourceVersions.habitLogs : [];
-      request.context.sourceVersions.branches = growthOption.input.checked ? baseRequest.context.sourceVersions.branches : [];
-      request.context.sourceVersions.xpLedger = growthOption.input.checked ? baseRequest.context.sourceVersions.xpLedger : [];
-      request.context.sourceVersions.goals = goalOption.input.checked ? baseRequest.context.sourceVersions.goals : [];
-      request.context.sourceVersions.reviews = experimentOption.input.checked ? baseRequest.context.sourceVersions.reviews : [];
-      const selectedMemoryIds = new Set(request.context.memories.map((item) => item.memoryId));
-      request.context.sourceVersions.memories = baseRequest.context.sourceVersions.memories.filter((item) => selectedMemoryIds.has(item.id));
+      request.context.sourceVersions.stateObservations = scope.stateSnapshots ? baseRequest.context.sourceVersions.stateObservations : [];
+      request.context.sourceVersions.quests = scope.taskResults ? baseRequest.context.sourceVersions.quests : [];
+      request.context.sourceVersions.questFeedback = scope.taskResults ? baseRequest.context.sourceVersions.questFeedback : [];
+      request.context.sourceVersions.habits = scope.habits ? baseRequest.context.sourceVersions.habits : [];
+      request.context.sourceVersions.habitLogs = scope.habits ? baseRequest.context.sourceVersions.habitLogs : [];
+      request.context.sourceVersions.branches = scope.growth ? baseRequest.context.sourceVersions.branches : [];
+      request.context.sourceVersions.xpLedger = scope.growth ? baseRequest.context.sourceVersions.xpLedger : [];
+      request.context.sourceVersions.goals = scope.goals ? baseRequest.context.sourceVersions.goals : [];
+      request.context.sourceVersions.reviews = scope.experiments ? baseRequest.context.sourceVersions.reviews : [];
+      request.context.sourceVersions.memories = scope.memories ? baseRequest.context.sourceVersions.memories : [];
     }
     request.permissions = {
-      eventIds: request.context.events.map((item) => item.eventId), includeStateSnapshots: stateOption.input.checked,
-      includeTaskResults: taskOption.input.checked, includeHabits: habitOption.input.checked, includeGrowth: growthOption.input.checked,
-      includeGoals: goalOption.input.checked, includeExperiments: experimentOption.input.checked,
+      eventIds: request.context.events.map((item) => item.eventId), includeStateSnapshots: scope.stateSnapshots,
+      includeTaskResults: scope.taskResults, includeHabits: scope.habits, includeGrowth: scope.growth,
+      includeGoals: scope.goals, includeExperiments: scope.experiments,
       memoryIds: request.context.memories.map((item) => item.memoryId),
     };
     return request;
@@ -3113,11 +3315,14 @@ async function openWeeklyReviewPreview(period: { start: string; end: string }, r
   };
   refresh();
   note.addEventListener('input', refresh);
-  choices.querySelectorAll('input').forEach((input) => input.addEventListener('change', refresh));
-  content.append(labelledControl('本周补充说明（可选）', note), choices, preview);
+  const scopeNote = node('p', 'caption', '发送范围已按设置保存；默认包含本次周复盘需要的全部事实摘要。');
+  const editScope = node('button', 'button button-quiet', '调整长期发送范围');
+  editScope.type = 'button';
+  editScope.addEventListener('click', () => { dialog.close(); go({ name: 'system' }); });
+  content.append(labelledControl('本周补充说明（可选）', note), scopeNote, editScope, preview);
   const cancel = node('button', 'button button-secondary', '取消');
   cancel.type = 'button'; cancel.addEventListener('click', () => dialog.close());
-  const send = node('button', 'button button-primary', navigator.onLine ? '确认范围并生成' : '当前离线');
+  const send = node('button', 'button button-primary', navigator.onLine ? '确认并生成' : '当前离线');
   send.type = 'button'; send.disabled = !navigator.onLine;
   send.addEventListener('click', async () => {
     send.disabled = true;
@@ -3843,11 +4048,29 @@ async function openMilestoneDialog(goal: Goal): Promise<void> {
 
 async function openQuestDialog(goal?: Goal, suggestedTitle = ''): Promise<void> {
   const branches = await db.listBranches();
-  const { dialog, content, actions } = dialogShell(goal ? '把下一步安排到今天' : '安排今日任务');
+  const { dialog, content, actions } = dialogShell(goal ? '安排目标下一步' : '安排每日任务');
   if (goal) content.append(node('p', 'muted', `来自目标：${goal.result}`));
   const title = node('input', 'input');
   title.maxLength = 160;
   title.value = suggestedTitle || goal?.nextStep || '';
+  const date = node('input', 'input');
+  date.type = 'date';
+  date.min = localDate();
+  date.value = localDate();
+  const completionMode = node('select', 'input');
+  completionMode.append(selectOption('once', '完成一次'), selectOption('count', '计数打卡'));
+  const targetCount = node('input', 'input');
+  targetCount.type = 'number';
+  targetCount.min = '2';
+  targetCount.max = '1000';
+  targetCount.value = '8';
+  const countUnit = node('input', 'input');
+  countUnit.maxLength = 20;
+  countUnit.value = '次';
+  const countFields = node('div', 'count-task-fields');
+  countFields.hidden = true;
+  countFields.append(labelledControl('目标次数', targetCount), labelledControl('计数单位', countUnit));
+  completionMode.addEventListener('change', () => { countFields.hidden = completionMode.value !== 'count'; });
   const reason = node('textarea', 'input compact-textarea');
   reason.maxLength = 500;
   reason.value = goal?.why || (suggestedTitle ? '来自昨天复盘，由你确认后才加入今天。' : '这是你今天主动选择的一步。');
@@ -3878,25 +4101,27 @@ async function openQuestDialog(goal?: Goal, suggestedTitle = ''): Promise<void> 
     labelledControl('成长方向', branch), labelledControl('可能照顾的近期状态', dimension),
   );
   content.append(
-    labelledControl('我现在想做什么？', title),
+    labelledControl('我想做什么？', title), labelledControl('计划日期', date), labelledControl('完成方式', completionMode), countFields,
     advanced, status,
   );
   const cancel = node('button', 'button button-secondary', '取消');
   cancel.type = 'button';
   cancel.addEventListener('click', () => dialog.close());
-  const save = node('button', 'button button-primary', '安排到今天');
+  const save = node('button', 'button button-primary', '安排任务');
   save.type = 'button';
   save.addEventListener('click', async () => {
     save.disabled = true;
     try {
       await db.addQuest({
-        localDate: localDate(), type: type.value as QuestType, sourceType: goal ? 'goal' : 'manual', sourceId: goal?.id,
+        localDate: date.value, type: type.value as QuestType, sourceType: goal ? 'goal' : 'manual', sourceId: goal?.id,
         completionCriteria: minimum.value,
         title: title.value, reason: reason.value, minimumAction: minimum.value, estimatedMinutes: Number(minutes.value),
+        targetCount: completionMode.value === 'count' ? Number(targetCount.value) : undefined,
+        countUnit: completionMode.value === 'count' ? countUnit.value : undefined,
         difficulty: difficulty.value as Difficulty, branchId: branch.value, dimension: (dimension.value || undefined) as Dimension | undefined,
       });
       dialog.close();
-      showToast('任务已安排到今天。');
+      showToast(`任务已安排到${date.value === localDate() ? '今天' : formatDate(date.value)}。`);
       await render();
     } catch (error) {
       save.disabled = false;
@@ -3919,6 +4144,16 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
   minimum.maxLength = 160;
   minimum.placeholder = '例如：穿鞋出门走 5 分钟';
   minimum.value = habit?.minimumAction ?? '';
+  const completionMode = node('select', 'input');
+  completionMode.append(selectOption('once', '每天完成一次', !habit?.targetCount), selectOption('count', '每天计数打卡', Boolean(habit?.targetCount)));
+  const targetCount = node('input', 'input');
+  targetCount.type = 'number'; targetCount.min = '2'; targetCount.max = '1000'; targetCount.value = String(habit?.targetCount ?? 8);
+  const countUnit = node('input', 'input');
+  countUnit.maxLength = 20; countUnit.value = habit?.countUnit ?? '次';
+  const countFields = node('div', 'count-task-fields');
+  countFields.hidden = !habit?.targetCount;
+  countFields.append(labelledControl('每日目标次数', targetCount), labelledControl('计数单位', countUnit));
+  completionMode.addEventListener('change', () => { countFields.hidden = completionMode.value !== 'count'; });
   const trigger = node('input', 'input');
   trigger.maxLength = 120;
   trigger.placeholder = '例如：晚饭后';
@@ -3956,7 +4191,7 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
   advanced.append(node('summary', '', '调整频率、最小版本和成长归属（可选）'));
   const advancedFields = node('div', 'form-advanced-fields');
   advancedFields.append(
-    labelledControl('最小动作', minimum), labelledControl('触发条件（可选）', trigger), schedule,
+    labelledControl('最小动作', minimum), labelledControl('完成方式', completionMode), countFields, labelledControl('触发条件（可选）', trigger), schedule,
     labelledControl('主要近期状态', dimension), labelledControl('成长方向', branch), labelledControl('基础难度', difficulty),
     labelledControl('习惯状态', habitStatus), bonusLabel,
   );
@@ -3973,6 +4208,8 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
     try {
       const value = {
         name: name.value, minimumAction: minimum.value.trim() || `先做一个“${name.value.trim()}”的五分钟版本`, trigger: trigger.value, scheduleDays: days,
+        targetCount: completionMode.value === 'count' ? Number(targetCount.value) : undefined,
+        countUnit: completionMode.value === 'count' ? countUnit.value : undefined,
         dimension: dimension.value as Dimension, branchId: branch.value, difficulty: difficulty.value as Difficulty,
         bonusEnabled: bonus.checked,
       };
@@ -4000,6 +4237,9 @@ async function tasksPage(): Promise<HTMLElement> {
     Promise.all(goals.map((goal) => db.listMilestones(goal.id))),
     Promise.all(habits.map((habit) => db.habitMomentum(habit.id, today))),
   ]);
+  const futureQuests = allQuests
+    .filter((quest) => quest.status === 'pending' && !quest.systemRetiredAt && quest.localDate > today)
+    .sort((left, right) => left.localDate.localeCompare(right.localDate) || left.createdAt.localeCompare(right.createdAt));
   const main = node('main', 'page page-tasks');
   main.append(pageHeader('现实行动', '任务板', primaryButton('安排任务', () => { void openQuestDialog(); })));
   if (overdueQuests.length) main.append(overdueQuestPanel(overdueQuests));
@@ -4014,7 +4254,7 @@ async function tasksPage(): Promise<HTMLElement> {
 
   const day = node('section', 'task-board');
   const dayHeading = node('div', 'section-heading');
-  dayHeading.append(node('h2', '', '今天'));
+  dayHeading.append(node('h2', '', '每日任务'));
   if (quests.length) {
     const pending = quests.filter((item) => item.status === 'pending').length;
     const retired = quests.filter((item) => item.systemRetiredAt && item.systemRetiredReason !== 'capacity').length;
@@ -4043,11 +4283,17 @@ async function tasksPage(): Promise<HTMLElement> {
       day.append(retired);
     }
   }
+  if (futureQuests.length) {
+    const future = node('details', 'task-future optional-details');
+    future.append(node('summary', '', `之后已安排 · ${futureQuests.length}`));
+    futureQuests.forEach((quest) => future.append(questCard(quest, false, quest.milestoneId ? milestonesByGoal.flat().find((item) => item.id === quest.milestoneId) : undefined)));
+    day.append(future);
+  }
   main.append(day);
 
   const goalSection = node('section', 'task-goals');
   const goalHeading = node('div', 'section-heading');
-  goalHeading.append(node('h2', '', '目标'), iconButton('新建目标', null, () => { void openGoalDialog(); }, 'button button-secondary'));
+  goalHeading.append(node('h2', '', '长期任务'), iconButton('新建目标', null, () => { void openGoalDialog(); }, 'button button-secondary'));
   goalSection.append(goalHeading);
   if (!goals.length) goalSection.append(node('p', 'empty-copy', '还没有目标。'));
   goals.forEach((goal, index) => {
@@ -4124,17 +4370,16 @@ async function tasksPage(): Promise<HTMLElement> {
     }
     goalSection.append(card);
   });
-  main.append(goalSection);
-
   const habitSection = node('section', 'task-habits');
   const habitHeading = node('div', 'section-heading');
-  habitHeading.append(node('h2', '', '习惯'), iconButton('新建习惯', null, () => { void openHabitDialog(); }, 'button button-secondary'));
+  habitHeading.append(node('h3', '', '长期习惯'), iconButton('新建习惯', null, () => { void openHabitDialog(); }, 'button button-secondary'));
   habitSection.append(habitHeading);
   if (!habits.length) habitSection.append(node('p', 'empty-copy', '还没有习惯。'));
   habits.forEach((habit, index) => {
     const row = node('article', 'habit-row');
     const copy = node('div');
-    copy.append(node('h3', '', habit.name), node('p', 'caption', `${habit.minimumAction} · 动量 ${momentums[index]}/5`));
+    const countTarget = habit.targetCount ? ` · 每日 ${habit.targetCount}${habit.countUnit || '次'}` : '';
+    copy.append(node('h3', '', habit.name), node('p', 'caption', `${habit.minimumAction}${countTarget} · 动量 ${momentums[index]}/5`));
     const habitActions = node('div', 'quest-actions');
     const toggle = node('button', `button ${habit.bonusEnabled && habit.status === 'active' ? 'button-secondary' : 'button-quiet'}`, habit.bonusEnabled && habit.status === 'active' ? '已启用 BONUS' : '设为 BONUS');
     toggle.type = 'button';
@@ -4156,7 +4401,8 @@ async function tasksPage(): Promise<HTMLElement> {
     row.append(copy, habitActions);
     habitSection.append(row);
   });
-  main.append(habitSection);
+  goalSection.append(habitSection);
+  main.append(goalSection);
   return main;
 }
 
@@ -4262,10 +4508,6 @@ async function growthPage(): Promise<HTMLElement> {
   const main = node('main', 'page page-growth');
   main.append(pageHeader('长期证据', '成长'));
   main.append(trailTabs('growth'));
-
-  const reviewEntry = node('section', 'surface review-entry');
-  reviewEntry.append(node('p', 'eyebrow', '每周章节'), node('h2', '', '本周复盘'), primaryButton('打开周复盘', () => go({ name: 'review', date: weekRange().start })));
-  main.append(reviewEntry);
 
   const badges = selectGrowthBadges({ milestones, goals, branches, ledger, habits, habitLogs, quests, feedbacks, reviews });
   const nextAchievement = selectNextAchievableAchievement({ habits, habitLogs, quests, feedbacks });
@@ -5006,12 +5248,12 @@ function aiPermissionSettings(): HTMLElement {
   permissionInput.type = 'checkbox';
   permissionInput.checked = NATIVE_AI_READY && settings.aiAllowed;
   permissionInput.disabled = !NATIVE_AI_READY;
-  permission.append(node('span', '', '允许主动整理（每次发送前先确认范围）'), permissionInput);
+  permission.append(node('span', '', '允许主动整理'), permissionInput);
   permissionInput.addEventListener('change', async () => {
     permissionInput.disabled = true;
     try {
       settings = await db.saveSettings({ aiAllowed: permissionInput.checked, previewBeforeSend: true });
-      showToast(permissionInput.checked ? 'AI 整理权限已开启；每次仍会显示发送预览。' : 'AI 权限已关闭；不会再发送整理请求。');
+      showToast(permissionInput.checked ? 'AI 整理权限已开启；发送范围按设置长期生效。' : 'AI 权限已关闭；不会再发送整理请求。');
     } catch (error) {
       permissionInput.checked = !permissionInput.checked;
       showToast(errorMessage(error), 'error');
@@ -5138,7 +5380,42 @@ function aiPermissionSettings(): HTMLElement {
     }
   });
 
+  const weeklyScope = node('details', 'optional-details weekly-scope-settings');
+  weeklyScope.append(node('summary', '', '周复盘发送范围'));
+  weeklyScope.append(node('p', 'caption', '默认全部发送相关事实摘要；设置一次后长期生效，周复盘不再逐项询问。日记原文不在此范围内。'));
+  const scopeLabels: Array<[keyof AppSettings['weeklyReviewScope'], string]> = [
+    ['events', '已确认事件'],
+    ['stateSnapshots', '状态摘要'],
+    ['taskResults', '任务结果'],
+    ['habits', '习惯动量'],
+    ['growth', '成长与经验'],
+    ['goals', '当前目标'],
+    ['experiments', '既有周实验'],
+    ['memories', '已确认记忆'],
+  ];
+  for (const [key, label] of scopeLabels) {
+    const row = node('label', 'setting-row');
+    const input = node('input');
+    input.type = 'checkbox';
+    input.checked = settings.weeklyReviewScope?.[key] ?? DEFAULT_WEEKLY_REVIEW_SCOPE[key];
+    input.addEventListener('change', async () => {
+      input.disabled = true;
+      try {
+        settings = await db.saveSettings({ weeklyReviewScope: { ...settings.weeklyReviewScope, [key]: input.checked } });
+        showToast('周复盘发送范围已保存。');
+      } catch (error) {
+        input.checked = !input.checked;
+        showToast(errorMessage(error), 'error');
+      } finally {
+        input.disabled = false;
+      }
+    });
+    row.append(node('span', '', label), input);
+    weeklyScope.append(row);
+  }
+
   section.append(permission);
+  section.append(weeklyScope);
   if (NATIVE_PLATFORM) section.append(modelRow, keyRow, keyActions, keyStatus);
   section.append(health, check);
   updateAiConfigStatus();

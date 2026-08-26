@@ -619,15 +619,55 @@ p {
   height: 84px;
   border: 0;
   background-color: transparent;
-  background-image: var(--idle-frame);
+  background-image: var(--motion-atlas);
   background-repeat: no-repeat;
-  background-position: center bottom;
-  background-size: contain;
+  background-position: var(--idle-frame);
+  background-size: 504px 504px;
   box-shadow: none;
+  image-rendering: pixelated;
   mix-blend-mode: normal;
   transform-origin: 50% 92%;
   scale: 1.22;
   will-change: transform;
+  --face-front-frame: 0px 0px;
+  --face-left-frame: -84px 0;
+  --face-back-frame: -168px 0;
+  --face-right-frame: -252px 0;
+  --calm-frame: -336px 0;
+  --wave-frame: -420px 0;
+  --celebrate-frame: 0 -84px;
+  --listen-frame: -84px -84px;
+  --drink-frame: -168px -84px;
+  --read-frame: -252px -84px;
+  --think-frame: -336px -84px;
+  --rest-frame: -420px -84px;
+  --walk-left-1: 0px -252px;
+  --walk-left-2: -84px -252px;
+  --walk-left-3: -168px -252px;
+  --walk-left-4: -252px -252px;
+  --walk-left-5: -336px -252px;
+  --walk-left-6: -420px -252px;
+  --walk-right-1: 0px -168px;
+  --walk-right-2: -84px -168px;
+  --walk-right-3: -168px -168px;
+  --walk-right-4: -252px -168px;
+  --walk-right-5: -336px -168px;
+  --walk-right-6: -420px -168px;
+  --walk-front-1: 0px -336px;
+  --walk-front-2: -84px -336px;
+  --walk-front-3: -168px -336px;
+  --walk-front-4: -252px -336px;
+  --walk-front-5: -336px -336px;
+  --walk-front-6: -420px -336px;
+  --walk-back-1: 0px -420px;
+  --walk-back-2: -84px -420px;
+  --walk-back-3: -168px -420px;
+  --walk-back-4: -252px -420px;
+  --walk-back-5: -336px -420px;
+  --walk-back-6: -420px -420px;
+  --idle-frame: var(--face-front-frame);
+  --happy-frame: var(--face-front-frame);
+  --idle-gesture-frame: var(--wave-frame);
   --turn-1: var(--walk-1);
   --turn-2: var(--walk-2);
   --turn-3: var(--walk-3);
@@ -844,7 +884,7 @@ p {
 }
 
 .room-character.has-motion.is-resting:not([class*="is-action-"]) {
-  background-image: var(--rest-frame);
+  background-position: var(--rest-frame);
 }
 
 .room-hotspot.is-active {
@@ -1873,6 +1913,65 @@ input[type="range"] {
   flex: 1 1 140px;
 }
 
+.day-snapshot-dialog .dialog-content {
+  gap: 12px;
+}
+
+.day-snapshot-dialog .room-stage {
+  margin: 0;
+}
+
+.day-snapshot-block {
+  display: grid;
+  gap: 8px;
+}
+
+.day-snapshot-block h3,
+.day-snapshot-copy {
+  margin: 0;
+}
+
+.day-snapshot-state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.day-snapshot-state span,
+.day-snapshot-item {
+  padding: 7px 9px;
+  background: var(--paper);
+}
+
+.day-caption-input {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.day-caption-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.day-snapshot-state .is-unknown {
+  color: var(--muted);
+}
+
+.day-snapshot-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+
+.day-snapshot-copy {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
 .revision-item {
   display: grid;
   gap: 5px;
@@ -2184,6 +2283,40 @@ input[type="range"] {
 .quest-adjust-shortcuts .button {
   min-height: 44px;
   padding: 6px 10px;
+}
+
+.record-prompt-actions .button[aria-pressed="true"] {
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.record-kind-heading {
+  margin: 0;
+  font-weight: 900;
+}
+
+.count-task-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.count-task-fields:not([hidden]) {
+  display: grid;
+}
+
+.quest-count-actions {
+  align-items: center;
+}
+
+.quest-count-progress {
+  min-width: 72px;
+  text-align: center;
+  font-weight: 900;
+}
+
+.record-intent-copy {
+  display: grid;
+  gap: 2px;
 }
 
 .today-optionals,
@@ -3242,8 +3375,12 @@ noscript {
     transform-origin: 50% 80%;
   }
 
-  .room-character.has-motion.is-motion-ready:not(.is-resting):not(.is-welcoming):not(.is-celebrating):not([class*="is-action-"]) {
+  .room-character.has-motion.is-motion-ready:not(.is-resting):not(.is-welcoming):not(.is-celebrating):not(.is-idle-gesture):not([class*="is-action-"]) {
     animation: character-idle 5.6s steps(1, end) 1 both;
+  }
+
+  .room-character.has-motion.is-motion-ready.is-idle-gesture:not([class*="is-action-"]) {
+    animation: character-idle-gesture 900ms steps(1, end) both;
   }
 
   .room-character.has-motion.is-motion-ready[class*="is-action-"].is-walking {
@@ -3257,7 +3394,7 @@ noscript {
   }
 
   .room-character.has-motion[class*="is-action-"].is-interacting {
-    background-image: var(--interaction-frame);
+    background-position: var(--interaction-frame);
     animation: room-furniture-use 720ms steps(1, end) both;
   }
 
@@ -3277,9 +3414,7 @@ noscript {
   }
 
   .room-character.has-motion.is-motion-ready.is-ambient-walk:not(.is-resting):not([class*="is-action-"]):not(.is-welcoming):not(.is-celebrating) {
-    animation:
-      room-ambient-walk 6200ms steps(5, jump-none) 1 both,
-      room-ambient-walk-sprite 6200ms steps(1, end) 1 both;
+    animation: room-ambient-stroll 6200ms steps(1, end) 1 both;
   }
 
   .room-character.has-motion.is-motion-ready.is-ambient-walk:not(.is-resting):not([class*="is-action-"]):not(.is-welcoming):not(.is-celebrating)::after {
@@ -3291,12 +3426,12 @@ noscript {
   }
 
   .room-character.has-motion.is-ambient-focus:not(.is-resting):not([class*="is-action-"]):not(.is-welcoming):not(.is-celebrating) {
-    background-image: var(--idle-frame);
+    background-position: var(--idle-frame);
     animation: room-ambient-focus 5200ms steps(1, end) 1 both;
   }
 
   .room-character.has-motion.is-ambient-rest.is-resting:not([class*="is-action-"]):not(.is-welcoming):not(.is-celebrating) {
-    background-image: var(--rest-frame);
+    background-position: var(--rest-frame);
     animation: room-ambient-rest 5600ms steps(1, end) 1 both;
   }
 
@@ -3317,8 +3452,8 @@ noscript {
   }
 
   @keyframes character-cheer {
-    0%, 100% { background-image: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
-    24%, 74% { background-image: var(--celebrate-frame); transform: translate3d(-50%, -4px, 0); }
+    0%, 100% { background-position: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
+    24%, 74% { background-position: var(--celebrate-frame); transform: translate3d(-50%, -4px, 0); }
   }
 
   @keyframes boot-light {
@@ -3327,13 +3462,18 @@ noscript {
   }
 
   @keyframes character-wave {
-    0%, 100% { background-image: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
-    22%, 78% { background-image: var(--wave-frame); transform: translate3d(-50%, -2px, 0); }
+    0%, 100% { background-position: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
+    22%, 78% { background-position: var(--wave-frame); transform: translate3d(-50%, -2px, 0); }
   }
 
   @keyframes character-idle {
-    0%, 34%, 66%, 100% { background-image: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
-    42%, 56% { background-image: var(--calm-frame); transform: translate3d(-50%, -1px, 0); }
+    0%, 34%, 66%, 100% { background-position: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
+    42%, 56% { background-position: var(--calm-frame); transform: translate3d(-50%, -1px, 0); }
+  }
+
+  @keyframes character-idle-gesture {
+    0%, 100% { background-position: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
+    16%, 84% { background-position: var(--idle-gesture-frame); transform: translate3d(-50%, -2px, 0); }
   }
 
   @keyframes room-action {
@@ -3346,20 +3486,20 @@ noscript {
   }
 
   @keyframes room-walk-cycle {
-    0%, 6% { background-image: var(--idle-frame); translate: 0 0; }
-    7%, 13% { background-image: var(--walk-1); translate: 0 -2px; }
-    14%, 20% { background-image: var(--walk-2); translate: 0 0; }
-    21%, 27% { background-image: var(--walk-3); translate: 0 -2px; }
-    28%, 34% { background-image: var(--walk-4); translate: 0 0; }
-    35%, 41% { background-image: var(--walk-5); translate: 0 -2px; }
-    42%, 48% { background-image: var(--walk-6); translate: 0 0; }
-    49%, 55% { background-image: var(--turn-1); translate: 0 -2px; }
-    56%, 62% { background-image: var(--turn-2); translate: 0 0; }
-    63%, 69% { background-image: var(--turn-3); translate: 0 -2px; }
-    70%, 76% { background-image: var(--turn-4); translate: 0 0; }
-    77%, 83% { background-image: var(--turn-5); translate: 0 -2px; }
-    84%, 91% { background-image: var(--turn-6); translate: 0 0; }
-    92%, 100% { background-image: var(--arrival-frame); translate: 0 0; }
+    0%, 6% { background-position: var(--idle-frame); translate: 0 0; }
+    7%, 13% { background-position: var(--walk-1); translate: 0 -2px; }
+    14%, 20% { background-position: var(--walk-2); translate: 0 0; }
+    21%, 27% { background-position: var(--walk-3); translate: 0 -2px; }
+    28%, 34% { background-position: var(--walk-4); translate: 0 0; }
+    35%, 41% { background-position: var(--walk-5); translate: 0 -2px; }
+    42%, 48% { background-position: var(--walk-6); translate: 0 0; }
+    49%, 55% { background-position: var(--turn-1); translate: 0 -2px; }
+    56%, 62% { background-position: var(--turn-2); translate: 0 0; }
+    63%, 69% { background-position: var(--turn-3); translate: 0 -2px; }
+    70%, 76% { background-position: var(--turn-4); translate: 0 0; }
+    77%, 83% { background-position: var(--turn-5); translate: 0 -2px; }
+    84%, 91% { background-position: var(--turn-6); translate: 0 0; }
+    92%, 100% { background-position: var(--arrival-frame); translate: 0 0; }
   }
 
   @keyframes room-shadow-step {
@@ -3368,9 +3508,9 @@ noscript {
   }
 
   @keyframes room-furniture-use {
-    0%, 13% { background-image: var(--arrival-frame); transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); translate: 0 0; }
-    14%, 48%, 72%, 100% { background-image: var(--interaction-frame); transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); translate: 0 0; }
-    49%, 71% { background-image: var(--interaction-frame); transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); translate: 0 -1px; }
+    0%, 13% { background-position: var(--arrival-frame); transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); translate: 0 0; }
+    14%, 48%, 72%, 100% { background-position: var(--interaction-frame); transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); translate: 0 0; }
+    49%, 71% { background-position: var(--interaction-frame); transform: translate3d(calc(-50% + var(--action-x)), var(--action-y), 0); translate: 0 -1px; }
   }
 
   @keyframes room-return {
@@ -3380,19 +3520,19 @@ noscript {
   }
 
   @keyframes room-return-walk-cycle {
-    0%, 8% { background-image: var(--interaction-frame); translate: 0 0; }
-    9%, 16% { background-image: var(--return-1); translate: 0 -2px; }
-    17%, 24% { background-image: var(--return-2); translate: 0 0; }
-    25%, 32% { background-image: var(--return-3); translate: 0 -2px; }
-    33%, 40% { background-image: var(--return-4); translate: 0 0; }
-    41%, 48% { background-image: var(--return-5); translate: 0 -2px; }
-    49%, 56% { background-image: var(--return-6); translate: 0 0; }
-    57%, 64% { background-image: var(--return-turn-1); translate: 0 -2px; }
-    65%, 72% { background-image: var(--return-turn-2); translate: 0 0; }
-    73%, 80% { background-image: var(--return-turn-3); translate: 0 -2px; }
-    81%, 88% { background-image: var(--return-turn-4); translate: 0 0; }
-    89%, 91% { background-image: var(--return-turn-5); translate: 0 -2px; }
-    92%, 100% { background-image: var(--happy-frame); translate: 0 0; }
+    0%, 8% { background-position: var(--interaction-frame); translate: 0 0; }
+    9%, 16% { background-position: var(--return-1); translate: 0 -2px; }
+    17%, 24% { background-position: var(--return-2); translate: 0 0; }
+    25%, 32% { background-position: var(--return-3); translate: 0 -2px; }
+    33%, 40% { background-position: var(--return-4); translate: 0 0; }
+    41%, 48% { background-position: var(--return-5); translate: 0 -2px; }
+    49%, 56% { background-position: var(--return-6); translate: 0 0; }
+    57%, 64% { background-position: var(--return-turn-1); translate: 0 -2px; }
+    65%, 72% { background-position: var(--return-turn-2); translate: 0 0; }
+    73%, 80% { background-position: var(--return-turn-3); translate: 0 -2px; }
+    81%, 88% { background-position: var(--return-turn-4); translate: 0 0; }
+    89%, 91% { background-position: var(--return-turn-5); translate: 0 -2px; }
+    92%, 100% { background-position: var(--happy-frame); translate: 0 0; }
   }
 
   @keyframes room-return-shadow-step {
@@ -3400,25 +3540,29 @@ noscript {
     9%, 16%, 25%, 32%, 41%, 48%, 57%, 64%, 73%, 80%, 89%, 91% { opacity: .18; transform: translateX(-50%) translateY(2px) scaleX(.82); }
   }
 
-  @keyframes room-ambient-walk {
-    0%, 4% { transform: translate3d(-50%, 0, 0); }
-    26%, 40% { transform: translate3d(calc(-50% - 28px), -10px, 0); }
-    62%, 74% { transform: translate3d(calc(-50% + 24px), -4px, 0); }
-    92%, 100% { transform: translate3d(-50%, 0, 0); }
-  }
-
-  @keyframes room-ambient-walk-sprite {
-    0%, 4%, 27%, 40%, 63%, 74%, 93%, 100% { background-image: var(--idle-frame); translate: 0 0; }
-    5%, 8%, 75%, 78% { background-image: var(--walk-left-1); translate: 0 -2px; }
-    9%, 12%, 79%, 82% { background-image: var(--walk-left-2); translate: 0 0; }
-    13%, 16%, 83%, 86% { background-image: var(--walk-left-3); translate: 0 -2px; }
-    17%, 20%, 87%, 90% { background-image: var(--walk-left-4); translate: 0 0; }
-    21%, 26%, 91%, 92% { background-image: var(--walk-left-5); translate: 0 -2px; }
-    41%, 45% { background-image: var(--walk-right-1); translate: 0 -2px; }
-    46%, 50% { background-image: var(--walk-right-2); translate: 0 0; }
-    51%, 55% { background-image: var(--walk-right-3); translate: 0 -2px; }
-    56%, 59% { background-image: var(--walk-right-4); translate: 0 0; }
-    60%, 62% { background-image: var(--walk-right-5); translate: 0 -2px; }
+  @keyframes room-ambient-stroll {
+    0%, 4% { background-position: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
+    5%, 8% { background-position: var(--walk-left-1); transform: translate3d(calc(-50% - 5px), -2px, 0); }
+    9%, 12% { background-position: var(--walk-left-2); transform: translate3d(calc(-50% - 10px), -3px, 0); }
+    13%, 16% { background-position: var(--walk-left-3); transform: translate3d(calc(-50% - 15px), -5px, 0); }
+    17%, 20% { background-position: var(--walk-left-4); transform: translate3d(calc(-50% - 20px), -7px, 0); }
+    21%, 24% { background-position: var(--walk-left-5); transform: translate3d(calc(-50% - 25px), -9px, 0); }
+    25%, 26% { background-position: var(--walk-left-6); transform: translate3d(calc(-50% - 28px), -10px, 0); }
+    27%, 40% { background-position: var(--idle-frame); transform: translate3d(calc(-50% - 28px), -10px, 0); }
+    41%, 44% { background-position: var(--walk-right-1); transform: translate3d(calc(-50% - 19px), -9px, 0); }
+    45%, 48% { background-position: var(--walk-right-2); transform: translate3d(calc(-50% - 10px), -8px, 0); }
+    49%, 52% { background-position: var(--walk-right-3); transform: translate3d(calc(-50% - 1px), -7px, 0); }
+    53%, 56% { background-position: var(--walk-right-4); transform: translate3d(calc(-50% + 8px), -6px, 0); }
+    57%, 59% { background-position: var(--walk-right-5); transform: translate3d(calc(-50% + 17px), -5px, 0); }
+    60%, 62% { background-position: var(--walk-right-6); transform: translate3d(calc(-50% + 24px), -4px, 0); }
+    63%, 74% { background-position: var(--idle-frame); transform: translate3d(calc(-50% + 24px), -4px, 0); }
+    75%, 77% { background-position: var(--walk-left-1); transform: translate3d(calc(-50% + 20px), -3px, 0); }
+    78%, 80% { background-position: var(--walk-left-2); transform: translate3d(calc(-50% + 16px), -3px, 0); }
+    81%, 83% { background-position: var(--walk-left-3); transform: translate3d(calc(-50% + 12px), -2px, 0); }
+    84%, 86% { background-position: var(--walk-left-4); transform: translate3d(calc(-50% + 8px), -1px, 0); }
+    87%, 89% { background-position: var(--walk-left-5); transform: translate3d(calc(-50% + 4px), -1px, 0); }
+    90%, 92% { background-position: var(--walk-left-6); transform: translate3d(-50%, 0, 0); }
+    93%, 100% { background-position: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
   }
 
   @keyframes room-ambient-shadow {
@@ -3427,18 +3571,18 @@ noscript {
   }
 
   @keyframes room-ambient-read {
-    0%, 24%, 82%, 100% { background-image: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
-    32%, 74% { background-image: var(--read-frame); transform: translate3d(-50%, -1px, 0); }
+    0%, 24%, 82%, 100% { background-position: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
+    32%, 74% { background-position: var(--read-frame); transform: translate3d(-50%, -1px, 0); }
   }
 
   @keyframes room-ambient-focus {
-    0%, 100% { background-image: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
-    46%, 58% { background-image: var(--think-frame); transform: translate3d(-50%, -1px, 0); }
+    0%, 100% { background-position: var(--idle-frame); transform: translate3d(-50%, 0, 0); }
+    46%, 58% { background-position: var(--think-frame); transform: translate3d(-50%, -1px, 0); }
   }
 
   @keyframes room-ambient-rest {
-    0%, 100% { background-image: var(--rest-frame); transform: translate3d(-50%, 0, 0); }
-    48%, 60% { background-image: var(--rest-frame); transform: translate3d(-50%, 1px, 0); }
+    0%, 100% { background-position: var(--rest-frame); transform: translate3d(-50%, 0, 0); }
+    48%, 60% { background-position: var(--rest-frame); transform: translate3d(-50%, 1px, 0); }
   }
 
   @keyframes lamp-breathe {

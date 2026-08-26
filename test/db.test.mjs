@@ -56,7 +56,7 @@ function storeShape(store) {
 
 function emptyBackupData() {
   return Object.fromEntries([
-    'profile', 'areas', 'entries', 'revisions', 'observations', 'goals', 'milestones',
+    'profile', 'areas', 'entries', 'dayCaptions', 'revisions', 'observations', 'goals', 'milestones',
     'analyses', 'events', 'snapshots', 'quests', 'questFeedback', 'habits', 'habitLogs',
     'branches', 'xpLedger', 'reviews', 'memories', 'analysisJobs', 'settings',
   ].map((name) => [name, []]));
@@ -230,13 +230,13 @@ async function patchRawRecord(database, storeName, id, patch) {
   raw.close();
 }
 
-test('v5 schema contains all twenty documented stores and integrity indexes', async (t) => {
+test('v6 schema contains all twenty-one documented stores and integrity indexes', async (t) => {
   const db = await withDatabase(t, 'schema');
   const raw = await openRawDatabase(db.name);
   try {
-    assert.equal(raw.version, 5);
+    assert.equal(raw.version, 6);
     assert.deepEqual(Array.from(raw.objectStoreNames), [
-      'analyses', 'analysisJobs', 'areas', 'branches', 'entries', 'events', 'goals', 'habitLogs',
+      'analyses', 'analysisJobs', 'areas', 'branches', 'dayCaptions', 'entries', 'events', 'goals', 'habitLogs',
       'habits', 'memories', 'milestones', 'observations', 'profile', 'questFeedback', 'quests',
       'reviews', 'revisions', 'settings', 'snapshots', 'xpLedger',
     ]);
@@ -249,6 +249,7 @@ test('v5 schema contains all twenty documented stores and integrity indexes', as
     assert.equal(transaction.objectStore('xpLedger').index('bySettlementKey').unique, true);
     assert.equal(transaction.objectStore('analyses').index('byRequestId').unique, true);
     assert.equal(transaction.objectStore('analysisJobs').index('byRequestId').unique, true);
+    assert.equal(transaction.objectStore('dayCaptions').index('byLocalDate').unique, true);
     await new Promise((resolve, reject) => {
       transaction.addEventListener('complete', resolve, { once: true });
       transaction.addEventListener('error', () => reject(transaction.error), { once: true });
@@ -371,13 +372,14 @@ test('opening v5 gives legacy completed goals one stable completion timestamp', 
   assert.equal((await db.listGoals())[0].completedDate, '2026-08-14');
 });
 
-test('format v3 backups without weekly reviews upgrade safely to format v4', async (t) => {
+test('format v3 backups without weekly reviews or day captions upgrade safely to format v5', async (t) => {
   const db = await withDatabase(t, 'backup-v3-upgrade');
   await db.addEntry('旧版备份中的真实记录', '2026-08-14');
   const backup = await db.exportBundle();
   backup.formatVersion = 3;
   const parsed = parseBackup(JSON.stringify(backup));
-  assert.equal(parsed.formatVersion, 4);
+  assert.equal(parsed.formatVersion, 5);
+  assert.deepEqual(parsed.data.dayCaptions, []);
   assert.equal(parsed.data.entries[0].body, '旧版备份中的真实记录');
 });
 
@@ -1155,6 +1157,33 @@ test('task feedback is atomic, editable, undoable, and XP stays idempotent', asy
   assert.equal((await db.branchProgress(branch.id)).totalXp, 20);
 });
 
+test('scheduled count tasks increment once per check-in and settle XP only at the target', async (t) => {
+  const db = await withDatabase(t, 'count-quest');
+  await db.ensureI2Defaults();
+  const branch = (await db.listBranches())[0];
+  const quest = await db.addQuest({
+    localDate: '2026-08-16', type: 'side', sourceType: 'manual', title: '喝三杯水',
+    reason: '分次完成', minimumAction: '喝一杯水', estimatedMinutes: 1,
+    difficulty: 'light', branchId: branch.id, targetCount: 3, countUnit: '杯',
+  });
+
+  assert.deepEqual(
+    { date: quest.localDate, progress: quest.progressCount, target: quest.targetCount, unit: quest.countUnit },
+    { date: '2026-08-16', progress: 0, target: 3, unit: '杯' },
+  );
+  assert.equal((await db.changeQuestProgress(quest.id, 1)).progressCount, 1);
+  assert.equal((await db.changeQuestProgress(quest.id, 1)).progressCount, 2);
+  assert.equal((await db.branchProgress(branch.id)).totalXp, 0);
+  await assert.rejects(() => db.changeQuestProgress(quest.id, 1), /直接完成任务/);
+
+  await db.feedbackQuest(quest.id, 'completed', '达到目标', '喝了三杯水', undefined, 0, '2026-08-16');
+  assert.equal((await db.listQuests('2026-08-16'))[0].progressCount, 3);
+  assert.equal((await db.branchProgress(branch.id)).totalXp, 5);
+  await db.undoQuestFeedback(quest.id);
+  assert.equal((await db.listQuests('2026-08-16'))[0].progressCount, 2);
+  assert.equal((await db.branchProgress(branch.id)).totalXp, 0);
+});
+
 test('confirmed task effects form a clamped and undoable state ledger', async (t) => {
   const db = await withDatabase(t, 'i2-state-ledger');
   await db.ensureI2Defaults();
@@ -1264,6 +1293,26 @@ test('only user-enabled habits create BONUS quests and momentum does not reset a
   const first = (await db.listQuests('2026-08-14')).find((item) => item.sourceId === habit.id);
   await db.feedbackQuest(first.id, 'completed');
   assert.equal(await db.habitMomentum(habit.id, '2026-08-14'), 3.3);
+});
+
+test('a count habit creates an independent count BONUS for each scheduled day', async (t) => {
+  const db = await withDatabase(t, 'count-habit');
+  await db.ensureI2Defaults();
+  const branch = (await db.listBranches())[0];
+  const habit = await db.addHabit({
+    name: '喝水', minimumAction: '喝一杯水', scheduleDays: [1, 2, 3, 4, 5, 6, 7],
+    dimension: 'energy', branchId: branch.id, difficulty: 'light', bonusEnabled: true,
+    targetCount: 8, countUnit: '杯',
+  }, '2026-08-14');
+
+  const first = (await db.ensureTodayBonusQuests('2026-08-14')).find((item) => item.sourceId === habit.id);
+  assert.deepEqual(
+    { progress: first.progressCount, target: first.targetCount, unit: first.countUnit },
+    { progress: 0, target: 8, unit: '杯' },
+  );
+  await db.changeQuestProgress(first.id, 1);
+  const next = (await db.ensureTodayBonusQuests('2026-08-15')).find((item) => item.sourceId === habit.id);
+  assert.deepEqual({ progress: next.progressCount, target: next.targetCount }, { progress: 0, target: 8 });
 });
 
 test('overdue habit BONUS stays user-decided and accepts a real late completion or no-penalty exemption', async (t) => {
@@ -1928,6 +1977,18 @@ test('edit creates a revision and undo restores the previous body as a new versi
     ],
   );
   await assert.rejects(() => db.undoLastEdit(original.id));
+});
+
+test('one editable day caption is stored per date and included in backups', async (t) => {
+  const db = await withDatabase(t, 'day-caption');
+  assert.equal(await db.getDayCaption('2026-08-14'), undefined);
+  assert.equal((await db.saveDayCaption('2026-08-14', '今天开始把复杂的事做简单。')).text, '今天开始把复杂的事做简单。');
+  assert.equal((await db.saveDayCaption('2026-08-14', '今天完成了第一步。')).text, '今天完成了第一步。');
+  assert.deepEqual((await db.exportBundle()).data.dayCaptions.map(({ localDate, text }) => ({ localDate, text })), [
+    { localDate: '2026-08-14', text: '今天完成了第一步。' },
+  ]);
+  assert.equal(await db.saveDayCaption('2026-08-14', '  '), undefined);
+  assert.equal(await db.getDayCaption('2026-08-14'), undefined);
 });
 
 test('success journal kind defaults explicitly, is editable and undoable, and survives backup restore', async (t) => {

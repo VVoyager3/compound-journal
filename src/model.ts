@@ -27,6 +27,28 @@ export type QuestStatus = 'pending' | 'completed' | 'partial' | 'skipped' | 'exe
 export type QuestSystemRetiredReason = 'elapsed' | 'schedule-changed' | 'tracking-disabled' | 'capacity' | 'source-invalidated';
 export type HabitStatus = 'active' | 'paused' | 'ended';
 
+export interface WeeklyReviewScope {
+  events: boolean;
+  stateSnapshots: boolean;
+  taskResults: boolean;
+  habits: boolean;
+  growth: boolean;
+  goals: boolean;
+  experiments: boolean;
+  memories: boolean;
+}
+
+export const DEFAULT_WEEKLY_REVIEW_SCOPE: WeeklyReviewScope = {
+  events: true,
+  stateSnapshots: true,
+  taskResults: true,
+  habits: true,
+  growth: true,
+  goals: true,
+  experiments: true,
+  memories: true,
+};
+
 /**
  * Canonical product vocabulary. Keep UI copy and persistence fields aligned:
  * area = life context; state = recent capacity signal; goal = desired result;
@@ -66,6 +88,11 @@ export interface JournalRevision extends ImportableEntity {
   undoneAt?: string;
 }
 
+export interface DayCaption extends ImportableEntity {
+  localDate: string;
+  text: string;
+}
+
 export interface StateObservation extends BaseEntity {
   assessmentId: string;
   localDate: string;
@@ -97,6 +124,7 @@ export interface AppSettings extends BaseEntity {
   aiAllowed: boolean;
   previewBeforeSend: boolean;
   guidanceTone: 'gentle' | 'direct';
+  weeklyReviewScope: WeeklyReviewScope;
   aiModel?: 'MiniMax-M3' | 'MiniMax-M2.7';
   aiApiKey?: string;
 }
@@ -176,6 +204,10 @@ export interface Quest extends ImportableEntity {
   completionCriteria?: string;
   estimatedMinutes: number;
   deadlineAt?: string;
+  /** Optional repeated check-in target. Omitted means a single-completion task. */
+  targetCount?: number;
+  progressCount?: number;
+  countUnit?: string;
   difficulty: import('./rules.ts').Difficulty;
   dimension?: Dimension;
   branchId?: string;
@@ -298,6 +330,8 @@ export interface QuestFeedback extends ImportableEntity {
 export interface Habit extends ImportableEntity {
   name: string;
   minimumAction: string;
+  targetCount?: number;
+  countUnit?: string;
   scheduleDays: number[];
   /** Effective-dated BONUS tracking rules; absent on legacy records. */
   scheduleHistory?: Array<{
@@ -338,6 +372,7 @@ export interface BackupData {
   profile: Profile[];
   areas: Area[];
   entries: JournalEntry[];
+  dayCaptions: DayCaption[];
   revisions: JournalRevision[];
   analyses: DailyAnalysis[];
   events: JournalEvent[];
@@ -359,7 +394,7 @@ export interface BackupData {
 
 export interface BackupBundle {
   format: 'qiguang-backup';
-  formatVersion: 4;
+  formatVersion: 5;
   exportedAt: string;
   appVersion: string;
   data: BackupData;

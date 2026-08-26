@@ -47,10 +47,10 @@ test('manifest provides an installable local-first application identity', async 
 
 test('room motion sprites use real PNG alpha instead of a painted grid', async () => {
   for (const gender of ['female', 'male']) {
-    const png = await readFile(path.join(root, 'design-assets', 'pre-development', `character-motion-${gender}-transparent.png`));
+    const png = await readFile(path.join(root, 'design-assets', 'pre-development', `character-motion-${gender}-runtime.png`));
     assert.deepEqual([...png.subarray(1, 4)], [80, 78, 71], `${gender} motion asset must be a PNG`);
-    assert.equal(png.readUInt32BE(16), 1536, `${gender} motion asset must have six fixed-width columns`);
-    assert.equal(png.readUInt32BE(20), 1536, `${gender} motion asset must have six fixed-height rows`);
+    assert.equal(png.readUInt32BE(16), 1152, `${gender} runtime atlas must have six fixed-width columns`);
+    assert.equal(png.readUInt32BE(20), 1152, `${gender} runtime atlas must have six fixed-height rows`);
     assert.equal(png[25], 6, `${gender} motion asset must use RGBA color type`);
   }
 });
@@ -90,14 +90,16 @@ test('room movement uses sprite frames instead of stretching the whole character
   assert.match(styles, /@keyframes room-return-shadow-step/);
   assert.match(styles, /@keyframes hotspot-sigil/);
   assert.match(styles, /--scene-light:/);
-  assert.match(styles, /background-size:\s*contain/);
-  assert.match(styles, /background-image:\s*var\(--walk-1\)/);
+  assert.match(styles, /background-size:\s*504px 504px/);
+  assert.match(styles, /background-position:\s*var\(--walk-1\)/);
+  assert.match(styles, /--walk-left-1:\s*0px -252px/);
+  assert.match(styles, /--walk-right-1:\s*0px -168px/);
   assert.match(styles, /room-action 960ms steps\(6, jump-none\)/);
-  assert.match(styles, /room-ambient-walk 6200ms steps\(5, jump-none\)/);
+  assert.match(styles, /room-ambient-stroll 6200ms steps\(1, end\)/);
   assert.doesNotMatch(styles, /inset\(0 8px 22px 4px\)/);
   assert.doesNotMatch(styles, /room-step-weight|room-footfall|room-ambient-footfall|filter:\s*drop-shadow|scale:\s*1\.27|rotate:\s*-?1deg/);
   assert.doesNotMatch(`${app}\n${styles}`, /room-plant|plant-celebration/, 'the room must not ship unexplained habit color blocks');
-  assert.match(app, /character-frames\/\*\/\*\.png/);
+  assert.match(app, /character-motion-(?:female|male)-runtime\.png/);
   assert.match(app, /preloadMotionFrames/);
   assert.doesNotMatch(app, /character-motion-(?:female|male)-transparent\.png/);
   assert.match(app, /room-background\.png/);
@@ -121,6 +123,8 @@ test('Android launcher and splash use the Qiguang identity instead of Capacitor 
   assert.match(styles, /postSplashScreenTheme[^\n]+AppTheme\.NoActionBar/);
   assert.match(styles, /Theme\.AppCompat\.Light\.NoActionBar/);
   assert.match(activity, /SplashScreen\.installSplashScreen\(this\)/);
+  const capacitorConfig = JSON.parse(await read('capacitor.config.json'));
+  assert.equal(capacitorConfig.android?.adjustMarginsForEdgeToEdge, 'force', 'native content must stay outside system bars and display cutouts');
   assert(existsSync(path.join(root, 'android/app/src/main/res/drawable-port-xxhdpi/splash.png')));
 });
 
