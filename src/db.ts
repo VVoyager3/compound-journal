@@ -590,8 +590,9 @@ async function weeklyReviewSourcesCurrent(transaction: IDBTransaction, request: 
       .sort((left, right) => right.periodEnd.localeCompare(left.periodEnd) || right.createdAt.localeCompare(left.createdAt)).slice(0, 4);
     if (!sameVersionSet(eligibleReviews, versions.reviews)) return false;
   }
-  const eligibleMemories = allMemories.filter((item) => item.status === 'confirmed' && !item.reminderMuted
-    && existedByPeriodEnd(item.confirmedAt ?? item.createdAt)).sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)).slice(0, 20);
+  const selectedMemoryIds = new Set(request.permissions.memoryIds);
+  const eligibleMemories = allMemories.filter((item) => selectedMemoryIds.has(item.id) && item.status === 'confirmed' && !item.reminderMuted
+    && existedByPeriodEnd(item.confirmedAt ?? item.createdAt));
   if (!sameVersionSet(eligibleMemories, versions.memories)) return false;
 
   const quests = current.quests as Quest[];

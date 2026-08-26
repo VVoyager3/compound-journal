@@ -728,7 +728,7 @@ test('weekly source set stales an in-flight result when a new completed task bec
   await assert.rejects(() => db.saveWeeklyReview(job.id, weeklyResponse(request)), /旧结果没有应用/);
 });
 
-test('weekly source set rejects confirmation when a new confirmed memory becomes eligible', async (t) => {
+test('weekly source set ignores a confirmed memory that the user did not select', async (t) => {
   const { db, request } = await weeklyVersionFixture(t, 'weekly-version-new-memory');
   const job = await db.createWeeklyReviewJob(request);
   await db.markAnalysisJobProcessing(job.id);
@@ -737,7 +737,24 @@ test('weekly source set rejects confirmation when a new confirmed memory becomes
   await patchRawRecord(db, 'memories', memory.id, {
     createdAt: '2026-08-14T08:00:00.000Z', confirmedAt: '2026-08-14T08:00:00.000Z',
   });
-  await assert.rejects(() => db.confirmWeeklyReview(review.id, review.nextTheme, review.nextExperiment), /来源已改变/);
+  const confirmed = await db.confirmWeeklyReview(review.id, review.nextTheme, review.nextExperiment, '2026-08-20');
+  assert.equal(confirmed.review.status, 'confirmed');
+});
+
+test('weekly source set rejects confirmation when a selected memory changes', async (t) => {
+  const { db, request } = await weeklyVersionFixture(t, 'weekly-version-selected-memory');
+  const memory = await db.addConfirmedMemory('strength', '我能把复杂任务拆成小步。');
+  await patchRawRecord(db, 'memories', memory.id, {
+    createdAt: '2026-08-14T08:00:00.000Z', confirmedAt: '2026-08-14T08:00:00.000Z',
+  });
+  request.context.memories = [{ memoryId: memory.id, type: memory.type, statement: memory.statement }];
+  request.context.sourceVersions.memories = [{ id: memory.id, version: memory.version }];
+  request.permissions.memoryIds = [memory.id];
+  const job = await db.createWeeklyReviewJob(request);
+  await db.markAnalysisJobProcessing(job.id);
+  const review = await db.saveWeeklyReview(job.id, weeklyResponse(request));
+  await db.setMemoryReminder(memory.id, true);
+  await assert.rejects(() => db.confirmWeeklyReview(review.id, review.nextTheme, review.nextExperiment, '2026-08-20'), /来源已改变/);
 });
 
 test('weekly source set rejects confirmation when a new active goal becomes eligible', async (t) => {
@@ -1765,7 +1782,7 @@ test('merge-import exempts pending quests whose goal or BONUS habit loses an act
   assert.equal(importedPending.length, 2);
   assert.ok(importedPending.every((item) => item.status === 'exempt'));
   assert.ok(importedPending.every((item) => item.systemRetiredAt));
-  assert.deepEqual(new Set(importedPending.map((item) => item.systemRetiredReason)), new Set(['source-invalidated', 'elapsed']));
+  assert.deepEqual(new Set(importedPending.map((item) => item.systemRetiredReason)), new Set(['source-invalidated', 'tracking-disabled']));
   assert.equal((await target.listQuestFeedback()).filter((item) => importedPending.some((quest) => quest.id === item.questId)).length, 0);
   assert.equal((await target.listHabitLogs(importedHabit.id)).filter((item) => importedPending.some((quest) => quest.id === item.questId)).length, 0);
   assert.equal((await target.listXpLedger()).filter((item) => importedPending.some((quest) => quest.id === item.sourceId)).length, 0);

@@ -82,6 +82,9 @@ function weeklyRequest(events, startDate, endDate, requestId) {
     period: { start: startDate, end: endDate }, userInput: { note: '' },
     context: {
       events: events.map((event) => ({ eventId: event.id, version: event.version, localDate: event.localDate, title: event.title, description: event.description })),
+      sourceVersions: {
+        quests: [], questFeedback: [], habits: [], habitLogs: [], branches: [], xpLedger: [], goals: [], reviews: [], memories: [], stateObservations: [],
+      },
       stateSnapshots: [], taskResults: [], habits: [], growth: [], goals: [], experiments: [], memories: [],
     },
     permissions: {

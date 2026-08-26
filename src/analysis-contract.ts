@@ -671,7 +671,7 @@ export function parseWeeklyReviewRequest(value: unknown): WeeklyReviewRequest {
     if (!sameIds(sourceVersions.branches.map((item) => item.id), growth.map((item) => item.branchId))) throw new Error('成长来源版本与发送范围不一致。');
     if (!sameIds(sourceVersions.goals.map((item) => item.id), goals.map((item) => item.goalId))) throw new Error('目标来源版本与发送范围不一致。');
     if (!sameIds(sourceVersions.reviews.map((item) => item.id), experiments.map((item) => item.reviewId))) throw new Error('实验来源版本与发送范围不一致。');
-    if (memories.some((item) => !sourceVersions.memories.some((source) => source.id === item.memoryId))) throw new Error('记忆来源版本与发送范围不一致。');
+    if (!sameIds(sourceVersions.memories.map((item) => item.id), memoryIds)) throw new Error('记忆来源版本与发送范围不一致。');
     if ((!includeStateSnapshots && sourceVersions.stateObservations.length)
       || (!includeTaskResults && sourceVersions.questFeedback.length)
       || (!includeHabits && sourceVersions.habitLogs.length)

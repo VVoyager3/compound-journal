@@ -692,7 +692,7 @@ test('growth page connects milestone, goal, habit, recovery, and experiment achi
       const goalDate = dateAt(-7);
       transaction.objectStore('goals').add({
         id: goalId, result: '五类成就目标', why: '验证成果来自现实事实', evidence: '一份五类成就验收记录', nextStep: '已经完成',
-        areaId: crypto.randomUUID(), branchId: branch.id, role: 'main', status: 'completed', startDate: dateAt(-14), completedAt: `${goalDate}T08:00:00.000Z`, ...common,
+        areaId: crypto.randomUUID(), branchId: branch.id, role: 'main', status: 'completed', startDate: dateAt(-14), completedDate: goalDate, completedAt: `${goalDate}T08:00:00.000Z`, ...common,
       });
       transaction.objectStore('milestones').add({
         id: milestoneId, goalId, order: 0, description: '完成第一章', evidence: '第一章验收记录', status: 'completed',
@@ -1697,6 +1697,7 @@ test('late completion evidence belongs to the real feedback day, not the planned
     assert.equal(await dateEdit.getByRole('textbox', { name: '实际完成日期' }).inputValue(), '2026-08-21', 'editing later must preserve the existing date by default');
     await dateEdit.getByRole('textbox', { name: '实际完成日期' }).fill('2026-08-24');
     await dateEdit.getByRole('button', { name: '确认反馈' }).click();
+    await assert.doesNotReject(() => page.locator('.success-evidence').waitFor({ state: 'detached' }));
     assert.equal(await page.locator('.success-evidence').count(), 0, 'explicitly moving the completion removes it from the former day');
     assert.equal(await page.locator('.day-quests').count(), 0, 'the former day no longer owns the action feedback');
 

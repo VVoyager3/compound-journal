@@ -321,6 +321,7 @@ test('formal pages sustain a 30 day loop without historic debt', async () => {
     await page.goto(`${baseUrl}/#/growth`);
     await assert.doesNotReject(() => page.locator('.branch-card').first().waitFor());
     await assert.doesNotReject(() => page.getByRole('heading', { name: '成果徽章' }).waitFor());
+    await page.locator('.badge-all').getByText(/查看全部徽章/).click();
     await page.getByRole('button', { name: '查看徽章证据：完成第一段可检查成果' }).click();
     const badgeEvidence = page.getByRole('dialog', { name: '徽章证据' });
     await assert.doesNotReject(() => badgeEvidence.getByText(GOAL).first().waitFor());

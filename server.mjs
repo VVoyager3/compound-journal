@@ -161,14 +161,20 @@ function fixtureAnalysis(request) {
           sourceType: 'explicit', confirmation: 'confirmed_by_default', confidence: 'high',
           evidence: [{ entryId: entry.entryId, quote: characters.slice(0, firstLength).join(''), start: 0, end: firstLength }],
           stateImpactCandidates: [{ dimension: 'energy', direction: 'negative', strength: 'small', suggestedDelta: -2, reason: '仅用于桌面测试确定性重算。', confidence: 'medium' }],
-          growthEvidenceCandidate: null,
+          growthEvidenceCandidate: {
+            branchId: null, suggestedBranchName: null, evidenceType: 'practice', description: '用原始记录留下了一条可核对的行动证据。',
+            isMilestoneCandidate: false, reason: '明确事件有原文位置证据。',
+          },
         },
         {
           candidateId: 'fixture-inference', title: '等待用户决定的推断', description: '这条推断确认前不会生效。',
           sourceType: 'inferred', confirmation: 'pending', confidence: 'low',
           evidence: [{ entryId: entry.entryId, quote: characters.slice(secondStart).join(''), start: secondStart, end: characters.length }],
           stateImpactCandidates: [{ dimension: 'mental', direction: 'positive', strength: 'small', suggestedDelta: 3, reason: '仅用于桌面测试确认流程。', confidence: 'low' }],
-          growthEvidenceCandidate: null,
+          growthEvidenceCandidate: {
+            branchId: null, suggestedBranchName: null, evidenceType: 'practice', description: '用户确认后才成为一条可核对的行动证据。',
+            isMilestoneCandidate: false, reason: '推断必须先由用户核对。',
+          },
         },
       ],
       reflection: {

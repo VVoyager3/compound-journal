@@ -21,7 +21,7 @@ function validGoalResponse(request) {
       refinedResult: request.userInput.result,
       completionEvidence: request.userInput.completionEvidence,
       rationale: request.userInput.why,
-      currentStage: '尚未开始', estimatedInvestment: '约两周，每周两小时', risks: [],
+      currentStage: '尚未开始', estimatedInvestment: '约两周，每周两小时', risks: [{ description: '模型多返回的对象' }, '', '启动成本可能过高'],
       milestones: [
         { title: '完成初稿', evidence: '保存一份可阅读初稿' },
         { title: '完成发布', evidence: '得到一个可访问链接' },
@@ -38,12 +38,13 @@ test('personal direct AI validates, repairs once, and scopes a custom key to the
   const bridge = {
     async request({ payload }) {
       payloads.push(payload);
-      const content = payloads.length === 1 ? '{}' : JSON.stringify(validGoalResponse(request));
+      const content = payloads.length === 1 ? 'not json' : JSON.stringify(validGoalResponse(request));
       return { status: 200, data: JSON.stringify({ choices: [{ message: { content } }] }) };
     },
   };
   const response = await analyzeDirectWithBridge(request, bridge, 'MiniMax-M2.7', 'custom-local-key');
   assert.equal(response.result.refinedResult, request.userInput.result);
+  assert.deepEqual(response.result.risks, ['启动成本可能过高']);
   assert.equal(payloads.length, 2);
   assert.equal(payloads[0].model, 'MiniMax-M2.7');
   assert.equal(payloads[0].apiKey, 'custom-local-key');
@@ -76,11 +77,12 @@ test('model ingress repairs only provable evidence coordinates and optional meta
       title: '早晨写作顺利', summary: '今天早晨写作顺利。', explicitMoods: [],
       events: [{
         candidateId: 'event-1', title: '早晨写作', description: '早晨写作顺利。', sourceType: 'explicit', confirmation: 'confirmed_by_default', confidence: 'high',
-        evidence: [{ entryId: 'entry-1', quote: '今天早晨写作很顺利。', start: 99, end: 100 }], stateImpactCandidates: [], growthEvidenceCandidate: null,
+        evidence: [{ entryId: 'entry-1', quote: '今天早晨写作很顺利。', start: 99, end: 100 }],
+        stateImpactCandidates: [{ dimension: 'progress', direction: 'positive', strength: 'small', suggestedDelta: -9, reason: '方向和强度与数值冲突。', confidence: 'low' }], growthEvidenceCandidate: null,
       }],
       reflection: { whatHappened: '早晨写作顺利。', specificCredit: '完成了写作。', patternCandidate: null },
       questSuggestions: [{ type: 'side', title: '继续写', why: '保持推进', minimumVersion: '', estimatedMinutes: 10, difficulty: 'light', primaryState: 'progress', growthBranchId: null, sourceGoalId: null, isRecovery: false }],
-      memoryCandidates: [{ type: 'pattern', statement: '早晨写作效果可能取决于条件。', confidence: 'low', supportingEventIds: ['event-1'], counterEvidence: [{ memoryId: 'memory-1' }], recommendedAction: 'observe', description: '模型多给的字段' }],
+      memoryCandidates: [{ type: 'pattern', statement: '早晨写作效果可能取决于条件。', confidence: 'low', supportingEventIds: ['event-1'], counterEvidence: [{ memoryId: 'memory-1' }], recommendedAction: 'review', description: '模型多给的字段' }],
     }, warnings: [],
   };
   response.result.events.push({ ...structuredClone(response.result.events[0]), candidateId: 'event-duplicate' });
@@ -88,8 +90,10 @@ test('model ingress repairs only provable evidence coordinates and optional meta
   const parsed = await analyzeDirectWithBridge(request, bridge);
   assert.deepEqual(parsed.result.events[0].evidence[0], { entryId: 'entry-1', quote: '今天早晨写作很顺利。', start: 1, end: 11 });
   assert.equal(parsed.result.events.length, 1);
+  assert.deepEqual(parsed.result.events[0].stateImpactCandidates, []);
   assert.equal(parsed.result.questSuggestions.length, 0);
   assert.equal(parsed.result.reflection.nextSmallStep, '');
   assert.deepEqual(parsed.result.memoryCandidates[0].counterEvidence, ['memory-1']);
+  assert.equal(parsed.result.memoryCandidates[0].recommendedAction, 'observe');
   assert.equal('description' in parsed.result.memoryCandidates[0], false);
 });
