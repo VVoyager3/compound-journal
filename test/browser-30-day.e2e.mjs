@@ -74,7 +74,7 @@ async function setDay(page, day, openApp = true) {
 async function finishOnboarding(page) {
   await page.goto(`${baseUrl}/#/today`);
   const dialog = page.getByRole('dialog', { name: '选择生活分身' });
-  await dialog.getByRole('button', { name: '选择牛纹帽双辫女生' }).click();
+  await dialog.getByRole('button', { name: '选择鱼鱼' }).click();
   await dialog.getByRole('button', { name: '开始记录' }).click();
   await page.getByRole('textbox', { name: '发生了什么' }).waitFor();
 }

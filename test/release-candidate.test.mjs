@@ -312,13 +312,16 @@ test('Android widget ships three responsive layouts without overlay or notificat
   }
   assert.match(manifest, /QiguangWidgetProvider/);
   assert.match(manifest, /qiguang_widget_info/);
-  for (const size of ['small', 'medium', 'large']) {
+  for (const [size, rows] of [['small', 1], ['medium', 2], ['large', 4]]) {
     const layout = await read(`android/app/src/main/res/layout/widget_qiguang_${size}.xml`);
-    for (const id of ['widget_root', 'widget_name', 'widget_main', 'widget_minimum', 'widget_xp', 'widget_complete']) assert(layout.includes(`@+id/${id}`), `${size} widget lacks ${id}`);
+    for (const id of ['widget_root', 'widget_header', 'widget_title', 'widget_count', 'widget_private', 'widget_empty', 'widget_privacy_toggle']) assert(layout.includes(`@+id/${id}`), `${size} widget lacks ${id}`);
+    for (let row = 1; row <= rows; row += 1) for (const suffix of ['', '_check', '_type', '_title']) assert(layout.includes(`@+id/widget_task_${row}${suffix}`), `${size} widget lacks task row ${row}${suffix}`);
+    for (const removed of ['widget_avatar', 'widget_name', 'widget_xp', 'widget_record', 'widget_minimum']) assert(!layout.includes(removed), `${size} widget still exposes ${removed}`);
   }
   const provider = await read('android/app/src/main/java/com/vvoyager3/qiguang/QiguangWidgetProvider.java');
-  for (const action of ['COMPLETE_MAIN', 'OPEN_ROUTE', 'TOGGLE_PRIVACY']) assert(provider.includes(action), `widget lacks ${action}`);
-  assert.match(provider, /avatar-.*-cartoon-/s, 'widget must reuse the selected cartoon companion portrait from the packaged assets');
+  for (const action of ['COMPLETE_TASK', 'OPEN_ROUTE', 'TOGGLE_PRIVACY']) assert(provider.includes(action), `widget lacks ${action}`);
+  for (const removed of ['loadAvatar', 'companionName', 'currentXp', 'widget_record']) assert(!provider.includes(removed), `widget provider still exposes ${removed}`);
+  assert.match(provider, /today\.equals\(snapshot\.optString\("localDate"/, 'widget must not show a stale day as today');
   const bridge = await read('android/app/src/main/java/com/vvoyager3/qiguang/QiguangWidgetBridge.java');
   assert.match(bridge, /isRequestPinAppWidgetSupported/);
   assert.match(bridge, /requestPinAppWidget/);

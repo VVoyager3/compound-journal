@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="widget_background">#28251F</color>
-    <color name="widget_foreground">#FFF7DE</color>
-    <color name="widget_accent">#D9A93A</color>
-    <color name="widget_secondary">#413B31</color>
+    <color name="widget_background">#18241F</color>
+    <color name="widget_foreground">#F6EEDB</color>
+    <color name="widget_accent">#E0B95C</color>
+    <color name="widget_muted">#B9AE96</color>
+    <color name="widget_border">#496052</color>
+    <color name="widget_task_row">#22332C</color>
 </resources>

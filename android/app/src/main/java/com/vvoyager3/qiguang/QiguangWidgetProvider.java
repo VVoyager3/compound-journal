@@ -7,8 +7,6 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.RemoteViews;
@@ -16,12 +14,18 @@ import android.widget.RemoteViews;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.InputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class QiguangWidgetProvider extends AppWidgetProvider {
     private static final String TOGGLE_PRIVACY = "com.vvoyager3.qiguang.widget.TOGGLE_PRIVACY";
-    private static final String COMPLETE_MAIN = "com.vvoyager3.qiguang.widget.COMPLETE_MAIN";
+    private static final String COMPLETE_TASK = "com.vvoyager3.qiguang.widget.COMPLETE_TASK";
     private static final String OPEN_ROUTE = "com.vvoyager3.qiguang.widget.OPEN_ROUTE";
+    private static final int[] TASK_ROWS = {R.id.widget_task_1, R.id.widget_task_2, R.id.widget_task_3, R.id.widget_task_4};
+    private static final int[] TASK_CHECKS = {R.id.widget_task_1_check, R.id.widget_task_2_check, R.id.widget_task_3_check, R.id.widget_task_4_check};
+    private static final int[] TASK_TYPES = {R.id.widget_task_1_type, R.id.widget_task_2_type, R.id.widget_task_3_type, R.id.widget_task_4_type};
+    private static final int[] TASK_TITLES = {R.id.widget_task_1_title, R.id.widget_task_2_title, R.id.widget_task_3_title, R.id.widget_task_4_title};
 
     static void refreshAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
@@ -55,7 +59,7 @@ public class QiguangWidgetProvider extends AppWidgetProvider {
             boolean current = context.getSharedPreferences(QiguangWidgetBridge.PREFS, Context.MODE_PRIVATE).getBoolean("private_" + id, false);
             context.getSharedPreferences(QiguangWidgetBridge.PREFS, Context.MODE_PRIVATE).edit().putBoolean("private_" + id, !current).apply();
             render(context, AppWidgetManager.getInstance(context), id);
-        } else if (COMPLETE_MAIN.equals(action)) {
+        } else if (COMPLETE_TASK.equals(action)) {
             queueActionAndOpen(context, new JSONObjectBuilder().put("type", "complete").put("questId", intent.getStringExtra("quest_id")).toString());
         } else if (OPEN_ROUTE.equals(action)) {
             queueActionAndOpen(context, new JSONObjectBuilder().put("type", "open").put("route", intent.getStringExtra("route")).put("questId", intent.getStringExtra("quest_id")).toString());
@@ -80,69 +84,65 @@ public class QiguangWidgetProvider extends AppWidgetProvider {
     private static void render(Context context, AppWidgetManager manager, int id) {
         Bundle options = manager.getAppWidgetOptions(id);
         int width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110);
-        int layout = width < 180 ? R.layout.widget_qiguang_small : width < 300 ? R.layout.widget_qiguang_medium : R.layout.widget_qiguang_large;
+        int height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 70);
+        boolean compact = width < 180 || height < 195;
+        boolean medium = !compact && (width < 300 || height < 310);
+        int layout = compact ? R.layout.widget_qiguang_small : medium ? R.layout.widget_qiguang_medium : R.layout.widget_qiguang_large;
+        int visibleTasks = compact ? 1 : medium ? 2 : 4;
         RemoteViews views = new RemoteViews(context.getPackageName(), layout);
         boolean privacy = context.getSharedPreferences(QiguangWidgetBridge.PREFS, Context.MODE_PRIVATE).getBoolean("private_" + id, false);
         try {
             JSONObject snapshot = new JSONObject(context.getSharedPreferences(QiguangWidgetBridge.PREFS, Context.MODE_PRIVATE).getString(QiguangWidgetBridge.SNAPSHOT, "{}"));
-            JSONObject main = snapshot.optJSONObject("main");
-            JSONObject xp = snapshot.optJSONObject("xp");
-            String title = main == null ? "今天还没有 MAIN" : main.optString("title", "今天还没有 MAIN");
-            String minimum = main == null ? "打开栖光安排一个最小行动" : main.optString("minimumAction", "");
-            Bitmap avatar = width >= 180 ? loadAvatar(context, snapshot.optString("avatar", "")) : null;
-            if (avatar != null) views.setImageViewBitmap(R.id.widget_avatar, avatar);
-            views.setTextViewText(R.id.widget_name, snapshot.optString("companionName", "小栖") + " · " + snapshot.optString("companionState", "陪伴"));
-            views.setTextViewText(R.id.widget_main, title);
-            views.setTextViewText(R.id.widget_minimum, minimum);
-            views.setTextViewText(R.id.widget_xp, xp == null ? "Lv.1" : "Lv." + xp.optInt("level", 1) + " · " + xp.optInt("currentXp", 0) + "/" + xp.optInt("nextLevelXp", 30) + " XP");
-            JSONArray bonus = snapshot.optJSONArray("bonus");
-            StringBuilder bonusText = new StringBuilder();
-            if (bonus != null) for (int index = 0; index < bonus.length(); index++) {
-                JSONObject item = bonus.optJSONObject(index);
-                if (item != null) bonusText.append(index == 0 ? "" : "\n").append("BONUS · ").append(item.optString("title"));
+            String today = new SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(new Date());
+            boolean current = today.equals(snapshot.optString("localDate", ""));
+            JSONArray tasks = current ? snapshot.optJSONArray("tasks") : null;
+            if (tasks == null) tasks = new JSONArray();
+            int count = tasks.length();
+            views.setTextViewText(R.id.widget_title, context.getString(R.string.widget_title));
+            views.setTextViewText(R.id.widget_count, count == 0 ? "" : context.getString(R.string.widget_count, count));
+            views.setTextViewText(R.id.widget_privacy_toggle, context.getString(privacy ? R.string.widget_show : R.string.widget_hide));
+            views.setViewVisibility(R.id.widget_private, privacy && count > 0 ? View.VISIBLE : View.GONE);
+            views.setTextViewText(R.id.widget_private, context.getString(R.string.widget_private, count));
+            views.setViewVisibility(R.id.widget_empty, !privacy && count == 0 ? View.VISIBLE : View.GONE);
+            views.setTextViewText(R.id.widget_empty, context.getString(current ? R.string.widget_all_done : R.string.widget_sync));
+            for (int index = 0; index < visibleTasks; index++) {
+                JSONObject task = index < count ? tasks.optJSONObject(index) : null;
+                boolean visible = !privacy && index < visibleTasks && task != null;
+                views.setViewVisibility(TASK_ROWS[index], visible ? View.VISIBLE : View.GONE);
+                if (!visible) continue;
+                String taskId = task.optString("id", "");
+                String title = task.optString("title", context.getString(R.string.widget_untitled));
+                views.setTextViewText(TASK_TYPES[index], taskType(context, task.optString("type", "side")));
+                views.setViewVisibility(TASK_TYPES[index], compact ? View.GONE : View.VISIBLE);
+                views.setTextViewText(TASK_TITLES[index], title);
+                views.setContentDescription(TASK_CHECKS[index], context.getString(R.string.widget_complete_named, title));
+                views.setOnClickPendingIntent(TASK_CHECKS[index], broadcast(context, id, COMPLETE_TASK, "quest_id", taskId));
+                views.setOnClickPendingIntent(TASK_TITLES[index], route(context, id, "tasks", taskId));
             }
-            views.setTextViewText(R.id.widget_bonus, bonusText.length() == 0 ? "暂无 BONUS" : bonusText.toString());
-            views.setViewVisibility(R.id.widget_private, privacy ? View.VISIBLE : View.GONE);
-            for (int viewId : new int[]{R.id.widget_main, R.id.widget_minimum, R.id.widget_xp, R.id.widget_bonus}) {
-                views.setViewVisibility(viewId, privacy ? View.GONE : View.VISIBLE);
-            }
-            views.setViewVisibility(R.id.widget_complete, privacy || main == null ? View.GONE : View.VISIBLE);
-            if (!privacy && main != null) views.setOnClickPendingIntent(R.id.widget_complete, broadcast(context, id, COMPLETE_MAIN, "quest_id", main.optString("id", "")));
+            int hidden = Math.max(0, count - visibleTasks);
+            views.setViewVisibility(R.id.widget_more, !privacy && !compact && hidden > 0 ? View.VISIBLE : View.GONE);
+            views.setTextViewText(R.id.widget_more, context.getString(R.string.widget_more, hidden));
             views.setOnClickPendingIntent(R.id.widget_privacy_toggle, broadcast(context, id, TOGGLE_PRIVACY, "unused", ""));
-            views.setOnClickPendingIntent(R.id.widget_tasks, route(context, id, "tasks", main == null ? "" : main.optString("id", "")));
-            views.setOnClickPendingIntent(R.id.widget_record, broadcast(context, id, OPEN_ROUTE, "route", "record"));
-            views.setOnClickPendingIntent(R.id.widget_root, broadcast(context, id, OPEN_ROUTE, "route", "today"));
+            views.setOnClickPendingIntent(R.id.widget_header, route(context, id, "tasks", ""));
+            views.setOnClickPendingIntent(R.id.widget_more, route(context, id, "tasks", ""));
+            views.setOnClickPendingIntent(R.id.widget_root, route(context, id, "tasks", ""));
         } catch (Exception ignored) {
-            views.setTextViewText(R.id.widget_main, "打开栖光同步今天的行动");
+            views.setViewVisibility(R.id.widget_empty, View.VISIBLE);
+            views.setTextViewText(R.id.widget_empty, context.getString(R.string.widget_sync));
         }
         manager.updateAppWidget(id, views);
+    }
+
+    private static String taskType(Context context, String type) {
+        if ("main".equals(type)) return context.getString(R.string.widget_type_main);
+        if ("bonus".equals(type)) return context.getString(R.string.widget_type_bonus);
+        return context.getString(R.string.widget_type_side);
     }
 
     private static PendingIntent route(Context context, int id, String route, String questId) {
         Intent intent = new Intent(context, QiguangWidgetProvider.class).setAction(OPEN_ROUTE)
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id).putExtra("route", route).putExtra("quest_id", questId);
         return PendingIntent.getBroadcast(context, (id + OPEN_ROUTE + route + questId).hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    private static Bitmap loadAvatar(Context context, String avatar) {
-        if (!"male".equals(avatar) && !"female".equals(avatar)) return null;
-        try {
-            String prefix = "avatar-" + avatar + "-cartoon-";
-            for (String name : context.getAssets().list("public/assets")) {
-                if (name.startsWith(prefix) && name.endsWith(".png")) {
-                    String path = "public/assets/" + name;
-                    BitmapFactory.Options bounds = new BitmapFactory.Options();
-                    bounds.inJustDecodeBounds = true;
-                    try (InputStream stream = context.getAssets().open(path)) { BitmapFactory.decodeStream(stream, null, bounds); }
-                    BitmapFactory.Options scaled = new BitmapFactory.Options();
-                    while (bounds.outWidth / scaled.inSampleSize > 256 || bounds.outHeight / scaled.inSampleSize > 256) scaled.inSampleSize *= 2;
-                    try (InputStream stream = context.getAssets().open(path)) { return BitmapFactory.decodeStream(stream, null, scaled); }
-                }
-            }
-        } catch (Exception ignored) {
-            // Keep the launcher image when an old or incomplete bundle has no matching portrait.
-        }
-        return null;
     }
 
     /** Tiny builder keeps widget actions valid JSON without another dependency. */

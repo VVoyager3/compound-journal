@@ -272,11 +272,10 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
   const dayTen = await addGoalMain(9, milestones[3], '根据试读反馈完成修订');
   await db.ensureTodayBonusQuests(dates[9]);
   const widgetBeforeCompletion = buildWidgetSnapshot({
-    profile: await db.getProfile(), quests: await db.listQuests(dates[9]), ledger: await db.listXpLedger(),
-    localDate: dates[9], generatedAt: `${dates[9]}T08:00:00.000Z`, companionState: '指导',
+    quests: await db.listQuests(dates[9]), localDate: dates[9], generatedAt: `${dates[9]}T08:00:00.000Z`,
   });
-  assert.equal(widgetBeforeCompletion.main?.id, dayTen.id);
-  assert.equal(widgetBeforeCompletion.bonus.length, 1);
+  assert.equal(widgetBeforeCompletion.tasks[0]?.id, dayTen.id);
+  assert.equal(widgetBeforeCompletion.tasks.filter((item) => item.type === 'bonus').length, 1);
   await db.feedbackQuest(dayTen.id, 'completed', '完成修订', '生成可分享最终版', undefined, 3, dates[9]);
   const finished = await db.createGoalFollowUpQuest(dayTen.id, dates[10]);
   assert.equal(finished.goalReady, true);
@@ -346,8 +345,7 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
     }
     if (index === 28) await db.saveHabit(walking.id, { status: 'ended' }, date);
     if (index === 29) finalWidget = buildWidgetSnapshot({
-      profile: await db.getProfile(), quests: await db.listQuests(date), ledger: await db.listXpLedger(),
-      localDate: date, generatedAt: `${date}T20:00:00.000Z`, companionState: '陪伴',
+      quests: await db.listQuests(date), localDate: date, generatedAt: `${date}T20:00:00.000Z`,
     });
   }
 
@@ -369,8 +367,7 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
   assert.ok(totalXp(ledger) > 300, 'thirty days of real actions and milestones should leave visible growth without login XP');
   assert((await db.habitMomentum(walking.id, dates[29])) > 0, 'missed and paused days lower momentum without resetting it');
   assert.equal(monthlyAreaSignal(area.mode, ledger.length, 0, dates[29], dates[29]), 'progress');
-  assert.equal(finalWidget?.main, null);
-  assert.equal(finalWidget?.bonus.length, 0, 'an ended habit must not remain in the final widget');
+  assert.equal(finalWidget?.tasks.length, 0, 'completed work and an ended habit must not remain in the final widget');
   const lateQuest = (await db.listQuests()).find((quest) => quest.deadlineAt);
   assert(lateQuest);
   const lateFeedback = (await db.listQuestFeedback(lateQuest.id)).find((item) => !item.undoneAt);

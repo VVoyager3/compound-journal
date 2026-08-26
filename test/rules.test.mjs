@@ -111,24 +111,22 @@ test('daily quest limits stay at one main, three BONUS, and two side quests', ()
   assert.equal(canAddQuest('side', ['side', 'side']), false);
 });
 
-test('widget snapshot exposes only the current actionable summary', () => {
+test('widget snapshot exposes only pending tasks in board order', () => {
   const snapshot = buildWidgetSnapshot({
-    profile: { companionName: '小栖', avatar: 'female' },
     localDate: '2026-08-19', generatedAt: '2026-08-19T08:00:00.000Z',
-    companionState: '指导',
-    reduceMotion: true,
     quests: [
       { id: 'main', type: 'main', status: 'pending', title: '推进主线', minimumAction: '先做五分钟' },
       { id: 'bonus-1', type: 'bonus', status: 'pending', title: '散步', minimumAction: '走两分钟' },
+      { id: 'side-1', type: 'side', status: 'pending', title: '整理桌面', minimumAction: '收起一件物品' },
+      { id: 'done', type: 'main', status: 'completed', title: '已经完成', minimumAction: '无需展示' },
     ],
-    ledger: [{ settlementKey: 'q1', finalXp: 25 }],
   });
-  assert.equal(snapshot.main?.title, '推进主线');
-  assert.equal(snapshot.bonus[0].title, '散步');
-  assert.equal(snapshot.xp.totalXp, 25);
+  assert.deepEqual(snapshot.tasks, [
+    { id: 'main', type: 'main', title: '推进主线' },
+    { id: 'bonus-1', type: 'bonus', title: '散步' },
+    { id: 'side-1', type: 'side', title: '整理桌面' },
+  ]);
   assert.equal(snapshot.version, 1);
-  assert.equal(snapshot.companionState, '指导');
-  assert.equal(snapshot.reduceMotion, true);
 });
 
 test('widget task deep link keeps the MAIN identity for direct focus', () => {

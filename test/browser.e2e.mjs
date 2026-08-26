@@ -61,7 +61,7 @@ async function offlineShellPage() {
 async function finishOnboarding(page) {
   await page.goto(`${baseUrl}/#/today`);
   const dialog = page.getByRole('dialog', { name: '选择生活分身' });
-  await dialog.getByRole('button', { name: '选择牛纹帽双辫女生' }).click();
+  await dialog.getByRole('button', { name: '选择鱼鱼' }).click();
   await dialog.getByRole('button', { name: '开始记录' }).click();
   await assert.doesNotReject(() => page.getByRole('textbox', { name: '发生了什么' }).waitFor());
 }
@@ -88,8 +88,8 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     assert.equal(await page.locator('#main-content').getByRole('button', { name: '开始记录' }).count(), 1, 'first use must expose one primary record action');
     assert.equal(await page.locator('#main-content').getByRole('button', { name: '开始收束今天' }).count(), 0, 'empty first use must not show an end-of-day action');
     assert.equal(await page.locator('#main-content').getByText('今天留下一件真实事情', { exact: true }).count(), 0, 'the primary record action must not be repeated as a reminder');
-    await dialog.getByRole('button', { name: '选择牛纹帽双辫女生' }).click();
-    await assert.doesNotReject(() => dialog.getByText('已选择牛纹帽双辫女生').waitFor());
+    await dialog.getByRole('button', { name: '选择鱼鱼' }).click();
+    await assert.doesNotReject(() => dialog.getByText('已选择鱼鱼').waitFor());
     await dialog.getByRole('button', { name: '开始记录' }).click();
     await page.waitForURL(/#\/record$/);
     assert.deepEqual(await page.locator('.bottom-nav .nav-item').allTextContents(), ['今日', '任务', '记录', '轨迹']);
@@ -1512,12 +1512,14 @@ test('installed shell keeps every independent companion frame available offline'
     assert.equal(assets.length, 75, 'portraits, 72 independent frames, and the room background must be built into the shell');
     await context.setOffline(true);
     const dialog = page.getByRole('dialog', { name: '选择生活分身' });
-    await dialog.getByRole('button', { name: '选择牛纹帽双辫女生' }).click();
+    await dialog.getByRole('button', { name: '选择鱼鱼' }).click();
     await dialog.getByRole('button', { name: '开始记录' }).click();
     await page.waitForURL(/#\/record$/);
     await page.goto(`${baseUrl}/#/today`);
     const imageUrl = await page.locator('.room-character').evaluate((element) => getComputedStyle(element).backgroundImage.match(/url\("?([^"\)]+)"?\)/)?.[1]);
-    assert.match(imageUrl ?? '', /01-idle-front/, 'selected companion must use an independent motion frame');
+    const motionFrames = assets.filter((asset) => /\/assets\/(?:0[1-9]|[12]\d|3[0-6])-[^/]+\.png$/.test(asset));
+    assert.equal(motionFrames.length, 72, 'all independent motion frames must be built into the shell');
+    assert.equal(motionFrames.some((asset) => imageUrl?.endsWith(asset)), true, 'the current time-based pose must use an independent motion frame');
     const cached = await page.evaluate((urls) => Promise.all(urls.map((url) => fetch(url).then((response) => response.ok).catch(() => false))), assets);
     assert.equal(cached.every(Boolean), true);
   } finally {
@@ -1914,7 +1916,7 @@ test('an active Android WebView handles widget completion without reloading the 
       window.dispatchEvent(new Event('qiguang-widget-action'));
     }, { id: questId, value: marker });
 
-    await assert.doesNotReject(() => page.getByText(`已从桌面伙伴完成任务；经验已结算，可在任务板撤销。 行动证据：${title}。本次 +10 XP · 成长方向总计 10 XP · 等级 Lv.0。`, { exact: true }).waitFor());
+    await assert.doesNotReject(() => page.getByText(`已从今日任务小组件完成；经验已结算，可在任务板撤销。 行动证据：${title}。本次 +10 XP · 成长方向总计 10 XP · 等级 Lv.0。`, { exact: true }).waitFor());
     assert.equal(await page.evaluate(() => window.__qiguangWidgetPageMarker), marker, 'widget action reloaded the active page');
     assert.equal(await xpLedgerCount(page), 1);
     assert.match(page.url(), /#\/tasks$/);
@@ -1940,7 +1942,7 @@ test('Android users can request the desktop companion from settings once', async
       location.hash = '/system';
     });
     await assert.doesNotReject(() => page.getByRole('heading', { name: '我的系统' }).waitFor());
-    await page.getByText('桌面伙伴', { exact: true }).click();
+    await page.getByText('今日任务小组件', { exact: true }).click();
     const add = page.getByRole('button', { name: '添加到桌面' });
     await add.click();
     assert.equal(await page.evaluate(() => globalThis.__qiguangPinRequested), 1);

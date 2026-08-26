@@ -212,6 +212,15 @@ function avatarAsset(avatar: Exclude<Profile['avatar'], null>): string {
   return avatar === 'male' ? maleAvatarImage : femaleAvatarImage;
 }
 
+function avatarName(avatar: Profile['avatar']): string {
+  return avatar === 'male' ? '包包' : '鱼鱼';
+}
+
+function resolvedCompanionName(profile: Profile | undefined): string {
+  const saved = profile?.companionName.trim();
+  return saved && saved !== '小栖' ? saved : avatarName(profile?.avatar ?? null);
+}
+
 function preloadMotionFrames(avatar: Exclude<Profile['avatar'], null>, urls: string[]): Promise<void> {
   const cached = motionFramePreloads.get(avatar);
   if (cached) return cached;
@@ -607,7 +616,7 @@ function companionMessage(welcoming: boolean, cue: RoomCue | null, hasMainQuest:
   return hasMainQuest ? '主线已经在等你了；需要的话，我陪你拆成下一步。' : '我在。今天想从哪里开始？';
 }
 
-function roomStage(compact = false, avatar: Profile['avatar'] = null, companionName = '小栖', welcoming = false, cue: RoomCue | null = null, snapshotDate: string | null = null, hasMainQuest = false, achievementCount = 0, guidance: { title: string; reason: string; settled?: boolean } | null = null, companionContext: string[] = []): HTMLElement {
+function roomStage(compact = false, avatar: Profile['avatar'] = null, companionName = '鱼鱼', welcoming = false, cue: RoomCue | null = null, snapshotDate: string | null = null, hasMainQuest = false, achievementCount = 0, guidance: { title: string; reason: string; settled?: boolean } | null = null, companionContext: string[] = []): HTMLElement {
   const stage = node('section', `room-stage${compact ? ' is-compact' : ''}`);
   if (snapshotDate) stage.dataset.snapshotDate = snapshotDate;
   stage.setAttribute('aria-label', '温暖的像素房间：包含日记桌、任务板、日历、书架工作台、窗边床铺和生活分身。所有功能也能通过普通导航进入。');
@@ -744,7 +753,7 @@ function roomStage(compact = false, avatar: Profile['avatar'] = null, companionN
           }
           const companionCopy = guidance?.settled ? '今天已经留下证据，可以回看，也可以停下。' : companionMessage(welcoming, cue, hasMainQuest);
           const recordIsPrimary = guidance?.title === '先讲一件最近发生的事';
-          created.append(node('strong', '', companionName || '小栖'), node('p', 'character-response', companionCopy));
+          created.append(node('strong', '', companionName || avatarName(avatar)), node('p', 'character-response', companionCopy));
           if (guidance && !guidance.settled && !recordIsPrimary) created.append(node('p', 'quest-minimum', guidance.title));
           if (companionContext.length) {
             const remembered = node('details', 'companion-memory');
@@ -1798,7 +1807,7 @@ async function todayPage(): Promise<HTMLElement> {
   ];
 
   const hero = node('section', 'home-hero');
-  hero.append(roomStage(false, profile?.avatar ?? null, profile?.companionName || '小栖', isReturning, roomCueFor(lowest), null, Boolean(directionQuest), achievementCount, guidance, companionContext));
+  hero.append(roomStage(false, profile?.avatar ?? null, resolvedCompanionName(profile), isReturning, roomCueFor(lowest), null, Boolean(directionQuest), achievementCount, guidance, companionContext));
   main.append(hero, statusSummary(observations));
 
   if (overdueQuests.length) main.append(overdueQuestPanel(overdueQuests));
@@ -2260,7 +2269,7 @@ function showOnboarding(): void {
     begin.disabled = true;
     void (async () => {
       try {
-        await db.saveProfile({ avatar });
+        await db.saveProfile({ avatar, companionName: avatarName(avatar) });
         settings = await db.saveSettings({ onboardingSeen: true });
         dialog.close();
         if (currentRoute.name === 'record') document.querySelector<HTMLTextAreaElement>('.journal-input')?.focus();
@@ -2276,7 +2285,7 @@ function showOnboarding(): void {
   });
   begin.disabled = true;
   (['female', 'male'] as const).forEach((choice) => {
-    const label = choice === 'female' ? '牛纹帽双辫女生' : '鹿角头饰男生';
+    const label = avatarName(choice);
     const button = node('button', 'avatar-choice');
     button.type = 'button';
     button.setAttribute('aria-label', `选择${label}`);
@@ -2821,7 +2830,7 @@ async function dayPage(date: string): Promise<HTMLElement> {
   const main = node('main', 'page page-day');
   const calendarLink = node('a', 'button button-secondary compact-button', '日历');
   calendarLink.href = '#/calendar';
-  main.append(pageHeader('某日回顾', formatDate(date, { year: 'numeric' }), calendarLink), roomStage(true, profile?.avatar ?? null, profile?.companionName || '小栖', false, roomCueFor(lowest), date));
+  main.append(pageHeader('某日回顾', formatDate(date, { year: 'numeric' }), calendarLink), roomStage(true, profile?.avatar ?? null, resolvedCompanionName(profile), false, roomCueFor(lowest), date));
 
   if (entries.length || quests.length) main.append(await dailyAnalysisSection(date, entries, quests));
   if (Object.keys(observations).length) main.append(statusSummary(observations, date));
@@ -4502,15 +4511,15 @@ function profileForm(profile: Profile): HTMLElement {
   userName.placeholder = '你希望被怎样称呼（可留空）';
   const companionName = node('input', 'input');
   companionName.maxLength = 40;
-  companionName.value = profile.companionName;
+  companionName.value = resolvedCompanionName(profile);
   const chapterTitle = node('input', 'input');
   chapterTitle.maxLength = 80;
   chapterTitle.value = profile.chapterTitle;
   const avatar = node('select', 'input');
   avatar.append(
     selectOption('', '暂不选择', profile.avatar === null),
-    selectOption('female', '牛纹帽双辫女生', profile.avatar === 'female'),
-    selectOption('male', '鹿角头饰男生', profile.avatar === 'male'),
+    selectOption('female', '鱼鱼', profile.avatar === 'female'),
+    selectOption('male', '包包', profile.avatar === 'male'),
   );
   const preview = node('img', 'avatar-preview') as HTMLImageElement;
   preview.alt = '生活分身外观预览';
@@ -4519,7 +4528,15 @@ function profileForm(profile: Profile): HTMLElement {
     preview.hidden = selected === null;
     if (selected) preview.src = avatarAsset(selected);
   };
-  avatar.addEventListener('change', updatePreview);
+  let currentDefaultName = avatarName(profile.avatar);
+  avatar.addEventListener('change', () => {
+    const selected = (avatar.value || null) as Profile['avatar'];
+    if (!companionName.value.trim() || companionName.value === '小栖' || companionName.value === currentDefaultName) {
+      companionName.value = avatarName(selected);
+    }
+    currentDefaultName = avatarName(selected);
+    updatePreview();
+  });
   updatePreview();
   const status = node('p', 'save-state', '');
   const save = node('button', 'button button-secondary', '保存章节设置');
@@ -5216,8 +5233,8 @@ async function systemPage(): Promise<HTMLElement> {
 
   const pinState = widgetPinState();
   if (pinState !== 'unavailable') {
-    const desktop = settingsDisclosure('桌面伙伴');
-    const desktopStatus = node('p', 'caption', pinState === 'pinned' ? '桌面伙伴已添加。' : '在桌面直接查看今天的任务与经验。');
+    const desktop = settingsDisclosure('今日任务小组件');
+    const desktopStatus = node('p', 'caption', pinState === 'pinned' ? '今日任务小组件已添加。' : '在桌面直接查看并完成今天的任务。');
     desktop.append(desktopStatus);
     if (pinState === 'available') {
       const pin = iconButton('添加到桌面', null, () => {
@@ -5326,11 +5343,8 @@ async function pageFor(route: Route): Promise<HTMLElement> {
 
 async function refreshWidgetSnapshot(): Promise<void> {
   const date = localDate();
-  const [profile, quests, ledger, state] = await Promise.all([db.getProfile(), db.listQuests(date), db.listXpLedger(), db.resolvedStateAtOrBefore(date)]);
-  const lowest = Object.values(state).filter((item) => item && !observationIsStale(item, date)).sort((a, b) => a.value - b.value)[0];
-  const hour = new Date().getHours();
-  const companionState = lowest && lowest.value < 45 ? '恢复' : quests.some((quest) => quest.type === 'main' && quest.status === 'pending') ? '指导' : hour >= 22 || hour < 6 ? '休息' : '陪伴';
-  saveWidgetSnapshot(buildWidgetSnapshot({ profile: profile ?? null, quests, ledger, localDate: date, generatedAt: new Date().toISOString(), companionState, reduceMotion: settings.reduceMotion }));
+  const quests = await db.listQuests(date);
+  saveWidgetSnapshot(buildWidgetSnapshot({ quests, localDate: date, generatedAt: new Date().toISOString() }));
 }
 
 async function render(): Promise<void> {
@@ -5416,8 +5430,8 @@ async function applyPendingWidgetAction(): Promise<WidgetActionResult | null> {
   if (quest?.status === 'pending') {
     achievementsBefore = await growthBadgeIds();
     const before = await questProgress(quest);
-    const progression = await db.feedbackAndProgressQuest(quest.id, 'completed', '由桌面伙伴勾选完成', '', quest.difficulty, 0, localDate());
-    notice = await feedbackSettlementMessage(quest, 'completed', '', progression, '已从桌面伙伴完成任务；经验已结算，可在任务板撤销。', before);
+    const progression = await db.feedbackAndProgressQuest(quest.id, 'completed', '由今日任务小组件勾选完成', '', quest.difficulty, 0, localDate());
+    notice = await feedbackSettlementMessage(quest, 'completed', '', progression, '已从今日任务小组件完成；经验已结算，可在任务板撤销。', before);
     sessionStorage.setItem('qiguang.character-celebration', quest.id);
   }
   history.replaceState(null, '', '#/tasks');
