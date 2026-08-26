@@ -247,9 +247,16 @@ function weeklyRequest() {
         { eventId: 'event-a', version: 1, localDate: '2026-08-11', title: '午间散步', description: '走了十分钟。' },
         { eventId: 'event-b', version: 2, localDate: '2026-08-13', title: '晚间散步', description: '走了十五分钟。' },
       ],
+      sourceVersions: {
+        quests: [{ id: 'quest-1', version: 2 }], questFeedback: [{ id: 'feedback-1', version: 1 }],
+        habits: [{ id: 'habit-1', version: 1 }], habitLogs: [{ id: 'habit-log-1', version: 1 }],
+        branches: [{ id: 'branch-1', version: 1 }], xpLedger: [{ id: 'ledger-1', version: 1 }],
+        goals: [{ id: 'goal-1', version: 1 }], reviews: [], memories: [],
+        stateObservations: [{ id: 'observation-1', version: 1 }],
+      },
       stateSnapshots: [{ localDate: '2026-08-11', values: { energy: 55 } }],
       taskResults: [{ questId: 'quest-1', localDate: '2026-08-11', title: '散步', result: 'completed', actual: '走了十分钟。' }],
-      habits: [{ habitId: 'habit-1', name: '散步', minimumAction: '走两分钟', momentum: 4 }],
+      habits: [{ habitId: 'habit-1', name: '散步', minimumAction: '走两分钟', momentum: 4.2 }],
       growth: [{ branchId: 'branch-1', name: '健康实践', xp: 20 }],
       goals: [{ goalId: 'goal-1', result: '保持可持续节奏', role: 'main' }], experiments: [], memories: [],
     },
@@ -281,6 +288,7 @@ function weeklyResponse() {
 test('weekly review sends summaries instead of raw journals and keeps one theme and experiment', () => {
   const request = parseWeeklyReviewRequest(weeklyRequest());
   assert.equal('entries' in request.userInput, false);
+  assert.equal(request.context.habits[0].momentum, 4.2);
   const response = parseWeeklyReviewResponse(weeklyResponse(), request);
   assert.equal(response.result.nextWeekTheme.title, '保护恢复节奏');
   assert.equal(response.result.nextExperiment.minimumAction, '午后走两分钟。');
@@ -316,6 +324,14 @@ test('system candidate review can only suggest type-safe user-confirmed merges',
   const duplicate = structuredClone(response);
   duplicate.result.groups.push({ ...duplicate.result.groups[0], action: 'keep_separate', mergedStatement: null });
   assert.throws(() => parseSystemCandidateReviewResponse(duplicate, request), /多个分组/);
+});
+
+test('weekly habit momentum accepts one decimal but rejects finer precision', () => {
+  const request = weeklyRequest();
+  request.context.habits[0].momentum = 2.9;
+  assert.equal(parseWeeklyReviewRequest(request).context.habits[0].momentum, 2.9);
+  request.context.habits[0].momentum = 2.95;
+  assert.throws(() => parseWeeklyReviewRequest(request), /习惯动量/);
 });
 
 test('goal decomposition stays a bounded editable draft with matching memory permission', () => {

@@ -24,6 +24,7 @@ export type GoalRole = 'main' | 'secondary' | 'wishlist';
 export type GoalStatus = 'idea' | 'active' | 'paused' | 'completed' | 'abandoned';
 export type QuestType = 'main' | 'bonus' | 'side';
 export type QuestStatus = 'pending' | 'completed' | 'partial' | 'skipped' | 'exempt';
+export type QuestSystemRetiredReason = 'elapsed' | 'schedule-changed' | 'tracking-disabled' | 'capacity' | 'source-invalidated';
 export type HabitStatus = 'active' | 'paused' | 'ended';
 
 /**
@@ -50,6 +51,8 @@ export interface JournalEntry extends ImportableEntity {
   localDate: string;
   body: string;
   inputMethod: 'text' | 'import';
+  /** Explicit user intent; absent on legacy records and defaults to a regular journal entry. */
+  kind?: 'journal' | 'success';
   analysisStatus: 'not-submitted' | 'queued' | 'processing' | 'succeeded' | 'failed';
 }
 
@@ -57,6 +60,8 @@ export interface JournalRevision extends ImportableEntity {
   entryId: string;
   fromVersion: number;
   previousBody: string;
+  /** The kind before this revision; absent on legacy revisions and defaults to journal. */
+  previousKind?: NonNullable<JournalEntry['kind']>;
   reason: 'user-edit' | 'undo' | 'import';
   undoneAt?: string;
 }
@@ -134,6 +139,10 @@ export interface Goal extends ImportableEntity {
   branchId: string;
   role: GoalRole;
   status: GoalStatus;
+  /** Real transition time into completed; absent on legacy completed goals. */
+  completedAt?: string;
+  /** Local calendar day of completion; avoids deriving a user-facing date from UTC later. */
+  completedDate?: string;
 }
 
 export interface Milestone extends ImportableEntity {
@@ -171,6 +180,9 @@ export interface Quest extends ImportableEntity {
   dimension?: Dimension;
   branchId?: string;
   status: QuestStatus;
+  /** System-only retirement is not user feedback and must stay read-only until explicitly restored. */
+  systemRetiredAt?: string;
+  systemRetiredReason?: QuestSystemRetiredReason;
   aiSuggested: boolean;
   userModified: boolean;
 }
@@ -287,6 +299,12 @@ export interface Habit extends ImportableEntity {
   name: string;
   minimumAction: string;
   scheduleDays: number[];
+  /** Effective-dated BONUS tracking rules; absent on legacy records. */
+  scheduleHistory?: Array<{
+    effectiveFrom: string;
+    scheduleDays: number[];
+    trackingEnabled: boolean;
+  }>;
   trigger?: string;
   dimension: Dimension;
   branchId: string;

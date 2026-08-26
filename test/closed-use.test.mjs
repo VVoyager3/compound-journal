@@ -147,11 +147,11 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
   const walking = await db.addHabit({
     name: '散步两分钟', minimumAction: '离开座位走两分钟', scheduleDays: [1, 2, 3, 4, 5, 6, 7],
     dimension: 'energy', branchId: branch.id, difficulty: 'light', bonusEnabled: true,
-  });
+  }, dates[0]);
   const gratitude = await db.addHabit({
     name: '写一句感谢', minimumAction: '写下一句具体感谢', scheduleDays: [1, 2, 3, 4, 5, 6, 7],
     dimension: 'mind', branchId: branch.id, difficulty: 'light', bonusEnabled: false,
-  });
+  }, dates[0]);
 
   const organizeEntry = async (entry, index) => {
     if (!analysisIndexes.has(index)) return;
@@ -174,12 +174,17 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
   };
   const recordDay = async (index) => {
     const date = dates[index];
-    let entry = await db.addEntry(`第 ${index + 1} 天：今天会议很多，晚上散步后好了一些。小小成功：完成或诚实反馈了一件事。`, date);
+    let entry = await db.addEntry(
+      `第 ${index + 1} 天：今天会议很多，晚上散步后好了一些。`,
+      date,
+      'text',
+      index % 3 === 0 ? 'success' : 'journal',
+    );
     if (index === 0) {
       entry = await db.editEntry(entry.id, entry.version, `${entry.body} 临时补充。`);
       entry = await db.undoLastEdit(entry.id);
       assert.equal(entry.body.endsWith('临时补充。'), false, 'journal editing must remain undoable during long use');
-      assert.equal((await db.searchEntries('小小成功', date)).length, 1);
+      assert.equal((await db.searchEntries('会议很多', date)).length, 1);
     }
     await organizeEntry(entry, index);
     return entry;
@@ -207,11 +212,11 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
     const job = await db.createWeeklyReviewJob(request);
     await db.markAnalysisJobProcessing(job.id);
     const review = await db.saveWeeklyReview(job.id, weeklyResponse(request));
-    if (decision === 'confirm') await db.confirmWeeklyReview(review.id, review.nextTheme, review.nextExperiment);
+    if (decision === 'confirm') await db.confirmWeeklyReview(review.id, review.nextTheme, review.nextExperiment, endDate);
     else await db.rejectWeeklyReview(review.id);
   };
 
-  await db.saveAssessment({ energy: 70, mind: 65, relationship: 60, growth: 55, play: 50 }, dates[0]);
+  await db.saveAssessment({ energy: 70, mind: 65, connection: 60, progress: 55, play: 50 }, dates[0]);
   await recordDay(0);
   const first = await addGoalMain(0, milestones[0]);
   assert.equal(chooseDailyDirection({ mainQuest: first, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false }).kind, 'main');
@@ -283,7 +288,7 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
     }
     const date = dates[index];
     await recordDay(index);
-    if (index === 10) await db.saveAssessment({ energy: 62, mind: 68, relationship: 61, growth: 66, play: 58 }, date);
+    if (index === 10) await db.saveAssessment({ energy: 62, mind: 68, connection: 61, progress: 66, play: 58 }, date);
 
     let main = [...await db.listPendingBefore(date), ...await db.listQuests(date)].find((quest) => quest.type === 'main' && quest.status === 'pending');
     if (!main) main = await db.addQuest({
@@ -316,11 +321,11 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
 
     if (index === 11) {
       await settleBonuses(index);
-      await db.saveHabit(walking.id, { status: 'paused' });
-      await db.saveHabit(gratitude.id, { bonusEnabled: true });
+      await db.saveHabit(walking.id, { status: 'paused' }, date);
+      await db.saveHabit(gratitude.id, { bonusEnabled: true }, date);
     } else if (index === 14) {
-      await db.saveHabit(gratitude.id, { status: 'paused' });
-      await db.saveHabit(walking.id, { status: 'active' });
+      await db.saveHabit(gratitude.id, { status: 'paused' }, date);
+      await db.saveHabit(walking.id, { status: 'active' }, date);
       await settleBonuses(index);
     } else {
       await settleBonuses(index, index === 24 ? 'skipped' : 'completed');
@@ -328,21 +333,15 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
 
     if ([13, 20, 27].includes(index)) await runWeeklyReview(index, 'confirm');
     if (index === 21) {
-      const backup = await db.exportBundle();
-      await t.test('day 22 backup restores a goal progression exactly', async (backupTest) => {
-        try {
-          restored = await QiguangDb.restoreFromBackup(JSON.stringify(backup), restoredName);
-        } catch (error) {
-          backupTest.diagnostic(error instanceof Error ? error.message : String(error));
-          backupTest.todo('目标后续任务的 actionId 超过备份校验上限，真实长期备份无法恢复。');
-          return;
-        }
+      const backup = JSON.parse(JSON.stringify(await db.exportBundle()));
+      await t.test('day 22 backup restores a goal progression exactly', async () => {
+        restored = await QiguangDb.restoreFromBackup(JSON.stringify(backup), restoredName);
         assert.deepEqual((await restored.exportBundle()).data, backup.data, 'a month-in-progress backup must restore exactly');
       });
       restored?.close();
       restored = undefined;
     }
-    if (index === 28) await db.saveHabit(walking.id, { status: 'ended' });
+    if (index === 28) await db.saveHabit(walking.id, { status: 'ended' }, date);
     if (index === 29) finalWidget = buildWidgetSnapshot({
       profile: await db.getProfile(), quests: await db.listQuests(date), ledger: await db.listXpLedger(),
       localDate: date, generatedAt: `${date}T20:00:00.000Z`, companionState: '陪伴',
@@ -354,7 +353,8 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
   const ledger = await db.listXpLedger();
   const activeDays = dates.filter((_, index) => !interruptionIndexes.has(index));
   assert.equal(entries.length, activeDays.length);
-  assert.ok(entries.every((entry) => entry.body.includes('小小成功：')), 'success evidence must stay part of the journal instead of becoming a separate obligation');
+  assert.ok(entries.some((entry) => entry.kind === 'success'));
+  assert.ok(entries.some((entry) => entry.kind === 'journal'));
   assert.deepEqual(new Set(feedback.map((item) => item.result)), new Set(['completed', 'partial', 'skipped', 'exempt']));
   assert.equal((await db.listMilestones(goal.id)).filter((item) => item.status === 'completed').length, 4);
   assert.equal((await db.listGoals()).find((item) => item.id === goal.id)?.status, 'completed');
@@ -389,7 +389,7 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
     taskFeedback: Object.fromEntries(['completed', 'partial', 'skipped', 'exempt'].map((result) => [result, feedback.filter((item) => item.result === result).length])),
     milestonesCompleted: 4, totalXp: totalXp(ledger), pendingDebt: 0,
     testedFlows: ['journal-edit-search-undo', 'confirmed-goal-plan', 'MAIN-and-side-feedback', 'BONUS-pause-resume-end', 'late-completion', 'feedback-undo', 'daily-analysis', 'weekly-review', 'memory-confirmation', 'widget'],
-    knownProductGaps: ['goal progression backup cannot restore', 'badge UI is not implemented', 'real retention and trust need human longitudinal use'],
+    knownProductGaps: ['real retention and trust need human longitudinal use'],
   }));
 });
 
@@ -402,14 +402,10 @@ test('pausing a habit retires an already generated pending BONUS', async (t) => 
   const habit = await db.addHabit({
     name: '暂停测试', minimumAction: '做一分钟', scheduleDays: [1, 2, 3, 4, 5, 6, 7],
     dimension: 'energy', branchId: branch.id, difficulty: 'light', bonusEnabled: true,
-  });
+  }, dates[0]);
   await db.ensureTodayBonusQuests(dates[0]);
-  await db.saveHabit(habit.id, { status: 'paused' });
+  await db.saveHabit(habit.id, { status: 'paused' }, dates[0]);
   const pending = (await db.listQuests(dates[0])).filter((quest) => quest.sourceId === habit.id && quest.status === 'pending').length;
-  if (pending) {
-    t.todo('暂停或结束习惯后，当前已生成的 BONUS 仍会遗留为待处理债务。');
-    return;
-  }
   assert.equal(pending, 0);
 });
 
@@ -429,10 +425,7 @@ test('redoing an undone milestone restores its XP on the real completion date', 
   await db.undoMilestone(milestone.id);
   await db.completeMilestone(milestone.id, dates[1]);
   const ledger = (await db.listXpLedger(branch.id)).filter((item) => item.sourceType === 'milestone' && item.sourceId === milestone.id && !item.reversedAt);
-  if (ledger.length !== 1) {
-    t.todo('撤销里程碑后重新完成会显示已完成，却不会恢复 50 XP。');
-    return;
-  }
+  assert.equal(ledger.length, 1);
   assert.equal(ledger[0].localDate, dates[1]);
   assert.equal((await db.branchProgress(branch.id)).totalXp, 50);
 });

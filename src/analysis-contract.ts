@@ -173,6 +173,19 @@ export interface TaskFeedbackResponse {
 export type WeeklyRelationship = 'correlation' | 'causal' | 'unknown';
 export type HabitDecisionAction = 'keep' | 'lower_difficulty' | 'change_trigger' | 'pause' | 'stop';
 
+export interface WeeklyReviewSourceVersions {
+  quests: Array<{ id: string; version: number }>;
+  questFeedback: Array<{ id: string; version: number }>;
+  habits: Array<{ id: string; version: number }>;
+  habitLogs: Array<{ id: string; version: number }>;
+  branches: Array<{ id: string; version: number }>;
+  xpLedger: Array<{ id: string; version: number }>;
+  goals: Array<{ id: string; version: number }>;
+  reviews: Array<{ id: string; version: number }>;
+  memories: Array<{ id: string; version: number }>;
+  stateObservations: Array<{ id: string; version: number }>;
+}
+
 export interface WeeklyReviewRequest {
   contractVersion: typeof ANALYSIS_CONTRACT_VERSION;
   operation: 'weekly_review';
@@ -183,6 +196,8 @@ export interface WeeklyReviewRequest {
   userInput: { note: string };
   context: {
     events: Array<{ eventId: string; version: number; localDate: string; title: string; description: string }>;
+    /** Optional only for requests persisted before source-version validation was introduced. */
+    sourceVersions?: WeeklyReviewSourceVersions;
     stateSnapshots: Array<{ localDate: string; values: Partial<Record<ContractDimension, number>> }>;
     taskResults: Array<{ questId: string; localDate: string; title: string; result: 'completed' | 'partial' | 'skipped' | 'exempt'; actual: string }>;
     habits: Array<{ habitId: string; name: string; minimumAction: string; momentum: number }>;
@@ -348,6 +363,13 @@ function textValue(value: unknown, label: string, max: number, allowEmpty = fals
 function integerValue(value: unknown, label: string, min: number, max: number): number {
   if (!Number.isInteger(value) || Number(value) < min || Number(value) > max) throw new Error(`${label}无效。`);
   return Number(value);
+}
+
+function oneDecimalValue(value: unknown, label: string, min: number, max: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max || Math.abs(value * 10 - Math.round(value * 10)) > 1e-9) {
+    throw new Error(`${label}无效。`);
+  }
+  return value;
 }
 
 function booleanValue(value: unknown, label: string): boolean {
@@ -536,7 +558,30 @@ export function parseWeeklyReviewRequest(value: unknown): WeeklyReviewRequest {
   const input = objectValue(root.userInput, '用户输入');
   exactKeys(input, ['note'], '用户输入');
   const context = objectValue(root.context, '上下文');
-  exactKeys(context, ['events', 'stateSnapshots', 'taskResults', 'habits', 'growth', 'goals', 'experiments', 'memories'], '上下文');
+  exactKeys(
+    context,
+    context.sourceVersions === undefined
+      ? ['events', 'stateSnapshots', 'taskResults', 'habits', 'growth', 'goals', 'experiments', 'memories']
+      : ['events', 'sourceVersions', 'stateSnapshots', 'taskResults', 'habits', 'growth', 'goals', 'experiments', 'memories'],
+    '上下文',
+  );
+  const sourceVersions = (() => {
+    if (context.sourceVersions === undefined) return undefined;
+    const root = objectValue(context.sourceVersions, '来源版本');
+    const keys: Array<keyof WeeklyReviewSourceVersions> = [
+      'quests', 'questFeedback', 'habits', 'habitLogs', 'branches', 'xpLedger', 'goals', 'reviews', 'memories', 'stateObservations',
+    ];
+    exactKeys(root, keys, '来源版本');
+    return Object.fromEntries(keys.map((key) => {
+      const values = arrayValue(root[key], `${key} 来源版本`, 1_000).map((value, index) => {
+        const item = objectValue(value, `${key} 来源版本${index + 1}`);
+        exactKeys(item, ['id', 'version'], `${key} 来源版本${index + 1}`);
+        return { id: textValue(item.id, `${key} 来源 ID`, 200), version: integerValue(item.version, `${key} 来源版本`, 1, Number.MAX_SAFE_INTEGER) };
+      });
+      if (new Set(values.map((item) => item.id)).size !== values.length) throw new Error(`${key} 来源版本不能重复。`);
+      return [key, values];
+    })) as unknown as WeeklyReviewSourceVersions;
+  })();
   const inPeriod = (date: string, label: string): string => {
     const parsed = localDateValue(date, label);
     if (parsed < start || parsed > end) throw new Error(`${label}不在复盘周期内。`);
@@ -576,7 +621,7 @@ export function parseWeeklyReviewRequest(value: unknown): WeeklyReviewRequest {
   const habits = arrayValue(context.habits, '习惯', 20).map((value, index) => {
     const item = objectValue(value, `习惯${index + 1}`);
     exactKeys(item, ['habitId', 'name', 'minimumAction', 'momentum'], `习惯${index + 1}`);
-    return { habitId: textValue(item.habitId, '习惯 ID', 200), name: textValue(item.name, '习惯名称', 60), minimumAction: textValue(item.minimumAction, '习惯最小动作', 160), momentum: integerValue(item.momentum, '习惯动量', 0, 5) };
+    return { habitId: textValue(item.habitId, '习惯 ID', 200), name: textValue(item.name, '习惯名称', 60), minimumAction: textValue(item.minimumAction, '习惯最小动作', 160), momentum: oneDecimalValue(item.momentum, '习惯动量', 0, 5) };
   });
   const growth = arrayValue(context.growth, '成长摘要', 30).map((value, index) => {
     const item = objectValue(value, `成长摘要${index + 1}`);
@@ -618,10 +663,24 @@ export function parseWeeklyReviewRequest(value: unknown): WeeklyReviewRequest {
     || (!includeGrowth && growth.length) || (!includeGoals && goals.length) || (!includeExperiments && experiments.length)) {
     throw new Error('发送权限为关闭时，对应周复盘上下文必须为空。');
   }
+  if (sourceVersions) {
+    const sameIds = (left: string[], right: string[]): boolean => left.length === right.length
+      && left.every((id) => right.includes(id));
+    if (!sameIds(sourceVersions.quests.map((item) => item.id), taskResults.map((item) => item.questId))) throw new Error('任务来源版本与发送范围不一致。');
+    if (!sameIds(sourceVersions.habits.map((item) => item.id), habits.map((item) => item.habitId))) throw new Error('习惯来源版本与发送范围不一致。');
+    if (!sameIds(sourceVersions.branches.map((item) => item.id), growth.map((item) => item.branchId))) throw new Error('成长来源版本与发送范围不一致。');
+    if (!sameIds(sourceVersions.goals.map((item) => item.id), goals.map((item) => item.goalId))) throw new Error('目标来源版本与发送范围不一致。');
+    if (!sameIds(sourceVersions.reviews.map((item) => item.id), experiments.map((item) => item.reviewId))) throw new Error('实验来源版本与发送范围不一致。');
+    if (memories.some((item) => !sourceVersions.memories.some((source) => source.id === item.memoryId))) throw new Error('记忆来源版本与发送范围不一致。');
+    if ((!includeStateSnapshots && sourceVersions.stateObservations.length)
+      || (!includeTaskResults && sourceVersions.questFeedback.length)
+      || (!includeHabits && sourceVersions.habitLogs.length)
+      || (!includeGrowth && sourceVersions.xpLedger.length)) throw new Error('来源版本超出发送权限。');
+  }
   return {
     contractVersion: ANALYSIS_CONTRACT_VERSION, operation: 'weekly_review', requestId: textValue(root.requestId, '请求 ID', 200), locale: 'zh-CN', timeZone,
     period: { start, end }, userInput: { note: textValue(input.note, '补充说明', 2_000, true) },
-    context: { events, stateSnapshots, taskResults, habits, growth, goals, experiments, memories },
+    context: { events, ...(sourceVersions ? { sourceVersions } : {}), stateSnapshots, taskResults, habits, growth, goals, experiments, memories },
     permissions: {
       eventIds,
       includeStateSnapshots,
