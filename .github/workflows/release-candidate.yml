@@ -1,0 +1,84 @@
+name: Release candidate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/latest-ui
+    paths-ignore:
+      - TODO.md
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.18.0
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run check:release
+      - run: npm run eval:ai
+      - run: npm run test:e2e
+
+  container:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build, smoke-test, and publish server image
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}-server"
+          version="$(node -p "require('./package.json').version")"
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" -t "$image:$version" -t "$image:$GITHUB_SHA" .
+          container="$(docker run --rm --detach --name qiguang-server-smoke -p 127.0.0.1:4173:4173 -e QIGUANG_APP_ORIGIN=https://localhost "$image:$version")"
+          trap 'docker logs "$container"; docker stop "$container"' EXIT
+          for attempt in {1..30}; do
+            status="$(docker inspect --format '{{.State.Health.Status}}' "$container")"
+            [ "$status" = healthy ] && break
+            [ "$status" = unhealthy ] && exit 1
+            sleep 1
+          done
+          [ "$(docker inspect --format '{{.State.Health.Status}}' "$container")" = healthy ]
+          curl --fail --silent http://127.0.0.1:4173/api/health | grep --quiet '"contractVersion":"1.0"'
+          curl --silent --dump-header - --output /dev/null --request OPTIONS -H 'Origin: https://localhost' -H 'Access-Control-Request-Method: POST' http://127.0.0.1:4173/api/analyze | tr -d '\r' | grep --ignore-case --quiet '^access-control-allow-origin: https://localhost$'
+          docker stop "$container"
+          trap - EXIT
+          docker push "$image:$version"
+          docker push "$image:$GITHUB_SHA"
+
+  android:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.18.0
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+      - run: npm run android:sync
+      - name: Test, lint, and build debug APK
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew testDebugUnitTest lintDebug assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qiguang-android-v0.6.4
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
