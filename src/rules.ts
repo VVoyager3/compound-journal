@@ -193,7 +193,7 @@ export function chooseDailyDirection(input: DailyDirectionInput): DailyDirection
   if (input.mainQuest) return { kind: 'main', reason: '今天的主线已经留下反馈，可以决定继续、维持或停下。' };
   if (input.activeGoalAvailable) return {
     kind: 'goal',
-    reason: input.stagnantGoal ? '这个目标近 7 天没有推进证据，先缩小一步；仍由你决定是否换路。' : input.milestoneDue ? '当前重点目标的下一里程碑已有明确证据要求，先推进它。' : input.areaBalanceNeeded ? '这个重点建设领域近 7 天的推进证据较少，先补一个最小行动。' : input.goalMode === 'maintain' ? '这个领域当前选择稳定维持，先做一个不会透支的保持动作。' : input.goalMode === 'explore' ? '这个领域当前处于探索期，先用一个小实验获得真实反馈。' : '当前重点目标已经提供了下一步。',
+    reason: input.stagnantGoal ? '这个目标近 7 天没有推进记录，先缩小一步；仍由你决定是否换路。' : input.milestoneDue ? '当前重点目标的下一阶段已有明确完成标准，先推进它。' : input.areaBalanceNeeded ? '这个重点生活分类近 7 天的推进记录较少，先补一个最小行动。' : input.goalMode === 'maintain' ? '这个生活分类当前选择保持现状，先做一个不会透支的小行动。' : input.goalMode === 'explore' ? '这个生活分类当前想先试试看，用一个小行动获得真实反馈。' : '当前重点目标已经提供了下一步。',
   };
   if (input.previousStepAvailable) return { kind: 'reflection', reason: '昨天留下了一个可核对的最小步骤。' };
   return { kind: 'explore', reason: '还没有足够依据指定方向，先记录真实发生的事。' };

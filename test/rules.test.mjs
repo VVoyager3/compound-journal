@@ -23,10 +23,10 @@ test('daily direction chooses one explainable starting point by priority', () =>
   assert.match(chooseDailyDirection({ mainQuest: { status: 'pending', carriedFromPreviousDay: true }, recoveryAvailable: false, activeGoalAvailable: false, previousStepAvailable: false }).reason, /昨天反馈/);
   assert.equal(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: true }).kind, 'goal');
   assert.equal(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: false, previousStepAvailable: false }).kind, 'explore');
-  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, milestoneDue: true }).reason, /里程碑/);
+  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, milestoneDue: true }).reason, /下一阶段/);
   assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, stagnantGoal: true }).reason, /7 天/);
-  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, areaBalanceNeeded: true }).reason, /推进证据较少/);
-  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, goalMode: 'maintain' }).reason, /稳定维持/);
+  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, areaBalanceNeeded: true }).reason, /推进记录较少/);
+  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, goalMode: 'maintain' }).reason, /保持现状/);
 });
 
 test('monthly area signal compares real evidence without scoring a whole life', () => {

@@ -1,9 +1,9 @@
 export const DIMENSIONS = [
-  { key: 'energy', label: '体力', description: '睡眠、饮食、运动、疼痛与恢复' },
-  { key: 'mind', label: '心力', description: '压力、安定感、掌控感与精神负荷' },
-  { key: 'connection', label: '连接', description: '与重要他人的真实联系' },
-  { key: 'progress', label: '推进', description: '工作与重要目标的方向感' },
-  { key: 'play', label: '玩心', description: '好奇、兴趣、创作与无功利快乐' },
+  { key: 'energy', label: '身体', description: '睡眠、饮食、运动和恢复' },
+  { key: 'mind', label: '心理', description: '压力、情绪和内心安定' },
+  { key: 'connection', label: '关系', description: '与家人、朋友和伴侣的联系' },
+  { key: 'progress', label: '工作', description: '工作、学习和重要目标' },
+  { key: 'play', label: '玩乐', description: '兴趣、放松和快乐' },
 ] as const;
 
 export type Dimension = (typeof DIMENSIONS)[number]['key'];
@@ -215,6 +215,8 @@ export interface Quest extends ImportableEntity {
   /** System-only retirement is not user feedback and must stay read-only until explicitly restored. */
   systemRetiredAt?: string;
   systemRetiredReason?: QuestSystemRetiredReason;
+  /** Soft deletion prevents generated habits from recreating the same task. */
+  userRemovedAt?: string;
   aiSuggested: boolean;
   userModified: boolean;
 }

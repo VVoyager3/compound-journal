@@ -175,7 +175,7 @@ export function selectGrowthBadges(input: GrowthBadgeSelectionInput): GrowthBadg
       milestoneId: milestone.id, name: milestone.description, evidence: milestone.evidence,
       earnedOn: settlement.localDate, completedAt: milestone.completedAt,
       goalId: goal.id, goalResult: goal.result, branchId: branch.id, branchName: branch.name, branchAsset: branch.rootAsset,
-      sourceAction: sourceQuest?.title ?? (milestone.completionSourceQuestId ? '已确认的里程碑行动' : '由你手动确认里程碑完成'),
+      sourceAction: sourceQuest?.title ?? (milestone.completionSourceQuestId ? '已确认的阶段行动' : '由你手动确认阶段完成'),
       related: { type: 'goal', id: goal.id, name: goal.result },
       confirmation: milestone.completionSourceQuestId ? 'quest' : 'manual',
     };
@@ -203,7 +203,7 @@ export function selectGrowthBadges(input: GrowthBadgeSelectionInput): GrowthBadg
     badges.push({
       id: `goal:${goal.id}`, sourceType: 'goal', theme: branch.rootAsset,
       milestoneId: sourceMilestone.id, name: `完成目标：${goal.result}`,
-      evidence: goal.evidence.trim() || `当前路径的 ${path.length} 个里程碑均已确认完成。`,
+      evidence: goal.evidence.trim() || `当前计划的 ${path.length} 个阶段目标均已确认完成。`,
       earnedOn: goal.completedDate, completedAt: goal.completedAt,
       goalId: goal.id, goalResult: goal.result, branchId: branch.id, branchName: branch.name, branchAsset: branch.rootAsset,
       sourceQuestId: sourceMilestone.completionSourceQuestId, sourceAction: sourceQuest?.title ?? '由你确认目标完成',
