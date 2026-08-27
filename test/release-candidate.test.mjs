@@ -92,8 +92,8 @@ test('room movement uses sprite frames instead of stretching the whole character
   assert.match(styles, /--scene-light:/);
   assert.match(styles, /background-size:\s*504px 504px/);
   assert.match(styles, /background-position:\s*var\(--walk-1\)/);
-  assert.match(styles, /--face-left-frame:\s*-84px 0/);
-  assert.match(styles, /--face-right-frame:\s*-252px 0/);
+  assert.match(styles, /--face-left-frame:\s*-252px 0/);
+  assert.match(styles, /--face-right-frame:\s*-84px 0/);
   assert.match(styles, /--walk-left-1:\s*0px -168px/);
   assert.match(styles, /--walk-right-1:\s*0px -252px/);
   assert.match(styles, /\.room-character\.has-motion\.is-female\s*\{[^}]*--rest-frame:\s*var\(--face-front-frame\)/s);
