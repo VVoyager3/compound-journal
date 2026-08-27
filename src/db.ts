@@ -3243,12 +3243,14 @@ export class QiguangDb {
     const transaction = this.database.transaction(['quests', 'goals', 'milestones'], 'readwrite');
     const quests = transaction.objectStore('quests');
     const current = await requestResult(quests.get(id)) as Quest | undefined;
-    if (!current || current.status !== 'pending' || current.userRemovedAt) {
+    if (!current || (current.status !== 'pending' && current.systemRetiredReason !== 'capacity') || current.userRemovedAt) {
       transaction.abort();
       throw new Error('只有待完成任务可以删除。');
     }
     const timestamp = nowIso();
-    const removed: Quest = { ...current, status: 'exempt', userRemovedAt: timestamp, updatedAt: timestamp, version: current.version + 1 };
+    const removed = restoreSystemRetiredQuest(current, {
+      status: 'exempt', userRemovedAt: timestamp, updatedAt: timestamp, version: current.version + 1,
+    });
     quests.put(removed);
     if (removed.sourceType === 'goal' && removed.sourceId) {
       const [goal, allQuests, milestones] = await Promise.all([

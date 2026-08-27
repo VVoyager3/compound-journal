@@ -1,9 +1,9 @@
 export const DIMENSIONS = [
-  { key: 'energy', label: '身体', description: '睡眠、饮食、运动和恢复' },
-  { key: 'mind', label: '心理', description: '压力、情绪和内心安定' },
-  { key: 'connection', label: '关系', description: '与家人、朋友和伴侣的联系' },
-  { key: 'progress', label: '工作', description: '工作、学习和重要目标' },
-  { key: 'play', label: '玩乐', description: '兴趣、放松和快乐' },
+  { key: 'energy', label: '身体', description: '最近的睡眠、体力和恢复情况' },
+  { key: 'mind', label: '心理', description: '最近的压力、情绪和安定感' },
+  { key: 'connection', label: '关系', description: '最近是否有人交流、支持和陪伴' },
+  { key: 'progress', label: '工作', description: '最近的工作学习是否有方向、有推进' },
+  { key: 'play', label: '玩乐', description: '最近是否有兴趣、放松和纯粹开心的时间' },
 ] as const;
 
 export type Dimension = (typeof DIMENSIONS)[number]['key'];

@@ -1266,7 +1266,7 @@ test('pending quests can be shrunk, replaced, or moved without bypassing daily c
   await assert.rejects(() => db.savePendingQuest(quest.id, { title: '完成后不能改' }), /只有待完成任务/);
 });
 
-test('pending quests can be removed without recreating a generated habit task', async (t) => {
+test('pending and capacity-retired quests can be removed without resurfacing', async (t) => {
   const db = await withDatabase(t, 'i2-remove-quest');
   await db.ensureI2Defaults();
   const branch = (await db.listBranches())[0];
@@ -1280,6 +1280,18 @@ test('pending quests can be removed without recreating a generated habit task', 
   assert.equal((await db.listQuests('2026-08-14')).length, 0);
   assert.equal((await db.ensureTodayBonusQuests('2026-08-14')).length, 0);
   await assert.rejects(() => db.removePendingQuest(generated.id), /只有待完成任务/);
+
+  const capacity = await db.addQuest({
+    localDate: '2026-08-14', type: 'side', sourceType: 'manual', title: '容量保留行动', reason: '当天位置已满',
+    minimumAction: '做一步', estimatedMinutes: 5, difficulty: 'light',
+  });
+  await patchRawRecord(db, 'quests', capacity.id, {
+    status: 'exempt', systemRetiredAt: '2026-08-14T08:00:00.000Z', systemRetiredReason: 'capacity',
+  });
+  await db.removePendingQuest(capacity.id);
+  assert.equal((await db.listQuests()).some((item) => item.id === capacity.id), false);
+  assert.equal(await db.scheduleCapacityQuest(capacity.id, '2026-08-15'), null);
+  await assert.rejects(() => db.removePendingQuest(capacity.id), /只有待完成任务/);
 });
 
 test('only user-enabled habits create BONUS quests and momentum does not reset after a miss', async (t) => {

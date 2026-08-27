@@ -114,9 +114,10 @@ test('record editor keeps three concise prompts on one row', async () => {
   const app = await read('src/app.ts');
   const styles = await read('src/styles.css');
   assert.match(app, /'成功小记'/);
-  assert.match(app, /'想记住的事情'/);
-  assert.match(app, /'有趣的事情'/);
-  assert.match(app, /'一句话概括今天'/);
+  assert.match(app, /'珍藏小记'/);
+  assert.match(app, /'趣事小记'/);
+  assert.match(app, /'今日一句'/);
+  assert.match(app, /'历年今天'/);
   assert.match(app, /saveDayCaption\(saved\.localDate, summaryInput\.value\)/);
   assert.match(app, /snapshotVariantFor/);
   assert.match(styles, /\.room-stage\.is-snapshot-(?:rest|focus|play|connection|bright)/);
