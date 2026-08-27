@@ -1,9 +1,9 @@
 export const DIMENSIONS = [
-  { key: 'energy', label: '体力', description: '睡眠、饮食、运动、疼痛与恢复' },
-  { key: 'mind', label: '心力', description: '压力、安定感、掌控感与精神负荷' },
-  { key: 'connection', label: '连接', description: '与重要他人的真实联系' },
-  { key: 'progress', label: '推进', description: '工作与重要目标的方向感' },
-  { key: 'play', label: '玩心', description: '好奇、兴趣、创作与无功利快乐' },
+  { key: 'energy', label: '身体', description: '最近的睡眠、体力和恢复情况' },
+  { key: 'mind', label: '心理', description: '最近的压力、情绪和安定感' },
+  { key: 'connection', label: '关系', description: '最近是否有人交流、支持和陪伴' },
+  { key: 'progress', label: '工作', description: '最近的工作学习是否有方向、有推进' },
+  { key: 'play', label: '玩乐', description: '最近是否有兴趣、放松和纯粹开心的时间' },
 ] as const;
 
 export type Dimension = (typeof DIMENSIONS)[number]['key'];
@@ -26,6 +26,28 @@ export type QuestType = 'main' | 'bonus' | 'side';
 export type QuestStatus = 'pending' | 'completed' | 'partial' | 'skipped' | 'exempt';
 export type QuestSystemRetiredReason = 'elapsed' | 'schedule-changed' | 'tracking-disabled' | 'capacity' | 'source-invalidated';
 export type HabitStatus = 'active' | 'paused' | 'ended';
+
+export interface WeeklyReviewScope {
+  events: boolean;
+  stateSnapshots: boolean;
+  taskResults: boolean;
+  habits: boolean;
+  growth: boolean;
+  goals: boolean;
+  experiments: boolean;
+  memories: boolean;
+}
+
+export const DEFAULT_WEEKLY_REVIEW_SCOPE: WeeklyReviewScope = {
+  events: true,
+  stateSnapshots: true,
+  taskResults: true,
+  habits: true,
+  growth: true,
+  goals: true,
+  experiments: true,
+  memories: true,
+};
 
 /**
  * Canonical product vocabulary. Keep UI copy and persistence fields aligned:
@@ -66,6 +88,11 @@ export interface JournalRevision extends ImportableEntity {
   undoneAt?: string;
 }
 
+export interface DayCaption extends ImportableEntity {
+  localDate: string;
+  text: string;
+}
+
 export interface StateObservation extends BaseEntity {
   assessmentId: string;
   localDate: string;
@@ -97,6 +124,7 @@ export interface AppSettings extends BaseEntity {
   aiAllowed: boolean;
   previewBeforeSend: boolean;
   guidanceTone: 'gentle' | 'direct';
+  weeklyReviewScope: WeeklyReviewScope;
   aiModel?: 'MiniMax-M3' | 'MiniMax-M2.7';
   aiApiKey?: string;
 }
@@ -176,6 +204,10 @@ export interface Quest extends ImportableEntity {
   completionCriteria?: string;
   estimatedMinutes: number;
   deadlineAt?: string;
+  /** Optional repeated check-in target. Omitted means a single-completion task. */
+  targetCount?: number;
+  progressCount?: number;
+  countUnit?: string;
   difficulty: import('./rules.ts').Difficulty;
   dimension?: Dimension;
   branchId?: string;
@@ -183,6 +215,8 @@ export interface Quest extends ImportableEntity {
   /** System-only retirement is not user feedback and must stay read-only until explicitly restored. */
   systemRetiredAt?: string;
   systemRetiredReason?: QuestSystemRetiredReason;
+  /** Soft deletion prevents generated habits from recreating the same task. */
+  userRemovedAt?: string;
   aiSuggested: boolean;
   userModified: boolean;
 }
@@ -298,6 +332,8 @@ export interface QuestFeedback extends ImportableEntity {
 export interface Habit extends ImportableEntity {
   name: string;
   minimumAction: string;
+  targetCount?: number;
+  countUnit?: string;
   scheduleDays: number[];
   /** Effective-dated BONUS tracking rules; absent on legacy records. */
   scheduleHistory?: Array<{
@@ -338,6 +374,7 @@ export interface BackupData {
   profile: Profile[];
   areas: Area[];
   entries: JournalEntry[];
+  dayCaptions: DayCaption[];
   revisions: JournalRevision[];
   analyses: DailyAnalysis[];
   events: JournalEvent[];
@@ -359,7 +396,7 @@ export interface BackupData {
 
 export interface BackupBundle {
   format: 'qiguang-backup';
-  formatVersion: 4;
+  formatVersion: 5;
   exportedAt: string;
   appVersion: string;
   data: BackupData;

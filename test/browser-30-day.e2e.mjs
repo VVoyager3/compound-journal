@@ -73,29 +73,37 @@ async function setDay(page, day, openApp = true) {
 
 async function finishOnboarding(page) {
   await page.goto(`${baseUrl}/#/today`);
-  const dialog = page.getByRole('dialog', { name: '选择生活分身' });
+  const dialog = page.getByRole('dialog', { name: '选一个陪伴角色' });
   await dialog.getByRole('button', { name: '选择鱼鱼' }).click();
-  await dialog.getByRole('button', { name: '开始记录' }).click();
+  await dialog.getByRole('button', { name: '写下第一件事' }).click();
   await page.getByRole('textbox', { name: '发生了什么' }).waitFor();
+  await page.evaluate(() => localStorage.setItem('qiguang.room-guide-seen.v1', '1'));
 }
 
-async function directionTitle(page) {
+async function directionTitle(page, allowRecordOnly = false) {
   await page.goto(`${baseUrl}/#/today`);
+  await page.getByRole('heading', { name: '今天', exact: true }).waitFor();
   const title = page.locator('.daily-guide h2, .main-action h2').first();
-  await title.waitFor();
-  return (await title.textContent())?.trim() ?? '';
+  if (!allowRecordOnly) {
+    await title.waitFor();
+    return (await title.textContent())?.trim() ?? '';
+  }
+  assert.equal(await title.count(), 0, 'record-only days must not render a duplicate direction card');
+  const record = page.locator('.bottom-nav').getByRole('link', { name: '记录', exact: true });
+  await record.waitFor();
+  return (await record.textContent())?.trim() ?? '';
 }
 
 async function recordDay(page, day, success = false) {
   const body = `第 ${String(day).padStart(2, '0')} 天：留下当天真实进展。`;
   await page.goto(`${baseUrl}/#/record`);
-  const successIntent = page.getByRole('checkbox', { name: '作为小小成功' });
-  if (success) await successIntent.check();
-  else assert.equal(await successIntent.isChecked(), false);
+  if (success) await page.getByRole('button', { name: '成功小记' }).click();
+  else await page.getByRole('button', { name: '珍藏小记' }).click();
+  assert.equal(await page.getByRole('checkbox', { name: '记为成功记录' }).count(), 0);
   await page.getByRole('textbox', { name: '发生了什么' }).fill(body);
   await page.getByRole('button', { name: '保存记录' }).click();
-  await page.waitForURL(new RegExp(`#\/day\/${dayDate(day)}$`));
-  await assert.doesNotReject(() => page.locator('.entry-card .entry-body').getByText(body, { exact: true }).waitFor());
+  await page.waitForURL(new RegExp(`#\\/day\\/${dayDate(day)}$`));
+  await assert.doesNotReject(() => page.locator('.journal-entry-body').getByText(body, { exact: true }).waitFor());
 }
 
 async function readStores(page, names) {
@@ -125,9 +133,9 @@ async function completeHabit(page) {
 
 async function completeQuest(page, title) {
   await page.goto(`${baseUrl}/#/today`);
-  const complete = page.getByRole('checkbox', { name: `完成：${title}` });
+  const complete = page.getByRole('button', { name: `完成：${title}` });
   await complete.waitFor();
-  await complete.check();
+  await complete.click();
   await complete.waitFor({ state: 'detached' });
 }
 
@@ -135,7 +143,7 @@ async function moveQuestToTomorrow(page, title) {
   await page.goto(`${baseUrl}/#/tasks`);
   const card = page.locator('.quest-card').filter({ hasText: title });
   await card.getByText('更多', { exact: true }).click();
-  await card.getByRole('button', { name: `调整或顺延任务：${title}` }).click();
+  await card.getByRole('button', { name: `编辑任务` }).click();
   const dialog = page.getByRole('dialog', { name: '调整这项行动' });
   await dialog.getByRole('button', { name: '移到明天' }).click();
   await dialog.getByRole('button', { name: '保存调整' }).click();
@@ -143,14 +151,26 @@ async function moveQuestToTomorrow(page, title) {
 }
 
 async function calibrateEnergy(page, value) {
-  await page.goto(`${baseUrl}/#/system`);
-  await page.getByText(/校准近期状态 · \d\/5/, { exact: true }).click();
-  const energy = page.locator('[data-dimension="energy"]');
-  const enabled = energy.getByRole('checkbox', { name: '我想校准这一项' });
-  if (!await enabled.isChecked()) await enabled.check();
-  await energy.getByRole('slider', { name: '体力自评' }).fill(String(value));
-  await page.getByRole('button', { name: '保存这次校准' }).click();
-  await page.getByRole('status').filter({ hasText: '状态自评已保存。' }).waitFor();
+  await page.goto(`${baseUrl}/#/today`);
+  await page.evaluate((score) => new Promise((resolve, reject) => {
+    const date = new Date();
+    const localDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const timestamp = new Date().toISOString();
+    const request = indexedDB.open('qiguang');
+    request.addEventListener('error', () => reject(request.error));
+    request.addEventListener('success', () => {
+      const database = request.result;
+      const transaction = database.transaction('observations', 'readwrite');
+      transaction.objectStore('observations').add({
+        id: crypto.randomUUID(), assessmentId: crypto.randomUUID(), localDate, dimension: 'energy', kind: 'user-self-assessment', value: score,
+        active: true, observedAt: timestamp, createdAt: timestamp, updatedAt: timestamp, version: 1,
+      });
+      transaction.addEventListener('complete', () => { database.close(); resolve(); });
+      transaction.addEventListener('abort', () => { database.close(); reject(transaction.error); });
+    });
+  }), value);
+  await page.reload();
+  await page.locator('#main-content').waitFor();
 }
 
 async function saveHabitStatus(page, status) {
@@ -158,7 +178,7 @@ async function saveHabitStatus(page, status) {
   const row = page.locator('.habit-row').filter({ hasText: HABIT });
   await row.getByRole('button', { name: `编辑习惯“${HABIT}”` }).click();
   const dialog = page.getByRole('dialog', { name: '编辑习惯' });
-  await dialog.getByText('调整频率、最小版本和成长归属（可选）', { exact: true }).click();
+  await dialog.getByText('更多设置（可选）', { exact: true }).click();
   await dialog.getByRole('combobox', { name: '习惯状态' }).selectOption(status);
   await dialog.getByRole('button', { name: '保存习惯' }).click();
   await page.getByRole('status').filter({ hasText: '习惯设置已保存。' }).waitFor();
@@ -166,17 +186,17 @@ async function saveHabitStatus(page, status) {
 
 async function createGoalAndHabit(page) {
   await page.goto(`${baseUrl}/#/tasks`);
-  await page.getByRole('button', { name: '新建目标' }).click();
+  await page.getByRole('button', { name: '新建长期任务' }).click();
   const goalDialog = page.getByRole('dialog', { name: '建立一个真实目标' });
   await goalDialog.getByRole('textbox', { name: '你想让什么事情发生？' }).fill(GOAL);
-  await goalDialog.getByRole('button', { name: 'AI 帮我拆成里程碑' }).click();
+  await goalDialog.getByRole('button', { name: 'AI 帮我拆成阶段目标' }).click();
   await page.getByRole('dialog', { name: '检查目标拆解发送范围' }).getByRole('button', { name: '确认范围并生成草案' }).click();
   const consent = page.getByRole('dialog', { name: '允许这一次目标拆解？' });
   await consent.getByRole('button', { name: '允许并继续' }).click();
   await goalDialog.getByRole('heading', { name: '可编辑的拆解草案' }).waitFor();
   assert.equal(await goalDialog.getByRole('checkbox', { name: /同时把“写下第一版结构”安排到今天/ }).isChecked(), true);
   await goalDialog.getByRole('button', { name: '建立目标' }).click();
-  await page.getByRole('checkbox', { name: `完成：${INITIAL_STEP}` }).check();
+  await page.getByRole('button', { name: `完成：${INITIAL_STEP}` }).click();
   await page.getByRole('heading', { name: FIRST_MILESTONE }).waitFor();
 
   const initial = await readStores(page, ['milestones', 'xpLedger']);
@@ -188,7 +208,7 @@ async function createGoalAndHabit(page) {
   const habitDialog = page.getByRole('dialog', { name: '建立低成本习惯' });
   await habitDialog.getByRole('textbox', { name: '我想养成什么？' }).fill(HABIT);
   await habitDialog.getByRole('button', { name: '建立习惯' }).click();
-  await page.getByRole('button', { name: `将“${HABIT}”设为 BONUS` }).click();
+  await page.getByRole('button', { name: `将“${HABIT}”加入每日任务` }).click();
 }
 
 async function finishGoal(page) {
@@ -205,20 +225,20 @@ async function finishGoal(page) {
 async function adoptWeeklyReview(page) {
   await page.goto(`${baseUrl}/#/review/${dayDate(7)}`);
   await page.getByRole('button', { name: '检查范围并生成' }).click();
-  await page.getByRole('dialog', { name: '检查周复盘发送范围' }).getByRole('button', { name: '确认范围并生成' }).click();
+  await page.getByRole('dialog', { name: '生成本周复盘' }).getByRole('button', { name: '确认并生成' }).click();
   const consent = page.getByRole('dialog', { name: '允许这一次 AI 周复盘？' });
   if (await consent.count()) await consent.getByRole('button', { name: '允许并继续' }).click();
   await page.getByRole('heading', { name: '保留可持续节奏' }).waitFor();
   assert.equal(await page.getByRole('dialog', { name: '确认下周唯一主题与实验' }).count(), 0);
   await page.getByRole('button', { name: '采用下周建议' }).click();
-  await page.getByText('已由你确认', { exact: true }).waitFor();
+  await page.locator('.review-hero .tag').getByText('已确认', { exact: true }).waitFor();
 }
 
 test('formal pages sustain a 30 day loop without historic debt', async () => {
   const { context, page, apiRequests } = await freshPage();
   try {
     await finishOnboarding(page);
-    assert.equal(await directionTitle(page), '先讲一件最近发生的事');
+    assert.equal(await directionTitle(page, true), '记录');
     await recordDay(page, 1, true);
     await createGoalAndHabit(page);
     await completeHabit(page);
@@ -238,7 +258,7 @@ test('formal pages sustain a 30 day loop without historic debt', async () => {
     await completeHabit(page);
 
     await setDay(page, 4);
-    assert.equal(await directionTitle(page), '先讲一件最近发生的事');
+    assert.equal(await directionTitle(page, true), '记录');
     await recordDay(page, 4);
     await completeHabit(page);
 
@@ -254,12 +274,12 @@ test('formal pages sustain a 30 day loop without historic debt', async () => {
     await setDay(page, 6);
     assert.equal(await directionTitle(page), '先恢复行动力');
     await calibrateEnergy(page, 80);
-    assert.notEqual(await directionTitle(page), '先恢复行动力');
+    assert.equal(await directionTitle(page, true), '记录');
     await recordDay(page, 6);
     await completeHabit(page);
 
     await setDay(page, 7);
-    assert.equal(await directionTitle(page), '先讲一件最近发生的事');
+    assert.equal(await directionTitle(page, true), '记录');
     await recordDay(page, 7);
     await completeHabit(page);
     await adoptWeeklyReview(page);
@@ -271,7 +291,7 @@ test('formal pages sustain a 30 day loop without historic debt', async () => {
     await completeHabit(page);
 
     await setDay(page, 9);
-    assert.equal(await directionTitle(page), '先讲一件最近发生的事');
+    assert.equal(await directionTitle(page, true), '记录');
     await recordDay(page, 9);
     await page.goto(`${baseUrl}/#/today`);
     await page.getByRole('button', { name: `完成打卡：${HABIT}` }).waitFor();
@@ -279,7 +299,7 @@ test('formal pages sustain a 30 day loop without historic debt', async () => {
     assert.equal((await readStores(page, ['quests'])).quests.filter((item) => item.localDate === dayDate(9) && item.status === 'pending').length, 0, 'pausing must settle today\'s generated BONUS without debt');
 
     await setDay(page, 10);
-    assert.equal(await directionTitle(page), '先讲一件最近发生的事');
+    assert.equal(await directionTitle(page, true), '记录');
     await recordDay(page, 10, true);
     await saveHabitStatus(page, 'active');
     await completeHabit(page);
@@ -290,14 +310,14 @@ test('formal pages sustain a 30 day loop without historic debt', async () => {
     assert.equal(await page.locator('.overdue-quests').count(), 0, 'returning after three days must not show catch-up work');
     const interruption = await readStores(page, ['quests']);
     assert.equal(interruption.quests.filter((item) => [dayDate(11), dayDate(12), dayDate(13)].includes(item.localDate)).length, 0, 'closed days must not create BONUS or make-up quests');
-    assert.equal(await directionTitle(page), '先讲一件最近发生的事');
+    assert.equal(await directionTitle(page, true), '记录');
     await recordDay(page, 14);
     await completeHabit(page);
 
     for (let day = 15; day <= 30; day += 1) {
       await setDay(page, day);
       assert.equal(await page.locator('.overdue-quests').count(), 0, `day ${day} must start without historic debt`);
-      assert.equal(await directionTitle(page), '先讲一件最近发生的事');
+      assert.equal(await directionTitle(page, true), '记录');
       await recordDay(page, day, day % 5 === 0);
       await completeHabit(page);
     }
@@ -324,7 +344,7 @@ test('formal pages sustain a 30 day loop without historic debt', async () => {
     await page.locator('.badge-all').getByText(/查看全部徽章/).click();
     await page.getByRole('button', { name: '查看徽章证据：完成第一段可检查成果' }).click();
     const badgeEvidence = page.getByRole('dialog', { name: '徽章证据' });
-    await assert.doesNotReject(() => badgeEvidence.getByText(GOAL).first().waitFor());
+    assert.equal(await badgeEvidence.getByText(GOAL, { exact: true }).count(), 0, 'badge details should not repeat the whole goal title');
     await assert.doesNotReject(() => badgeEvidence.getByText('留下一份可以查看或使用的初版成果。').first().waitFor());
     assert.deepEqual(apiRequests.map((item) => item.operation), ['goal_decomposition', 'weekly_review']);
   } finally {

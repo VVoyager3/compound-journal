@@ -1,5 +1,6 @@
 import {
   DEFAULT_AREA_NAMES,
+  DEFAULT_WEEKLY_REVIEW_SCOPE,
   DIMENSIONS,
   ROOT_ASSETS,
   type Area,
@@ -9,6 +10,7 @@ import {
   type BackupBundle,
   type BackupData,
   type DailyAnalysis,
+  type DayCaption,
   type Dimension,
   type Goal,
   type GoalRole,
@@ -52,8 +54,8 @@ import {
 import { DIFFICULTY_XP, canAddQuest, habitMomentum, levelFromXp, questXp, resolveStateTimeline, totalXp, type Difficulty, type FeedbackResult, type QuestType } from './rules.ts';
 
 export const DB_NAME = 'qiguang';
-export const DB_VERSION = 5;
-export const BACKUP_FORMAT_VERSION = 4;
+export const DB_VERSION = 6;
+export const BACKUP_FORMAT_VERSION = 5;
 export const APP_VERSION = '0.6.18';
 export const LEGACY_SUCCESS_PROMPT = '今天做成或推进了什么？哪怕很小：';
 const MAX_ACTION_ID_LENGTH = 180;
@@ -150,6 +152,7 @@ const STORE_NAMES = [
   'profile',
   'areas',
   'entries',
+  'dayCaptions',
   'revisions',
   'analyses',
   'events',
@@ -253,6 +256,9 @@ function openRawDatabase(name: string): Promise<IDBDatabase> {
             cursor.continue();
           })().catch(() => request.transaction?.abort());
         });
+      }
+      if (!database.objectStoreNames.contains('dayCaptions')) {
+        database.createObjectStore('dayCaptions', { keyPath: 'id' }).createIndex('byLocalDate', 'localDate', { unique: true });
       }
       if (!database.objectStoreNames.contains('revisions')) {
         const store = database.createObjectStore('revisions', { keyPath: 'id' });
@@ -1016,12 +1022,13 @@ export function parseBackup(text: string): BackupBundle {
   const bundle = raw as Partial<BackupBundle>;
   if (bundle.format !== 'qiguang-backup') throw new Error('这不是栖光备份文件。');
   const formatVersion = (bundle as { formatVersion?: number }).formatVersion;
-  if (![3, BACKUP_FORMAT_VERSION].includes(formatVersion ?? -1)) throw new Error('备份版本不受支持。');
+  if (![3, 4, BACKUP_FORMAT_VERSION].includes(formatVersion ?? -1)) throw new Error('备份版本不受支持。');
   assertTimestamp(bundle.exportedAt, '备份导出时间');
   if (typeof bundle.appVersion !== 'string' || !bundle.appVersion) throw new Error('备份应用版本无效。');
   if (!bundle.data || typeof bundle.data !== 'object') throw new Error('备份缺少数据。');
 
   const data = bundle.data as Partial<BackupData>;
+  if (formatVersion === 3 || formatVersion === 4) data.dayCaptions = [];
   for (const key of STORE_NAMES) {
     if (!Array.isArray(data[key])) throw new Error(`备份缺少 ${key} 数据。`);
   }
@@ -1053,13 +1060,13 @@ export function parseBackup(text: string): BackupBundle {
 
   const areas = data.areas as Area[];
   areas.forEach((item) => {
-    assertCommonRecord(item, '关注领域');
+    assertCommonRecord(item, '生活分类');
     assertText(item.name, '领域名称', 40);
     assertOneOf(item.mode, ['build', 'maintain', 'explore', 'pause'], '领域模式');
     assertInteger(item.order, 0, 10_000, '领域排序');
     if (typeof item.isDefault !== 'boolean') throw new Error('领域默认标记无效。');
   });
-  uniqueIds(areas, '关注领域');
+  uniqueIds(areas, '生活分类');
   if (areas.filter((item) => item.mode === 'build').length > 2) throw new Error('重点建设领域超过两个。');
   const areaIds = new Set(areas.map((item) => item.id));
 
@@ -1067,7 +1074,7 @@ export function parseBackup(text: string): BackupBundle {
   const assetKeys = ROOT_ASSETS.map((item) => item.key);
   branches.forEach((item) => {
     assertCommonRecord(item, '成长分支');
-    assertOneOf(item.rootAsset, assetKeys, '根资产');
+    assertOneOf(item.rootAsset, assetKeys, '主要提升');
     assertText(item.name, '成长分支名称', 60);
     assertInteger(item.order, 0, 10_000, '成长分支排序');
     assertOneOf(item.status, ['active', 'paused'], '成长分支状态');
@@ -1089,6 +1096,15 @@ export function parseBackup(text: string): BackupBundle {
   uniqueIds(entries, '记录');
   const entryIds = new Set(entries.map((entry) => entry.id));
   const entryVersions = new Map(entries.map((entry) => [entry.id, entry.version]));
+
+  const dayCaptions = data.dayCaptions as DayCaption[];
+  dayCaptions.forEach((item) => {
+    assertCommonRecord(item, '当日一句话');
+    if (!isLocalDate(item.localDate) || item.id !== `day-caption:${item.localDate}`) throw new Error('当日一句话日期无效。');
+    assertText(item.text, '当日一句话', 120);
+  });
+  uniqueIds(dayCaptions, '当日一句话');
+  if (new Set(dayCaptions.map((item) => item.localDate)).size !== dayCaptions.length) throw new Error('同一日期存在重复的当日一句话。');
 
   const revisions = data.revisions as JournalRevision[];
   revisions.forEach((revision) => {
@@ -1165,7 +1181,7 @@ export function parseBackup(text: string): BackupBundle {
       if (observation.value !== undefined) throw new Error('状态事件不能直接写最终值。');
     } else {
       assertInteger(observation.value, 0, 100, '状态值');
-      if (observation.delta !== undefined) throw new Error('状态校准不能同时写变化量。');
+      if (observation.delta !== undefined) throw new Error('状态自评不能同时写变化量。');
     }
     if (typeof observation.active !== 'boolean') throw new Error('状态明细生效标记无效。');
     assertTimestamp(observation.observedAt, '状态自评时间');
@@ -1223,17 +1239,17 @@ export function parseBackup(text: string): BackupBundle {
 
   const milestones = data.milestones as Milestone[];
   milestones.forEach((item) => {
-    assertCommonRecord(item, '里程碑');
-    if (!goalIds.has(item.goalId)) throw new Error('备份存在孤立的里程碑。');
-    assertText(item.description, '里程碑描述', 200);
-    assertText(item.evidence, '里程碑证据', 500);
-    if (item.order !== undefined) assertInteger(item.order, 0, 10_000, '里程碑顺序');
-    assertOneOf(item.status, ['pending', 'completed', 'superseded'], '里程碑状态');
-    if (item.completedAt !== undefined) assertTimestamp(item.completedAt, '里程碑完成时间');
-    if (item.completionSourceQuestId !== undefined) assertText(item.completionSourceQuestId, '里程碑完成来源', 200);
-    if (typeof item.xpSettled !== 'boolean') throw new Error('里程碑结算状态无效。');
+    assertCommonRecord(item, '阶段目标');
+    if (!goalIds.has(item.goalId)) throw new Error('备份存在没有所属目标的阶段目标。');
+    assertText(item.description, '阶段目标描述', 200);
+    assertText(item.evidence, '阶段目标完成标准', 500);
+    if (item.order !== undefined) assertInteger(item.order, 0, 10_000, '阶段目标顺序');
+    assertOneOf(item.status, ['pending', 'completed', 'superseded'], '阶段目标状态');
+    if (item.completedAt !== undefined) assertTimestamp(item.completedAt, '阶段目标完成时间');
+    if (item.completionSourceQuestId !== undefined) assertText(item.completionSourceQuestId, '阶段目标完成来源', 200);
+    if (typeof item.xpSettled !== 'boolean') throw new Error('阶段目标结算状态无效。');
   });
-  uniqueIds(milestones, '里程碑');
+  uniqueIds(milestones, '阶段目标');
   const milestoneIds = new Set(milestones.map((item) => item.id));
 
   const habits = data.habits as Habit[];
@@ -1241,6 +1257,10 @@ export function parseBackup(text: string): BackupBundle {
     assertCommonRecord(item, '习惯');
     assertText(item.name, '习惯名称', 60);
     assertText(item.minimumAction, '习惯最小动作', 160);
+    if (item.targetCount !== undefined) {
+      assertInteger(item.targetCount, 2, 1_000, '习惯目标次数');
+      assertText(item.countUnit, '习惯计数单位', 20);
+    } else if (item.countUnit !== undefined) throw new Error('习惯计数设置无效。');
     if (!Array.isArray(item.scheduleDays) || !item.scheduleDays.length || new Set(item.scheduleDays).size !== item.scheduleDays.length) throw new Error('习惯计划日无效。');
     item.scheduleDays.forEach((day) => assertInteger(day, 1, 7, '习惯计划日'));
     if (item.scheduleHistory !== undefined) {
@@ -1258,10 +1278,10 @@ export function parseBackup(text: string): BackupBundle {
     if (!dimensionKeys.has(item.dimension) || !branchIds.has(item.branchId)) throw new Error('习惯状态或成长分支无效。');
     assertOneOf(item.difficulty, Object.keys(DIFFICULTY_XP), '习惯难度');
     assertOneOf(item.status, ['active', 'paused', 'ended'], '习惯状态');
-    if (typeof item.bonusEnabled !== 'boolean') throw new Error('BONUS 设置无效。');
+    if (typeof item.bonusEnabled !== 'boolean') throw new Error('每日可选任务设置无效。');
   });
   uniqueIds(habits, '习惯');
-  if (habits.filter((item) => item.status === 'active' && item.bonusEnabled).length > 3) throw new Error('启用的 BONUS 超过三个。');
+  if (habits.filter((item) => item.status === 'active' && item.bonusEnabled).length > 3) throw new Error('启用的每日可选习惯超过三个。');
   const habitIds = new Set(habits.map((item) => item.id));
 
   const quests = data.quests as Quest[];
@@ -1272,8 +1292,8 @@ export function parseBackup(text: string): BackupBundle {
     assertOneOf(item.sourceType, ['goal', 'habit', 'recovery', 'manual'], '任务来源');
     if (item.sourceType === 'goal' && (!item.sourceId || !goalIds.has(item.sourceId))) throw new Error('目标任务来源无效。');
     if (item.sourceType === 'habit' && (!item.sourceId || !habitIds.has(item.sourceId))) throw new Error('习惯任务来源无效。');
-    if (item.milestoneId !== undefined && !milestoneIds.has(item.milestoneId)) throw new Error('任务关联的里程碑不存在。');
-    if (item.milestoneId !== undefined && item.sourceType !== 'goal') throw new Error('里程碑只能关联目标任务。');
+    if (item.milestoneId !== undefined && !milestoneIds.has(item.milestoneId)) throw new Error('任务关联的阶段目标不存在。');
+    if (item.milestoneId !== undefined && item.sourceType !== 'goal') throw new Error('阶段目标只能关联目标任务。');
     validateActionId(item.actionId);
     assertInteger(item.settlementVersion, 0, Number.MAX_SAFE_INTEGER, '任务结算版本');
     assertText(item.title, '任务标题', 160);
@@ -1282,6 +1302,13 @@ export function parseBackup(text: string): BackupBundle {
     if (item.completionCriteria !== undefined) assertText(item.completionCriteria, '任务完成标准', 500);
     assertInteger(item.estimatedMinutes, 1, 24 * 60, '任务预计时间');
     if (item.deadlineAt !== undefined) assertTimestamp(item.deadlineAt, '任务截止时间');
+    if (item.targetCount !== undefined) {
+      assertInteger(item.targetCount, 2, 1_000, '任务目标次数');
+      assertInteger(item.progressCount, 0, item.targetCount, '任务已打卡次数');
+      assertText(item.countUnit, '任务计数单位', 20);
+      if (item.status === 'pending' && item.progressCount === item.targetCount) throw new Error('待完成计数任务不能已经达到目标。');
+      if (item.status === 'completed' && item.progressCount !== item.targetCount) throw new Error('已完成计数任务没有达到目标。');
+    } else if (item.progressCount !== undefined || item.countUnit !== undefined) throw new Error('任务计数设置无效。');
     assertOneOf(item.difficulty, Object.keys(DIFFICULTY_XP), '任务难度');
     if (item.dimension !== undefined && !dimensionKeys.has(item.dimension)) throw new Error('任务状态维度无效。');
     if (item.branchId !== undefined && !branchIds.has(item.branchId)) throw new Error('任务成长分支无效。');
@@ -1292,6 +1319,10 @@ export function parseBackup(text: string): BackupBundle {
       assertOneOf(item.systemRetiredReason, ['elapsed', 'schedule-changed', 'tracking-disabled', 'capacity', 'source-invalidated'], '任务系统收束原因');
       if (item.status !== 'exempt') throw new Error('任务系统收束状态无效。');
     }
+    if (item.userRemovedAt !== undefined) {
+      assertTimestamp(item.userRemovedAt, '任务删除时间');
+      if (item.status !== 'exempt') throw new Error('已删除任务状态无效。');
+    }
     if (typeof item.aiSuggested !== 'boolean' || typeof item.userModified !== 'boolean') throw new Error('任务权限标记无效。');
   });
   uniqueIds(quests, '任务');
@@ -1301,7 +1332,7 @@ export function parseBackup(text: string): BackupBundle {
   });
   const questById = new Map(quests.map((item) => [item.id, item]));
   milestones.forEach((item) => {
-    if (item.completionSourceQuestId !== undefined && (item.status !== 'completed' || questById.get(item.completionSourceQuestId)?.milestoneId !== item.id)) throw new Error('里程碑完成来源无效。');
+    if (item.completionSourceQuestId !== undefined && (item.status !== 'completed' || questById.get(item.completionSourceQuestId)?.milestoneId !== item.id)) throw new Error('阶段目标完成来源无效。');
   });
   for (const date of new Set(quests.map((item) => item.localDate))) {
     const types = quests.filter((item) => item.localDate === date && item.status === 'pending').map((item) => item.type);
@@ -1340,7 +1371,7 @@ export function parseBackup(text: string): BackupBundle {
     assertOneOf(item.sourceType, ['quest', 'habit', 'milestone'], '经验来源');
     if (item.sourceType === 'quest' && !questIds.has(item.sourceId)) throw new Error('任务经验来源无效。');
     if (item.sourceType === 'habit' && !habitIds.has(item.sourceId)) throw new Error('习惯经验来源无效。');
-    if (item.sourceType === 'milestone' && !milestoneIds.has(item.sourceId)) throw new Error('里程碑经验来源无效。');
+    if (item.sourceType === 'milestone' && !milestoneIds.has(item.sourceId)) throw new Error('阶段目标经验来源无效。');
     if (!branchIds.has(item.branchId) || !isLocalDate(item.localDate)) throw new Error('经验成长分支或日期无效。');
     assertInteger(item.baseXp, 1, 50, '基础经验');
     if (item.ratio !== 0.5 && item.ratio !== 1) throw new Error('经验结算比例无效。');
@@ -1458,6 +1489,11 @@ export function parseBackup(text: string): BackupBundle {
     }
     if (item.guidanceTone === undefined) item.guidanceTone = 'gentle';
     assertOneOf(item.guidanceTone, ['gentle', 'direct'], '指导语气');
+    if (item.weeklyReviewScope === undefined) item.weeklyReviewScope = { ...DEFAULT_WEEKLY_REVIEW_SCOPE };
+    if (!item.weeklyReviewScope || typeof item.weeklyReviewScope !== 'object'
+      || Object.keys(DEFAULT_WEEKLY_REVIEW_SCOPE).some((key) => typeof item.weeklyReviewScope[key as keyof typeof DEFAULT_WEEKLY_REVIEW_SCOPE] !== 'boolean')) {
+      throw new Error('周复盘发送范围无效。');
+    }
     if (item.aiModel === undefined) item.aiModel = 'MiniMax-M3';
     if (item.aiModel !== 'MiniMax-M3' && item.aiModel !== 'MiniMax-M2.7') throw new Error('设置数据无效。');
     if (item.aiApiKey !== undefined && typeof item.aiApiKey !== 'string') throw new Error('设置数据无效。');
@@ -1536,6 +1572,45 @@ export class QiguangDb {
     const entries = await requestResult(request) as JournalEntry[];
     await transactionDone(transaction);
     return entries.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async getDayCaption(date: string): Promise<DayCaption | undefined> {
+    if (!isLocalDate(date)) throw new Error('当日一句话日期无效。');
+    const transaction = this.database.transaction('dayCaptions', 'readonly');
+    const caption = await requestResult(transaction.objectStore('dayCaptions').index('byLocalDate').get(date)) as DayCaption | undefined;
+    await transactionDone(transaction);
+    return caption;
+  }
+
+  async saveDayCaption(date: string, value: string): Promise<DayCaption | undefined> {
+    if (!isLocalDate(date)) throw new Error('当日一句话日期无效。');
+    const text = value.trim();
+    if (text.length > 120) throw new Error('当日一句话不能超过 120 个字。');
+    const transaction = this.database.transaction('dayCaptions', 'readwrite');
+    const store = transaction.objectStore('dayCaptions');
+    const current = await requestResult(store.index('byLocalDate').get(date)) as DayCaption | undefined;
+    if (!text) {
+      if (current) store.delete(current.id);
+      await transactionDone(transaction);
+      return undefined;
+    }
+    const timestamp = nowIso();
+    const caption: DayCaption = current ? {
+      ...current,
+      text,
+      updatedAt: timestamp,
+      version: current.version + 1,
+    } : {
+      id: `day-caption:${date}`,
+      localDate: date,
+      text,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      version: 1,
+    };
+    store.put(caption);
+    await transactionDone(transaction);
+    return caption;
   }
 
   async getEntry(id: string): Promise<JournalEntry | undefined> {
@@ -1660,7 +1735,7 @@ export class QiguangDb {
   async saveAssessment(values: Partial<Record<Dimension, number>>, date = localDate()): Promise<StateObservation[]> {
     if (!isLocalDate(date)) throw new Error('自评日期无效。');
     const selected = DIMENSIONS.flatMap(({ key }) => values[key] === undefined ? [] : [[key, values[key]] as const]);
-    if (!selected.length) throw new Error('至少选择一个想校准的状态。');
+    if (!selected.length) throw new Error('至少回答一个状态问题。');
     const timestamp = nowIso();
     const assessmentId = crypto.randomUUID();
     const observations = selected.map(([dimension, value]) => {
@@ -2465,16 +2540,22 @@ export class QiguangDb {
     const transaction = this.database.transaction('settings', 'readonly');
     const saved = await requestResult(transaction.objectStore('settings').get('app')) as AppSettings | undefined;
     await transactionDone(transaction);
-    if (saved) return { ...saved, guidanceTone: saved.guidanceTone ?? 'gentle', aiModel: saved.aiModel ?? 'MiniMax-M3' };
+    if (saved) return {
+      ...saved,
+      guidanceTone: saved.guidanceTone ?? 'gentle',
+      weeklyReviewScope: { ...DEFAULT_WEEKLY_REVIEW_SCOPE, ...saved.weeklyReviewScope },
+      aiModel: saved.aiModel ?? 'MiniMax-M3',
+    };
     const timestamp = nowIso();
     return {
       id: 'app', reduceMotion: false, onboardingSeen: false, aiAllowed: false, previewBeforeSend: true, guidanceTone: 'gentle',
+      weeklyReviewScope: { ...DEFAULT_WEEKLY_REVIEW_SCOPE },
       aiModel: 'MiniMax-M3',
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
   }
 
-  async saveSettings(patch: Partial<Pick<AppSettings, 'reduceMotion' | 'onboardingSeen' | 'aiAllowed' | 'previewBeforeSend' | 'guidanceTone' | 'aiModel' | 'aiApiKey'>>): Promise<AppSettings> {
+  async saveSettings(patch: Partial<Pick<AppSettings, 'reduceMotion' | 'onboardingSeen' | 'aiAllowed' | 'previewBeforeSend' | 'guidanceTone' | 'weeklyReviewScope' | 'aiModel' | 'aiApiKey'>>): Promise<AppSettings> {
     const current = await this.getSettings();
     const updated = { ...current, ...patch, updatedAt: nowIso() };
     const transaction = this.database.transaction('settings', 'readwrite');
@@ -2631,7 +2712,7 @@ export class QiguangDb {
 
   async addBranch(name: string, rootAsset: GrowthBranch['rootAsset'], parentId?: string): Promise<GrowthBranch> {
     assertText(name, '成长分支名称', 60);
-    assertOneOf(rootAsset, ROOT_ASSETS.map((item) => item.key), '根资产');
+    assertOneOf(rootAsset, ROOT_ASSETS.map((item) => item.key), '主要提升');
     const transaction = this.database.transaction('branches', 'readwrite');
     const store = transaction.objectStore('branches');
     const branches = await requestResult(store.getAll()) as GrowthBranch[];
@@ -2789,9 +2870,9 @@ export class QiguangDb {
     assertText(patch.result, '目标结果', 160);
     assertText(patch.evidence, '目标证据', 500);
     assertText(patch.nextStep, '目标下一步', 160);
-    if (replacements.length < 2 || replacements.length > 5) throw new Error('重新拆解需要保留 2—5 个里程碑。');
-    replacements.forEach((item) => { assertText(item.description, '里程碑描述', 200); assertText(item.evidence, '里程碑证据', 500); });
-    if (new Set(replacements.map((item) => item.description.trim())).size !== replacements.length) throw new Error('里程碑不能重复。');
+    if (replacements.length < 2 || replacements.length > 5) throw new Error('新计划需要保留 2—5 个阶段目标。');
+    replacements.forEach((item) => { assertText(item.description, '阶段目标描述', 200); assertText(item.evidence, '阶段目标完成标准', 500); });
+    if (new Set(replacements.map((item) => item.description.trim())).size !== replacements.length) throw new Error('阶段目标不能重复。');
     const transaction = this.database.transaction(['goals', 'milestones', 'quests'], 'readwrite');
     const goals = transaction.objectStore('goals');
     const milestones = transaction.objectStore('milestones');
@@ -2829,8 +2910,8 @@ export class QiguangDb {
   }
 
   async addMilestone(goalId: string, description: string, evidence: string): Promise<Milestone> {
-    assertText(description, '里程碑描述', 200);
-    assertText(evidence, '里程碑证据', 500);
+    assertText(description, '阶段目标描述', 200);
+    assertText(evidence, '阶段目标完成标准', 500);
     const transaction = this.database.transaction(['goals', 'milestones'], 'readwrite');
     const milestoneStore = transaction.objectStore('milestones');
     if (!await requestResult(transaction.objectStore('goals').get(goalId))) {
@@ -2849,22 +2930,22 @@ export class QiguangDb {
   }
 
   async completeMilestone(id: string, date = localDate()): Promise<Milestone> {
-    if (!isLocalDate(date)) throw new Error('里程碑日期无效。');
+    if (!isLocalDate(date)) throw new Error('阶段目标日期无效。');
     const transaction = this.database.transaction(['milestones', 'goals', 'xpLedger'], 'readwrite');
     const milestones = transaction.objectStore('milestones');
     const current = await requestResult(milestones.get(id)) as Milestone | undefined;
     if (!current) {
       transaction.abort();
-      throw new Error('里程碑不存在。');
+      throw new Error('阶段目标不存在。');
     }
     if (current.status === 'superseded') {
       transaction.abort();
-      throw new Error('这个里程碑已被新计划替换。');
+      throw new Error('这个阶段目标已被新计划替换。');
     }
     const goal = await requestResult(transaction.objectStore('goals').get(current.goalId)) as Goal | undefined;
     if (!goal) {
       transaction.abort();
-      throw new Error('里程碑所属目标不存在。');
+      throw new Error('阶段目标所属的目标不存在。');
     }
     const timestamp = nowIso();
     const ledger = transaction.objectStore('xpLedger');
@@ -2885,7 +2966,7 @@ export class QiguangDb {
     const current = await requestResult(milestones.get(id)) as Milestone | undefined;
     if (!current || current.status !== 'completed') {
       transaction.abort();
-      throw new Error('没有可撤销的里程碑完成记录。');
+      throw new Error('没有可撤销的阶段目标完成记录。');
     }
     const timestamp = nowIso();
     const ledger = transaction.objectStore('xpLedger');
@@ -2915,12 +2996,16 @@ export class QiguangDb {
   }
 
   async addHabit(
-    input: Pick<Habit, 'name' | 'minimumAction' | 'scheduleDays' | 'dimension' | 'branchId' | 'difficulty'> & Partial<Pick<Habit, 'trigger' | 'bonusEnabled'>>,
+    input: Pick<Habit, 'name' | 'minimumAction' | 'scheduleDays' | 'dimension' | 'branchId' | 'difficulty'> & Partial<Pick<Habit, 'trigger' | 'bonusEnabled' | 'targetCount' | 'countUnit'>>,
     effectiveDate = localDate(),
   ): Promise<Habit> {
     if (!isLocalDate(effectiveDate)) throw new Error('习惯生效日期无效。');
     assertText(input.name, '习惯名称', 60);
     assertText(input.minimumAction, '习惯最小动作', 160);
+    if (input.targetCount !== undefined) {
+      assertInteger(input.targetCount, 2, 1_000, '习惯目标次数');
+      assertText(input.countUnit, '习惯计数单位', 20);
+    } else if (input.countUnit !== undefined) throw new Error('习惯计数设置无效。');
     if (!input.scheduleDays.length || new Set(input.scheduleDays).size !== input.scheduleDays.length) throw new Error('至少选择一个计划日。');
     input.scheduleDays.forEach((day) => assertInteger(day, 1, 7, '习惯计划日'));
     assertOneOf(input.dimension, DIMENSIONS.map((item) => item.key), '习惯状态维度');
@@ -2937,11 +3022,12 @@ export class QiguangDb {
     }
     if (input.bonusEnabled && allHabits.filter((item) => item.status === 'active' && item.bonusEnabled).length >= 3) {
       transaction.abort();
-      throw new Error('同时启用的 BONUS 习惯最多三个，请先暂停或替换一个。');
+      throw new Error('每日可选习惯最多三个，请先暂停或替换一个。');
     }
     const timestamp = nowIso();
     const habit: Habit = {
       id: crypto.randomUUID(), name: input.name.trim(), minimumAction: input.minimumAction.trim(),
+      targetCount: input.targetCount, countUnit: input.countUnit?.trim(),
       scheduleDays: [...input.scheduleDays].sort(), trigger: input.trigger?.trim() || undefined,
       scheduleHistory: [{
         effectiveFrom: effectiveDate,
@@ -2959,7 +3045,7 @@ export class QiguangDb {
 
   async saveHabit(
     id: string,
-    patch: Partial<Pick<Habit, 'name' | 'minimumAction' | 'scheduleDays' | 'trigger' | 'dimension' | 'branchId' | 'difficulty' | 'status' | 'bonusEnabled'>>,
+    patch: Partial<Pick<Habit, 'name' | 'minimumAction' | 'scheduleDays' | 'trigger' | 'dimension' | 'branchId' | 'difficulty' | 'status' | 'bonusEnabled' | 'targetCount' | 'countUnit'>>,
     effectiveDate = localDate(),
   ): Promise<Habit> {
     if (!isLocalDate(effectiveDate)) throw new Error('习惯生效日期无效。');
@@ -2976,6 +3062,10 @@ export class QiguangDb {
     const updated = { ...current, ...patch, scheduleDays: [...(patch.scheduleDays ?? current.scheduleDays)].sort(), updatedAt: nowIso(), version: current.version + 1 };
     assertText(updated.name, '习惯名称', 60);
     assertText(updated.minimumAction, '习惯最小动作', 160);
+    if (updated.targetCount !== undefined) {
+      assertInteger(updated.targetCount, 2, 1_000, '习惯目标次数');
+      assertText(updated.countUnit, '习惯计数单位', 20);
+    } else if (updated.countUnit !== undefined) throw new Error('习惯计数设置无效。');
     if (!updated.scheduleDays.length || new Set(updated.scheduleDays).size !== updated.scheduleDays.length) {
       transaction.abort();
       throw new Error('至少选择一个计划日。');
@@ -2991,7 +3081,7 @@ export class QiguangDb {
     }
     if (updated.status === 'active' && updated.bonusEnabled && allHabits.filter((item) => item.id !== id && item.status === 'active' && item.bonusEnabled).length >= 3) {
       transaction.abort();
-      throw new Error('同时启用的 BONUS 习惯最多三个，请先暂停或替换一个。');
+      throw new Error('每日可选习惯最多三个，请先暂停或替换一个。');
     }
     const trackingEnabled = updated.status === 'active' && updated.bonusEnabled;
     const currentTrackingEnabled = current.status === 'active' && current.bonusEnabled;
@@ -3025,7 +3115,8 @@ export class QiguangDb {
     const quests = await requestResult(date ? store.index('byLocalDate').getAll(date) : store.getAll()) as Quest[];
     await transactionDone(transaction);
     const typeOrder: Record<QuestType, number> = { main: 0, bonus: 1, side: 2 };
-    return quests.sort((left, right) => typeOrder[left.type] - typeOrder[right.type] || left.createdAt.localeCompare(right.createdAt));
+    return quests.filter((quest) => !quest.userRemovedAt)
+      .sort((left, right) => typeOrder[left.type] - typeOrder[right.type] || left.createdAt.localeCompare(right.createdAt));
   }
 
   /** Every overdue action remains user-decided so a real late completion can still be recorded. */
@@ -3037,7 +3128,7 @@ export class QiguangDb {
       .sort((left, right) => left.localDate.localeCompare(right.localDate) || left.createdAt.localeCompare(right.createdAt));
   }
 
-  async addQuest(input: Pick<Quest, 'localDate' | 'type' | 'sourceType' | 'title' | 'reason' | 'minimumAction' | 'estimatedMinutes' | 'difficulty'> & Partial<Pick<Quest, 'sourceId' | 'actionId' | 'dimension' | 'branchId' | 'milestoneId' | 'completionCriteria' | 'aiSuggested' | 'userModified' | 'deadlineAt'>>): Promise<Quest> {
+  async addQuest(input: Pick<Quest, 'localDate' | 'type' | 'sourceType' | 'title' | 'reason' | 'minimumAction' | 'estimatedMinutes' | 'difficulty'> & Partial<Pick<Quest, 'sourceId' | 'actionId' | 'dimension' | 'branchId' | 'milestoneId' | 'completionCriteria' | 'aiSuggested' | 'userModified' | 'deadlineAt' | 'targetCount' | 'countUnit'>>): Promise<Quest> {
     if (!isLocalDate(input.localDate)) throw new Error('任务日期无效。');
     assertOneOf(input.type, ['main', 'bonus', 'side'], '任务类型');
     assertOneOf(input.sourceType, ['goal', 'habit', 'recovery', 'manual'], '任务来源');
@@ -3049,6 +3140,10 @@ export class QiguangDb {
     if (input.completionCriteria !== undefined) assertText(input.completionCriteria, '任务完成标准', 500);
     assertInteger(input.estimatedMinutes, 1, 24 * 60, '任务预计时间');
     if (input.deadlineAt !== undefined) assertTimestamp(input.deadlineAt, '任务截止时间');
+    if (input.targetCount !== undefined) {
+      assertInteger(input.targetCount, 2, 1_000, '任务目标次数');
+      assertText(input.countUnit, '任务计数单位', 20);
+    } else if (input.countUnit !== undefined) throw new Error('任务计数设置无效。');
     const validatedActionId = validateActionId(input.actionId ?? crypto.randomUUID());
     const transaction = this.database.transaction(['quests', 'goals', 'habits', 'branches', 'milestones'], 'readwrite');
     const quests = transaction.objectStore('quests');
@@ -3069,7 +3164,7 @@ export class QiguangDb {
       const milestone = await requestResult(transaction.objectStore('milestones').get(input.milestoneId)) as Milestone | undefined;
       if (!milestone || input.sourceType !== 'goal' || milestone.goalId !== input.sourceId) {
         transaction.abort();
-        throw new Error('任务关联的里程碑与目标不一致。');
+        throw new Error('任务关联的阶段目标与目标不一致。');
       }
     }
     if (input.branchId && !await requestResult(transaction.objectStore('branches').get(input.branchId))) {
@@ -3082,7 +3177,7 @@ export class QiguangDb {
       sourceId: input.sourceId, milestoneId: input.milestoneId, actionId: validatedActionId, settlementVersion: 0,
       title: input.title.trim(), reason: input.reason.trim(), minimumAction: input.minimumAction.trim(), completionCriteria: input.completionCriteria?.trim() || input.minimumAction.trim(),
       estimatedMinutes: input.estimatedMinutes, difficulty: input.difficulty, dimension: input.dimension,
-      deadlineAt: input.deadlineAt,
+      deadlineAt: input.deadlineAt, targetCount: input.targetCount, progressCount: input.targetCount ? 0 : undefined, countUnit: input.countUnit?.trim(),
       branchId: input.branchId, status: 'pending', aiSuggested: input.aiSuggested ?? false, userModified: input.userModified ?? true,
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
@@ -3091,7 +3186,7 @@ export class QiguangDb {
     return quest;
   }
 
-  async savePendingQuest(id: string, patch: Partial<Pick<Quest, 'localDate' | 'title' | 'reason' | 'minimumAction' | 'completionCriteria' | 'estimatedMinutes' | 'difficulty' | 'deadlineAt'>>): Promise<Quest> {
+  async savePendingQuest(id: string, patch: Partial<Pick<Quest, 'localDate' | 'title' | 'reason' | 'minimumAction' | 'completionCriteria' | 'estimatedMinutes' | 'difficulty' | 'deadlineAt' | 'targetCount' | 'countUnit'>>): Promise<Quest> {
     const transaction = this.database.transaction(['quests', 'goals', 'milestones'], 'readwrite');
     const quests = transaction.objectStore('quests');
     const current = await requestResult(quests.get(id)) as Quest | undefined;
@@ -3099,7 +3194,14 @@ export class QiguangDb {
       transaction.abort();
       throw new Error('只有待完成任务可以调整。');
     }
-    const updated = { ...current, ...patch, userModified: true, updatedAt: nowIso(), version: current.version + 1 };
+    const updated = {
+      ...current,
+      ...patch,
+      progressCount: 'targetCount' in patch ? (patch.targetCount ? current.progressCount ?? 0 : undefined) : current.progressCount,
+      userModified: true,
+      updatedAt: nowIso(),
+      version: current.version + 1,
+    };
     if (!isLocalDate(updated.localDate)) {
       transaction.abort();
       throw new Error('任务日期无效。');
@@ -3111,6 +3213,10 @@ export class QiguangDb {
     assertInteger(updated.estimatedMinutes, 1, 24 * 60, '任务预计时间');
     assertOneOf(updated.difficulty, Object.keys(DIFFICULTY_XP), '任务难度');
     if (updated.deadlineAt !== undefined) assertTimestamp(updated.deadlineAt, '任务截止时间');
+    if (updated.targetCount !== undefined) {
+      assertInteger(updated.targetCount, Math.max(2, (updated.progressCount ?? 0) + 1), 1_000, '任务目标次数');
+      assertText(updated.countUnit, '任务计数单位', 20);
+    } else if (updated.countUnit !== undefined || updated.progressCount !== undefined) throw new Error('任务计数设置无效。');
     const destination = await requestResult(quests.index('byLocalDate').getAll(updated.localDate)) as Quest[];
     if (!canAddQuest(updated.type, destination.filter((item) => item.id !== id && item.status === 'pending').map((item) => item.type))) {
       transaction.abort();
@@ -3129,6 +3235,53 @@ export class QiguangDb {
         if (goal.nextStep !== nextStep) transaction.objectStore('goals').put({ ...goal, nextStep, updatedAt: updated.updatedAt, version: goal.version + 1 });
       }
     }
+    await transactionDone(transaction);
+    return updated;
+  }
+
+  async removePendingQuest(id: string): Promise<void> {
+    const transaction = this.database.transaction(['quests', 'goals', 'milestones'], 'readwrite');
+    const quests = transaction.objectStore('quests');
+    const current = await requestResult(quests.get(id)) as Quest | undefined;
+    if (!current || (current.status !== 'pending' && current.systemRetiredReason !== 'capacity') || current.userRemovedAt) {
+      transaction.abort();
+      throw new Error('只有待完成任务可以删除。');
+    }
+    const timestamp = nowIso();
+    const removed = restoreSystemRetiredQuest(current, {
+      status: 'exempt', userRemovedAt: timestamp, updatedAt: timestamp, version: current.version + 1,
+    });
+    quests.put(removed);
+    if (removed.sourceType === 'goal' && removed.sourceId) {
+      const [goal, allQuests, milestones] = await Promise.all([
+        requestResult(transaction.objectStore('goals').get(removed.sourceId)) as Promise<Goal | undefined>,
+        requestResult(quests.getAll()) as Promise<Quest[]>,
+        requestResult(transaction.objectStore('milestones').index('byGoalId').getAll(removed.sourceId)) as Promise<Milestone[]>,
+      ]);
+      if (goal) {
+        const projected = allQuests.map((item) => item.id === removed.id ? removed : item);
+        const nextStep = resolveGoalNextStep(goal, projected, milestones);
+        if (goal.nextStep !== nextStep) transaction.objectStore('goals').put({ ...goal, nextStep, updatedAt: timestamp, version: goal.version + 1 });
+      }
+    }
+    await transactionDone(transaction);
+  }
+
+  async changeQuestProgress(id: string, delta: -1 | 1): Promise<Quest> {
+    const transaction = this.database.transaction('quests', 'readwrite');
+    const store = transaction.objectStore('quests');
+    const quest = await requestResult(store.get(id)) as Quest | undefined;
+    if (!quest || quest.status !== 'pending' || !quest.targetCount) {
+      transaction.abort();
+      throw new Error('这不是可计数的待完成任务。');
+    }
+    const progressCount = (quest.progressCount ?? 0) + delta;
+    if (progressCount < 0 || progressCount >= quest.targetCount) {
+      transaction.abort();
+      throw new Error(progressCount >= quest.targetCount ? '最后一次打卡会直接完成任务。' : '打卡次数不能小于零。');
+    }
+    const updated = { ...quest, progressCount, updatedAt: nowIso(), version: quest.version + 1 };
+    store.put(updated);
     await transactionDone(transaction);
     return updated;
   }
@@ -3154,7 +3307,8 @@ export class QiguangDb {
       const quest: Quest = {
         id: crypto.randomUUID(), localDate: date, type: 'bonus', sourceType: 'habit', sourceId: habit.id,
         actionId: validateActionId(`habit:${habit.id}:${date}`), settlementVersion: 0, title: habit.name,
-        reason: '这是你主动设为 BONUS 的计划习惯。', minimumAction: habit.minimumAction,
+        reason: '这是你主动放入每日可选任务的习惯。', minimumAction: habit.minimumAction,
+        targetCount: habit.targetCount, progressCount: habit.targetCount ? 0 : undefined, countUnit: habit.countUnit,
         estimatedMinutes: 10, difficulty: habit.difficulty, dimension: habit.dimension, branchId: habit.branchId,
         status: 'pending', aiSuggested: false, userModified: false,
         createdAt: timestamp, updatedAt: timestamp, version: 1,
@@ -3290,7 +3444,17 @@ export class QiguangDb {
         createdAt: timestamp, updatedAt: timestamp, version: 1,
       } satisfies StateObservation);
     }
-    quests.put({ ...quest, difficulty: finalDifficulty, status: result, settlementVersion, updatedAt: timestamp, version: quest.version + 1 });
+    quests.put({
+      ...quest,
+      difficulty: finalDifficulty,
+      status: result,
+      progressCount: quest.targetCount
+        ? result === 'completed' ? quest.targetCount : Math.min(quest.progressCount ?? 0, quest.targetCount - 1)
+        : quest.progressCount,
+      settlementVersion,
+      updatedAt: timestamp,
+      version: quest.version + 1,
+    });
     if (quest.sourceType === 'habit' && quest.sourceId) {
       const logs = transaction.objectStore('habitLogs');
       const existingLog = await requestResult(logs.index('byHabitDate').get([quest.sourceId, quest.localDate])) as HabitLog | undefined;
@@ -3519,7 +3683,13 @@ export class QiguangDb {
         if (key !== undefined) transaction.objectStore('habitLogs').delete(key);
       }, { once: true });
     }
-    quests.put({ ...quest, status: 'pending', updatedAt: timestamp, version: quest.version + 1 });
+    quests.put({
+      ...quest,
+      status: 'pending',
+      progressCount: quest.targetCount ? Math.min(quest.progressCount ?? 0, quest.targetCount - 1) : quest.progressCount,
+      updatedAt: timestamp,
+      version: quest.version + 1,
+    });
     await transactionDone(transaction);
   }
 
@@ -3546,7 +3716,7 @@ export class QiguangDb {
   }
 
   async habitMomentum(habitId: string, throughDate = localDate()): Promise<number> {
-    if (!isLocalDate(throughDate)) throw new Error('动量日期无效。');
+    if (!isLocalDate(throughDate)) throw new Error('最近坚持的日期无效。');
     const transaction = this.database.transaction(['habits', 'habitLogs'], 'readonly');
     const habit = await requestResult(transaction.objectStore('habits').get(habitId)) as Habit | undefined;
     if (!habit) {
@@ -3582,7 +3752,7 @@ export class QiguangDb {
     const values = await Promise.all(STORE_NAMES.map((name) => requestResult(stores[name].getAll())));
     const existing = Object.fromEntries(STORE_NAMES.map((name, index) => [name, values[index]])) as Record<StoreName, Array<{ id: string; importedFromId?: string }>>;
     const activityStores: StoreName[] = [
-      'entries', 'revisions', 'analyses', 'events', 'observations', 'snapshots', 'goals', 'milestones',
+      'entries', 'dayCaptions', 'revisions', 'analyses', 'events', 'observations', 'snapshots', 'goals', 'milestones',
       'quests', 'questFeedback', 'habits', 'habitLogs', 'xpLedger', 'reviews', 'memories', 'analysisJobs',
     ];
     const profiles = existing.profile as Profile[];
@@ -3646,6 +3816,12 @@ export class QiguangDb {
       }));
     }
     for (const entry of bundle.data.entries) stores.entries.add(imported(entry, idMaps.entries));
+    const captionDates = new Set((existing.dayCaptions as DayCaption[]).map((item) => item.localDate));
+    for (const caption of bundle.data.dayCaptions) {
+      if (captionDates.has(caption.localDate)) continue;
+      stores.dayCaptions.add(caption);
+      captionDates.add(caption.localDate);
+    }
     for (const revision of bundle.data.revisions) {
       stores.revisions.add(imported(revision, idMaps.revisions, { entryId: idMaps.entries.get(revision.entryId) ?? revision.entryId }));
     }

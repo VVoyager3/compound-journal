@@ -47,10 +47,10 @@ test('manifest provides an installable local-first application identity', async 
 
 test('room motion sprites use real PNG alpha instead of a painted grid', async () => {
   for (const gender of ['female', 'male']) {
-    const png = await readFile(path.join(root, 'design-assets', 'pre-development', `character-motion-${gender}-transparent.png`));
+    const png = await readFile(path.join(root, 'design-assets', 'pre-development', `character-motion-${gender}-runtime.png`));
     assert.deepEqual([...png.subarray(1, 4)], [80, 78, 71], `${gender} motion asset must be a PNG`);
-    assert.equal(png.readUInt32BE(16), 1536, `${gender} motion asset must have six fixed-width columns`);
-    assert.equal(png.readUInt32BE(20), 1536, `${gender} motion asset must have six fixed-height rows`);
+    assert.equal(png.readUInt32BE(16), 1152, `${gender} runtime atlas must have six fixed-width columns`);
+    assert.equal(png.readUInt32BE(20), 1152, `${gender} runtime atlas must have six fixed-height rows`);
     assert.equal(png[25], 6, `${gender} motion asset must use RGBA color type`);
   }
 });
@@ -90,17 +90,50 @@ test('room movement uses sprite frames instead of stretching the whole character
   assert.match(styles, /@keyframes room-return-shadow-step/);
   assert.match(styles, /@keyframes hotspot-sigil/);
   assert.match(styles, /--scene-light:/);
-  assert.match(styles, /background-size:\s*contain/);
-  assert.match(styles, /background-image:\s*var\(--walk-1\)/);
+  assert.match(styles, /background-size:\s*504px 504px/);
+  assert.match(styles, /background-position:\s*var\(--walk-1\)/);
+  assert.match(styles, /--face-left-frame:\s*-84px 0/);
+  assert.match(styles, /--face-right-frame:\s*-252px 0/);
+  assert.match(styles, /--walk-left-1:\s*0px -168px/);
+  assert.match(styles, /--walk-right-1:\s*0px -252px/);
+  assert.match(styles, /\.room-character\.has-motion\.is-female\s*\{[^}]*--rest-frame:\s*var\(--face-front-frame\)/s);
   assert.match(styles, /room-action 960ms steps\(6, jump-none\)/);
-  assert.match(styles, /room-ambient-walk 6200ms steps\(5, jump-none\)/);
+  assert.match(styles, /room-ambient-stroll 6200ms steps\(1, end\)/);
   assert.doesNotMatch(styles, /inset\(0 8px 22px 4px\)/);
   assert.doesNotMatch(styles, /room-step-weight|room-footfall|room-ambient-footfall|filter:\s*drop-shadow|scale:\s*1\.27|rotate:\s*-?1deg/);
   assert.doesNotMatch(`${app}\n${styles}`, /room-plant|plant-celebration/, 'the room must not ship unexplained habit color blocks');
-  assert.match(app, /character-frames\/\*\/\*\.png/);
+  assert.match(app, /character-motion-(?:female|male)-runtime\.png/);
   assert.match(app, /preloadMotionFrames/);
+  assert.match(app, /scheduleIdleGesture\(700 \+ Math\.random\(\) \* 800\)/);
+  assert.doesNotMatch(app, /avatar && ambientAction !== 'rest'/);
   assert.doesNotMatch(app, /character-motion-(?:female|male)-transparent\.png/);
   assert.match(app, /room-background\.png/);
+});
+
+test('record editor keeps three concise prompts on one row', async () => {
+  const app = await read('src/app.ts');
+  const styles = await read('src/styles.css');
+  assert.match(app, /'成功小记'/);
+  assert.match(app, /'珍藏小记'/);
+  assert.match(app, /'趣事小记'/);
+  assert.match(app, /'今日一句'/);
+  assert.match(app, /'历年今天'/);
+  assert.match(app, /saveDayCaption\(saved\.localDate, summaryInput\.value\)/);
+  assert.match(app, /snapshotVariantFor/);
+  assert.match(styles, /\.room-stage\.is-snapshot-(?:rest|focus|play|connection|bright)/);
+  assert.doesNotMatch(app, /\['成功记录',[\s\S]*\['感受'/);
+  assert.match(styles, /\.record-prompt-actions\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.doesNotMatch(styles, /\.record-prompt-actions\s*\{[^}]*overflow-x:\s*auto/s);
+});
+
+test('typography and settings density follow the global UI rules', async () => {
+  const styles = await read('src/styles.css');
+  const checklist = await read('DESIGN-CHECKLIST.md');
+  assert.match(styles, /h1,[\s\S]*h3\s*\{[^}]*font-family:\s*inherit/s);
+  assert.doesNotMatch(styles, /Noto Serif SC|Source Han Serif SC|Songti SC/);
+  assert.match(styles, /\.page-system\s*\{[^}]*gap:\s*10px/s);
+  assert.match(checklist, /### 字体与排版规则/);
+  assert.match(checklist, /能删掉的描述先删/);
 });
 
 test('Android launcher and splash use the Qiguang identity instead of Capacitor defaults', async () => {
@@ -121,6 +154,8 @@ test('Android launcher and splash use the Qiguang identity instead of Capacitor 
   assert.match(styles, /postSplashScreenTheme[^\n]+AppTheme\.NoActionBar/);
   assert.match(styles, /Theme\.AppCompat\.Light\.NoActionBar/);
   assert.match(activity, /SplashScreen\.installSplashScreen\(this\)/);
+  const capacitorConfig = JSON.parse(await read('capacitor.config.json'));
+  assert.equal(capacitorConfig.android?.adjustMarginsForEdgeToEdge, 'force', 'native content must stay outside system bars and display cutouts');
   assert(existsSync(path.join(root, 'android/app/src/main/res/drawable-port-xxhdpi/splash.png')));
 });
 
@@ -241,11 +276,11 @@ test('fresh production output contains no secret, source map, or oversized initi
 });
 
 test('user-facing product vocabulary has one name per concept', async () => {
-  const source = await read('src/app.ts');
-  for (const legacy of ['关注领域', '唯一成长分支', '目标位置', '小目标']) {
+  const source = (await Promise.all(['src/app.ts', 'src/db.ts', 'src/rules.ts', 'src/badges.ts', 'src/analysis-contract.ts'].map(read))).join('\n');
+  for (const legacy of ['关注领域', '人生领域', '成长方向', '根资产', '父分支', '阶段模式', '目标位置', '小目标', 'MAIN', 'BONUS', '支线', '校准']) {
     assert.equal(source.includes(legacy), false, `replace legacy label: ${legacy}`);
   }
-  for (const current of ['人生领域', '成长方向', '推进优先级', '里程碑']) assert(source.includes(current), `missing current label: ${current}`);
+  for (const current of ['生活分类', '想提升什么', '当前投入', '阶段目标', '今日重点', '可选任务', '状态自评']) assert(source.includes(current), `missing current label: ${current}`);
 });
 
 test('production backend container is minimal, non-root, and never copies local secrets', async () => {

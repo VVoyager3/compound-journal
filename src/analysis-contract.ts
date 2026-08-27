@@ -464,9 +464,9 @@ export function parseDailyAnalysisRequest(value: unknown): DailyAnalysisRequest 
     exactKeys(item, ['goalId', 'result', 'role'], `当前目标${index + 1}`);
     return { goalId: textValue(item.goalId, '目标 ID', 200), result: textValue(item.result, '目标结果', 160), role: enumValue(item.role, ['main', 'secondary'], '目标角色') };
   });
-  const bonusHabits = arrayValue(context.bonusHabits, 'BONUS 习惯', 3).map((value, index) => {
-    const item = objectValue(value, `BONUS 习惯${index + 1}`);
-    exactKeys(item, ['habitId', 'name', 'minimumAction'], `BONUS 习惯${index + 1}`);
+  const bonusHabits = arrayValue(context.bonusHabits, '每日可选习惯', 3).map((value, index) => {
+    const item = objectValue(value, `每日可选习惯${index + 1}`);
+    exactKeys(item, ['habitId', 'name', 'minimumAction'], `每日可选习惯${index + 1}`);
     return { habitId: textValue(item.habitId, '习惯 ID', 200), name: textValue(item.name, '习惯名称', 60), minimumAction: textValue(item.minimumAction, '习惯最小动作', 160) };
   });
   const memoryTypes = ['preference', 'pattern', 'principle', 'strength', 'constraint'] as const;
@@ -621,7 +621,7 @@ export function parseWeeklyReviewRequest(value: unknown): WeeklyReviewRequest {
   const habits = arrayValue(context.habits, '习惯', 20).map((value, index) => {
     const item = objectValue(value, `习惯${index + 1}`);
     exactKeys(item, ['habitId', 'name', 'minimumAction', 'momentum'], `习惯${index + 1}`);
-    return { habitId: textValue(item.habitId, '习惯 ID', 200), name: textValue(item.name, '习惯名称', 60), minimumAction: textValue(item.minimumAction, '习惯最小动作', 160), momentum: oneDecimalValue(item.momentum, '习惯动量', 0, 5) };
+    return { habitId: textValue(item.habitId, '习惯 ID', 200), name: textValue(item.name, '习惯名称', 60), minimumAction: textValue(item.minimumAction, '习惯最小动作', 160), momentum: oneDecimalValue(item.momentum, '最近坚持', 0, 5) };
   });
   const growth = arrayValue(context.growth, '成长摘要', 30).map((value, index) => {
     const item = objectValue(value, `成长摘要${index + 1}`);
@@ -745,8 +745,8 @@ export function parseGoalDecompositionRequest(value: unknown): GoalDecomposition
   exactKeys(input, ['result', 'why', 'completionEvidence'], '用户输入');
   const context = objectValue(root.context, '上下文');
   exactKeys(context, ['area', 'branch', 'currentGoals', 'executionEvidence', 'memories'], '上下文');
-  const area = objectValue(context.area, '关注领域');
-  exactKeys(area, ['areaId', 'name', 'mode'], '关注领域');
+  const area = objectValue(context.area, '生活分类');
+  exactKeys(area, ['areaId', 'name', 'mode'], '生活分类');
   const branch = objectValue(context.branch, '成长分支');
   exactKeys(branch, ['branchId', 'name'], '成长分支');
   const currentGoals = arrayValue(context.currentGoals, '当前目标', 3).map((value, index) => {
@@ -855,7 +855,7 @@ function parseGrowthEvidence(value: unknown): GrowthEvidenceCandidate | null {
     suggestedBranchName: nullableText(record.suggestedBranchName, '建议成长分支', 60),
     evidenceType: enumValue(record.evidenceType, ['practice', 'output', 'feedback', 'milestone'], '成长证据类型'),
     description: textValue(record.description, '成长证据描述', 500),
-    isMilestoneCandidate: booleanValue(record.isMilestoneCandidate, '里程碑候选'),
+    isMilestoneCandidate: booleanValue(record.isMilestoneCandidate, '阶段目标建议'),
     reason: textValue(record.reason, '成长证据理由', 500),
   };
 }
@@ -951,7 +951,7 @@ export function parseDailyAnalysisResponse(value: unknown, request: DailyAnalysi
   if (new Set(events.map((event) => event.candidateId)).size !== events.length) throw new Error('事件候选 ID 不能重复。');
   const questSuggestions = arrayValue(resultRecord.questSuggestions, '任务建议', 3).map(parseQuestSuggestion);
   if (questSuggestions.filter((item) => item.type === 'main').length > 1 || questSuggestions.filter((item) => item.type === 'side').length > 2) {
-    throw new Error('任务建议超过一条主线或两条支线。');
+    throw new Error('任务建议超过一项今日重点或两项其他任务。');
   }
   const eventIds = new Set(events.map((event) => event.candidateId));
   const result: DailyAnalysisResult = {
@@ -1135,16 +1135,16 @@ export function parseGoalDecompositionResponse(value: unknown, request: GoalDeco
   }
   const result = objectValue(root.result, '目标拆解结果');
   exactKeys(result, ['refinedResult', 'completionEvidence', 'rationale', 'currentStage', 'estimatedInvestment', 'risks', 'milestones', 'nextStep', 'assumptions'], '目标拆解结果');
-  const milestones = arrayValue(result.milestones, '目标里程碑', 5).map((value, index) => {
-    const milestone = objectValue(value, `目标里程碑${index + 1}`);
-    exactKeys(milestone, ['title', 'evidence'], `目标里程碑${index + 1}`);
+  const milestones = arrayValue(result.milestones, '目标阶段', 5).map((value, index) => {
+    const milestone = objectValue(value, `目标阶段${index + 1}`);
+    exactKeys(milestone, ['title', 'evidence'], `目标阶段${index + 1}`);
     return {
-      title: textValue(milestone.title, '里程碑标题', 200),
-      evidence: textValue(milestone.evidence, '里程碑证据', 500),
+      title: textValue(milestone.title, '阶段目标标题', 200),
+      evidence: textValue(milestone.evidence, '阶段目标完成标准', 500),
     };
   });
-  if (milestones.length < 2) throw new Error('目标拆解至少需要两个里程碑。');
-  if (new Set(milestones.map((item) => item.title)).size !== milestones.length) throw new Error('目标里程碑不能重复。');
+  if (milestones.length < 2) throw new Error('目标计划至少需要两个阶段目标。');
+  if (new Set(milestones.map((item) => item.title)).size !== milestones.length) throw new Error('目标阶段不能重复。');
   const nextStep = objectValue(result.nextStep, '目标下一步');
   exactKeys(nextStep, ['title', 'why', 'minimumAction', 'estimatedMinutes', 'difficulty'], '目标下一步');
   const refinedResult = textValue(result.refinedResult, '优化后的目标结果', 160);

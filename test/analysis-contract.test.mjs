@@ -331,7 +331,7 @@ test('weekly habit momentum accepts one decimal but rejects finer precision', ()
   request.context.habits[0].momentum = 2.9;
   assert.equal(parseWeeklyReviewRequest(request).context.habits[0].momentum, 2.9);
   request.context.habits[0].momentum = 2.95;
-  assert.throws(() => parseWeeklyReviewRequest(request), /习惯动量/);
+  assert.throws(() => parseWeeklyReviewRequest(request), /最近坚持/);
 });
 
 test('goal decomposition stays a bounded editable draft with matching memory permission', () => {
@@ -425,7 +425,7 @@ test('goal decomposition rejects vague, conflicting, invented-deadline, oversize
 
   const oversized = responseFor(noDeadline);
   oversized.result.milestones = Array.from({ length: 6 }, (_, index) => ({ title: `阶段 ${index + 1}`, evidence: `证据 ${index + 1}` }));
-  assert.throws(() => parseGoalDecompositionResponse(oversized, noDeadline), /里程碑无效/);
+  assert.throws(() => parseGoalDecompositionResponse(oversized, noDeadline), /目标阶段无效/);
 
   const nonActionable = responseFor(noDeadline);
   nonActionable.result.nextStep.title = nonActionable.result.refinedResult;
