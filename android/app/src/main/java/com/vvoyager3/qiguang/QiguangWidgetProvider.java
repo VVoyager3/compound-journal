@@ -112,10 +112,17 @@ public class QiguangWidgetProvider extends AppWidgetProvider {
                 if (!visible) continue;
                 String taskId = task.optString("id", "");
                 String title = task.optString("title", context.getString(R.string.widget_untitled));
-                views.setTextViewText(TASK_TYPES[index], taskType(context, task.optString("type", "side")));
+                int targetCount = task.optInt("targetCount", 0);
+                int progressCount = task.optInt("progressCount", 0);
+                String countUnit = task.optString("countUnit", context.getString(R.string.widget_count_unit));
+                String progress = targetCount > 1 ? progressCount + "/" + targetCount + countUnit : "";
+                String taskType = taskType(context, task.optString("type", "side"));
+                views.setTextViewText(TASK_TYPES[index], progress.isEmpty() ? taskType : taskType + " · " + progress);
                 views.setViewVisibility(TASK_TYPES[index], compact ? View.GONE : View.VISIBLE);
                 views.setTextViewText(TASK_TITLES[index], title);
-                views.setContentDescription(TASK_CHECKS[index], context.getString(R.string.widget_complete_named, title));
+                views.setContentDescription(TASK_CHECKS[index], targetCount > 1
+                        ? context.getString(R.string.widget_check_in_named, title, progress)
+                        : context.getString(R.string.widget_complete_named, title));
                 views.setOnClickPendingIntent(TASK_CHECKS[index], broadcast(context, id, COMPLETE_TASK, "quest_id", taskId));
                 views.setOnClickPendingIntent(TASK_TITLES[index], route(context, id, "tasks", taskId));
             }

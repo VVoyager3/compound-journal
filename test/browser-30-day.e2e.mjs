@@ -80,6 +80,11 @@ async function finishOnboarding(page) {
   await page.evaluate(() => localStorage.setItem('qiguang.room-guide-seen.v1', '1'));
 }
 
+async function openTaskPlan(page) {
+  const tab = page.getByRole('tab', { name: '计划', exact: true });
+  if (await tab.getAttribute('aria-selected') !== 'true') await tab.click();
+}
+
 async function directionTitle(page, allowRecordOnly = false) {
   await page.goto(`${baseUrl}/#/today`);
   await page.getByRole('heading', { name: '今天', exact: true }).waitFor();
@@ -141,11 +146,15 @@ async function completeQuest(page, title) {
 
 async function moveQuestToTomorrow(page, title) {
   await page.goto(`${baseUrl}/#/tasks`);
-  const card = page.locator('.quest-card').filter({ hasText: title });
-  await card.getByText('更多', { exact: true }).click();
-  await card.getByRole('button', { name: `编辑任务` }).click();
-  const dialog = page.getByRole('dialog', { name: '调整这项行动' });
-  await dialog.getByRole('button', { name: '移到明天' }).click();
+  const todayTab = page.getByRole('tab', { name: '今天', exact: true });
+  if (await todayTab.getAttribute('aria-selected') !== 'true') await todayTab.click();
+  const card = page.locator('.task-list-item').filter({ hasText: title });
+  await card.getByRole('button', { name: `查看任务：${title}` }).click();
+  const details = page.getByRole('dialog', { name: '记录任务结果' });
+  await details.getByText('编辑或删除任务', { exact: true }).click();
+  await details.getByRole('button', { name: `编辑任务：${title}` }).click();
+  const dialog = page.getByRole('dialog', { name: '修改任务' });
+  await dialog.getByRole('button', { name: '改到明天' }).click();
   await dialog.getByRole('button', { name: '保存调整' }).click();
   await page.getByRole('status').filter({ hasText: '已顺延到' }).waitFor();
 }
@@ -175,7 +184,9 @@ async function calibrateEnergy(page, value) {
 
 async function saveHabitStatus(page, status) {
   await page.goto(`${baseUrl}/#/tasks`);
+  await openTaskPlan(page);
   const row = page.locator('.habit-row').filter({ hasText: HABIT });
+  await row.getByText('更多', { exact: true }).click();
   await row.getByRole('button', { name: `编辑习惯“${HABIT}”` }).click();
   const dialog = page.getByRole('dialog', { name: '编辑习惯' });
   await dialog.getByText('更多设置（可选）', { exact: true }).click();
@@ -186,7 +197,8 @@ async function saveHabitStatus(page, status) {
 
 async function createGoalAndHabit(page) {
   await page.goto(`${baseUrl}/#/tasks`);
-  await page.getByRole('button', { name: '新建长期任务' }).click();
+  await openTaskPlan(page);
+  await page.getByRole('button', { name: '新建目标' }).click();
   const goalDialog = page.getByRole('dialog', { name: '建立一个真实目标' });
   await goalDialog.getByRole('textbox', { name: '你想让什么事情发生？' }).fill(GOAL);
   await goalDialog.getByRole('button', { name: 'AI 帮我拆成阶段目标' }).click();
@@ -194,8 +206,9 @@ async function createGoalAndHabit(page) {
   const consent = page.getByRole('dialog', { name: '允许这一次目标拆解？' });
   await consent.getByRole('button', { name: '允许并继续' }).click();
   await goalDialog.getByRole('heading', { name: '可编辑的拆解草案' }).waitFor();
-  assert.equal(await goalDialog.getByRole('checkbox', { name: /同时把“写下第一版结构”安排到今天/ }).isChecked(), true);
-  await goalDialog.getByRole('button', { name: '建立目标' }).click();
+  await goalDialog.getByText('当前下一步：写下第一版结构', { exact: true }).waitFor();
+  await goalDialog.getByRole('button', { name: '建立并开始' }).click();
+  await page.getByRole('tab', { name: '今天', exact: true }).click();
   await page.getByRole('button', { name: `完成：${INITIAL_STEP}` }).click();
   await page.getByRole('heading', { name: FIRST_MILESTONE }).waitFor();
 
@@ -204,17 +217,19 @@ async function createGoalAndHabit(page) {
   assert.equal(initial.xpLedger.filter((item) => item.sourceType === 'milestone' && !item.reversedAt).length, 0, 'initial small step must not settle milestone XP');
   await moveQuestToTomorrow(page, FIRST_MILESTONE);
 
+  await openTaskPlan(page);
   await page.getByRole('button', { name: '新建习惯' }).click();
   const habitDialog = page.getByRole('dialog', { name: '建立低成本习惯' });
   await habitDialog.getByRole('textbox', { name: '我想养成什么？' }).fill(HABIT);
   await habitDialog.getByRole('button', { name: '建立习惯' }).click();
-  await page.getByRole('button', { name: `将“${HABIT}”加入每日任务` }).click();
+  await page.getByRole('button', { name: `暂停“${HABIT}”的计划日打卡` }).waitFor();
 }
 
 async function finishGoal(page) {
   await page.goto(`${baseUrl}/#/tasks`);
+  await openTaskPlan(page);
   const goal = page.locator('.goal-row').filter({ hasText: GOAL });
-  await goal.getByText('管理目标', { exact: true }).click();
+  await goal.getByText('更多', { exact: true }).click();
   await goal.getByRole('button', { name: `编辑目标“${GOAL}”` }).click();
   const dialog = page.getByRole('dialog', { name: '编辑目标' });
   await dialog.getByRole('combobox', { name: '目标状态' }).selectOption('completed');
@@ -264,7 +279,7 @@ test('formal pages sustain a 30 day loop without historic debt', async () => {
 
     await setDay(page, 5);
     await calibrateEnergy(page, 25);
-    assert.equal(await directionTitle(page), '先恢复行动力');
+    assert.equal(await directionTitle(page), '先恢复');
     await page.getByRole('button', { name: '换一个' }).click();
     await page.getByRole('button', { name: '加入今天' }).click();
     await completeQuest(page, '做一次很短的舒展');
@@ -272,7 +287,7 @@ test('formal pages sustain a 30 day loop without historic debt', async () => {
     await completeHabit(page);
 
     await setDay(page, 6);
-    assert.equal(await directionTitle(page), '先恢复行动力');
+    assert.equal(await directionTitle(page), '先恢复');
     await calibrateEnergy(page, 80);
     assert.equal(await directionTitle(page, true), '记录');
     await recordDay(page, 6);

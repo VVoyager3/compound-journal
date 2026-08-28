@@ -4,6 +4,9 @@ export interface WidgetTask {
   id: string;
   title: string;
   type: Quest['type'];
+  targetCount?: number;
+  progressCount?: number;
+  countUnit?: string;
 }
 
 export interface WidgetSnapshot {
@@ -37,7 +40,10 @@ export function buildWidgetSnapshot(input: { quests: Quest[]; localDate: string;
       .filter((quest) => quest.status === 'pending' && !quest.systemRetiredAt)
       .sort((left, right) => priority[left.type] - priority[right.type])
       .slice(0, 6)
-      .map((quest) => ({ id: quest.id, title: quest.title.slice(0, 80), type: quest.type })),
+      .map((quest) => ({
+        id: quest.id, title: quest.title.slice(0, 80), type: quest.type,
+        ...(quest.targetCount ? { targetCount: quest.targetCount, progressCount: quest.progressCount ?? 0, countUnit: quest.countUnit || '次' } : {}),
+      })),
   };
 }
 

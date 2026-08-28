@@ -1343,7 +1343,7 @@ test('a count habit creates an independent count BONUS for each scheduled day', 
   assert.deepEqual({ progress: next.progressCount, target: next.targetCount }, { progress: 0, target: 8 });
 });
 
-test('overdue habit BONUS stays user-decided and accepts a real late completion or no-penalty exemption', async (t) => {
+test('missed habit BONUS stays on its original day without becoming overdue debt', async (t) => {
   const db = await withDatabase(t, 'i2-bonus-elapsed');
   await db.ensureI2Defaults();
   const branch = (await db.listBranches())[0];
@@ -1353,7 +1353,7 @@ test('overdue habit BONUS stays user-decided and accepts a real late completion 
   }, '2026-08-14');
   const first = (await db.ensureTodayBonusQuests('2026-08-14'))[0];
   assert(first);
-  assert.deepEqual((await db.listPendingBefore('2026-08-15')).map((item) => item.id), [first.id]);
+  assert.deepEqual((await db.listPendingBefore('2026-08-15')).map((item) => item.id), []);
 
   const next = (await db.ensureTodayBonusQuests('2026-08-15'))[0];
   const overdue = (await db.listQuests('2026-08-14')).find((item) => item.id === first.id);

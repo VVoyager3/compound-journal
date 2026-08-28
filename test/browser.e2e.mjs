@@ -58,10 +58,10 @@ async function offlineShellPage() {
   return { context, page };
 }
 
-async function finishOnboarding(page) {
+async function finishOnboarding(page, companion = '鱼鱼') {
   await page.goto(`${baseUrl}/#/today`);
   const dialog = page.getByRole('dialog', { name: '选一个陪伴角色' });
-  await dialog.getByRole('button', { name: '选择鱼鱼' }).click();
+  await dialog.getByRole('button', { name: `选择${companion}` }).click();
   await dialog.getByRole('button', { name: '写下第一件事' }).click();
   await assert.doesNotReject(() => page.getByRole('textbox', { name: '发生了什么' }).waitFor());
   await page.evaluate(() => localStorage.setItem('qiguang.room-guide-seen.v1', '1'));
@@ -146,7 +146,11 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     assert.match(roomChrome.light, /gradient/, 'the room should share the warm wilderness lighting language without a permanent UI frame');
     const recordHotspot = page.getByRole('button', { name: '打开记录' });
     await recordHotspot.focus();
-    assert.notEqual(await recordHotspot.evaluate((element) => getComputedStyle(element).outlineStyle), 'none', 'borderless hotspots still need a visible keyboard focus ring');
+    const hotspotFocus = await recordHotspot.evaluate((element) => ({
+      outlineStyle: getComputedStyle(element).outlineStyle,
+      boxShadow: getComputedStyle(element).boxShadow,
+    }));
+    assert.deepEqual(hotspotFocus, { outlineStyle: 'none', boxShadow: 'none' }, 'scene hotspots should not gain a thick browser frame when focused or tapped');
     assert.equal(await recordHotspot.evaluate((element) => getComputedStyle(element, '::before').opacity), '1', 'focused furniture should receive an in-world interaction ring');
     assert.equal(await page.locator('.character-state.is-present').count(), 0, 'the neutral companion pose should not need a floating text label');
     assert.deepEqual(await page.locator('.bottom-nav .nav-item').allTextContents(), ['今日', '任务', '记录', '轨迹', '设置']);
@@ -325,7 +329,7 @@ test('today keeps records and habit editing behind compact entry points', async 
     const habitDialog = page.getByRole('dialog', { name: '建立低成本习惯' });
     await habitDialog.getByRole('textbox', { name: '我想养成什么？' }).fill('晚饭后散步');
     await habitDialog.getByRole('button', { name: '建立习惯' }).click();
-    await page.getByRole('button', { name: '将“晚饭后散步”加入每日任务' }).click();
+    await assert.doesNotReject(() => page.getByRole('button', { name: '暂停“晚饭后散步”的计划日打卡' }).waitFor());
     await page.goto(`${baseUrl}/#/today`);
 
     assert.equal(await page.getByText(privateBody, { exact: true }).count(), 0);
@@ -336,7 +340,9 @@ test('today keeps records and habit editing behind compact entry points', async 
     assert.equal(await page.getByRole('button', { name: /进入任务板详细管理“晚饭后散步”/ }).count(), 0);
     await page.getByRole('button', { name: '管理习惯与可选任务' }).click();
     await page.waitForURL(/#\/tasks$/);
-    await assert.doesNotReject(() => page.getByRole('button', { name: '编辑习惯“晚饭后散步”' }).waitFor());
+    const habitRow = page.locator('.habit-row').filter({ hasText: '晚饭后散步' });
+    await habitRow.getByText('更多', { exact: true }).click();
+    await assert.doesNotReject(() => habitRow.getByRole('button', { name: '编辑习惯“晚饭后散步”' }).waitFor());
     assert.deepEqual(apiRequests, []);
   } finally {
     await context.close();
@@ -351,9 +357,9 @@ test('a scheduled count task behaves like a TODO with one tap per unit', async (
     const todayTab = page.getByRole('tab', { name: '今天', exact: true });
     const planTab = page.getByRole('tab', { name: '计划', exact: true });
     assert.equal(await todayTab.getAttribute('aria-selected'), 'true');
-    assert.equal(await page.getByRole('heading', { name: '长期任务' }).count(), 0, 'planning content stays out of the execution view');
+    assert.equal(await page.getByRole('heading', { name: '目标', exact: true }).count(), 0, 'planning content stays out of the execution view');
     await openTaskView(page, '计划');
-    await assert.doesNotReject(() => page.getByRole('heading', { name: '长期任务' }).waitFor());
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '目标', exact: true }).waitFor());
     assert.equal(await planTab.getAttribute('aria-selected'), 'true');
     for (const tab of [todayTab, planTab]) assert.ok((await tab.boundingBox()).height >= 44, 'task tabs need a comfortable touch target');
     await openTaskView(page, '今天');
@@ -372,14 +378,18 @@ test('a scheduled count task behaves like a TODO with one tap per unit', async (
     await dialog.getByRole('button', { name: '安排任务' }).click();
 
     const openFuture = async () => {
-      await page.getByText('之后已安排 · 1', { exact: true }).click();
+      await openTaskView(page, '计划');
+      await page.getByText('之后已安排 · 1', { exact: true }).waitFor();
       await assert.doesNotReject(() => page.getByRole('heading', { name: '喝三杯水' }).waitFor());
     };
     await openFuture();
     await assert.doesNotReject(() => page.getByText('0/3 杯', { exact: true }).waitFor());
-    await page.locator('.page-header').getByRole('button', { name: '管理', exact: true }).click();
-    await assert.doesNotReject(() => page.getByRole('checkbox', { name: '选择删除“喝三杯水”' }).waitFor());
-    await page.locator('.page-header').getByRole('button', { name: '完成', exact: true }).click();
+    assert.equal(await page.locator('.page-header').getByRole('button', { name: '管理', exact: true }).count(), 0);
+    await page.getByRole('button', { name: '查看任务：喝三杯水' }).click();
+    const taskDetails = page.getByRole('dialog', { name: '记录任务结果' });
+    await taskDetails.getByText('编辑或删除任务', { exact: true }).click();
+    await assert.doesNotReject(() => taskDetails.getByRole('button', { name: '删除任务：喝三杯水' }).waitFor());
+    await taskDetails.getByRole('button', { name: '取消', exact: true }).click();
     await page.getByRole('button', { name: '记录一次：喝三杯水' }).click();
     await openFuture();
     await assert.doesNotReject(() => page.getByText('1/3 杯', { exact: true }).waitFor());
@@ -403,6 +413,7 @@ test('the bottom quick-add keeps task creation in context', async () => {
     const dialog = page.getByRole('dialog', { name: '安排每日任务' });
     await dialog.getByRole('textbox', { name: '我想做什么？' }).fill('已有任务');
     await dialog.getByRole('button', { name: '安排任务' }).click();
+    await page.getByRole('heading', { name: '已有任务' }).waitFor();
 
     const quick = page.getByRole('textbox', { name: '添加今日任务' });
     await quick.focus();
@@ -415,11 +426,37 @@ test('the bottom quick-add keeps task creation in context', async () => {
     ]);
     assert.ok(rowOpacity < .5, 'existing tasks should recede while adding');
     assert.equal(formOpacity, 1, 'the add row should stay prominent');
+    const quickAddLayout = await page.locator('.task-quick-add').evaluate((element) => {
+      const form = element.getBoundingClientRect();
+      const navigation = document.querySelector('.bottom-nav')?.getBoundingClientRect();
+      const submit = element.querySelector('.task-quick-submit');
+      const submitBox = submit?.getBoundingClientRect();
+      const plus = submit ? getComputedStyle(submit, '::before') : null;
+      return {
+        position: getComputedStyle(element).position,
+        gapFromNavigation: navigation ? navigation.top - form.bottom : null,
+        submitSize: submitBox ? [submitBox.width, submitBox.height] : null,
+        plusSize: plus ? [plus.width, plus.height] : null,
+      };
+    });
+    assert.equal(quickAddLayout.position, 'fixed', 'quick add should stay in the bottom row above navigation');
+    assert.ok(quickAddLayout.gapFromNavigation !== null && Math.abs(quickAddLayout.gapFromNavigation) <= 1, 'quick add should sit directly above navigation');
+    assert.deepEqual(quickAddLayout.submitSize, [44, 44], 'the add action should retain a safe touch target');
+    assert.deepEqual(quickAddLayout.plusSize, ['32px', '32px'], 'the visible plus should stay visually compact');
     await quick.fill('直接添加');
     await page.getByRole('button', { name: '安排任务', exact: true }).click();
     await assert.doesNotReject(() => page.getByRole('heading', { name: '直接添加' }).waitFor());
-    const checkBox = await page.getByRole('button', { name: '完成：直接添加' }).boundingBox();
-    assert.ok(checkBox && checkBox.width >= 44 && checkBox.height >= 44, 'the completion control needs a 44px touch target');
+    const directRow = page.locator('.task-list-item').filter({ hasText: '直接添加' });
+    const actionBox = await page.getByRole('button', { name: '完成：直接添加' }).boundingBox();
+    const circleBox = await directRow.locator('.task-check').boundingBox();
+    assert.ok(actionBox && actionBox.width >= 44 && actionBox.height >= 44, 'the whole task row needs a safe touch target');
+    assert.ok(circleBox && circleBox.width <= 20 && circleBox.height <= 20, 'the visible incomplete circle should stay compact');
+    assert.doesNotMatch(await directRow.innerText(), /临时任务|5 分钟|最低动作/, 'quick tasks must not invent or repeat planning metadata');
+    await page.getByRole('button', { name: '完成：直接添加' }).click();
+    await page.getByText(/已反馈 ·/).click();
+    const completedRow = page.locator('.task-list-item.is-completed').filter({ hasText: '直接添加' });
+    assert.equal(await completedRow.locator('.task-check').textContent(), '✓');
+    assert.equal(await completedRow.getByRole('heading', { name: '直接添加' }).evaluate((element) => getComputedStyle(element).textDecorationLine), 'line-through');
     assert.equal(await page.getByRole('dialog').count(), 0, 'quick add should not open another layer');
   } finally {
     await context.close();
@@ -442,6 +479,12 @@ test('a count task keeps its title readable in the flat list', async () => {
     const titleBox = await row.getByRole('heading', { name: '读三页书' }).boundingBox();
     assert.ok(titleBox && titleBox.width > 100, 'count-task titles must not collapse into the completion-control column');
     await assert.doesNotReject(() => row.getByText('0/3 页', { exact: true }).waitFor());
+    assert.equal(await row.getByRole('button', { name: /记录一次：读三页书/ }).count(), 1, 'the task row itself is the check-in action');
+    assert.equal(await row.getByRole('button', { name: '+1' }).count(), 0);
+    await row.getByRole('button', { name: /记录一次：读三页书/ }).click();
+    const progressed = page.locator('.task-list-item.has-count').filter({ hasText: '读三页书' });
+    await progressed.getByText('1/3 页', { exact: true }).waitFor();
+    assert.equal(await progressed.evaluate((element) => element.style.getPropertyValue('--task-progress')), '33%');
   } finally {
     await context.close();
   }
@@ -461,14 +504,19 @@ test('a user can edit and delete a pending task from the task board', async () =
     assert.equal(await card.getByRole('button', { name: '有进展：整理桌面十分钟' }).count(), 0, 'secondary results belong in task details');
     assert.equal(await card.getByRole('button', { name: '跳过今天：整理桌面十分钟' }).count(), 0, 'skip should not crowd the list row');
     await card.getByRole('button', { name: '查看任务：整理桌面十分钟' }).click();
-    await page.getByRole('dialog', { name: '记录任务结果' }).getByRole('button', { name: '编辑任务：整理桌面十分钟' }).click();
-    const edit = page.getByRole('dialog', { name: '调整这项行动' });
-    await edit.getByRole('textbox', { name: '行动标题' }).fill('整理书桌五分钟');
+    const taskDetails = page.getByRole('dialog', { name: '记录任务结果' });
+    await taskDetails.getByText('编辑或删除任务', { exact: true }).click();
+    await taskDetails.getByRole('button', { name: '编辑任务：整理桌面十分钟' }).click();
+    const edit = page.getByRole('dialog', { name: '修改任务' });
+    await edit.getByRole('textbox', { name: '任务名称' }).fill('整理书桌五分钟');
     await edit.getByRole('button', { name: '保存调整' }).click();
     await assert.doesNotReject(() => page.getByRole('heading', { name: '整理书桌五分钟' }).waitFor());
 
-    await page.getByRole('button', { name: '管理', exact: true }).click();
-    await page.getByRole('button', { name: '删除“整理书桌五分钟”' }).click();
+    card = page.locator('.task-list-item').filter({ hasText: '整理书桌五分钟' });
+    await card.getByRole('button', { name: '查看任务：整理书桌五分钟' }).click();
+    const details = page.getByRole('dialog', { name: '记录任务结果' });
+    await details.getByText('编辑或删除任务', { exact: true }).click();
+    await details.getByRole('button', { name: '删除任务：整理书桌五分钟' }).click();
     await page.getByRole('dialog', { name: '删除这一项？' }).getByRole('button', { name: '删除', exact: true }).click();
     await assert.doesNotReject(() => page.getByText('已删除；历史记录保留。', { exact: true }).waitFor());
     assert.equal(await page.getByRole('heading', { name: '整理书桌五分钟' }).count(), 0);
@@ -498,18 +546,28 @@ test('task cards and settings sections do not retain a thick blue focus frame', 
     await settingsSummary.focus();
     const settingsFocus = await settingsSummary.evaluate((element) => {
       const style = getComputedStyle(element);
-      return { outlineStyle: style.outlineStyle, boxShadow: style.boxShadow, textDecorationLine: style.textDecorationLine };
+      return {
+        outlineStyle: style.outlineStyle,
+        boxShadow: style.boxShadow,
+        textDecorationLine: style.textDecorationLine,
+        tapHighlightColor: style.webkitTapHighlightColor,
+      };
     });
 
     assert.equal(taskFocus.outlineStyle, 'none', 'a task card must not use the browser blue frame');
     assert.match(taskFocus.boxShadow, /inset/, 'a task row still needs a restrained non-blue focus marker');
-    assert.deepEqual(settingsFocus, { outlineStyle: 'none', boxShadow: 'none', textDecorationLine: 'underline' }, 'settings disclosures should replace the blue focus shadow with a light underline');
+    assert.deepEqual(settingsFocus, {
+      outlineStyle: 'none',
+      boxShadow: 'none',
+      textDecorationLine: 'underline',
+      tapHighlightColor: 'rgba(0, 0, 0, 0)',
+    }, 'settings disclosures should replace the blue focus shadow and touch highlight with a light underline');
   } finally {
     await context.close();
   }
 });
 
-test('daily tasks, long-term tasks, and habits support bulk deletion', async () => {
+test('task, goal, and habit deletion lives on each specific item', async () => {
   const { context, page } = await freshPage();
   try {
     await finishOnboarding(page);
@@ -521,38 +579,46 @@ test('daily tasks, long-term tasks, and habits support bulk deletion', async () 
     await taskDialog.getByRole('button', { name: '安排任务' }).click();
 
     await openTaskView(page, '计划');
-    await page.getByRole('button', { name: '新建长期任务' }).click();
+    await page.getByRole('button', { name: '新建目标' }).click();
     const goalDialog = page.getByRole('dialog', { name: '建立一个真实目标' });
     await goalDialog.getByRole('textbox', { name: '你想让什么事情发生？' }).fill('完成阅读计划');
-    await goalDialog.getByRole('button', { name: '建立目标' }).click();
+    await goalDialog.getByRole('button', { name: '只保存计划' }).click();
 
     await page.getByRole('button', { name: '新建习惯' }).click();
     const habitDialog = page.getByRole('dialog', { name: '建立低成本习惯' });
     await habitDialog.getByRole('textbox', { name: '我想养成什么？' }).fill('每天伸展');
     await habitDialog.getByRole('button', { name: '建立习惯' }).click();
 
-    await page.getByRole('button', { name: '管理', exact: true }).click();
-    await page.getByRole('checkbox', { name: '选择删除“完成阅读计划”' }).check();
-    await page.getByRole('checkbox', { name: '选择删除“每天伸展”' }).check();
-    await page.getByRole('button', { name: '删除选中' }).click();
-    await page.getByRole('dialog', { name: '删除选中的 2 项？' }).getByRole('button', { name: '删除', exact: true }).click();
-
-    await assert.doesNotReject(() => page.getByText('已删除 2 项；历史记录保留。', { exact: true }).waitFor());
-    for (const label of ['完成阅读计划', '每天伸展']) {
-      assert.equal(await page.getByText(label, { exact: true }).count(), 0);
-    }
-    await openTaskView(page, '今天');
-    await page.getByRole('button', { name: '管理', exact: true }).click();
-    await page.getByRole('checkbox', { name: '选择删除“整理今日清单”' }).check();
-    await page.getByRole('button', { name: '删除选中' }).click();
+    assert.equal(await page.locator('.page-header').getByRole('button', { name: '管理', exact: true }).count(), 0);
+    let item = page.locator('.goal-row').filter({ hasText: '完成阅读计划' });
+    await item.getByText('更多', { exact: true }).click();
+    await item.getByRole('button', { name: '删除目标：完成阅读计划' }).click();
     await page.getByRole('dialog', { name: '删除这一项？' }).getByRole('button', { name: '删除', exact: true }).click();
-    await assert.doesNotReject(() => page.getByText('已删除；历史记录保留。', { exact: true }).waitFor());
+    await item.waitFor({ state: 'detached' });
+    assert.equal(await page.locator('.goal-row').filter({ hasText: '完成阅读计划' }).count(), 0);
+
+    item = page.locator('.habit-row').filter({ hasText: '每天伸展' });
+    await item.getByText('更多', { exact: true }).click();
+    await item.getByRole('button', { name: '删除习惯：每天伸展' }).click();
+    await page.getByRole('dialog', { name: '删除这一项？' }).getByRole('button', { name: '删除', exact: true }).click();
+    await item.waitFor({ state: 'detached' });
+    assert.equal(await page.locator('.habit-row').filter({ hasText: '每天伸展' }).count(), 0);
+
+    await openTaskView(page, '今天');
+    item = page.locator('.task-list-item').filter({ hasText: '整理今日清单' });
+    await item.getByRole('button', { name: '查看任务：整理今日清单' }).click();
+    const taskDetails = page.getByRole('dialog', { name: '记录任务结果' });
+    await taskDetails.getByText('编辑或删除任务', { exact: true }).click();
+    await taskDetails.getByRole('button', { name: '删除任务：整理今日清单' }).click();
+    await page.getByRole('dialog', { name: '删除这一项？' }).getByRole('button', { name: '删除', exact: true }).click();
+    await item.waitFor({ state: 'detached' });
+    assert.equal(await page.locator('.task-list-item').filter({ hasText: '整理今日清单' }).count(), 0);
   } finally {
     await context.close();
   }
 });
 
-test('capacity-retired tasks support individual and bulk deletion', async () => {
+test('capacity-retired tasks support deletion on each specific card', async () => {
   const { context, page } = await freshPage();
   try {
     await finishOnboarding(page);
@@ -583,18 +649,14 @@ test('capacity-retired tasks support individual and bulk deletion', async () => 
     }, titles);
 
     await page.goto(`${baseUrl}/#/tasks`);
-    await page.getByRole('button', { name: '管理', exact: true }).click();
-    await page.getByRole('button', { name: `删除“${titles[0]}”` }).click();
-    await page.getByRole('dialog', { name: '删除这一项？' }).getByRole('button', { name: '删除', exact: true }).click();
-    await assert.doesNotReject(() => page.getByText('已删除；历史记录保留。', { exact: true }).waitFor());
-    assert.equal(await page.getByText(titles[0], { exact: true }).count(), 0);
-
-    await page.getByRole('button', { name: '管理', exact: true }).click();
-    await page.getByRole('checkbox', { name: `选择删除“${titles[1]}”` }).check();
-    await page.getByRole('checkbox', { name: `选择删除“${titles[2]}”` }).check();
-    await page.getByRole('button', { name: '删除选中' }).click();
-    await page.getByRole('dialog', { name: '删除选中的 2 项？' }).getByRole('button', { name: '删除', exact: true }).click();
-    await assert.doesNotReject(() => page.getByText('已删除 2 项；历史记录保留。', { exact: true }).waitFor());
+    assert.equal(await page.locator('.page-header').getByRole('button', { name: '管理', exact: true }).count(), 0);
+    for (const title of titles) {
+      const card = page.locator('.quest-card').filter({ hasText: title });
+      await card.getByRole('button', { name: `删除任务：${title}` }).click();
+      await page.getByRole('dialog', { name: '删除这一项？' }).getByRole('button', { name: '删除', exact: true }).click();
+      await card.waitFor({ state: 'detached' });
+      assert.equal(await page.locator('.quest-card').filter({ hasText: title }).count(), 0);
+    }
 
     await page.reload();
     for (const title of titles) assert.equal(await page.getByText(title, { exact: true }).count(), 0);
@@ -703,7 +765,7 @@ test('success diary prompts stay optional and AI goal decomposition requires con
 
     await page.goto(`${baseUrl}/#/tasks`);
     await openTaskView(page, '计划');
-    await page.getByRole('button', { name: '新建长期任务' }).click();
+    await page.getByRole('button', { name: '新建目标' }).click();
     const goalDialog = page.getByRole('dialog', { name: '建立一个真实目标' });
     assert.equal(await goalDialog.getByText('先写一句话就够了。系统会先给出下一步，所有内容都可以再修改。', { exact: true }).count(), 0);
     assert.equal(await goalDialog.getByText('需要帮你把目标变小吗？', { exact: true }).count(), 0);
@@ -718,7 +780,7 @@ test('success diary prompts stay optional and AI goal decomposition requires con
     await assert.doesNotReject(() => goalDialog.getByRole('heading', { name: '可编辑的拆解草案' }).waitFor());
     await assert.doesNotReject(() => goalDialog.getByText('当前阶段：目标已经明确，尚未形成第一份可检查成果。', { exact: true }).waitFor());
     await assert.doesNotReject(() => goalDialog.getByText(/关键风险：一次把范围铺得过大/).waitFor());
-    assert.equal(await goalDialog.getByRole('checkbox', { name: /同时把“写下第一版结构”安排到今天/ }).isChecked(), true);
+    await assert.doesNotReject(() => goalDialog.getByText('当前下一步：写下第一版结构', { exact: true }).waitFor());
     await goalDialog.getByRole('textbox', { name: '你想让什么事情发生？' }).fill('发布一本文章');
     assert.equal(await goalDialog.getByRole('heading', { name: '可编辑的拆解草案' }).isVisible(), false);
     await assert.doesNotReject(() => goalDialog.getByText('目标内容已经改变；请重新生成拆解草案。').waitFor());
@@ -727,15 +789,15 @@ test('success diary prompts stay optional and AI goal decomposition requires con
     const secondPreview = page.getByRole('dialog', { name: '检查目标拆解发送范围' });
     await secondPreview.getByRole('button', { name: '确认范围并生成草案' }).click();
     await assert.doesNotReject(() => goalDialog.getByRole('heading', { name: '可编辑的拆解草案' }).waitFor());
-    await goalDialog.getByRole('button', { name: '建立目标' }).click();
-    await assert.doesNotReject(() => page.getByText('目标和你确认的拆解已建立。', { exact: true }).waitFor());
+    await goalDialog.getByRole('button', { name: '建立并开始' }).click();
+    await assert.doesNotReject(() => page.getByText('目标已建立，下一步已放入今天。', { exact: true }).waitFor());
     await assert.doesNotReject(() => page.getByRole('heading', { name: '发布一篇文章' }).waitFor());
     await assert.doesNotReject(() => page.getByText('完成第一段可检查成果', { exact: true }).waitFor());
-    await assert.doesNotReject(() => page.getByText('管理目标', { exact: true }).waitFor());
+    await assert.doesNotReject(() => page.locator('.goal-row').filter({ hasText: '发布一篇文章' }).getByText('更多', { exact: true }).waitFor());
     await assert.doesNotReject(() => page.getByText('今日重点已安排', { exact: true }).waitFor());
     await openTaskView(page, '今天');
     await assert.doesNotReject(() => page.getByRole('heading', { name: '写下第一版结构' }).waitFor());
-    await assert.doesNotReject(() => page.getByText('1 项待处理', { exact: true }).waitFor());
+    await assert.doesNotReject(() => page.getByText('1 项待完成', { exact: true }).waitFor());
     assert.equal(await page.getByText(/\d\/1 MAIN/).count(), 0);
     await openTaskView(page, '计划');
     assert.equal(await page.getByRole('button', { name: '安排“发布一篇文章”的下一步' }).count(), 0);
@@ -752,7 +814,7 @@ test('success diary prompts stay optional and AI goal decomposition requires con
     assert.equal(await page.getByText('待完成', { exact: true }).count(), 2);
     assert.equal(await xpLedgerCount(page), 1, 'the initial action settles only its own light-task XP');
     await openTaskView(page, '计划');
-    await page.getByText('管理目标', { exact: true }).click();
+    await page.locator('.goal-row').filter({ hasText: '发布一篇文章' }).getByText('更多', { exact: true }).click();
     await page.getByRole('button', { name: '根据执行证据重新拆解“发布一篇文章”' }).click();
     const replanPreview = page.getByRole('dialog', { name: '检查目标拆解发送范围' });
     await assert.doesNotReject(() => replanPreview.getByRole('checkbox', { name: /执行证据 · completed/ }).waitFor());
@@ -948,7 +1010,7 @@ test('manual milestone badges are evidence-first, reversible, and survive goal s
     await page.goto(`${baseUrl}/#/tasks`);
     await openTaskView(page, '计划');
     const card = page.locator('.goal-row').filter({ hasText: goalName });
-    await card.getByText('管理目标', { exact: true }).click();
+    await card.getByText('更多', { exact: true }).click();
     await card.getByRole('button', { name: `编辑目标“${goalName}”` }).click();
     const dialog = page.getByRole('dialog', { name: '编辑目标' });
     await dialog.getByRole('combobox', { name: '目标状态' }).selectOption(status);
@@ -959,18 +1021,18 @@ test('manual milestone badges are evidence-first, reversible, and survive goal s
     await finishOnboarding(page);
     await page.goto(`${baseUrl}/#/tasks`);
     await openTaskView(page, '计划');
-    await page.getByRole('button', { name: '新建长期任务' }).click();
+    await page.getByRole('button', { name: '新建目标' }).click();
     const goalDialog = page.getByRole('dialog', { name: '建立一个真实目标' });
     await goalDialog.getByRole('textbox', { name: '你想让什么事情发生？' }).fill(goalName);
-    await goalDialog.getByRole('button', { name: '建立目标' }).click();
+    await goalDialog.getByRole('button', { name: '建立并开始' }).click();
 
     await openTaskView(page, '今天');
-    await page.getByRole('button', { name: `完成：花 5 分钟写下“${goalName}”的第一步` }).click();
+    await page.getByRole('button', { name: '完成：确定一个可以开始的下一步' }).click();
     await assert.doesNotReject(() => page.getByText('已反馈 · 1', { exact: true }).waitFor());
 
     await openTaskView(page, '计划');
     let goalCard = page.locator('.goal-row').filter({ hasText: goalName });
-    await goalCard.getByText('管理目标', { exact: true }).click();
+    await goalCard.getByText('更多', { exact: true }).click();
     await goalCard.getByRole('button', { name: `编辑目标“${goalName}”` }).click();
     const goalSettings = page.getByRole('dialog', { name: '编辑目标' });
     await goalSettings.getByRole('combobox', { name: '想提升什么' }).selectOption({ label: '学习能力' });
@@ -978,7 +1040,7 @@ test('manual milestone badges are evidence-first, reversible, and survive goal s
 
     for (const [name, proof] of milestones) {
       goalCard = page.locator('.goal-row').filter({ hasText: goalName });
-      await goalCard.getByText('管理目标', { exact: true }).click();
+      await goalCard.getByText('更多', { exact: true }).click();
       await goalCard.getByRole('button', { name: `为“${goalName}”添加阶段目标` }).click();
       const milestoneDialog = page.getByRole('dialog', { name: '添加阶段目标' });
       await milestoneDialog.getByRole('textbox', { name: '阶段目标', exact: true }).fill(name);
@@ -1066,7 +1128,7 @@ test('manual milestone badges are evidence-first, reversible, and survive goal s
     await goalCard.getByRole('button', { name: `确认阶段目标“${badgeName}”完成` }).click();
     await assert.doesNotReject(() => page.getByText('阶段目标已完成，获得 50 经验。', { exact: true }).waitFor());
 
-    await goalCard.getByText('管理目标', { exact: true }).click();
+    await goalCard.getByText('更多', { exact: true }).click();
     await goalCard.getByRole('button', { name: `根据执行证据重新拆解“${goalName}”` }).click();
     const replanPreview = page.getByRole('dialog', { name: '检查目标拆解发送范围' });
     await replanPreview.getByRole('button', { name: '确认范围并生成草案' }).click();
@@ -1263,18 +1325,18 @@ test('a goal-card next step remains an action until its milestone is explicitly 
     await finishOnboarding(page);
     await page.goto(`${baseUrl}/#/tasks`);
     await openTaskView(page, '计划');
-    await page.getByRole('button', { name: '新建长期任务' }).click();
+    await page.getByRole('button', { name: '新建目标' }).click();
     const goalDialog = page.getByRole('dialog', { name: '建立一个真实目标' });
     await goalDialog.getByRole('textbox', { name: '你想让什么事情发生？' }).fill('手动安排目标');
-    await goalDialog.getByRole('button', { name: '建立目标' }).click();
-    const firstStep = '花 5 分钟写下“手动安排目标”的第一步';
+    await goalDialog.getByRole('button', { name: '建立并开始' }).click();
+    const firstStep = '确定一个可以开始的下一步';
     await openTaskView(page, '今天');
     await page.getByRole('button', { name: `完成：${firstStep}` }).click();
     await assert.doesNotReject(() => page.getByText('已反馈 · 1', { exact: true }).waitFor());
 
     await openTaskView(page, '计划');
     let goalCard = page.locator('.goal-row').filter({ hasText: '手动安排目标' });
-    await goalCard.getByText('管理目标', { exact: true }).click();
+    await goalCard.getByText('更多', { exact: true }).click();
     await goalCard.getByRole('button', { name: '为“手动安排目标”添加阶段目标' }).click();
     const milestoneDialog = page.getByRole('dialog', { name: '添加阶段目标' });
     await milestoneDialog.getByRole('textbox', { name: '阶段目标', exact: true }).fill('留下手动里程碑证据');
@@ -1544,11 +1606,16 @@ test('confirmed feedback changes the next day recommendation', async () => {
     await assert.doesNotReject(() => guide.getByRole('heading', { name: '推进：第二阶段' }).waitFor());
     await page.goto(`${baseUrl}/#/tasks`);
     await page.getByRole('button', { name: '查看任务：推进：第二阶段' }).click();
-    await page.getByRole('dialog', { name: '记录任务结果' }).getByRole('button', { name: '编辑任务：推进：第二阶段' }).click();
-    const adjustment = page.getByRole('dialog', { name: '调整这项行动' });
-    await assert.doesNotReject(() => adjustment.getByText('这次调整依据', { exact: true }).waitFor());
-    await assert.doesNotReject(() => adjustment.getByText('事实：来自目标“完成跨日作品”', { exact: true }).waitFor());
-    await assert.doesNotReject(() => adjustment.getByText(/当前阶段“第二阶段”/).waitFor());
+    const taskDetails = page.getByRole('dialog', { name: '记录任务结果' });
+    await taskDetails.getByText('编辑或删除任务', { exact: true }).click();
+    await taskDetails.getByRole('button', { name: '编辑任务：推进：第二阶段' }).click();
+    const adjustment = page.getByRole('dialog', { name: '修改任务' });
+    const basis = adjustment.getByText('为什么这样建议', { exact: true });
+    await assert.doesNotReject(() => basis.waitFor());
+    assert.equal(await adjustment.getByText('这个任务来自目标“完成跨日作品”。', { exact: true }).isVisible(), false);
+    await basis.click();
+    await assert.doesNotReject(() => adjustment.getByText('这个任务来自目标“完成跨日作品”。', { exact: true }).waitFor());
+    await assert.doesNotReject(() => adjustment.getByText(/当前要完成“第二阶段”/).waitFor());
     await adjustment.getByRole('button', { name: '取消' }).click();
     await page.getByRole('button', { name: '查看任务：推进：第二阶段' }).click();
     const feedback = page.getByRole('dialog', { name: '记录任务结果' });
@@ -1594,16 +1661,16 @@ test('Android without a MiniMax key keeps the local success and action loop usab
 
     await page.goto(`${baseUrl}/#/tasks`);
     await openTaskView(page, '计划');
-    await page.getByRole('button', { name: '新建长期任务' }).click();
+    await page.getByRole('button', { name: '新建目标' }).click();
     const goalDialog = page.getByRole('dialog', { name: '建立一个真实目标' });
     assert.equal(await goalDialog.getByRole('button', { name: 'MiniMax 未配置' }).isDisabled(), true);
     await goalDialog.getByRole('textbox', { name: '你想让什么事情发生？' }).fill('完成一个本地目标');
-    await goalDialog.getByRole('button', { name: '建立目标' }).click();
-    await assert.doesNotReject(() => page.getByText('目标和可编辑的本地下一步已建立。', { exact: true }).waitFor());
+    await goalDialog.getByRole('button', { name: '建立并开始' }).click();
+    await assert.doesNotReject(() => page.getByText('目标已建立，下一步已放入今天。', { exact: true }).waitFor());
     assert.equal(await page.getByText(/已确认的拆解/).count(), 0);
     await assert.doesNotReject(() => page.getByRole('heading', { name: '完成一个本地目标', exact: true }).waitFor());
     await openTaskView(page, '今天');
-    await assert.doesNotReject(() => page.getByRole('heading', { name: /花 5 分钟写下“完成一个本地目标”的第一步/ }).waitFor());
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '确定一个可以开始的下一步' }).waitFor());
 
     await page.goto(`${baseUrl}/#/review`);
     await assert.doesNotReject(() => page.getByText('AI 未配置', { exact: true }).waitFor());
@@ -1688,7 +1755,7 @@ test('the companion wanders naturally and walks to furniture before direct navig
     const interaction = page.locator('.room-character.is-action-desk.is-interacting');
     await assert.doesNotReject(() => page.getByText('坐到椅子上，写下一件真实发生的事。', { exact: true }).waitFor());
     await assert.doesNotReject(() => interaction.waitFor());
-    assert.equal(await interaction.evaluate((element) => getComputedStyle(element).backgroundPosition), '-252px 0px');
+    assert.equal(await interaction.evaluate((element) => getComputedStyle(element).backgroundPosition), '-84px 0px');
     await page.waitForURL(/#\/record$/);
     assert.deepEqual(apiRequests, []);
   } finally {
@@ -1743,6 +1810,31 @@ test('ambient rightward steps face right, keep one atlas, and settle into an idl
       check();
     }));
     assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('the male companion maps horizontal movement to the direction shown in his atlas', async () => {
+  const { context, page } = await freshPage();
+  try {
+    await finishOnboarding(page, '包包');
+    await page.goto(`${baseUrl}/#/today`);
+    const character = page.locator('.room-character.is-male.is-motion-ready');
+    await assert.doesNotReject(() => character.waitFor());
+    const frames = await character.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return Object.fromEntries(['face-left-frame', 'face-right-frame', 'walk-left-1', 'walk-left-6', 'walk-right-1', 'walk-right-6']
+        .map((name) => [name, style.getPropertyValue(`--${name}`).trim()]));
+    });
+    assert.deepEqual(frames, {
+      'face-left-frame': '-252px 0',
+      'face-right-frame': '-84px 0',
+      'walk-left-1': '0px -252px',
+      'walk-left-6': '-420px -252px',
+      'walk-right-1': '0px -168px',
+      'walk-right-6': '-420px -168px',
+    });
   } finally {
     await context.close();
   }
@@ -2177,7 +2269,7 @@ test('late completion evidence belongs to the real feedback day, not the planned
     await page.evaluate((nextDay) => localStorage.setItem('qiguang.e2e-now', String(nextDay)), firstDay + 86_400_000);
     await page.goto(`${baseUrl}/#/today`);
     const overdue = page.locator('.task-list-item.is-overdue').filter({ hasText: '跨日完成证据' });
-    await overdue.getByRole('button', { name: '完成：跨日完成证据' }).click();
+    await overdue.getByRole('button', { name: '记录“跨日完成证据”的实际结果' }).click();
     const firstFeedback = page.getByRole('dialog', { name: '记录任务结果' });
     const actualDate = firstFeedback.getByRole('textbox', { name: '实际完成日期' });
     await assert.doesNotReject(() => firstFeedback.waitFor());
@@ -2332,31 +2424,32 @@ test('selected companion uses the supplied portrait and matching room sprite', a
 test('room furniture walks end at the matching interaction anchors', async () => {
   const { context, page, apiRequests } = await freshPage();
   const destinations = [
-    ['打开记录', 'desk', /#\/record$/, [0.31, 0.44, 0.68, 0.84], '-252px 0px'],
-    ['打开任务', 'board', /#\/tasks$/, [0.42, 0.58, 0.68, 0.84], '-168px 0px'],
-    ['打开日历', 'calendar', /#\/calendar$/, [0.58, 0.75, 0.68, 0.84], '-168px 0px'],
-    ['打开成长', 'workbench', /#\/growth$/, [0.60, 0.73, 0.68, 0.84], '-84px 0px'],
-    ['打开状态', 'window', /#\/system$/, [0.31, 0.44, 0.68, 0.84], '-168px 0px'],
+    ['打开记录', 'desk', /#\/record$/, [0.31, 0.44, 0.68, 0.84], '--face-left-frame'],
+    ['打开任务', 'board', /#\/tasks$/, [0.42, 0.58, 0.68, 0.84], '--face-back-frame'],
+    ['打开日历', 'calendar', /#\/calendar$/, [0.58, 0.75, 0.68, 0.84], '--face-back-frame'],
+    ['打开成长', 'workbench', /#\/growth$/, [0.60, 0.73, 0.68, 0.84], '--face-right-frame'],
+    ['打开状态', 'window', /#\/system$/, [0.31, 0.44, 0.68, 0.84], '--face-back-frame'],
   ];
   try {
     await finishOnboarding(page);
-    for (const [buttonName, action, route, [minX, maxX, minY, maxY], interactionFrame] of destinations) {
+    for (const [buttonName, action, route, [minX, maxX, minY, maxY], interactionVariable] of destinations) {
       await page.goto(`${baseUrl}/#/today`);
       await page.getByRole('button', { name: buttonName }).click();
       const interacting = page.locator(`.room-character.is-action-${action}.is-interacting`);
       await interacting.waitFor();
-      const interaction = await interacting.evaluate((element) => {
+      const interaction = await interacting.evaluate((element, variable) => {
         const room = element.closest('.room-scene').getBoundingClientRect();
         const box = element.getBoundingClientRect();
         return {
           x: (box.left + box.width / 2 - room.left) / room.width,
           y: (box.bottom - room.top) / room.height,
           backgroundPosition: getComputedStyle(element).backgroundPosition,
+          expectedPosition: getComputedStyle(element).getPropertyValue(variable).trim().replace(/(^|\s)0(?=\s|$)/g, (_, lead) => `${lead}0px`),
         };
-      });
+      }, interactionVariable);
       assert.ok(interaction.x >= minX && interaction.x <= maxX && interaction.y >= minY && interaction.y <= maxY,
         `${action} must align with its furniture, got ${JSON.stringify(interaction)}`);
-      assert.equal(interaction.backgroundPosition, interactionFrame, `${action} must use the matching interaction pose`);
+      assert.equal(interaction.backgroundPosition, interaction.expectedPosition, `${action} must use the matching interaction pose`);
       await page.waitForURL(route);
     }
     assert.deepEqual(apiRequests, []);
@@ -2641,16 +2734,20 @@ test('task feedback lets the user review an AI candidate before XP is settled', 
     await page.getByRole('textbox', { name: '最小动作' }).fill('完成一个可核对步骤');
     await page.getByRole('dialog', { name: '安排每日任务' }).getByRole('button', { name: '安排任务' }).click();
     await page.getByRole('button', { name: '查看任务：反馈闭环行动' }).click();
-    await page.getByRole('dialog', { name: '记录任务结果' }).getByRole('button', { name: '编辑任务：反馈闭环行动' }).click();
-    const adjustment = page.getByRole('dialog', { name: '调整这项行动' });
-    await adjustment.getByRole('button', { name: '缩到 5 分钟' }).click();
-    await adjustment.getByRole('textbox', { name: '最小动作' }).fill('只完成一个五分钟版本');
+    const taskDetails = page.getByRole('dialog', { name: '记录任务结果' });
+    await taskDetails.getByText('编辑或删除任务', { exact: true }).click();
+    await taskDetails.getByRole('button', { name: '编辑任务：反馈闭环行动' }).click();
+    const adjustment = page.getByRole('dialog', { name: '修改任务' });
+    await adjustment.getByRole('button', { name: '做个更小版本' }).click();
+    await adjustment.getByRole('textbox', { name: '最容易开始的一步（可选）' }).fill('只完成一个五分钟版本');
     await adjustment.getByRole('button', { name: '保存调整' }).click();
-    await assert.doesNotReject(() => page.getByText(/只完成一个五分钟版本 · 5 分钟/).waitFor());
+    const compactRow = page.locator('.task-list-item').filter({ hasText: '反馈闭环行动' });
+    assert.doesNotMatch(await compactRow.innerText(), /只完成一个五分钟版本|5 分钟/, 'planning metadata belongs in details, not the main task row');
     await page.getByRole('button', { name: '查看任务：反馈闭环行动' }).click();
     const dialog = page.getByRole('dialog', { name: '记录任务结果' });
+    await assert.doesNotReject(() => dialog.getByText('只完成一个五分钟版本', { exact: true }).waitFor());
     const dialogBox = await dialog.boundingBox();
-    assert.ok(dialogBox && dialogBox.y + dialogBox.height >= 798, 'task feedback should open as a bottom sheet on mobile');
+    assert.ok(dialogBox && Math.abs(dialogBox.y + dialogBox.height / 2 - 400) <= 2, 'task details should open centered on mobile');
     await dialog.getByRole('textbox', { name: '做了什么（可选）' }).fill('完成了一部分可核对步骤。');
     assert.deepEqual(apiRequests, []);
     await dialog.getByRole('button', { name: 'AI 帮我填写' }).click();
@@ -2684,6 +2781,7 @@ test('weekly review sends summaries instead of journals and adopts its candidate
     const today = await page.locator('.record-date-settings input[type="date"]').inputValue();
     await page.getByRole('textbox', { name: '发生了什么' }).fill('整周原文不应出现在周复盘请求里。');
     await page.getByRole('button', { name: '保存记录' }).click();
+    await page.waitForURL(/#\/day\//);
     await page.goto(`${baseUrl}/#/review/${today}`);
     assert.equal(await page.locator('.review-companion').count(), 0);
     await page.getByRole('button', { name: '检查范围并生成' }).click();
@@ -2787,13 +2885,13 @@ test('a newly created BONUS has no historic debt and remains usable in weekly re
     const habitDialog = page.getByRole('dialog', { name: '建立低成本习惯' });
     await habitDialog.getByRole('textbox', { name: '我想养成什么？' }).fill('晚饭后散步');
     await habitDialog.getByRole('button', { name: '建立习惯' }).click();
-    await page.getByRole('button', { name: '将“晚饭后散步”加入每日任务' }).click();
+    await assert.doesNotReject(() => page.getByRole('button', { name: '暂停“晚饭后散步”的计划日打卡' }).waitFor());
     await openTaskView(page, '今天');
     await page.getByRole('button', { name: '完成：晚饭后散步' }).click();
     await assert.doesNotReject(() => page.getByText('已反馈 · 1', { exact: true }).waitFor());
     await openTaskView(page, '计划');
     const momentum = await page.locator('.habit-row').filter({ hasText: '晚饭后散步' }).locator('.caption').textContent();
-    assert.match(momentum ?? '', /最近坚持 5\/5/);
+    assert.match(momentum ?? '', /最近完成 5\/5/);
 
     await page.goto(`${baseUrl}/#/review`);
     await page.getByRole('button', { name: '检查范围并生成' }).click();

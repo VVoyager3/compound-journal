@@ -199,10 +199,10 @@ export interface Quest extends ImportableEntity {
   settlementVersion: number;
   title: string;
   reason: string;
-  minimumAction: string;
+  minimumAction?: string;
   /** The smallest observable evidence that counts as completion. */
   completionCriteria?: string;
-  estimatedMinutes: number;
+  estimatedMinutes?: number;
   deadlineAt?: string;
   /** Optional repeated check-in target. Omitted means a single-completion task. */
   targetCount?: number;

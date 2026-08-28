@@ -67,7 +67,7 @@ test('every companion action has its own tightly cropped transparent PNG', async
         ...Array.from({ length: 6 }, (_, index) => `${13 + index}-walk-left-${index + 1}.png`),
         ...Array.from({ length: 6 }, (_, index) => `${19 + index}-walk-right-${index + 1}.png`),
       ],
-      `${gender} horizontal files must keep the manually verified visual direction in their names`,
+      `${gender} horizontal files must keep the stable horizontal frame naming contract`,
     );
     for (const file of files) {
       const png = await readFile(path.join(directory, file));
@@ -92,11 +92,12 @@ test('room movement uses sprite frames instead of stretching the whole character
   assert.match(styles, /--scene-light:/);
   assert.match(styles, /background-size:\s*504px 504px/);
   assert.match(styles, /background-position:\s*var\(--walk-1\)/);
-  assert.match(styles, /--face-left-frame:\s*-252px 0/);
-  assert.match(styles, /--face-right-frame:\s*-84px 0/);
+  assert.match(styles, /--face-left-frame:\s*-84px 0/);
+  assert.match(styles, /--face-right-frame:\s*-252px 0/);
   assert.match(styles, /--walk-left-1:\s*0px -168px/);
   assert.match(styles, /--walk-right-1:\s*0px -252px/);
   assert.match(styles, /\.room-character\.has-motion\.is-female\s*\{[^}]*--rest-frame:\s*var\(--face-front-frame\)/s);
+  assert.match(styles, /\.room-character\.has-motion\.is-male\s*\{[^}]*--face-left-frame:\s*-252px 0;[^}]*--face-right-frame:\s*-84px 0;[^}]*--walk-left-1:\s*0px -252px;[^}]*--walk-left-6:\s*-420px -252px;[^}]*--walk-right-1:\s*0px -168px;[^}]*--walk-right-6:\s*-420px -168px;/s);
   assert.match(styles, /room-action 960ms steps\(6, jump-none\)/);
   assert.match(styles, /room-ambient-stroll 6200ms steps\(1, end\)/);
   assert.doesNotMatch(styles, /inset\(0 8px 22px 4px\)/);
@@ -132,8 +133,8 @@ test('typography and settings density follow the global UI rules', async () => {
   assert.match(styles, /h1,[\s\S]*h3\s*\{[^}]*font-family:\s*inherit/s);
   assert.doesNotMatch(styles, /Noto Serif SC|Source Han Serif SC|Songti SC/);
   assert.match(styles, /\.page-system\s*\{[^}]*gap:\s*10px/s);
-  assert.match(checklist, /### 字体与排版规则/);
-  assert.match(checklist, /能删掉的描述先删/);
+  assert.match(checklist, /## 二、信息与文案/);
+  assert.match(checklist, /非必要说明已经删除/);
 });
 
 test('Android launcher and splash use the Qiguang identity instead of Capacitor defaults', async () => {

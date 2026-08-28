@@ -1147,6 +1147,10 @@ function capacityQuestSourceLabel(quest: Quest): string {
   return { goal: '目标行动', habit: '习惯行动', recovery: '恢复行动', manual: '自主行动' }[quest.sourceType];
 }
 
+function questMinimumAction(quest: Quest): string {
+  return quest.minimumAction?.trim() || quest.title;
+}
+
 async function saveQuickQuestFeedback(quest: Quest, result: Extract<FeedbackResult, 'completed' | 'partial' | 'skipped'>, controls: HTMLElement): Promise<void> {
   if (result === 'skipped') {
     const history = await db.listQuestFeedback(quest.id);
@@ -1171,36 +1175,40 @@ async function saveQuickQuestFeedback(quest: Quest, result: Extract<FeedbackResu
   }
 }
 
+async function changeCountQuestProgress(quest: Quest, delta: -1 | 1, controls: HTMLElement): Promise<void> {
+  const progress = quest.progressCount ?? 0;
+  const target = quest.targetCount ?? 1;
+  if (delta === 1 && progress + 1 >= target) {
+    await saveQuickQuestFeedback(quest, 'completed', controls);
+    return;
+  }
+  controls.querySelectorAll<HTMLButtonElement>('button').forEach((button) => { button.disabled = true; });
+  try {
+    const updated = await db.changeQuestProgress(quest.id, delta);
+    focusAfterRenderSelector = `[data-quest-id="${CSS.escape(quest.id)}"]`;
+    showToast(delta > 0 ? `已记录 ${updated.progressCount}/${target}${quest.countUnit || '次'}。` : '已减去一次记录。');
+    await render();
+  } catch (error) {
+    showToast(errorMessage(error), 'error');
+    controls.querySelectorAll<HTMLButtonElement>('button').forEach((button) => { button.disabled = false; });
+  }
+}
+
 function countQuestActions(quest: Quest): HTMLElement {
   const actions = node('div', 'quest-actions quest-count-actions');
   const progress = quest.progressCount ?? 0;
   const target = quest.targetCount ?? 1;
-  const change = async (delta: -1 | 1): Promise<void> => {
-    if (delta === 1 && progress + 1 >= target) {
-      await saveQuickQuestFeedback(quest, 'completed', actions);
-      return;
-    }
-    actions.querySelectorAll<HTMLButtonElement>('button').forEach((button) => { button.disabled = true; });
-    try {
-      await db.changeQuestProgress(quest.id, delta);
-      focusAfterRenderSelector = `[data-quest-id="${CSS.escape(quest.id)}"]`;
-      await render();
-    } catch (error) {
-      showToast(errorMessage(error), 'error');
-      actions.querySelectorAll<HTMLButtonElement>('button').forEach((button) => { button.disabled = false; });
-    }
-  };
   const minus = node('button', 'button button-quiet', '−1');
   minus.type = 'button';
   minus.disabled = progress === 0;
   minus.setAttribute('aria-label', `减少一次：${quest.title}`);
-  minus.addEventListener('click', () => { void change(-1); });
-  const count = node('output', 'quest-count-progress', `${progress}/${target} ${quest.countUnit}`);
+  minus.addEventListener('click', () => { void changeCountQuestProgress(quest, -1, actions); });
+  const count = node('output', 'quest-count-progress', `${progress}/${target} ${quest.countUnit || '次'}`);
   count.setAttribute('aria-live', 'polite');
   const plus = node('button', 'button button-primary', '+1');
   plus.type = 'button';
   plus.setAttribute('aria-label', `记录一次：${quest.title}`);
-  plus.addEventListener('click', () => { void change(1); });
+  plus.addEventListener('click', () => { void changeCountQuestProgress(quest, 1, actions); });
   const skip = node('button', 'button button-quiet', '跳过今天');
   skip.type = 'button';
   skip.setAttribute('aria-label', `跳过今天：${quest.title}`);
@@ -1250,6 +1258,20 @@ function quickQuestActions(quest: Quest): HTMLElement {
   return actions;
 }
 
+async function confirmRemoveTaskItem(label: string, remove: () => Promise<unknown>, trigger: HTMLButtonElement, parentDialog?: HTMLDialogElement): Promise<void> {
+  if (!await confirmAction('删除这一项？', `“${label}”会从任务页移除，已有进展会保留。`, '删除', true)) return;
+  trigger.disabled = true;
+  try {
+    await remove();
+    parentDialog?.close();
+    showToast('已删除；历史记录保留。');
+    await render();
+  } catch (error) {
+    trigger.disabled = false;
+    showToast(errorMessage(error), 'error');
+  }
+}
+
 async function openQuestFeedbackDialog(quest: Quest, initialResult?: FeedbackResult): Promise<void> {
   const [feedbackHistory, stateHistory] = await Promise.all([
     db.listQuestFeedback(quest.id),
@@ -1261,7 +1283,8 @@ async function openQuestFeedbackDialog(quest: Quest, initialResult?: FeedbackRes
   const { dialog, content, actions } = dialogShell(quest.status === 'pending' ? '记录任务结果' : '修改任务结果');
   dialog.classList.add('task-feedback-dialog');
   const taskContext = node('div', 'feedback-task-context');
-  taskContext.append(node('strong', '', quest.title), node('span', 'caption', quest.minimumAction));
+  taskContext.append(node('strong', '', quest.title));
+  if (quest.minimumAction && quest.minimumAction !== quest.title) taskContext.append(node('span', 'caption', quest.minimumAction));
   content.append(taskContext);
 
   const resultLabel = node('label', 'field-label', '结果');
@@ -1377,7 +1400,7 @@ async function openQuestFeedbackDialog(quest: Quest, initialResult?: FeedbackRes
       userInput: {
         questId: quest.id,
         questTitle: quest.title,
-        minimumAction: quest.minimumAction,
+        minimumAction: questMinimumAction(quest),
         currentDifficulty: difficulty.value as Difficulty,
         feedbackText: actual.value,
       },
@@ -1420,16 +1443,25 @@ async function openQuestFeedbackDialog(quest: Quest, initialResult?: FeedbackRes
   const cancel = node('button', 'button button-secondary', '取消');
   cancel.type = 'button';
   cancel.addEventListener('click', () => dialog.close());
-  const secondaryAction = quest.status === 'pending'
-    ? node('button', 'button button-quiet', '编辑任务')
-    : node('button', 'button button-quiet', '撤销结果');
+  const secondaryAction = node('button', 'button button-quiet', '撤销结果');
   secondaryAction.type = 'button';
   if (quest.status === 'pending') {
-    secondaryAction.setAttribute('aria-label', `编辑任务：${quest.title}`);
-    secondaryAction.addEventListener('click', () => {
+    const taskSettings = node('details', 'feedback-extra task-item-management');
+    const taskSettingsActions = node('div', 'quest-adjust-shortcuts');
+    const edit = node('button', 'button button-secondary', '编辑任务');
+    edit.type = 'button';
+    edit.setAttribute('aria-label', `编辑任务：${quest.title}`);
+    edit.addEventListener('click', () => {
       dialog.close();
       void openQuestAdjustmentDialog(quest);
     });
+    const remove = node('button', 'button button-quiet danger-button', '删除任务');
+    remove.type = 'button';
+    remove.setAttribute('aria-label', `删除任务：${quest.title}`);
+    remove.addEventListener('click', () => { void confirmRemoveTaskItem(quest.title, () => db.removePendingQuest(quest.id), remove, dialog); });
+    taskSettingsActions.append(edit, remove);
+    taskSettings.append(node('summary', '', '编辑或删除任务'), taskSettingsActions);
+    content.append(taskSettings);
   } else {
     secondaryAction.setAttribute('aria-label', `撤销任务“${quest.title}”的反馈`);
     secondaryAction.addEventListener('click', async () => {
@@ -1487,7 +1519,7 @@ async function openQuestFeedbackDialog(quest: Quest, initialResult?: FeedbackRes
       status.classList.add('is-error');
     }
   });
-  actions.append(secondaryAction, cancel, save);
+  actions.append(...(quest.status === 'pending' ? [] : [secondaryAction]), cancel, save);
   dialog.showModal();
   result.focus();
 }
@@ -1534,11 +1566,11 @@ async function openQuestAdjustmentDialog(quest: Quest): Promise<void> {
   const goal = quest.sourceType === 'goal' ? goals.find((item) => item.id === quest.sourceId) : undefined;
   const milestone = milestones.find((item) => item.id === quest.milestoneId);
   const usedMemories = memories.filter((item) => item.type === 'constraint' || item.type === 'preference' || item.type === 'pattern').slice(0, 3);
-  const { dialog, content, actions } = dialogShell('调整这项行动');
+  const { dialog, content, actions } = dialogShell('修改任务');
   const title = node('input', 'input'); title.maxLength = 160; title.value = quest.title;
   const reason = node('textarea', 'input compact-textarea'); reason.maxLength = 500; reason.value = quest.reason;
-  const minimum = node('input', 'input'); minimum.maxLength = 200; minimum.value = quest.minimumAction;
-  const minutes = node('input', 'input'); minutes.type = 'number'; minutes.min = '1'; minutes.max = '1440'; minutes.value = String(quest.estimatedMinutes);
+  const minimum = node('input', 'input'); minimum.maxLength = 200; minimum.value = quest.minimumAction ?? '';
+  const minutes = node('input', 'input'); minutes.type = 'number'; minutes.min = '1'; minutes.max = '1440'; minutes.value = quest.estimatedMinutes ? String(quest.estimatedMinutes) : '';
   const deadline = node('input', 'input'); deadline.type = 'datetime-local'; deadline.value = localDateTimeInput(quest.deadlineAt);
   const difficulty = node('select', 'input');
   for (const value of Object.keys(DIFFICULTY_XP) as Difficulty[]) difficulty.append(selectOption(value, questDifficultyLabel(quest, value), value === quest.difficulty));
@@ -1552,13 +1584,13 @@ async function openQuestAdjustmentDialog(quest: Quest): Promise<void> {
   completionMode.addEventListener('change', () => { countFields.hidden = completionMode.value !== 'count'; });
   const status = node('p', 'save-state');
   const shortcuts = node('div', 'quest-adjust-shortcuts');
-  const shrink = node('button', 'button button-secondary', '缩到 5 分钟'); shrink.type = 'button';
-  shrink.addEventListener('click', () => { minutes.value = '5'; difficulty.value = 'light'; minimum.focus(); status.textContent = '请把最小动作改成五分钟内真的能开始的版本。'; });
-  const replace = node('button', 'button button-secondary', '换一个行动'); replace.type = 'button';
-  replace.addEventListener('click', () => { title.select(); status.textContent = '改写行动标题、理由和最小动作，原目标或习惯关联会保留。'; });
+  const shrink = node('button', 'button button-secondary', '做个更小版本'); shrink.type = 'button';
+  shrink.addEventListener('click', () => { minutes.value = '5'; difficulty.value = 'light'; minimum.focus(); status.textContent = '写一个 5 分钟内能完成的小步骤。'; });
+  const replace = node('button', 'button button-secondary', '换一个任务'); replace.type = 'button';
+  replace.addEventListener('click', () => { title.select(); status.textContent = '直接改写任务标题即可，原目标或习惯关联会保留。'; });
   shortcuts.append(shrink, replace);
   if (quest.sourceType !== 'habit') {
-    const tomorrow = node('button', 'button button-secondary', '移到明天'); tomorrow.type = 'button';
+    const tomorrow = node('button', 'button button-secondary', '改到明天'); tomorrow.type = 'button';
     tomorrow.addEventListener('click', () => { date.value = shiftDate(localDate(), 1); status.textContent = '将顺延到明天；没有扣分。'; });
     shortcuts.append(tomorrow);
   } else date.disabled = true;
@@ -1582,22 +1614,22 @@ async function openQuestAdjustmentDialog(quest: Quest): Promise<void> {
     });
     shortcuts.append(editGoal, pauseGoal);
   }
-  const basis = node('details', 'quest-adjust-basis'); basis.open = true;
-  basis.append(node('summary', '', '这次调整依据'));
+  const basis = node('details', 'quest-adjust-basis');
+  basis.append(node('summary', '', '为什么这样建议'));
   const facts = node('ul', 'compact-list');
-  facts.append(node('li', '', `事实：原计划 ${formatDate(quest.localDate)} · ${quest.estimatedMinutes} 分钟 · ${DIFFICULTY_LABELS[quest.difficulty]}`));
-  if (quest.deadlineAt) facts.append(node('li', '', `事实：可选硬截止 ${new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(quest.deadlineAt))}`));
-  if (goal) facts.append(node('li', '', `事实：来自目标“${goal.result}”`));
-  if (milestone) facts.append(node('li', '', `当前阶段“${milestone.description}”，完成标准是“${milestone.evidence}”`));
-  if (feedback.length) facts.append(node('li', '', `事实：已有 ${feedback.filter((item) => !item.undoneAt).length} 次有效反馈`));
-  usedMemories.forEach((memory) => facts.append(node('li', '', `已确认记忆：${memory.statement}`)));
-  if (!usedMemories.length) facts.append(node('li', '', '已确认记忆：本次没有可用的限制、偏好或规律；不会凭空假设。'));
+  facts.append(node('li', '', `原来安排在 ${formatDate(quest.localDate)}${quest.estimatedMinutes ? `，预计 ${quest.estimatedMinutes} 分钟` : ''}，难度为${DIFFICULTY_LABELS[quest.difficulty]}。`));
+  if (quest.deadlineAt) facts.append(node('li', '', `截止时间是 ${new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(quest.deadlineAt))}。`));
+  if (goal) facts.append(node('li', '', `这个任务来自目标“${goal.result}”。`));
+  if (milestone) facts.append(node('li', '', `当前要完成“${milestone.description}”，完成时应看到“${milestone.evidence}”。`));
+  if (feedback.length) facts.append(node('li', '', `你已经为这个任务记录过 ${feedback.filter((item) => !item.undoneAt).length} 次结果。`));
+  usedMemories.forEach((memory) => facts.append(node('li', '', `参考了你保存的偏好：${memory.statement}`)));
   basis.append(facts);
   content.append(
-    basis, shortcuts,
-    labelledControl('行动标题', title), labelledControl('为什么值得做', reason), labelledControl('最小动作', minimum),
+    shortcuts,
+    labelledControl('任务名称', title), labelledControl('为什么要做（可选）', reason), labelledControl('最容易开始的一步（可选）', minimum),
     labelledControl('完成方式', completionMode), countFields,
-    labelledControl('预计分钟', minutes), labelledControl('难度', difficulty), labelledControl('可选硬截止（不会自动失败）', deadline), labelledControl(quest.sourceType === 'habit' ? '习惯任务日期由计划日决定' : '安排日期', date), status,
+    labelledControl('预计用时（分钟，可选）', minutes), labelledControl('难度', difficulty), labelledControl('截止时间（可选）', deadline), labelledControl(quest.sourceType === 'habit' ? '日期由习惯计划决定' : '安排日期', date),
+    basis, status,
   );
   const cancel = node('button', 'button button-secondary', '取消'); cancel.type = 'button'; cancel.addEventListener('click', () => dialog.close());
   const save = node('button', 'button button-primary', '保存调整'); save.type = 'button';
@@ -1608,7 +1640,7 @@ async function openQuestAdjustmentDialog(quest: Quest): Promise<void> {
         localDate: date.value, title: title.value, reason: reason.value, minimumAction: minimum.value,
         targetCount: completionMode.value === 'count' ? Number(targetCount.value) : undefined,
         countUnit: completionMode.value === 'count' ? countUnit.value : undefined,
-        estimatedMinutes: Number(minutes.value), difficulty: difficulty.value as Difficulty, deadlineAt: isoFromDateTimeInput(deadline.value),
+        estimatedMinutes: minutes.value ? Number(minutes.value) : undefined, difficulty: difficulty.value as Difficulty, deadlineAt: isoFromDateTimeInput(deadline.value),
       });
       dialog.close();
       showToast(updated.localDate === quest.localDate ? '行动已调整。' : `已顺延到${formatDate(updated.localDate)}；没有扣分。`);
@@ -1618,56 +1650,59 @@ async function openQuestAdjustmentDialog(quest: Quest): Promise<void> {
   actions.append(cancel, save); dialog.showModal(); title.focus();
 }
 
+function taskListQuest(quest: Quest, overdue = false): HTMLElement {
+  const deadlinePassed = Boolean(quest.deadlineAt && Date.parse(quest.deadlineAt) < Date.now() && quest.status === 'pending');
+  const item = node('article', `task-list-item is-${quest.type} is-${quest.status} is-source-${quest.sourceType}${quest.targetCount ? ' has-count' : ''}${overdue ? ' is-overdue' : ''}${deadlinePassed ? ' is-deadline-passed' : ''}`);
+  item.dataset.questId = quest.id;
+  item.tabIndex = -1;
+  const progress = quest.progressCount ?? 0;
+  const target = quest.targetCount ?? 1;
+  if (quest.targetCount) item.style.setProperty('--task-progress', `${Math.round((progress / target) * 100)}%`);
+  const action = node('button', 'task-row-action');
+  action.type = 'button';
+  const copy = node('span', 'task-list-copy');
+  copy.append(node('h3', '', quest.title));
+  const meta = overdue ? `原计划 ${formatDate(quest.localDate)}` : deadlinePassed ? '已过截止时间' : quest.deadlineAt
+    ? `${new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(quest.deadlineAt))} 截止` : '';
+  if (meta) copy.append(node('span', deadlinePassed ? 'caption danger-copy' : 'caption', meta));
+  if (!quest.targetCount) action.append(node('span', `task-check is-${quest.status}`, quest.status === 'completed' ? '✓' : quest.status === 'partial' ? '–' : ''));
+  action.append(copy);
+  if (quest.targetCount) action.append(node('span', 'task-count-progress', `${progress}/${target} ${quest.countUnit || '次'}`));
+  action.setAttribute('aria-label', quest.status !== 'pending' ? `修改任务“${quest.title}”的反馈` : overdue
+    ? `记录“${quest.title}”的实际结果` : quest.targetCount ? `记录一次：${quest.title}，当前 ${progress}/${target}${quest.countUnit || '次'}` : `完成：${quest.title}`);
+  action.addEventListener('click', () => {
+    if (quest.status !== 'pending' || overdue) { void openQuestFeedbackDialog(quest, overdue ? 'completed' : undefined); return; }
+    if (quest.targetCount) void changeCountQuestProgress(quest, 1, item);
+    else void saveQuickQuestFeedback(quest, 'completed', item);
+  });
+  const details = node('button', 'task-item-details', '⋯');
+  details.type = 'button';
+  details.dataset.questFeedbackFor = quest.id;
+  details.setAttribute('aria-label', `查看任务：${quest.title}`);
+  details.addEventListener('click', () => { void openQuestFeedbackDialog(quest); });
+  item.append(action, details);
+  return item;
+}
+
 function questCard(quest: Quest, compact = false, milestone?: { description: string }, taskList = false): HTMLElement {
   const deadlinePassed = Boolean(quest.deadlineAt && Date.parse(quest.deadlineAt) < Date.now() && quest.status === 'pending');
-  if (taskList && !quest.systemRetiredAt) {
-    const item = node('article', `task-list-item is-${quest.type} is-${quest.status} is-source-${quest.sourceType}${quest.targetCount ? ' has-count' : ''}${deadlinePassed ? ' is-deadline-passed' : ''}`);
-    item.dataset.questId = quest.id;
-    item.tabIndex = -1;
-    const sourceLabel = ({ goal: '长期任务', habit: '习惯', recovery: '恢复', manual: '临时任务' } as const)[quest.sourceType];
-    const copy = node('div', 'task-list-copy');
-    copy.append(
-      node('h3', '', quest.title),
-      node('p', 'caption', `${sourceLabel} · ${quest.minimumAction}${quest.estimatedMinutes ? ` · ${quest.estimatedMinutes} 分钟` : ''}`),
-    );
-    const details = node('button', 'task-item-details', '详情 ›');
-    details.type = 'button';
-    details.dataset.questFeedbackFor = quest.id;
-    details.setAttribute('aria-label', `查看任务：${quest.title}`);
-    details.addEventListener('click', () => { void openQuestFeedbackDialog(quest); });
-    if (quest.status === 'pending' && quest.targetCount) {
-      item.append(copy, countQuestActions(quest), details);
-      return item;
-    }
-    const check = node('button', `task-check is-${quest.status}`, quest.status === 'pending' ? '' : '✓');
-    check.type = 'button';
-    if (quest.status === 'pending') {
-      check.setAttribute('aria-label', `完成：${quest.title}`);
-      check.addEventListener('click', () => { void saveQuickQuestFeedback(quest, 'completed', item); });
-    } else {
-      check.setAttribute('aria-label', `修改任务“${quest.title}”的反馈`);
-      check.dataset.questFeedbackFor = quest.id;
-      check.addEventListener('click', () => { void openQuestFeedbackDialog(quest); });
-    }
-    item.append(check, copy, details);
-    return item;
-  }
+  if (taskList && !quest.systemRetiredAt) return taskListQuest(quest);
   const card = node('article', `${compact ? 'quest-row' : 'surface quest-card'} is-${quest.type} is-${quest.status}${deadlinePassed ? ' is-deadline-passed' : ''}`);
   card.dataset.questId = quest.id;
   card.tabIndex = -1;
   const heading = node('div', 'quest-heading');
   const capacitySource = quest.systemRetiredReason === 'capacity' ? capacityQuestSourceLabel(quest) : '';
-  const sourceLabel = ({ goal: '长期任务', habit: '习惯', recovery: '恢复', manual: '临时任务' } as const)[quest.sourceType];
+  const sourceLabel = ({ goal: '目标', habit: '习惯', recovery: '恢复', manual: '自主' } as const)[quest.sourceType];
   heading.append(
     node('span', `quest-source-label is-${quest.sourceType}`, capacitySource || sourceLabel),
     node('span', 'caption', `${QUEST_LABELS[quest.type]} · ${questDifficultyLabel(quest)}`),
   );
   card.append(heading, node('h3', '', quest.title));
   if (quest.localDate !== localDate()) card.append(node('p', 'caption', `计划日期：${formatDate(quest.localDate)}`));
-  const minimum = node('p', 'quest-minimum', `最小动作：${quest.minimumAction} · 约 ${quest.estimatedMinutes} 分钟`);
-  card.append(minimum);
-  const completionCriteria = (quest.completionCriteria || quest.minimumAction).trim();
-  if (completionCriteria !== quest.minimumAction.trim()) card.append(node('p', 'caption', `完成标准：${completionCriteria}`));
+  const planning = [quest.minimumAction && quest.minimumAction !== quest.title ? `最小动作：${quest.minimumAction}` : '', quest.estimatedMinutes ? `约 ${quest.estimatedMinutes} 分钟` : ''].filter(Boolean);
+  if (planning.length) card.append(node('p', 'quest-minimum', planning.join(' · ')));
+  const completionCriteria = quest.completionCriteria?.trim();
+  if (completionCriteria && completionCriteria !== questMinimumAction(quest)) card.append(node('p', 'caption', `完成标准：${completionCriteria}`));
   if (milestone) card.append(node('p', 'caption', `关联阶段：${milestone.description}`));
   if (quest.deadlineAt) card.append(node('p', deadlinePassed ? 'caption danger-copy' : 'caption', `${deadlinePassed ? '截止已过，仍由你决定' : '可选截止'}：${new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(quest.deadlineAt))}`));
   if (quest.status === 'pending') card.append(quest.targetCount ? countQuestActions(quest) : quickQuestActions(quest));
@@ -1698,6 +1733,11 @@ function questCard(quest: Quest, compact = false, milestone?: { description: str
         }
       });
       retired.append(schedule);
+      const remove = node('button', 'button button-quiet danger-button', '删除任务');
+      remove.type = 'button';
+      remove.setAttribute('aria-label', `删除任务：${quest.title}`);
+      remove.addEventListener('click', () => { void confirmRemoveTaskItem(quest.title, () => db.removePendingQuest(quest.id), remove); });
+      retired.append(remove);
     }
     card.append(retired);
   }
@@ -1886,32 +1926,13 @@ function openDailyCloseout(date: string, entries: JournalEntry[], quests: Quest[
   actions.append(close); dialog.showModal(); close.focus();
 }
 
-function overdueQuestPanel(quests: Quest[], manageControl?: (quest: Quest) => HTMLElement): HTMLElement {
+function overdueQuestPanel(quests: Quest[], limit = 3): HTMLElement {
   const panel = node('section', 'surface overdue-quests');
-  const visible = quests.slice(0, 3);
-  panel.append(
-    node('span', 'tag', '待处理'),
-    node('h2', '', `之前的任务 · ${quests.length}`),
-  );
+  const visible = quests.slice(0, limit);
+  panel.append(node('h2', '', `待决定 · ${quests.length}`));
   const list = node('div', 'overdue-quest-list');
   for (const quest of visible) {
-    const row = node('article', `task-list-item is-overdue is-${quest.type} is-source-${quest.sourceType}`);
-    row.dataset.questId = quest.id;
-    row.tabIndex = -1;
-    if (manageControl) row.append(manageControl(quest));
-    const check = node('button', 'task-check is-pending', '');
-    check.type = 'button';
-    check.setAttribute('aria-label', `完成：${quest.title}`);
-    check.addEventListener('click', () => { void openQuestFeedbackDialog(quest, 'completed'); });
-    const copy = node('div', 'task-list-copy');
-    copy.append(node('h3', '', quest.title), node('p', 'caption', `原计划 ${formatDate(quest.localDate)}`));
-    const details = node('button', 'task-item-details', '详情 ›');
-    details.type = 'button';
-    details.dataset.questFeedbackFor = quest.id;
-    details.setAttribute('aria-label', `查看任务：${quest.title}`);
-    details.addEventListener('click', () => { void openQuestFeedbackDialog(quest); });
-    row.append(check, copy, details);
-    list.append(row);
+    list.append(taskListQuest(quest, true));
   }
   if (quests.length > visible.length) {
     const more = node('button', 'button button-secondary', `打开任务板继续处理另外 ${quests.length - visible.length} 项`);
@@ -2042,7 +2063,8 @@ async function todayPage(): Promise<HTMLElement> {
         recovery?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
       }));
     } else if (direction.kind === 'main' && directionQuest?.status === 'pending') {
-      guide.append(node('h2', '', directionQuest.title), node('p', 'quest-minimum', `先做：${directionQuest.minimumAction}`));
+      guide.append(node('h2', '', directionQuest.title));
+      if (directionQuest.minimumAction && directionQuest.minimumAction !== directionQuest.title) guide.append(node('p', 'quest-minimum', `先做：${directionQuest.minimumAction}`));
       guide.append(primaryButton('处理这项后续行动', () => go({ name: 'tasks' })));
     } else if (direction.kind === 'main' && directionQuest) {
       guide.append(node('h2', '', '这项行动已经完成'));
@@ -2122,7 +2144,8 @@ async function todayPage(): Promise<HTMLElement> {
   if (mainQuest) {
     const action = node('section', 'surface main-action quest-main-action');
     action.append(node('span', 'tag tag-dark', '今日重点'), node('h2', '', mainQuest.title));
-    action.append(node('p', 'quest-minimum', `${mainQuest.minimumAction} · ${mainQuest.estimatedMinutes} 分钟`));
+    const mainPlanning = [mainQuest.minimumAction && mainQuest.minimumAction !== mainQuest.title ? mainQuest.minimumAction : '', mainQuest.estimatedMinutes ? `${mainQuest.estimatedMinutes} 分钟` : ''].filter(Boolean);
+    if (mainPlanning.length) action.append(node('p', 'quest-minimum', mainPlanning.join(' · ')));
     action.dataset.questId = mainQuest.id;
     action.tabIndex = -1;
     if (mainQuest.status === 'pending') action.append(quickQuestActions(mainQuest));
@@ -3947,7 +3970,6 @@ async function openGoalDialog(): Promise<void> {
   plan.hidden = true;
   let milestoneEditors: Array<{ enabled: HTMLInputElement; title: HTMLInputElement; evidence: HTMLTextAreaElement }> = [];
   let nextStepDraft: GoalDecompositionResult['nextStep'] | null = null;
-  let scheduleNext: HTMLInputElement | null = null;
   let decompositionFingerprint: string | null = null;
   const draftFingerprint = (): string => JSON.stringify({
     result: result.value.trim(), why: why.value.trim(), evidence: evidence.value.trim(),
@@ -3988,11 +4010,10 @@ async function openGoalDialog(): Promise<void> {
       plan.append(card);
       return { enabled, title: titleInput, evidence: evidenceInput };
     });
-    scheduleNext = node('input');
-    scheduleNext.type = 'checkbox'; scheduleNext.checked = true;
-    const schedule = node('label', 'setting-row');
-    schedule.append(node('span', '', `同时把“${draft.nextStep.title}”安排到今天`), scheduleNext);
-    plan.append(schedule, node('p', 'caption', `最小动作：${draft.nextStep.minimumAction} · 约 ${draft.nextStep.estimatedMinutes} 分钟 · ${DIFFICULTY_LABELS[draft.nextStep.difficulty]}`));
+    plan.append(
+      node('p', 'goal-plan-fact', `当前下一步：${draft.nextStep.title}`),
+      node('p', 'caption', `最小动作：${draft.nextStep.minimumAction} · 约 ${draft.nextStep.estimatedMinutes} 分钟 · ${DIFFICULTY_LABELS[draft.nextStep.difficulty]}`),
+    );
     if (draft.risks.length) plan.append(node('p', 'caption', `关键风险：${draft.risks.join('；')}`));
     if (draft.assumptions.length) plan.append(node('p', 'caption', `请核对这些假设：${draft.assumptions.join('；')}`));
   };
@@ -4041,14 +4062,14 @@ async function openGoalDialog(): Promise<void> {
   const cancel = node('button', 'button button-secondary', '取消');
   cancel.type = 'button';
   cancel.addEventListener('click', () => dialog.close());
-  const save = node('button', 'button button-primary', '建立目标');
-  save.type = 'button';
-  save.addEventListener('click', async () => {
-    save.disabled = true;
+  const saveGoal = async (startNow: boolean, trigger: HTMLButtonElement): Promise<void> => {
+    trigger.disabled = true;
+    start.disabled = true;
+    saveOnly.disabled = true;
     try {
-      const fallbackNextStep = `花 5 分钟写下“${result.value.trim()}”的第一步`.slice(0, 160);
+      const chosenNextStep = nextStep.value.trim() || nextStepDraft?.title || '确定一个可以开始的下一步';
       const created = await db.addGoal({
-        result: result.value, why: why.value, evidence: evidence.value, nextStep: nextStep.value.trim() || fallbackNextStep,
+        result: result.value, why: why.value, evidence: evidence.value, nextStep: chosenNextStep,
         areaId: area.value || undefined, branchId: branch.value || undefined, role: role.value as Goal['role'], startDate: localDate(),
       });
       const extraErrors: string[] = [];
@@ -4056,7 +4077,7 @@ async function openGoalDialog(): Promise<void> {
         try { await db.addMilestone(created.id, editor.title.value, editor.evidence.value); }
         catch (error) { extraErrors.push(errorMessage(error)); }
       }
-      if (scheduleNext?.checked && nextStepDraft && created.role !== 'wishlist') {
+      if (startNow && nextStepDraft && created.role !== 'wishlist') {
         try {
           await db.addQuest({
             localDate: localDate(), type: created.role === 'main' ? 'main' : 'side', sourceType: 'goal', sourceId: created.id,
@@ -4065,25 +4086,32 @@ async function openGoalDialog(): Promise<void> {
             estimatedMinutes: nextStepDraft.estimatedMinutes, difficulty: nextStepDraft.difficulty, branchId: created.branchId,
           });
         } catch (error) { extraErrors.push(errorMessage(error)); }
-      } else if (!nextStepDraft && created.role !== 'wishlist') {
+      } else if (startNow && !nextStepDraft && created.role !== 'wishlist') {
         try {
           await db.addQuest({
             localDate: localDate(), type: created.role === 'main' ? 'main' : 'side', sourceType: 'goal', sourceId: created.id,
-            title: created.nextStep, reason: `这是“${created.result}”当下最小的可行一步。`, minimumAction: '先做 5 分钟。',
-            estimatedMinutes: 10, difficulty: 'light', branchId: created.branchId,
+            title: created.nextStep, reason: `这是“${created.result}”当前确认的下一步。`,
+            difficulty: 'light', branchId: created.branchId,
           });
         } catch (error) { extraErrors.push(errorMessage(error)); }
       }
       dialog.close();
-      showToast(extraErrors.length ? `目标已建立；部分拆解未加入：${extraErrors[0]}` : created.role !== role.value ? '当前名额已满，目标已放入愿望库。' : nextStepDraft ? '目标和你确认的拆解已建立。' : '目标和可编辑的本地下一步已建立。');
+      showToast(extraErrors.length ? `目标已建立；今日下一步未加入：${extraErrors[0]}` : created.role !== role.value ? '当前名额已满，目标已放入愿望库。' : startNow && created.role !== 'wishlist' ? '目标已建立，下一步已放入今天。' : '目标计划已保存，没有安排今日任务。');
       await render();
     } catch (error) {
-      save.disabled = false;
+      start.disabled = false;
+      saveOnly.disabled = false;
       status.textContent = errorMessage(error);
       status.classList.add('is-error');
     }
-  });
-  actions.append(cancel, save);
+  };
+  const saveOnly = node('button', 'button button-secondary', '只保存计划');
+  saveOnly.type = 'button';
+  const start = node('button', 'button button-primary', '建立并开始');
+  start.type = 'button';
+  saveOnly.addEventListener('click', () => { void saveGoal(false, saveOnly); });
+  start.addEventListener('click', () => { void saveGoal(true, start); });
+  actions.append(cancel, saveOnly, start);
   dialog.showModal();
   result.focus();
 }
@@ -4304,12 +4332,12 @@ async function openQuestDialog(goal?: Goal, suggestedTitle = ''): Promise<void> 
   reason.value = goal?.why || (suggestedTitle ? '来自昨天复盘，由你确认后才加入今天。' : '这是你今天主动选择的一步。');
   const minimum = node('input', 'input');
   minimum.maxLength = 200;
-  minimum.value = suggestedTitle || goal?.nextStep || '先做 5 分钟。';
+  minimum.placeholder = '可选：更容易开始的小版本';
   const minutes = node('input', 'input');
   minutes.type = 'number';
   minutes.min = '1';
   minutes.max = '1440';
-  minutes.value = '10';
+  minutes.placeholder = '可选';
   const type = node('select', 'input');
   const suggestedType: QuestType = goal?.role === 'main' || suggestedTitle ? 'main' : 'side';
   type.append(selectOption('main', '今日重点 · 最多 1 项', suggestedType === 'main'), selectOption('side', '其他任务 · 最多 2 项', suggestedType === 'side'));
@@ -4342,11 +4370,11 @@ async function openQuestDialog(goal?: Goal, suggestedTitle = ''): Promise<void> 
     try {
       await db.addQuest({
         localDate: date.value, type: type.value as QuestType, sourceType: goal ? 'goal' : 'manual', sourceId: goal?.id,
-        completionCriteria: minimum.value,
-        title: title.value, reason: reason.value, minimumAction: minimum.value, estimatedMinutes: Number(minutes.value),
+        completionCriteria: minimum.value.trim() || undefined,
+        title: title.value, reason: reason.value, minimumAction: minimum.value.trim() || undefined, estimatedMinutes: minutes.value ? Number(minutes.value) : undefined,
         targetCount: completionMode.value === 'count' ? Number(targetCount.value) : undefined,
         countUnit: completionMode.value === 'count' ? countUnit.value : undefined,
-        difficulty: difficulty.value as Difficulty, branchId: branch.value, dimension: (dimension.value || undefined) as Dimension | undefined,
+        difficulty: difficulty.value as Difficulty, branchId: branch.value || undefined, dimension: (dimension.value || undefined) as Dimension | undefined,
       });
       dialog.close();
       showToast(`任务已安排到${date.value === localDate() ? '今天' : formatDate(date.value)}。`);
@@ -4412,8 +4440,8 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
   const bonusLabel = node('label', 'setting-row');
   const bonus = node('input');
   bonus.type = 'checkbox';
-  bonus.checked = habit?.bonusEnabled ?? false;
-  bonusLabel.append(node('span', '', '放到每日可选任务（最多 3 个）'), bonus);
+  bonus.checked = habit?.bonusEnabled ?? true;
+  bonusLabel.append(node('span', '', '按计划日加入今日任务'), bonus);
   const status = node('p', 'save-state');
   const advanced = node('details', 'form-advanced');
   advanced.append(node('summary', '', '更多设置（可选）'));
@@ -4421,10 +4449,10 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
   advancedFields.append(
     labelledControl('最小动作', minimum), labelledControl('完成方式', completionMode), countFields, labelledControl('触发条件（可选）', trigger), schedule,
     labelledControl('主要改善的状态', dimension), labelledControl('想提升什么', branch), labelledControl('难度', difficulty),
-    labelledControl('习惯状态', habitStatus), bonusLabel,
+    labelledControl('习惯状态', habitStatus),
   );
   advanced.append(advancedFields);
-  content.append(labelledControl(habit ? '习惯名称' : '我想养成什么？', name), advanced, status);
+  content.append(labelledControl(habit ? '习惯名称' : '我想养成什么？', name), bonusLabel, advanced, status);
   const cancel = node('button', 'button button-secondary', '取消');
   cancel.type = 'button';
   cancel.addEventListener('click', () => dialog.close());
@@ -4435,7 +4463,7 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
     const days = Array.from(schedule.querySelectorAll<HTMLInputElement>('input:checked')).map((item) => Number(item.value));
     try {
       const value = {
-        name: name.value, minimumAction: minimum.value.trim() || `先做一个“${name.value.trim()}”的五分钟版本`, trigger: trigger.value, scheduleDays: days,
+        name: name.value, minimumAction: minimum.value.trim() || name.value.trim(), trigger: trigger.value, scheduleDays: days,
         targetCount: completionMode.value === 'count' ? Number(targetCount.value) : undefined,
         countUnit: completionMode.value === 'count' ? countUnit.value : undefined,
         dimension: dimension.value as Dimension, branchId: branch.value, difficulty: difficulty.value as Difficulty,
@@ -4444,7 +4472,7 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
       if (habit) await db.saveHabit(habit.id, { ...value, trigger: trigger.value.trim() || undefined, status: habitStatus.value as Habit['status'] });
       else await db.addHabit(value);
       dialog.close();
-      showToast(habit ? '习惯设置已保存。' : bonus.checked ? '习惯已建立，并加入每日可选任务。' : '习惯已建立。');
+      showToast(habit ? '习惯设置已保存。' : bonus.checked ? '习惯已建立，会在计划日出现在今天。' : '习惯计划已保存。');
       await render();
     } catch (error) {
       save.disabled = false;
@@ -4479,81 +4507,6 @@ async function tasksPage(): Promise<HTMLElement> {
   planPanel.id = 'task-view-plan';
   planPanel.setAttribute('role', 'tabpanel');
   planPanel.setAttribute('aria-labelledby', 'task-tab-plan');
-  const selected = {
-    quest: new Map<string, string>(),
-    goal: new Map<string, string>(),
-    habit: new Map<string, string>(),
-  };
-  const manageButton = node('button', 'button button-quiet button-compact', '管理');
-  manageButton.type = 'button';
-  const manageBar = node('div', 'task-manage-bar');
-  const selectedCount = node('span', '', '选择要删除的内容');
-  const deleteSelected = node('button', 'button button-danger button-compact', '删除选中');
-  deleteSelected.type = 'button';
-  deleteSelected.disabled = true;
-  const selectionSize = () => selected.quest.size + selected.goal.size + selected.habit.size;
-  const syncManageBar = () => {
-    const count = selectionSize();
-    selectedCount.textContent = count ? `已选 ${count} 项` : '选择要删除的内容';
-    deleteSelected.disabled = count === 0;
-  };
-  const stopManaging = () => {
-    main.classList.remove('is-managing');
-    manageButton.textContent = '管理';
-    main.querySelectorAll<HTMLInputElement>('.task-manage-control input').forEach((input) => { input.checked = false; });
-    Object.values(selected).forEach((values) => values.clear());
-    syncManageBar();
-  };
-  const removeItems = async (items: Array<{ kind: keyof typeof selected; id: string; label: string }>) => {
-    if (!items.length) return;
-    const message = items.length === 1
-      ? `“${items[0]!.label}”会从任务板移除，已有进展会保留。`
-      : '所选内容会从任务板移除，已有进展会保留。';
-    if (!await confirmAction(`删除${items.length === 1 ? '这一项' : `选中的 ${items.length} 项`}？`, message, '删除', true)) return;
-    deleteSelected.disabled = true;
-    try {
-      for (const item of items) {
-        if (item.kind === 'quest') await db.removePendingQuest(item.id);
-        else if (item.kind === 'goal') await db.saveGoal(item.id, { status: 'abandoned' });
-        else await db.saveHabit(item.id, { status: 'ended', bonusEnabled: false });
-      }
-      showToast(items.length === 1 ? '已删除；历史记录保留。' : `已删除 ${items.length} 项；历史记录保留。`);
-      await render();
-    } catch (error) {
-      deleteSelected.disabled = false;
-      showToast(errorMessage(error), 'error');
-    }
-  };
-  const manageControl = (kind: keyof typeof selected, id: string, label: string): HTMLElement => {
-    const control = node('div', 'task-manage-control');
-    const selectLabel = node('label');
-    const checkbox = node('input');
-    checkbox.type = 'checkbox';
-    checkbox.setAttribute('aria-label', `选择删除“${label}”`);
-    checkbox.addEventListener('change', () => {
-      if (checkbox.checked) selected[kind].set(id, label);
-      else selected[kind].delete(id);
-      syncManageBar();
-    });
-    selectLabel.append(checkbox, node('span', '', '选择'));
-    const remove = node('button', 'button button-quiet danger-button button-compact', '删除');
-    remove.type = 'button';
-    remove.setAttribute('aria-label', `删除“${label}”`);
-    remove.addEventListener('click', () => { void removeItems([{ kind, id, label }]); });
-    control.append(selectLabel, remove);
-    return control;
-  };
-  manageButton.addEventListener('click', () => {
-    const active = main.classList.toggle('is-managing');
-    manageButton.textContent = active ? '完成' : '管理';
-    if (!active) stopManaging();
-  });
-  deleteSelected.addEventListener('click', () => {
-    const items = (Object.keys(selected) as Array<keyof typeof selected>).flatMap((kind) =>
-      [...selected[kind]].map(([id, label]) => ({ kind, id, label })));
-    void removeItems(items);
-  });
-  manageBar.append(selectedCount, deleteSelected);
   const tabs = node('nav', 'task-view-tabs');
   tabs.setAttribute('role', 'tablist');
   tabs.setAttribute('aria-label', '任务视图');
@@ -4575,7 +4528,6 @@ async function tasksPage(): Promise<HTMLElement> {
     planTab.setAttribute('aria-selected', String(!showingToday));
     todayTab.tabIndex = showingToday ? 0 : -1;
     planTab.tabIndex = showingToday ? -1 : 0;
-    stopManaging();
     if (persist) sessionStorage.setItem('qiguang.task-view', view);
   };
   todayTab.addEventListener('click', () => selectView('today'));
@@ -4588,8 +4540,8 @@ async function tasksPage(): Promise<HTMLElement> {
     next.focus();
   });
   tabs.append(todayTab, planTab);
-  main.append(pageHeader('', '任务', manageButton), tabs, manageBar, todayPanel, planPanel);
-  if (overdueQuests.length) todayPanel.append(overdueQuestPanel(overdueQuests, (quest) => manageControl('quest', quest.id, quest.title)));
+  main.append(pageHeader('', '任务'), tabs, todayPanel, planPanel);
+  if (overdueQuests.length) todayPanel.append(overdueQuestPanel(overdueQuests, Number.POSITIVE_INFINITY));
   const capacityCandidates = allQuests.filter((quest) => quest.systemRetiredReason === 'capacity')
     .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   if (capacityCandidates.length) {
@@ -4597,7 +4549,6 @@ async function tasksPage(): Promise<HTMLElement> {
     held.append(node('h2', '', '待安排'));
     capacityCandidates.forEach((quest) => {
       const card = questCard(quest, false, quest.milestoneId ? milestonesByGoal.flat().find((item) => item.id === quest.milestoneId) : undefined);
-      card.prepend(manageControl('quest', quest.id, quest.title));
       held.append(card);
     });
     todayPanel.append(held);
@@ -4611,7 +4562,7 @@ async function tasksPage(): Promise<HTMLElement> {
     const retired = quests.filter((item) => item.systemRetiredAt && item.systemRetiredReason !== 'capacity').length;
     const held = quests.filter((item) => item.systemRetiredReason === 'capacity').length;
     const settled = quests.length - pending - retired;
-    dayHeading.append(node('span', 'caption', [pending ? `${pending} 项待处理` : '', settled - held ? `${settled - held} 项已反馈` : '', held ? `${held} 项已保留` : '', retired ? `${retired} 项已收束` : ''].filter(Boolean).join(' · ')));
+    dayHeading.append(node('span', 'caption', [pending ? `${pending} 项待完成` : '', settled - held ? `${settled - held} 项已反馈` : '', held ? `${held} 项已保留` : '', retired ? `${retired} 项已收束` : ''].filter(Boolean).join(' · ')));
   }
   day.append(dayHeading);
   if (!quests.length) {
@@ -4622,7 +4573,6 @@ async function tasksPage(): Promise<HTMLElement> {
     const retiredQuests = quests.filter((quest) => quest.systemRetiredAt && quest.systemRetiredReason !== 'capacity');
     pendingQuests.forEach((quest) => {
       const card = questCard(quest, false, quest.milestoneId ? milestonesByGoal.flat().find((item) => item.id === quest.milestoneId) : undefined, true);
-      card.prepend(manageControl('quest', quest.id, quest.title));
       day.append(card);
     });
     if (settledQuests.length) {
@@ -4638,15 +4588,13 @@ async function tasksPage(): Promise<HTMLElement> {
       day.append(retired);
     }
   }
+  const future = node('section', 'task-future');
   if (futureQuests.length) {
-    const future = node('details', 'task-future optional-details');
-    future.append(node('summary', '', `之后已安排 · ${futureQuests.length}`));
+    future.append(node('h2', '', `之后已安排 · ${futureQuests.length}`));
     futureQuests.forEach((quest) => {
-      const card = questCard(quest, false, quest.milestoneId ? milestonesByGoal.flat().find((item) => item.id === quest.milestoneId) : undefined);
-      card.prepend(manageControl('quest', quest.id, quest.title));
+      const card = questCard(quest, false, quest.milestoneId ? milestonesByGoal.flat().find((item) => item.id === quest.milestoneId) : undefined, true);
       future.append(card);
     });
-    day.append(future);
   }
   const quickAdd = node('form', 'task-quick-add');
   const quickTitle = node('input', 'task-quick-input');
@@ -4678,8 +4626,7 @@ async function tasksPage(): Promise<HTMLElement> {
     try {
       const [branch] = await db.listBranches();
       await db.addQuest({
-        localDate: today, type: 'side', sourceType: 'manual', title, reason: '今日添加', minimumAction: title,
-        completionCriteria: title, estimatedMinutes: 5, difficulty: 'light', branchId: branch?.id,
+        localDate: today, type: 'side', sourceType: 'manual', title, reason: '由你在今天添加。', difficulty: 'light', branchId: branch?.id,
       });
       showToast('已添加');
       await render();
@@ -4694,12 +4641,11 @@ async function tasksPage(): Promise<HTMLElement> {
 
   const goalSection = node('section', 'task-goals');
   const goalHeading = node('div', 'section-heading');
-  goalHeading.append(node('h2', '', '长期任务'), iconButton('新建长期任务', null, () => { void openGoalDialog(); }, 'button button-secondary button-compact'));
+  goalHeading.append(node('h2', '', '目标'), iconButton('新建目标', null, () => { void openGoalDialog(); }, 'button button-secondary button-compact'));
   goalSection.append(goalHeading);
-  if (!goals.length) goalSection.append(node('p', 'empty-copy', '暂无任务'));
+  if (!goals.length) goalSection.append(node('p', 'empty-copy', '暂无目标'));
   goals.forEach((goal, index) => {
     const card = node('article', `goal-row${goal.role === 'main' ? ' is-main' : ''}`);
-    card.append(manageControl('goal', goal.id, goal.result));
     const roleLabel = goal.role === 'main' ? '主目标' : goal.role === 'secondary' ? '次要目标' : '愿望库';
     const statusLabel = ({ idea: '想法', active: '进行中', paused: '暂停', completed: '已完成', abandoned: '已放下' } as const)[goal.status];
     card.append(node('span', 'tag', `${roleLabel} · ${statusLabel}`), node('h3', '', goal.result));
@@ -4739,7 +4685,12 @@ async function tasksPage(): Promise<HTMLElement> {
       replan.setAttribute('aria-label', `根据执行证据重新拆解“${goal.result}”`);
       manageButtons.append(replan);
     }
-    manage.append(node('summary', '', '管理目标'), manageButtons);
+    const remove = node('button', 'button button-quiet danger-button button-compact', '删除目标');
+    remove.type = 'button';
+    remove.setAttribute('aria-label', `删除目标：${goal.result}`);
+    remove.addEventListener('click', () => { void confirmRemoveTaskItem(goal.result, () => db.saveGoal(goal.id, { status: 'abandoned' }), remove); });
+    manageButtons.append(remove);
+    manage.append(node('summary', '', '更多'), manageButtons);
     actions.append(manage);
     card.append(actions);
     for (const milestone of milestonesByGoal[index] ?? []) {
@@ -4773,37 +4724,44 @@ async function tasksPage(): Promise<HTMLElement> {
   });
   const habitSection = node('section', 'task-habits');
   const habitHeading = node('div', 'section-heading');
-  habitHeading.append(node('h2', '', '长期习惯'), iconButton('新建习惯', null, () => { void openHabitDialog(); }, 'button button-secondary button-compact'));
+  habitHeading.append(node('h2', '', '习惯'), iconButton('新建习惯', null, () => { void openHabitDialog(); }, 'button button-secondary button-compact'));
   habitSection.append(habitHeading);
   if (!habits.length) habitSection.append(node('p', 'empty-copy', '暂无习惯'));
   habits.forEach((habit, index) => {
     const row = node('article', 'habit-row');
-    row.append(manageControl('habit', habit.id, habit.name));
     const copy = node('div');
-    const countTarget = habit.targetCount ? ` · 每日 ${habit.targetCount}${habit.countUnit || '次'}` : '';
-    copy.append(node('h3', '', habit.name), node('p', 'caption', `${habit.minimumAction}${countTarget} · 最近坚持 ${momentums[index]}/5`));
+    const countTarget = habit.targetCount ? `每日 ${habit.targetCount}${habit.countUnit || '次'} · ` : '';
+    copy.append(node('h3', '', habit.name), node('p', 'caption', `${countTarget}最近完成 ${momentums[index]}/5`));
     const habitActions = node('div', 'quest-actions habit-actions');
-    const toggle = node('button', `button button-compact ${habit.bonusEnabled && habit.status === 'active' ? 'button-secondary' : 'button-quiet'}`, habit.bonusEnabled && habit.status === 'active' ? '移出每日' : '放入每日');
+    const toggle = node('button', `button button-compact ${habit.bonusEnabled && habit.status === 'active' ? 'button-secondary' : 'button-quiet'}`, habit.bonusEnabled && habit.status === 'active' ? '暂停打卡' : '开始打卡');
     toggle.type = 'button';
-    toggle.setAttribute('aria-label', habit.bonusEnabled && habit.status === 'active' ? `将“${habit.name}”移出每日任务` : `将“${habit.name}”加入每日任务`);
+    toggle.setAttribute('aria-label', habit.bonusEnabled && habit.status === 'active' ? `暂停“${habit.name}”的计划日打卡` : `开始“${habit.name}”的计划日打卡`);
     toggle.addEventListener('click', async () => {
       toggle.disabled = true;
       try {
         await db.saveHabit(habit.id, { bonusEnabled: !(habit.bonusEnabled && habit.status === 'active'), status: 'active' });
-        showToast(habit.bonusEnabled ? '已移出每日任务；历史记录保留。' : '已加入每日可选任务。');
+        showToast(habit.bonusEnabled ? '已暂停计划日打卡；历史记录保留。' : '已开始计划日打卡。');
         await render();
       } catch (error) {
         toggle.disabled = false;
         showToast(errorMessage(error), 'error');
       }
     });
+    const more = node('details', 'quest-more-actions');
+    const moreButtons = node('div', 'quest-more-buttons');
     const edit = iconButton('编辑', null, () => { void openHabitDialog(habit); }, 'button button-secondary button-compact');
     edit.setAttribute('aria-label', `编辑习惯“${habit.name}”`);
-    habitActions.append(edit, toggle);
+    const remove = node('button', 'button button-quiet danger-button button-compact', '删除习惯');
+    remove.type = 'button';
+    remove.setAttribute('aria-label', `删除习惯：${habit.name}`);
+    remove.addEventListener('click', () => { void confirmRemoveTaskItem(habit.name, () => db.saveHabit(habit.id, { status: 'ended', bonusEnabled: false }), remove); });
+    moreButtons.append(edit, remove);
+    more.append(node('summary', '', '更多'), moreButtons);
+    habitActions.append(toggle, more);
     row.append(copy, habitActions);
     habitSection.append(row);
   });
-  planPanel.append(goalSection, habitSection);
+  planPanel.append(...(futureQuests.length ? [future] : []), goalSection, habitSection);
   const initialView = sessionStorage.getItem('qiguang.task-view') === 'plan' ? 'plan' : 'today';
   selectView(initialView, false);
   return main;
@@ -6148,6 +6106,11 @@ async function applyPendingWidgetAction(): Promise<WidgetActionResult | null> {
   let notice = '这项任务已经处理过，没有重复结算经验。';
   let achievementsBefore: Set<string> | undefined;
   if (quest?.status === 'pending') {
+    if (quest.targetCount && (quest.progressCount ?? 0) + 1 < quest.targetCount) {
+      const updated = await db.changeQuestProgress(quest.id, 1);
+      history.replaceState(null, '', '#/tasks');
+      return { message: `已记录 ${updated.progressCount}/${quest.targetCount}${quest.countUnit || '次'}。` };
+    }
     achievementsBefore = await growthBadgeIds();
     const before = await questProgress(quest);
     const progression = await db.feedbackAndProgressQuest(quest.id, 'completed', '由今日任务小组件勾选完成', '', quest.difficulty, 0, localDate());
