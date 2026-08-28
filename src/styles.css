@@ -3274,7 +3274,7 @@ input[type="range"] {
 }
 
 .page-system {
-  gap: 10px;
+  gap: 18px;
 }
 
 .page-system .page-header {
@@ -3283,6 +3283,23 @@ input[type="range"] {
 
 .page-system .page-header h1 {
   font-size: clamp(1.55rem, 7vw, 2rem);
+}
+
+.page-system .settings-group {
+  display: grid;
+  gap: 1px;
+}
+
+.page-system .settings-group-title {
+  margin: 0 4px 5px;
+  color: var(--muted);
+  font-size: .8rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+
+.page-system .settings-group > .settings-section + .settings-section {
+  border-top: 1px solid var(--paper-deep);
 }
 
 .page-system .settings-section {

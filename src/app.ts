@@ -1825,7 +1825,7 @@ function recoveryPanel(state: ResolvedDimensionState, date: string, useMainSlot:
   const suggestions = RECOVERY_SUGGESTIONS[state.dimension];
   let suggestionIndex = 0;
   const panel = node('section', 'surface recovery-action');
-  panel.append(node('span', 'tag tag-warn', 'RECOVERY · 状态优先'), node('h2', '', `先补足${dimensionLabel(state.dimension)}`));
+  panel.append(node('span', 'tag tag-warn', '状态照顾'), node('h2', '', `先补足${dimensionLabel(state.dimension)}`));
   panel.append(node('p', '', `${dimensionLabel(state.dimension)} ${state.value}/100`));
   const title = node('strong', 'recovery-title');
   const detail = node('p', 'quest-minimum');
@@ -1833,7 +1833,7 @@ function recoveryPanel(state: ResolvedDimensionState, date: string, useMainSlot:
     const suggestion = suggestions[suggestionIndex] ?? suggestions[0];
     if (!suggestion) return;
     title.textContent = suggestion.title;
-    detail.textContent = `最小动作：${suggestion.minimumAction} · 约 ${suggestion.estimatedMinutes} 分钟 · 轻量`;
+    detail.textContent = `先做：${suggestion.minimumAction} · 约 ${suggestion.estimatedMinutes} 分钟 · 轻量`;
   };
   renderSuggestion();
   panel.append(title, detail);
@@ -5869,13 +5869,20 @@ async function systemPage(): Promise<HTMLElement> {
   if (!profile) throw new Error('个人系统尚未初始化。');
   const main = node('main', 'page page-system');
   main.append(pageHeader('设置', '设置'));
-  main.append(profileForm(profile), aiPermissionSettings(), assessmentForm(observations));
+  const dailySettings = node('section', 'settings-group');
+  dailySettings.append(node('h2', 'settings-group-title', '日常设置'), profileForm(profile), assessmentForm(observations));
+  const featureSettings = node('section', 'settings-group');
+  featureSettings.append(node('h2', 'settings-group-title', '功能与设备'), aiPermissionSettings());
+  const dataSettings = node('section', 'settings-group');
+  dataSettings.append(node('h2', 'settings-group-title', '数据与隐私'));
+  const advancedSettings = node('section', 'settings-group');
+  advancedSettings.append(node('h2', 'settings-group-title', '高级设置'));
   const advancedSystem = node('details', 'system-advanced');
   advancedSystem.append(
     node('summary', '', '分类与行动规则'),
     areasSettings(areas), memorySettings(memories, events),
   );
-  main.append(advancedSystem);
+  advancedSettings.append(advancedSystem);
 
   const preferences = settingsDisclosure('显示与语气');
   const motionLabel = node('label', 'setting-row');
@@ -5907,17 +5914,19 @@ async function systemPage(): Promise<HTMLElement> {
     }
   });
   preferences.append(toneLabel);
-  main.append(preferences);
+  dailySettings.append(preferences);
 
   const pinState = widgetPinState();
   if (pinState !== 'unavailable') {
     const desktop = settingsDisclosure('今日任务小组件');
     const desktopStatus = node('p', 'caption', pinState === 'pinned' ? '已添加' : '');
+    desktopStatus.hidden = pinState !== 'pinned';
     desktop.append(desktopStatus);
     if (pinState === 'available') {
       const pin = iconButton('添加到桌面', null, () => {
         if (requestWidgetPin()) {
           pin.disabled = true;
+          desktopStatus.hidden = false;
           desktopStatus.textContent = '请在系统窗口中确认添加。';
         } else {
           showToast('系统没有打开添加窗口，请从桌面小组件列表添加栖光。', 'error');
@@ -5925,10 +5934,10 @@ async function systemPage(): Promise<HTMLElement> {
       }, 'button button-secondary');
       desktop.append(pin);
     }
-    main.append(desktop);
+    featureSettings.append(desktop);
   }
 
-  const data = settingsDisclosure('备份与本地数据', 'data-actions');
+  const data = settingsDisclosure('本地数据', 'data-actions');
   const exportButton = iconButton('导出全部数据', null, async () => {
     exportButton.disabled = true;
     try {
@@ -5997,7 +6006,9 @@ async function systemPage(): Promise<HTMLElement> {
     remindActions.append(backupNow, later); reminder.append(remindActions); data.append(reminder);
   }
   data.append(exportButton, importLabel, deleteButton);
-  main.append(await installStorageSettings(), data);
+  featureSettings.append(await installStorageSettings());
+  dataSettings.append(data);
+  main.append(dailySettings, featureSettings, dataSettings, advancedSettings);
   return main;
 }
 

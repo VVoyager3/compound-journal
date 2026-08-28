@@ -132,7 +132,7 @@ test('typography and settings density follow the global UI rules', async () => {
   const checklist = await read('DESIGN-CHECKLIST.md');
   assert.match(styles, /h1,[\s\S]*h3\s*\{[^}]*font-family:\s*inherit/s);
   assert.doesNotMatch(styles, /Noto Serif SC|Source Han Serif SC|Songti SC/);
-  assert.match(styles, /\.page-system\s*\{[^}]*gap:\s*10px/s);
+  assert.match(styles, /\.page-system\s*\{[^}]*gap:\s*18px/s);
   assert.match(checklist, /## 二、信息与文案/);
   assert.match(checklist, /非必要说明已经删除/);
 });

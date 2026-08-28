@@ -263,6 +263,16 @@ test('expanded settings avoid permanent explanatory paragraphs', async () => {
   try {
     await finishOnboarding(page);
     await page.goto(`${baseUrl}/#/system`);
+    const settingsGroups = await page.locator('.settings-group').evaluateAll((groups) => groups.map((group) => ({
+      title: group.querySelector(':scope > .settings-group-title')?.textContent,
+      sections: [...group.querySelectorAll(':scope > details > summary')].map((summary) => summary.firstElementChild?.textContent ?? summary.textContent),
+    })));
+    assert.deepEqual(settingsGroups, [
+      { title: '日常设置', sections: ['人物', '状态自评', '显示与语气'] },
+      { title: '功能与设备', sections: ['AI 设置', '安装与存储'] },
+      { title: '数据与隐私', sections: ['本地数据'] },
+      { title: '高级设置', sections: ['分类与行动规则'] },
+    ]);
     await page.getByText('状态自评', { exact: true }).click();
     assert.equal(await page.getByText('不知道怎么打分时，用问卷判断过去 7 天的身体、心理、关系、工作和玩乐状态。', { exact: true }).count(), 0);
     await page.getByText('AI 设置', { exact: true }).click();
@@ -276,9 +286,18 @@ test('expanded settings avoid permanent explanatory paragraphs', async () => {
     await assert.doesNotReject(() => page.getByText('确认后生效', { exact: true }).waitFor());
     await page.getByText('安装与存储', { exact: true }).click();
     assert.equal(await page.getByText('可从浏览器菜单添加到主屏幕', { exact: true }).count(), 0);
-    await page.getByText('备份与本地数据', { exact: true }).click();
+    await page.getByText('本地数据', { exact: true }).click();
     assert.equal(await page.getByText('导入不会覆盖现有内容。', { exact: true }).count(), 0);
     await assert.doesNotReject(() => page.getByRole('button', { name: '导出全部数据' }).waitFor());
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    const expandedLayout = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      content: document.documentElement.scrollWidth,
+      shortSummaries: [...document.querySelectorAll('.settings-group > details > summary')]
+        .filter((summary) => summary.getBoundingClientRect().height < 44)
+        .map((summary) => summary.textContent),
+    }));
+    assert.deepEqual(expandedLayout, { viewport: 320, content: 320, shortSummaries: [] });
   } finally {
     await context.close();
   }
@@ -2153,6 +2172,8 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     await page.locator('.status-summary').waitFor();
     const stateLabels = await page.locator('.status-item').evaluateAll((items) => items.map((item) => item.getAttribute('aria-label')));
     assert.match(stateLabels[0] ?? '', /身体当前分数 33/);
+    await assert.doesNotReject(() => page.getByText('状态照顾', { exact: true }).waitFor());
+    assert.equal(await page.getByText(/RECOVERY/).count(), 0, 'recovery guidance must not expose an internal category label');
     await assert.doesNotReject(() => page.getByRole('heading', { name: '先补足身体' }).waitFor());
     assert.equal(await page.locator('.room-scene.is-cue-rest').count(), 1);
     assert.equal(await page.locator('.room-character.is-resting').count(), 1);
