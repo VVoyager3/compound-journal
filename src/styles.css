@@ -7818,6 +7818,7 @@ textarea:focus {
 .task-feedback-dialog { max-height: min(68dvh, 620px); }
 .task-feedback-dialog .dialog-actions { background: rgb(250 245 231); }
 .feedback-task-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; }
+.task-feedback-dialog .feedback-extra { margin-top: 20px; }
 .feedback-core-fields .feedback-date-control {
   position: relative;
   display: grid;
