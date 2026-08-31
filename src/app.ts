@@ -1257,7 +1257,9 @@ function countQuestActions(quest: Quest): HTMLElement {
   const more = node('details', 'quest-more-actions');
   const moreButtons = node('div', 'quest-more-buttons');
   moreButtons.append(skip, details, adjust);
-  more.append(node('summary', '', '更多'), moreButtons);
+  const moreTrigger = node('summary', 'quest-more-trigger', '•••');
+  moreTrigger.setAttribute('aria-label', '更多操作');
+  more.append(moreTrigger, moreButtons);
   actions.append(minus, count, plus, more);
   return actions;
 }
@@ -1288,7 +1290,9 @@ function quickQuestActions(quest: Quest): HTMLElement {
   adjust.setAttribute('aria-label', `编辑任务：${quest.title}`);
   adjust.addEventListener('click', () => { void openQuestAdjustmentDialog(quest); });
   const more = node('details', 'quest-more-actions');
-  more.append(node('summary', '', '更多'), node('div', 'quest-more-buttons'));
+  const moreTrigger = node('summary', 'quest-more-trigger', '•••');
+  moreTrigger.setAttribute('aria-label', '更多操作');
+  more.append(moreTrigger, node('div', 'quest-more-buttons'));
   more.lastElementChild!.append(details, adjust);
   actions.append(more);
   return actions;
@@ -2252,7 +2256,7 @@ async function todayPage(): Promise<HTMLElement> {
   if (bonusQuests.length) {
     const bonus = node('section', 'today-optionals');
     const heading = node('div', 'section-heading');
-    const manageHabits = node('button', 'button button-quiet', '管理');
+    const manageHabits = node('button', 'button button-quiet section-text-action', '管理');
     manageHabits.type = 'button';
     manageHabits.setAttribute('aria-label', '管理习惯与可选任务');
     manageHabits.addEventListener('click', () => go({ name: 'tasks' }));
@@ -2720,13 +2724,19 @@ async function calendarPage(): Promise<HTMLElement> {
   const dateFilter = node('input', 'input');
   dateFilter.type = 'date';
   dateFilter.setAttribute('aria-label', '限定记录日期');
+  const dateField = node('label', 'date-filter-field');
+  const datePlaceholder = node('span', 'date-filter-placeholder', '选择日期');
+  const syncDatePlaceholder = () => dateField.classList.toggle('has-value', Boolean(dateFilter.value));
+  dateFilter.addEventListener('input', syncDatePlaceholder);
+  syncDatePlaceholder();
+  dateField.append(dateFilter, datePlaceholder);
   const searchButton = node('button', 'button button-secondary', '查找');
   searchButton.type = 'submit';
   const searchStatus = node('p', 'search-status');
   searchStatus.setAttribute('role', 'status');
   searchStatus.setAttribute('aria-live', 'polite');
   const results = node('div', 'search-results');
-  searchForm.append(query, dateFilter, searchButton);
+  searchForm.append(query, dateField, searchButton);
   search.append(searchForm, searchStatus, results);
   searchForm.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -4782,7 +4792,7 @@ async function tasksPage(): Promise<HTMLElement> {
       const row = node('div', `milestone-row is-${milestone.status}`);
       row.append(node('span', '', milestone.description), node('span', 'caption', milestone.status === 'completed' ? '已完成 · +50 经验' : milestone.status === 'superseded' ? '已被新计划替换' : '待完成'));
       if (milestone.status === 'superseded') { card.append(row); continue; }
-      const button = node('button', 'button button-quiet', milestone.status === 'completed' ? '撤销完成' : '标为完成');
+      const button = node('button', `button button-compact milestone-action ${milestone.status === 'completed' ? 'is-undo' : 'is-complete'}`, milestone.status === 'completed' ? '撤销完成' : '标为完成');
       button.type = 'button';
       button.setAttribute('aria-label', `${milestone.status === 'completed' ? '撤销' : '确认'}阶段目标“${milestone.description}”完成`);
       button.addEventListener('click', async () => {

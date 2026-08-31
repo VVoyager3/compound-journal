@@ -240,6 +240,17 @@ test('all core pages survive 200 percent text at 320px with touch-safe actions',
       return { width: box.width, height: box.height };
     }));
     assert(promptSizes.length === 2 && promptSizes.every((box) => box.width >= 44 && box.height >= 44), 'record types must remain touch-safe');
+    const numberWidths = await page.locator('.record-number-button').evaluateAll((buttons) => buttons.map((button) => Math.round(button.getBoundingClientRect().width)));
+    assert.equal(new Set(numberWidths).size, 1, 'all record numbering controls must share one width');
+    await page.goto(`${baseUrl}/#/calendar`);
+    await assert.doesNotReject(() => page.getByText('选择日期', { exact: true }).waitFor());
+    const trailWidths = await page.locator('.trail-tab').evaluateAll((tabs) => tabs.map((tab) => Math.round(tab.getBoundingClientRect().width)));
+    assert.equal(new Set(trailWidths).size, 1, 'calendar, growth, and weekly review tabs must divide the row equally');
+    const safeBottom = await page.locator('#main-content').evaluate((main) => ({
+      pagePadding: Number.parseFloat(getComputedStyle(main).paddingBottom),
+      navigationHeight: document.querySelector('.bottom-nav')?.getBoundingClientRect().height ?? 0,
+    }));
+    assert.ok(safeBottom.pagePadding >= safeBottom.navigationHeight + 48, 'scrolling pages must reserve a full control row below the fixed navigation');
     await page.goto(`${baseUrl}/#/system`);
     const advanced = page.getByText('分类与行动规则', { exact: true });
     assert.ok((await advanced.boundingBox())?.height >= 44);
@@ -992,6 +1003,7 @@ test('five-year diary history links the same date across years and supports numb
     await page.getByRole('textbox', { name: '发生了什么' }).fill('给未来留下一页。');
     await page.getByRole('button', { name: '保存记录' }).click();
     await page.waitForURL(new RegExp(`#\\/day\\/${previous}$`));
+    await assert.doesNotReject(() => page.locator('.journal-sheet').getByText('去年今天开始认真记录。', { exact: true }).waitFor());
 
     await page.goto(`${baseUrl}/#/record/${today}`);
     await page.getByRole('textbox', { name: '今日一句' }).fill('今年今天仍在继续。');

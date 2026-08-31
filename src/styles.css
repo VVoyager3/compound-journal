@@ -32,7 +32,7 @@
   --text-body: 1rem;
   --text-meta: .82rem;
   --bottom-nav-height: 70px;
-  --page-bottom-space: calc(var(--bottom-nav-height) + 32px + env(safe-area-inset-bottom));
+  --page-bottom-space: calc(var(--bottom-nav-height) + 64px + env(safe-area-inset-bottom));
 }
 
 *,
@@ -46,6 +46,7 @@ html {
   min-height: 100%;
   background: #b9aa89;
   scroll-behavior: smooth;
+  scroll-padding-bottom: var(--page-bottom-space);
 }
 
 body {
@@ -266,6 +267,10 @@ p {
   padding: 18px var(--page-pad) var(--page-bottom-space);
 }
 
+.page > :last-child {
+  scroll-margin-bottom: var(--page-bottom-space);
+}
+
 .page-header {
   display: flex;
   align-items: flex-end;
@@ -382,6 +387,12 @@ p {
 
 .danger-button {
   color: var(--danger);
+}
+
+.quest-more-buttons .danger-button {
+  border-color: rgb(200 62 62 / 52%);
+  color: #8f2424;
+  background: #f8dfd6;
 }
 
 .button-wide {
@@ -1330,6 +1341,13 @@ p {
   border-bottom-color: rgb(159 120 54 / 28%);
 }
 
+.page-today .section-text-action {
+  min-height: 44px;
+  padding-inline: 4px;
+  font-size: .82rem;
+  box-shadow: none;
+}
+
 .review-companion {
   display: flex;
   align-items: center;
@@ -1595,9 +1613,9 @@ p {
 
 .record-summary-heading,
 .record-body-heading {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(56px, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
 }
 
@@ -1618,13 +1636,14 @@ p {
 }
 
 .record-number-tools {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto repeat(3, 36px);
   align-items: center;
   gap: 4px;
 }
 
 .record-number-button {
-  min-width: 32px;
+  width: 36px;
   min-height: 32px;
   padding: 3px 6px;
   border: 1px solid rgb(40 50 40 / 44%);
@@ -1875,6 +1894,34 @@ p {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(144px, .65fr) auto;
   gap: 10px;
+}
+
+.date-filter-field {
+  position: relative;
+  display: grid;
+  min-width: 0;
+}
+
+.date-filter-field .input {
+  width: 100%;
+}
+
+.date-filter-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  color: var(--muted);
+  font-size: .9rem;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.date-filter-field.has-value .date-filter-placeholder {
+  display: none;
+}
+
+.date-filter-field:not(.has-value) input::-webkit-datetime-edit {
+  color: transparent;
 }
 
 .search-results {
@@ -2757,7 +2804,7 @@ input[type="range"] {
 
 .page-tasks {
   gap: 10px;
-  padding-bottom: calc(var(--bottom-nav-height) + 104px + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--page-bottom-space) + 72px);
 }
 
 .page-tasks > .page-header {
@@ -3197,6 +3244,12 @@ input[type="range"] {
 
 .quest-result-actions > .quest-more-actions {
   grid-column: 1 / -1;
+  display: grid;
+  justify-items: end;
+}
+
+.quest-result-actions > .quest-more-actions > .quest-more-buttons {
+  width: 100%;
 }
 
 .quest-more-actions {
@@ -3204,12 +3257,28 @@ input[type="range"] {
 }
 
 .quest-more-actions > summary {
-  min-height: 34px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   width: max-content;
   cursor: pointer;
   font-weight: 800;
+}
+
+.quest-more-actions > .quest-more-trigger {
+  width: 44px;
+  min-height: 44px;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgb(40 50 40 / 36%);
+  background: var(--surface);
+  font-size: 1.05rem;
+  letter-spacing: .08em;
+  list-style: none;
+}
+
+.quest-more-trigger::-webkit-details-marker {
+  display: none;
 }
 
 .quest-more-buttons {
@@ -3267,8 +3336,8 @@ input[type="range"] {
 }
 
 .trail-tabs {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin: 0 0 14px;
 }
@@ -3277,12 +3346,14 @@ input[type="range"] {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   padding: 8px 13px;
   border: 1px solid rgb(40 50 40 / 44%);
   color: var(--ink);
   background: var(--paper);
   font-weight: 800;
   text-decoration: none;
+  text-align: center;
 }
 
 .trail-tab.is-active,
@@ -3475,7 +3546,9 @@ input[type="range"] {
 }
 
 .page-system .ai-model-status {
-  margin-top: -2px;
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: var(--paper-deep);
 }
 
 .page-system .ai-settings .character-actions {
@@ -3532,6 +3605,18 @@ input[type="range"] {
   grid-row: auto;
   grid-column: auto;
   justify-self: start;
+}
+
+.milestone-action.is-complete {
+  border-color: var(--forest);
+  color: #fff;
+  background: var(--forest);
+}
+
+.milestone-action.is-undo {
+  border-color: rgb(104 105 87 / 44%);
+  color: var(--muted);
+  background: var(--surface);
 }
 
 .habit-row {
@@ -3847,13 +3932,8 @@ input[type="range"] {
   width: min(100%, 430px);
 }
 
-.review-actions > :is(.button-primary, .button-secondary) {
+.review-actions > .button {
   width: 100%;
-}
-
-.review-actions > .button-quiet {
-  width: fit-content;
-  justify-self: start;
 }
 
 .review-evidence-row,
