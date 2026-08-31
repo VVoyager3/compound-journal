@@ -3094,7 +3094,7 @@ export class QiguangDb {
     const quests = transaction.objectStore('quests');
     const openBonuses = (await requestResult(quests.index('bySourceId').getAll(id)) as Quest[])
       .filter((quest) => quest.type === 'bonus' && quest.sourceType === 'habit'
-        && (quest.status === 'pending' || quest.systemRetiredReason === 'capacity'));
+        && (quest.status === 'pending' || ['capacity', 'schedule-changed', 'tracking-disabled'].includes(quest.systemRetiredReason ?? '')));
     for (const quest of openBonuses) {
       const weekday = parseLocalDate(quest.localDate).getDay() || 7;
       const isCapacityCandidate = quest.systemRetiredReason === 'capacity';
@@ -3102,7 +3102,21 @@ export class QiguangDb {
       const retireReason: QuestSystemRetiredReason | null = withinChangedSchedule && !trackingEnabled
         ? 'tracking-disabled'
         : withinChangedSchedule && scheduleChanged && !updated.scheduleDays.includes(weekday) ? 'schedule-changed' : null;
-      if (retireReason) quests.put(systemRetireQuest(quest, retireReason, updated.updatedAt));
+      const liveFields = quest.userModified ? {} : {
+        title: updated.name, minimumAction: updated.minimumAction, targetCount: updated.targetCount,
+        progressCount: updated.targetCount ? Math.min(quest.progressCount ?? 0, updated.targetCount - 1) : undefined,
+        countUnit: updated.countUnit, difficulty: updated.difficulty, dimension: updated.dimension, branchId: updated.branchId,
+      };
+      if (retireReason) {
+        const changed = { ...quest, ...liveFields };
+        quests.put(changed.systemRetiredReason === retireReason
+          ? { ...changed, updatedAt: updated.updatedAt, version: quest.version + 1 }
+          : systemRetireQuest(changed, retireReason, updated.updatedAt));
+      } else if (withinChangedSchedule && trackingEnabled && updated.scheduleDays.includes(weekday) && !isCapacityCandidate) {
+        quests.put(restoreSystemRetiredQuest(quest, { ...liveFields, status: 'pending', updatedAt: updated.updatedAt, version: quest.version + 1 }));
+      } else if (withinChangedSchedule && !quest.userModified) {
+        quests.put({ ...quest, ...liveFields, updatedAt: updated.updatedAt, version: quest.version + 1 });
+      }
     }
     habits.put(updated);
     await transactionDone(transaction);

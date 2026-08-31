@@ -1018,6 +1018,30 @@ test('goals and habits can be edited or paused without deleting their history', 
   assert.equal(parseBackup(JSON.stringify(parseBackup(JSON.stringify(legacyGoalBackup)))).data.goals.find((item) => item.id === goal.id).completedDate, '2026-08-14');
 });
 
+test('editing or resuming a habit updates the pending daily check-in instead of leaving a stale snapshot', async (t) => {
+  const db = await withDatabase(t, 'i4-habit-live-checkin');
+  await db.ensureI2Defaults();
+  const branch = (await db.listBranches())[0];
+  const habit = await db.addHabit({
+    name: '复习错题十分钟', minimumAction: '看一道错题', scheduleDays: [5], dimension: 'progress',
+    branchId: branch.id, difficulty: 'light', bonusEnabled: true,
+  }, '2026-08-14');
+  const quest = (await db.ensureTodayBonusQuests('2026-08-14'))[0];
+  assert(quest);
+
+  await db.saveHabit(habit.id, { name: '复习错题十五分钟', minimumAction: '诊断一道错题', status: 'paused' }, '2026-08-14');
+  let synced = (await db.listQuests('2026-08-14')).find((item) => item.id === quest.id);
+  assert.deepEqual({ title: synced?.title, minimum: synced?.minimumAction, status: synced?.status, reason: synced?.systemRetiredReason }, {
+    title: '复习错题十五分钟', minimum: '诊断一道错题', status: 'exempt', reason: 'tracking-disabled',
+  });
+
+  await db.saveHabit(habit.id, { status: 'active' }, '2026-08-14');
+  synced = (await db.listQuests('2026-08-14')).find((item) => item.id === quest.id);
+  assert.deepEqual({ title: synced?.title, minimum: synced?.minimumAction, status: synced?.status, retired: synced?.systemRetiredAt }, {
+    title: '复习错题十五分钟', minimum: '诊断一道错题', status: 'pending', retired: undefined,
+  });
+});
+
 test('goal status transitions close related pending tasks', async (t) => {
   const db = await withDatabase(t, 'i2-goal-close-tasks');
   await db.ensureI2Defaults();

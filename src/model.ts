@@ -2,7 +2,7 @@ export const DIMENSIONS = [
   { key: 'energy', label: '身体', description: '最近的睡眠、体力和恢复情况' },
   { key: 'mind', label: '心理', description: '最近的压力、情绪和安定感' },
   { key: 'connection', label: '关系', description: '最近是否有人交流、支持和陪伴' },
-  { key: 'progress', label: '工作', description: '最近的工作学习是否有方向、有推进' },
+  { key: 'progress', label: '学习/工作', description: '最近的学习或工作是否有方向、有推进' },
   { key: 'play', label: '玩乐', description: '最近是否有兴趣、放松和纯粹开心的时间' },
 ] as const;
 

@@ -111,19 +111,18 @@ test('room movement uses sprite frames instead of stretching the whole character
   assert.match(app, /room-background\.png/);
 });
 
-test('record editor keeps three concise prompts on one row', async () => {
+test('record editor uses the same two record types when creating and editing', async () => {
   const app = await read('src/app.ts');
   const styles = await read('src/styles.css');
-  assert.match(app, /'成功小记'/);
-  assert.match(app, /'珍藏小记'/);
-  assert.match(app, /'趣事小记'/);
+  assert.match(app, /'日常记录'/);
+  assert.match(app, /'成功记录'/);
+  assert.doesNotMatch(app, /成功小记|珍藏小记|趣事小记|普通记录/);
   assert.match(app, /'今日一句'/);
   assert.match(app, /'历年今天'/);
   assert.match(app, /saveDayCaption\(saved\.localDate, summaryInput\.value\)/);
   assert.match(app, /snapshotVariantFor/);
   assert.match(styles, /\.room-stage\.is-snapshot-(?:rest|focus|play|connection|bright)/);
-  assert.doesNotMatch(app, /\['成功记录',[\s\S]*\['感受'/);
-  assert.match(styles, /\.record-prompt-actions\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(styles, /\.record-prompt-actions\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s);
   assert.doesNotMatch(styles, /\.record-prompt-actions\s*\{[^}]*overflow-x:\s*auto/s);
 });
 
@@ -161,6 +160,8 @@ test('Android launcher and splash use the Qiguang identity instead of Capacitor 
   assert.match(styles, /postSplashScreenTheme[^\n]+AppTheme\.NoActionBar/);
   assert.match(styles, /Theme\.AppCompat\.Light\.NoActionBar/);
   assert.match(activity, /SplashScreen\.installSplashScreen\(this\)/);
+  assert.match(activity, /OnBackPressedCallback/);
+  assert.match(activity, /querySelectorAll\('dialog\[open\]'\)/, 'Android back must close the active form before leaving the app');
   const capacitorConfig = JSON.parse(await read('capacitor.config.json'));
   assert.equal(capacitorConfig.android?.adjustMarginsForEdgeToEdge, 'force', 'native content must stay outside system bars and display cutouts');
   assert(existsSync(path.join(root, 'android/app/src/main/res/drawable-port-xxhdpi/splash.png')));
@@ -370,6 +371,7 @@ test('Android widget ships three responsive layouts without overlay or notificat
   assert.match(bridge, /hasPinnedWidget\(\)/, 'settings must avoid duplicate widget requests');
   const activity = await read('android/app/src/main/java/com/vvoyager3/qiguang/MainActivity.java');
   assert.match(activity, /qiguang-widget-action/);
+  assert.match(activity, /qiguang-native-resume/);
   assert.doesNotMatch(activity, /getWebView\(\)\.reload\(\)/, 'widget actions must not reload and blank the active WebView');
 });
 

@@ -102,8 +102,8 @@ async function directionTitle(page, allowRecordOnly = false) {
 async function recordDay(page, day, success = false) {
   const body = `第 ${String(day).padStart(2, '0')} 天：留下当天真实进展。`;
   await page.goto(`${baseUrl}/#/record`);
-  if (success) await page.getByRole('button', { name: '成功小记' }).click();
-  else await page.getByRole('button', { name: '珍藏小记' }).click();
+  if (success) await page.getByRole('button', { name: '成功记录' }).click();
+  else await page.getByRole('button', { name: '日常记录' }).click();
   assert.equal(await page.getByRole('checkbox', { name: '记为成功记录' }).count(), 0);
   await page.getByRole('textbox', { name: '发生了什么' }).fill(body);
   await page.getByRole('button', { name: '保存记录' }).click();
@@ -244,7 +244,7 @@ async function adoptWeeklyReview(page) {
   const consent = page.getByRole('dialog', { name: '允许这一次 AI 周复盘？' });
   if (await consent.count()) await consent.getByRole('button', { name: '允许并继续' }).click();
   await page.getByRole('heading', { name: '保留可持续节奏' }).waitFor();
-  assert.equal(await page.getByRole('dialog', { name: '确认下周唯一主题与实验' }).count(), 0);
+  assert.equal(await page.getByRole('dialog', { name: '确认下周重点和小尝试' }).count(), 0);
   await page.getByRole('button', { name: '采用下周建议' }).click();
   await page.locator('.review-hero .tag').getByText('已确认', { exact: true }).waitFor();
 }
