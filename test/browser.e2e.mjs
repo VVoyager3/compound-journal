@@ -95,8 +95,24 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     assert.equal(await page.locator('#main-content').getByRole('button', { name: '开始记录' }).count(), 0, 'today must not duplicate the record destination');
     assert.equal(await page.locator('#main-content').getByRole('button', { name: '开始收束今天' }).count(), 0, 'empty first use must not show an end-of-day action');
     assert.equal(await page.locator('#main-content').getByText('今天留下一件真实事情', { exact: true }).count(), 0, 'the primary record action must not be repeated as a reminder');
+    const avatarChoices = dialog.locator('.avatar-choice');
+    assert.deepEqual(await avatarChoices.evaluateAll((choices) => choices.map((choice) => ({
+      pressed: choice.getAttribute('aria-pressed'),
+      selected: choice.classList.contains('is-selected'),
+    }))), [
+      { pressed: 'false', selected: false },
+      { pressed: 'false', selected: false },
+    ], 'first-use characters must look unselected until the user chooses one');
+    assert.equal(await dialog.evaluate((element) => element.querySelector('h2') === document.activeElement), true, 'initial focus should announce the dialog title without implying a character choice');
     await dialog.getByRole('button', { name: '选择鱼鱼' }).click();
     await assert.doesNotReject(() => dialog.getByText('已选择鱼鱼').waitFor());
+    assert.deepEqual(await avatarChoices.evaluateAll((choices) => choices.map((choice) => ({
+      pressed: choice.getAttribute('aria-pressed'),
+      selected: choice.classList.contains('is-selected'),
+    }))), [
+      { pressed: 'true', selected: true },
+      { pressed: 'false', selected: false },
+    ], 'only the chosen character should use the selected state');
     await dialog.getByRole('button', { name: '写下第一件事' }).click();
     await page.waitForURL(/#\/record$/);
     assert.deepEqual(await page.locator('.bottom-nav .nav-item').allTextContents(), ['今日', '任务', '记录', '轨迹', '设置']);
@@ -289,6 +305,9 @@ test('expanded settings avoid permanent explanatory paragraphs', async () => {
     await page.getByText('本地数据', { exact: true }).click();
     assert.equal(await page.getByText('导入不会覆盖现有内容。', { exact: true }).count(), 0);
     await assert.doesNotReject(() => page.getByRole('button', { name: '导出全部数据' }).waitFor());
+    assert.equal(await page.locator('.settings-group > details[open]').count(), 1, 'only one top-level settings section should stay open');
+    assert.equal(await page.locator('.data-danger-zone').getByRole('heading', { name: '危险操作' }).count(), 1);
+    assert.equal(await page.locator('.data-danger-zone').getByRole('button', { name: '删除全部数据' }).count(), 1);
     await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
     const expandedLayout = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,
@@ -363,6 +382,33 @@ test('today keeps records and habit editing behind compact entry points', async 
     await habitRow.getByText('更多', { exact: true }).click();
     await assert.doesNotReject(() => habitRow.getByRole('button', { name: '编辑习惯“晚饭后散步”' }).waitFor());
     assert.deepEqual(apiRequests, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('long task dialogs stay inside a short mobile viewport', async () => {
+  const { context, page } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    await page.setViewportSize({ width: 320, height: 480 });
+    await page.goto(`${baseUrl}/#/tasks`);
+    await page.getByRole('button', { name: '安排任务', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: '安排每日任务' });
+    await dialog.getByRole('textbox', { name: '我想做什么？' }).focus();
+    const layout = await dialog.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return {
+        top: Math.round(box.top),
+        bottom: Math.round(box.bottom),
+        viewportHeight: Math.round(window.visualViewport?.height ?? window.innerHeight),
+        cssViewportHeight: getComputedStyle(element).getPropertyValue('--dialog-viewport-height').trim(),
+        scrollable: element.scrollHeight > element.clientHeight,
+      };
+    });
+    assert.ok(layout.top >= 0 && layout.bottom <= layout.viewportHeight, 'the dialog must remain inside the visible viewport');
+    assert.equal(layout.cssViewportHeight, `${layout.viewportHeight}px`, 'the dialog should follow visualViewport height changes');
+    assert.equal(layout.scrollable, true, 'long dialog content must scroll instead of hiding under its action bar');
   } finally {
     await context.close();
   }
@@ -1932,6 +1978,7 @@ test('the companion explains the current direction before offering adjustments',
     await companionButton.click();
     const panel = page.locator('.character-panel');
     await assert.doesNotReject(() => panel.waitFor());
+    assert.equal(await panel.getByRole('button', { name: '关闭生活分身' }).count(), 1, 'the companion panel needs an explicit close action');
     await assert.doesNotReject(() => panel.getByText('我在。今天想从哪里开始？', { exact: true }).waitFor());
     await panel.getByText('我在。今天想从哪里开始？', { exact: true }).click();
     assert.equal(await panel.isVisible(), true, 'clicking inside the companion panel must keep it open');
@@ -2609,6 +2656,7 @@ test('an exported backup restores records after deleting all local data', async 
         }
       };
     });
+    await page.getByText('本地数据', { exact: true }).click();
     await page.getByRole('button', { name: '导出全部数据' }).click();
     await assert.doesNotReject(() => page.getByText('备份文件已生成，请妥善保存。', { exact: true }).waitFor());
     await page.waitForFunction(() => Boolean(globalThis.__qiguangBackupText && globalThis.__qiguangBackupMetadata));

@@ -815,6 +815,16 @@ function roomStage(compact = false, avatar: Profile['avatar'] = null, companionN
           window.setTimeout(() => character.classList.remove('is-welcoming'), 520);
           const created = node('div', 'character-panel');
           created.id = characterPanelId;
+          const closePanel = (restoreFocus = true): void => {
+            created.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
+            if (restoreFocus) button.focus({ preventScroll: true });
+          };
+          const close = node('button', 'character-panel-close', '×');
+          close.type = 'button';
+          close.setAttribute('aria-label', '关闭生活分身');
+          close.addEventListener('click', () => closePanel());
+          created.append(close);
           if (avatar) {
             const portrait = node('img', 'character-portrait') as HTMLImageElement;
             portrait.src = avatarAsset(avatar);
@@ -839,8 +849,7 @@ function roomStage(compact = false, avatar: Profile['avatar'] = null, companionN
             const guide = document.querySelector<HTMLElement>(guidance?.settled ? '.daily-closeout, .daily-guide' : '.daily-guide, .main-action');
             guide?.scrollIntoView({ behavior: settings.reduceMotion ? 'auto' : 'smooth', block: 'center' });
             (guide?.querySelector<HTMLButtonElement>('button') ?? guide)?.focus({ preventScroll: true });
-            created.hidden = true;
-            button.setAttribute('aria-expanded', 'false');
+            closePanel(false);
           });
           const record = node('button', `button ${recordIsPrimary ? 'button-primary' : 'button-quiet'}`, guidance?.settled ? '再记一件事' : '记录一件事');
           record.type = 'button';
@@ -2687,7 +2696,19 @@ function dialogShell(title: string): { dialog: HTMLDialogElement; content: HTMLE
   const actions = node('div', 'dialog-actions');
   dialog.append(content, actions);
   document.body.append(dialog);
-  dialog.addEventListener('close', () => dialog.remove(), { once: true });
+  const viewport = window.visualViewport;
+  const syncViewport = (): void => {
+    dialog.style.setProperty('--dialog-viewport-height', `${viewport?.height ?? window.innerHeight}px`);
+    dialog.style.setProperty('--dialog-viewport-top', `${viewport?.offsetTop ?? 0}px`);
+  };
+  syncViewport();
+  viewport?.addEventListener('resize', syncViewport);
+  viewport?.addEventListener('scroll', syncViewport);
+  dialog.addEventListener('close', () => {
+    viewport?.removeEventListener('resize', syncViewport);
+    viewport?.removeEventListener('scroll', syncViewport);
+    dialog.remove();
+  }, { once: true });
   dialog.addEventListener('cancel', () => dialog.close());
   return { dialog, content, actions };
 }
@@ -2742,7 +2763,11 @@ function showOnboarding(): void {
   content.append(choices, selected);
   actions.append(begin);
   dialog.showModal();
-  choices.querySelector<HTMLButtonElement>('button')?.focus();
+  const heading = content.querySelector<HTMLHeadingElement>('h2');
+  if (heading) {
+    heading.tabIndex = -1;
+    heading.focus();
+  }
 }
 
 function confirmAction(title: string, message: string, confirmLabel: string, dangerous = false): Promise<boolean> {
@@ -3670,7 +3695,7 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
       try { await db.rejectWeeklyReview(review.id); showToast('已暂不采用；没有惩罚，也没有修改计划。'); await render(); }
       catch (error) { showToast(errorMessage(error), 'error'); }
     }, 'button button-quiet');
-    reviewActions.append(adopt, iconButton('修改后采用', null, () => { void openReviewConfirmation(review); }, 'button button-secondary'), iconButton('重新检查本周证据', null, () => { void openWeeklyReviewPreview(period); }, 'button button-secondary'), reject);
+    reviewActions.append(adopt, iconButton('修改后采用', null, () => { void openReviewConfirmation(review); }, 'button button-secondary'), iconButton('重新检查本周证据', null, () => { void openWeeklyReviewPreview(period); }, 'button button-quiet'), reject);
     hero.append(reviewActions);
   } else if (review.status === 'rejected') {
     hero.append(iconButton('重新检查本周证据', null, () => { void openWeeklyReviewPreview(period); }, 'button button-secondary'));
@@ -4559,10 +4584,7 @@ async function tasksPage(): Promise<HTMLElement> {
   dayHeading.append(node('h2', '', '今日任务'));
   if (quests.length) {
     const pending = quests.filter((item) => item.status === 'pending').length;
-    const retired = quests.filter((item) => item.systemRetiredAt && item.systemRetiredReason !== 'capacity').length;
-    const held = quests.filter((item) => item.systemRetiredReason === 'capacity').length;
-    const settled = quests.length - pending - retired;
-    dayHeading.append(node('span', 'caption', [pending ? `${pending} 项待完成` : '', settled - held ? `${settled - held} 项已反馈` : '', held ? `${held} 项已保留` : '', retired ? `${retired} 项已收束` : ''].filter(Boolean).join(' · ')));
+    dayHeading.append(node('span', 'caption', pending ? `${pending} 项待完成` : '今天已完成'));
   }
   day.append(dayHeading);
   if (!quests.length) {
@@ -4648,7 +4670,7 @@ async function tasksPage(): Promise<HTMLElement> {
     const card = node('article', `goal-row${goal.role === 'main' ? ' is-main' : ''}`);
     const roleLabel = goal.role === 'main' ? '主目标' : goal.role === 'secondary' ? '次要目标' : '愿望库';
     const statusLabel = ({ idea: '想法', active: '进行中', paused: '暂停', completed: '已完成', abandoned: '已放下' } as const)[goal.status];
-    card.append(node('span', 'tag', `${roleLabel} · ${statusLabel}`), node('h3', '', goal.result));
+    card.append(node('span', 'tag', `${roleLabel} · ${statusLabel}`), node('h3', 'goal-title', goal.result));
     card.append(node('p', 'quest-minimum', `下一步：${goal.nextStep}`));
     const actions = node('div', 'quest-actions');
     if (goal.role !== 'wishlist' && goal.status === 'active') {
@@ -6005,10 +6027,19 @@ async function systemPage(): Promise<HTMLElement> {
     later.type = 'button'; later.addEventListener('click', () => { localStorage.setItem(backupDismissKey, '1'); reminder.remove(); });
     remindActions.append(backupNow, later); reminder.append(remindActions); data.append(reminder);
   }
-  data.append(exportButton, importLabel, deleteButton);
+  const transferActions = node('div', 'data-transfer-actions');
+  transferActions.append(exportButton, importLabel);
+  const dangerZone = node('section', 'data-danger-zone');
+  dangerZone.append(node('h3', '', '危险操作'), deleteButton);
+  data.append(transferActions, dangerZone);
   featureSettings.append(await installStorageSettings());
   dataSettings.append(data);
   main.append(dailySettings, featureSettings, dataSettings, advancedSettings);
+  const topLevelSettings = [...main.querySelectorAll<HTMLDetailsElement>('.settings-group > details')];
+  topLevelSettings.forEach((section) => section.addEventListener('toggle', () => {
+    if (!section.open) return;
+    topLevelSettings.forEach((other) => { if (other !== section) other.open = false; });
+  }));
   return main;
 }
 

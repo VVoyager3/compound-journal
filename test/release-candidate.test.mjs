@@ -130,8 +130,14 @@ test('record editor keeps three concise prompts on one row', async () => {
 test('typography and settings density follow the global UI rules', async () => {
   const styles = await read('src/styles.css');
   const checklist = await read('DESIGN-CHECKLIST.md');
+  assert.match(styles, /--line:\s*1px/);
+  assert.match(styles, /--text-page:\s*clamp\(2rem,\s*7\.5vw,\s*2\.25rem\)/);
   assert.match(styles, /h1,[\s\S]*h3\s*\{[^}]*font-family:\s*inherit/s);
   assert.doesNotMatch(styles, /Noto Serif SC|Source Han Serif SC|Songti SC/);
+  assert.match(styles, /\.button\s*\{[^}]*min-height:\s*48px;[^}]*border:\s*1px solid var\(--forest\);[^}]*box-shadow:\s*none/s);
+  assert.match(styles, /\.input,[\s\S]*\.journal-input\s*\{[^}]*border:\s*1px solid rgb\(40 50 40 \/ 48%\);[^}]*box-shadow:\s*none/s);
+  assert.match(styles, /\.page\s*\{[^}]*padding:\s*18px var\(--page-pad\) var\(--page-bottom-space\)/s);
+  assert.match(styles, /max-height:\s*min\(calc\(var\(--dialog-viewport-height/);
   assert.match(styles, /\.page-system\s*\{[^}]*gap:\s*18px/s);
   assert.match(checklist, /## 二、信息与文案/);
   assert.match(checklist, /非必要说明已经删除/);
