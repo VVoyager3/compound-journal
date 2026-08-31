@@ -111,11 +111,12 @@ test('room movement uses sprite frames instead of stretching the whole character
   assert.match(app, /room-background\.png/);
 });
 
-test('record editor uses the same two record types when creating and editing', async () => {
+test('record editor uses the same three record types when creating and editing', async () => {
   const app = await read('src/app.ts');
   const styles = await read('src/styles.css');
   assert.match(app, /'日常记录'/);
   assert.match(app, /'成功记录'/);
+  assert.match(app, /'趣事记录'/);
   assert.doesNotMatch(app, /成功小记|珍藏小记|趣事小记|普通记录/);
   assert.match(app, /'今日一句'/);
   assert.match(app, /'历年今天'/);
@@ -168,6 +169,7 @@ test('Android launcher and splash use the Qiguang identity instead of Capacitor 
   assert.match(activity, /SplashScreen\.installSplashScreen\(this\)/);
   assert.match(activity, /OnBackPressedCallback/);
   assert.match(activity, /querySelectorAll\('dialog\[open\]'\)/, 'Android back must close the active form before leaving the app');
+  assert.match(activity, /querySelector\('\.secondary-back'\)/, 'Android back must return from secondary pages before leaving the app');
   const capacitorConfig = JSON.parse(await read('capacitor.config.json'));
   assert.equal(capacitorConfig.android?.adjustMarginsForEdgeToEdge, 'force', 'native content must stay outside system bars and display cutouts');
   assert(existsSync(path.join(root, 'android/app/src/main/res/drawable-port-xxhdpi/splash.png')));

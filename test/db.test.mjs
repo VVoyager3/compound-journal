@@ -2047,8 +2047,10 @@ test('success journal kind defaults explicitly, is editable and undoable, and su
   const db = await withDatabase(t, 'success-journal-kind');
   const regular = await db.addEntry('普通记录', '2026-08-14');
   const success = await db.addEntry('我完成了困难的一步', '2026-08-14', 'text', 'success');
+  const fun = await db.addEntry('午休时听到一个好笑的故事', '2026-08-14', 'text', 'fun');
   assert.equal(regular.kind, 'journal');
   assert.equal(success.kind, 'success');
+  assert.equal(fun.kind, 'fun');
 
   const corrected = await db.editEntry(success.id, success.version, success.body, 'journal');
   assert.equal(corrected.kind, 'journal');
@@ -2062,6 +2064,7 @@ test('success journal kind defaults explicitly, is editable and undoable, and su
   await db.importBundle(JSON.stringify(backup));
   assert.deepEqual((await db.exportBundle()).data, backup.data);
   assert.equal((await db.getEntry(success.id)).kind, 'success');
+  assert.equal((await db.getEntry(fun.id)).kind, 'fun');
 
   const legacy = structuredClone(backup);
   legacy.data.entries[0].body = `普通正文\n\n ${LEGACY_SUCCESS_PROMPT}\n拆分出的成功`;

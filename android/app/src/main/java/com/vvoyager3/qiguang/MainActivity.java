@@ -19,7 +19,7 @@ public class MainActivity extends BridgeActivity {
             @Override
             public void handleOnBackPressed() {
                 bridge.getWebView().evaluateJavascript(
-                    "(() => { const dialogs = document.querySelectorAll('dialog[open]'); const dialog = dialogs[dialogs.length - 1]; if (!dialog) return false; dialog.dispatchEvent(new Event('cancel', { cancelable: true })); return true; })()",
+                    "(() => { const dialogs = document.querySelectorAll('dialog[open]'); const dialog = dialogs[dialogs.length - 1]; if (dialog) { dialog.dispatchEvent(new Event('cancel', { cancelable: true })); return true; } const back = document.querySelector('.secondary-back'); if (back) { back.click(); return true; } return false; })()",
                     handled -> {
                         if ("true".equals(handled)) return;
                         setEnabled(false);

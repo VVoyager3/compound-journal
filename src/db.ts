@@ -1090,7 +1090,7 @@ export function parseBackup(text: string): BackupBundle {
     if (!isLocalDate(entry.localDate)) throw new Error('记录日期无效。');
     validateBody(entry.body);
     if (!['text', 'import'].includes(entry.inputMethod)) throw new Error('记录输入方式无效。');
-    if (entry.kind !== undefined) assertOneOf(entry.kind, ['journal', 'success'], '记录类型');
+    if (entry.kind !== undefined) assertOneOf(entry.kind, ['journal', 'success', 'fun'], '记录类型');
     assertOneOf(entry.analysisStatus, ['not-submitted', 'queued', 'processing', 'succeeded', 'failed'], '记录整理状态');
   });
   uniqueIds(entries, '记录');
@@ -1113,7 +1113,7 @@ export function parseBackup(text: string): BackupBundle {
     assertInteger(revision.fromVersion, 1, Number.MAX_SAFE_INTEGER, '修改版本号');
     if (revision.fromVersion >= (entryVersions.get(revision.entryId) ?? 0)) throw new Error('修改版本号超出记录版本。');
     validateBody(revision.previousBody);
-    if (revision.previousKind !== undefined) assertOneOf(revision.previousKind, ['journal', 'success'], '修改前记录类型');
+    if (revision.previousKind !== undefined) assertOneOf(revision.previousKind, ['journal', 'success', 'fun'], '修改前记录类型');
     if (!['user-edit', 'undo', 'import'].includes(revision.reason)) throw new Error('修改原因无效。');
     if (revision.undoneAt !== undefined) {
       assertTimestamp(revision.undoneAt, '撤销时间');
@@ -1544,7 +1544,7 @@ export class QiguangDb {
   ): Promise<JournalEntry> {
     if (!isLocalDate(date)) throw new Error('记录日期无效。');
     assertOneOf(inputMethod, ['text', 'import'], '记录输入方式');
-    assertOneOf(kind, ['journal', 'success'], '记录类型');
+    assertOneOf(kind, ['journal', 'success', 'fun'], '记录类型');
     const timestamp = nowIso();
     const entry: JournalEntry = {
       id: crypto.randomUUID(),
@@ -1644,7 +1644,7 @@ export class QiguangDb {
       throw new Error('记录已在其他页面修改，请刷新后重试。');
     }
     const body = validateBody(bodyValue);
-    if (kind !== undefined) assertOneOf(kind, ['journal', 'success'], '记录类型');
+    if (kind !== undefined) assertOneOf(kind, ['journal', 'success', 'fun'], '记录类型');
     const currentKind = current.kind ?? 'journal';
     const updatedKind = kind ?? currentKind;
     if (body === current.body && updatedKind === currentKind) {

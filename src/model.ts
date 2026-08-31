@@ -74,7 +74,7 @@ export interface JournalEntry extends ImportableEntity {
   body: string;
   inputMethod: 'text' | 'import';
   /** Explicit user intent; absent on legacy records and defaults to a regular journal entry. */
-  kind?: 'journal' | 'success';
+  kind?: 'journal' | 'success' | 'fun';
   analysisStatus: 'not-submitted' | 'queued' | 'processing' | 'succeeded' | 'failed';
 }
 
