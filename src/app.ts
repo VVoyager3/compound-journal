@@ -64,7 +64,7 @@ const motionFramePreloads = new Map<Exclude<Profile['avatar'], null>, Promise<vo
 
 type RouteName = 'today' | 'calendar' | 'record' | 'tasks' | 'growth' | 'system' | 'day' | 'review' | 'task-analysis' | 'habit-analysis';
 type PixelIcon = 'today' | 'calendar' | 'record' | 'growth' | 'system' | 'desk' | 'board' | 'books' | 'window' | 'character'
-  | 'ai' | 'bell' | 'storage' | 'transfer' | 'lock' | 'folder' | 'rules' | 'trash' | 'trophy' | 'book' | 'target' | 'coin' | 'wifi';
+  | 'ai' | 'bell' | 'storage' | 'transfer' | 'lock' | 'folder' | 'rules' | 'trash' | 'trophy' | 'book' | 'target' | 'coin' | 'wifi' | 'heart' | 'quill';
 interface Route { name: RouteName; date?: string; entityId?: string }
 type RoomCue = 'rest' | 'focus' | 'play';
 type SnapshotVariant = 'steady' | 'rest' | 'focus' | 'play' | 'connection' | 'bright';
@@ -1172,6 +1172,18 @@ async function announceNewGrowthBadge(before: Set<string>, fallback: string): Pr
   );
 }
 
+async function settleMilestone(milestone: Milestone, onSettled?: () => void): Promise<void> {
+  const completing = milestone.status !== 'completed';
+  const achievementsBefore = completing ? await growthBadgeIds() : undefined;
+  if (completing) await db.completeMilestone(milestone.id);
+  else await db.undoMilestone(milestone.id);
+  onSettled?.();
+  await render();
+  const notice = completing ? '阶段目标已完成，获得 50 经验。' : '阶段目标经验已撤销。';
+  if (achievementsBefore) await announceNewGrowthBadge(achievementsBefore, notice);
+  else showToast(notice);
+}
+
 type QuestProgress = Awaited<ReturnType<QiguangDb['branchProgress']>>;
 
 async function questProgress(quest: Quest): Promise<QuestProgress | null> {
@@ -1791,7 +1803,7 @@ function taskListQuest(quest: Quest, overdue = false, detailed = false): HTMLEle
   if (quest.targetCount) {
     const count = node('span', 'task-count-progress');
     count.append(
-      node('span', 'task-count-value', `${progress}/${target}`),
+      node('span', 'task-count-value', `${progress}/${target} ${quest.countUnit || '次'}`),
       node('span', 'task-count-meter', ''),
     );
     if (detailed) count.append(node('span', 'task-count-continue', '继续'));
@@ -2043,15 +2055,120 @@ function overdueQuestPanel(quests: Quest[], limit = 3): HTMLElement {
 async function todayPage(): Promise<HTMLElement> {
   const today = localDate();
   await db.ensureTodayBonusQuests(today);
-  const [entries, observations, quests, profile] = await Promise.all([
-    db.listEntries(today), db.resolvedStateAtOrBefore(today), db.listQuests(today), db.getProfile(),
+  const [entries, observations, quests, profile, entryHistory, overdueQuests, allQuests, allFeedback, previousAnalyses, goals, milestones, areas] = await Promise.all([
+    db.listEntries(today), db.resolvedStateAtOrBefore(today), db.listQuests(today), db.getProfile(), db.listEntries(),
+    db.listPendingBefore(today), db.listQuests(), db.listQuestFeedback(), db.listDailyAnalyses(shiftDate(today, -1)), db.listGoals(), db.listMilestones(), db.listAreas(),
   ]);
   const main = node('main', 'page page-today');
   main.append(pageHeader(formatDate(today), '今天'));
 
+  const latestEntry = entryHistory.at(-1);
+  const isReturning = Boolean(latestEntry
+    && (Date.now() - Date.parse(latestEntry.createdAt)) / 86_400_000 >= 14
+    && sessionStorage.getItem(`qiguang.return-dismissed.${today}`) !== '1');
+  const lowest = Object.values(observations)
+    .filter((item) => !observationIsStale(item, today))
+    .sort((left, right) => left.value - right.value)[0];
+  const pendingMain = quests.find((quest) => quest.type === 'main' && quest.status === 'pending');
+  const showRecovery = Boolean(lowest && lowest.value < 45
+    && sessionStorage.getItem(`qiguang.recovery-dismissed.${today}.${lowest.dimension}`) !== '1'
+    && !quests.some((quest) => quest.sourceType === 'recovery'));
+
   const hero = node('section', 'home-hero');
-  hero.append(roomStage(false, profile?.avatar ?? null, resolvedCompanionName(profile), false, null, null, quests.some((quest) => quest.type === 'main' && quest.status === 'pending')));
+  hero.append(roomStage(false, profile?.avatar ?? null, resolvedCompanionName(profile), isReturning, roomCueFor(lowest), null, Boolean(pendingMain)));
   main.append(hero, statusSummary(observations));
+
+  if (isReturning) {
+    const returning = node('section', 'home-return');
+    const actions = node('div', 'home-return-actions');
+    const record = node('button', 'button button-secondary', '记录近况');
+    record.type = 'button';
+    record.addEventListener('click', () => go({ name: 'record' }));
+    const history = node('button', 'button button-quiet', '先看看以前');
+    history.type = 'button';
+    history.addEventListener('click', () => go({ name: 'calendar' }));
+    const dismiss = node('button', 'button button-quiet', '暂时不用');
+    dismiss.type = 'button';
+    dismiss.addEventListener('click', () => {
+      sessionStorage.setItem(`qiguang.return-dismissed.${today}`, '1');
+      returning.remove();
+      main.querySelector<HTMLElement>('.today-focus-list h2, .today-focus-list button')?.focus({ preventScroll: true });
+    });
+    actions.append(record, history, dismiss);
+    returning.append(node('strong', '', '欢迎回来'), actions);
+    main.append(returning);
+  }
+
+  if (showRecovery && lowest) main.append(recoveryPanel(lowest, today, !pendingMain));
+
+  const carriedGoalQuest = overdueQuests.find((item) => item.type === 'main' && item.sourceType === 'goal')
+    ?? overdueQuests.find((item) => item.sourceType === 'goal');
+  const directionQuest = pendingMain ?? carriedGoalQuest;
+  const feedbackByQuest = activeFeedbackByQuest(allFeedback);
+  const questById = new Map(allQuests.map((item) => [item.id, item]));
+  const blockedGoalIds = new Set(allFeedback.flatMap((item) => {
+    const quest = questById.get(item.questId);
+    return !item.undoneAt && item.result === 'skipped' && (item.completedDate ?? quest?.localDate) === today && quest?.sourceType === 'goal' && quest.sourceId ? [quest.sourceId] : [];
+  }));
+  const goalProgressSince = shiftDate(today, -7);
+  const areaEvidence = (areaId: string): number => allFeedback.filter((item) => {
+    const quest = questById.get(item.questId);
+    const evidenceDate = item.completedDate ?? quest?.localDate ?? '';
+    return !item.undoneAt && (item.result === 'completed' || item.result === 'partial') && evidenceDate >= goalProgressSince
+      && quest?.sourceType === 'goal' && goals.find((goal) => goal.id === quest.sourceId)?.areaId === areaId;
+  }).length;
+  const eligibleGoals = goals.filter((item) => item.status === 'active' && !blockedGoalIds.has(item.id) && areas.find((area) => area.id === item.areaId)?.mode !== 'pause');
+  const primaryGoal = eligibleGoals.find((item) => item.role === 'main');
+  const secondaryGoals = eligibleGoals.filter((item) => item.role === 'secondary').sort((left, right) => {
+    const modeRank = (goal: Goal): number => ({ build: 0, explore: 1, maintain: 2, pause: 3 })[areas.find((area) => area.id === goal.areaId)?.mode ?? 'pause'];
+    return modeRank(left) - modeRank(right) || areaEvidence(left.areaId) - areaEvidence(right.areaId) || left.createdAt.localeCompare(right.createdAt);
+  });
+  const activeGoal = primaryGoal ?? secondaryGoals[0];
+  const latestGoalQuest = activeGoal ? allQuests
+    .filter((item) => item.sourceType === 'goal' && item.sourceId === activeGoal.id)
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] : undefined;
+  const skippedGoalQuest = latestGoalQuest?.status === 'skipped' ? latestGoalQuest : undefined;
+  const previousReflection = previousAnalyses.find((item) => item.status === 'ready')?.result.reflection;
+  const direction = chooseDailyDirection({
+    mainQuest: directionQuest ? {
+      status: directionQuest.status,
+      deadlineRisk: Boolean(directionQuest.deadlineAt && Date.parse(directionQuest.deadlineAt) - Date.now() <= 24 * 60 * 60 * 1000),
+      carriedFromPreviousDay: directionQuest.localDate < today,
+    } : null,
+    recoveryAvailable: showRecovery,
+    activeGoalAvailable: Boolean(activeGoal),
+    previousStepAvailable: Boolean(previousReflection?.nextSmallStep),
+    milestoneDue: Boolean(activeGoal && milestones.some((item) => item.goalId === activeGoal.id && item.status === 'pending')),
+    stagnantGoal: Boolean(activeGoal && parseLocalDate(today).getTime() - parseLocalDate(activeGoal.startDate ?? today).getTime() >= 7 * 86_400_000
+      && !allQuests.some((item) => {
+        const feedback = feedbackByQuest.get(item.id);
+        return item.sourceType === 'goal' && item.sourceId === activeGoal.id && feedback
+          && questResultDate(item, feedbackByQuest) >= goalProgressSince
+          && (feedback.result === 'completed' || feedback.result === 'partial');
+      })),
+    areaBalanceNeeded: Boolean(!primaryGoal && activeGoal && secondaryGoals.some((item) => areaEvidence(item.areaId) > areaEvidence(activeGoal.areaId))),
+    goalMode: activeGoal ? areas.find((area) => area.id === activeGoal.areaId)?.mode : undefined,
+  });
+  if (!pendingMain && direction.kind !== 'recovery' && direction.kind !== 'explore') {
+    const guide = node('article', 'surface daily-guide');
+    if (direction.kind === 'main' && directionQuest) {
+      guide.append(node('h2', '', directionQuest.title));
+      if (directionQuest.minimumAction && directionQuest.minimumAction !== directionQuest.title) guide.append(node('p', 'quest-minimum', `先做：${directionQuest.minimumAction}`));
+      guide.append(primaryButton('处理这项后续行动', () => go({ name: 'tasks' })));
+    } else if (direction.kind === 'goal' && activeGoal) {
+      if (skippedGoalQuest) {
+        guide.append(node('h2', '', `重新决定：${skippedGoalQuest.title}`), node('p', 'caption', `目标：${activeGoal.result}`));
+        guide.append(primaryButton('确认或调整这一步', () => { void openQuestDialog(activeGoal, skippedGoalQuest.title); }));
+      } else {
+        guide.append(node('h2', '', activeGoal.nextStep), node('p', '', direction.reason), node('p', '', `来自目标：${activeGoal.result}`));
+        guide.append(primaryButton('把这一步安排到今天', () => { void openQuestDialog(activeGoal); }));
+      }
+    } else if (direction.kind === 'reflection' && previousReflection?.nextSmallStep) {
+      guide.append(node('h2', '', previousReflection.nextSmallStep));
+      guide.append(primaryButton('确认或调整这一步', () => { void openQuestDialog(undefined, previousReflection.nextSmallStep); }));
+    }
+    if (guide.childElementCount) main.append(guide);
+  }
 
   const todayTasks = node('section', 'today-focus-list');
   const todayTasksHeading = node('div', 'section-heading');
@@ -2074,15 +2191,18 @@ async function todayPage(): Promise<HTMLElement> {
   if (latestTodayEntry) {
     const preview = node('button', 'today-record-row');
     preview.type = 'button';
+    const previewIcon = node('span', `today-record-icon is-${latestTodayEntry.kind}`);
+    previewIcon.append(pixelIcon(latestTodayEntry.kind === 'success' ? 'trophy' : 'record'));
     preview.append(
-      node('span', `today-record-icon is-${latestTodayEntry.kind}`, '▤'),
+      previewIcon,
       node('span', 'line-clamp', latestTodayEntry.body),
       node('time', 'caption', new Date(latestTodayEntry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })),
     );
     preview.addEventListener('click', () => go({ name: 'day', date: today }));
     todayRecord.append(preview);
   } else todayRecord.append(node('p', 'empty-copy', '今天还没有记录'));
-  const write = node('button', 'record-fab', '✎');
+  const write = node('button', 'record-fab');
+  write.append(pixelIcon('record'));
   write.type = 'button';
   write.setAttribute('aria-label', '写记录');
   write.addEventListener('click', () => go({ name: 'record' }));
@@ -2116,8 +2236,9 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   const savedCaption = await db.getDayCaption(targetDate);
   const summaryBlock = node('section', 'record-summary-block');
   const summaryHeading = node('div', 'record-summary-heading');
-  const summaryLabel = node('label', 'field-label record-summary-label', '今日一句');
+  const summaryLabel = node('label', 'field-label record-summary-label');
   const summaryInput = node('input', 'input record-summary-input');
+  summaryInput.setAttribute('aria-label', '今日一句');
   summaryInput.maxLength = 120;
   summaryInput.placeholder = '给今天留一句话';
   summaryInput.value = initialDraft.summary || savedCaption?.text || '';
@@ -2125,7 +2246,7 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   const sameDay = node('button', 'button button-quiet button-compact', '历年今天');
   sameDay.type = 'button';
   sameDay.addEventListener('click', () => { void openSameDayHistory(activeDraftDate); });
-  summaryHeading.append(node('strong', '', '五年日记'), sameDay);
+  summaryHeading.append(node('strong', '', '今日一句'), sameDay);
   summaryBlock.append(summaryHeading, summaryLabel);
   textarea.placeholder = initialDraft.kind === 'success' ? SUCCESS_PROMPT : initialDraft.kind === 'fun' ? '今天有什么有趣、意外或值得笑一下的事？' : '写下你想留住的细节';
   textarea.value = initialDraft.body;
@@ -2205,7 +2326,7 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   const attachment = node('button', 'record-attachment-button');
   attachment.type = 'button';
   attachment.title = '当前版本仅保存文字记录';
-  attachment.append(node('span', 'record-attachment-icon', '▧'), node('span', '', '添加图片'));
+  attachment.append(node('span', '', '添加图片'));
   attachment.addEventListener('click', () => showToast('为保证备份可靠，当前版本暂不保存图片。'));
   const editorMeta = node('div', 'record-editor-meta');
   editorMeta.append(attachment, saveState);
@@ -2344,19 +2465,14 @@ function trailTabs(active: 'calendar' | 'growth' | 'review'): HTMLElement {
   return nav;
 }
 
-async function openDaySnapshot(date: string, entries: JournalEntry[], allQuests: Quest[], allFeedback: QuestFeedback[], suggestedCaption?: string): Promise<void> {
-  const [observations, profile, caption, analyses] = await Promise.all([
-    db.resolvedStateAtOrBefore(date), db.getProfile(), db.getDayCaption(date), db.listDailyAnalyses(date),
-  ]);
-  const activeFeedback = activeFeedbackByQuest(allFeedback);
-  const quests = allQuests.filter((quest) => activeFeedback.has(quest.id) && questResultDate(quest, activeFeedback) === date);
+async function openDayCaptionDialog(date: string, entries: JournalEntry[], suggestedCaption?: string): Promise<void> {
+  const [caption, analyses] = await Promise.all([db.getDayCaption(date), db.listDailyAnalyses(date)]);
   const readyAnalysis = analyses.find((item) => item.status === 'ready');
-  const { dialog, content, actions } = dialogShell(formatDate(date, { year: 'numeric' }));
-  dialog.classList.add('day-snapshot-dialog');
-  content.append(snapshotRoomStage(date, entries, observations, quests, profile, readyAnalysis));
+  const { dialog, content, actions } = dialogShell('编辑当日一句');
+  dialog.classList.add('day-caption-dialog');
 
   const captionBlock = node('section', 'day-snapshot-block day-caption-block');
-  captionBlock.append(node('h3', '', '当日一句话'));
+  captionBlock.append(node('p', 'caption', formatDate(date, { year: 'numeric' })));
   const captionInput = node('textarea', 'input day-caption-input');
   captionInput.maxLength = 120;
   captionInput.rows = 2;
@@ -2378,7 +2494,7 @@ async function openDaySnapshot(date: string, entries: JournalEntry[], allQuests:
     }
     void openAnalysisPreview(date, entries, undefined, (summary) => {
       if (!dialog.isConnected) {
-        void openDaySnapshot(date, entries, allQuests, allFeedback, summary);
+        void openDayCaptionDialog(date, entries, summary);
         return;
       }
       captionInput.value = summary;
@@ -2405,51 +2521,12 @@ async function openDaySnapshot(date: string, entries: JournalEntry[], allQuests:
   captionBlock.append(captionInput, captionActions, captionStatus);
   content.append(captionBlock);
 
-  const state = node('section', 'day-snapshot-block');
-  state.append(node('h3', '', '当日状态'));
-  const stateGrid = node('div', 'day-snapshot-state');
-  for (const dimension of DIMENSIONS) {
-    const observation = observations[dimension.key];
-    stateGrid.append(node('span', observation ? '' : 'is-unknown', `${dimension.label} ${observation?.value ?? '—'}`));
-  }
-  state.append(stateGrid);
-  content.append(state);
-
-  const records = node('section', 'day-snapshot-block');
-  records.append(node('h3', '', `记录 · ${entries.length}`));
-  if (!entries.length) records.append(node('p', 'empty-copy', '暂无记录'));
-  for (const entry of entries) {
-    const item = node('article', 'day-snapshot-item');
-    item.append(
-      node('span', `tag${entry.kind === 'success' ? ' is-success' : entry.kind === 'fun' ? ' is-fun' : ''}`, entry.kind === 'success' ? '成功记录' : entry.kind === 'fun' ? '趣事记录' : '日常记录'),
-      node('p', 'day-snapshot-copy', entry.body),
-    );
-    records.append(item);
-  }
-  content.append(records);
-
-  const results = node('section', 'day-snapshot-block');
-  results.append(node('h3', '', `行动结果 · ${quests.length}`));
-  if (!quests.length) results.append(node('p', 'empty-copy', '暂无反馈'));
-  const resultLabels: Record<QuestFeedback['result'], string> = { completed: '完成', partial: '部分完成', skipped: '今天不做', exempt: '豁免' };
-  for (const quest of quests) {
-    const feedback = activeFeedback.get(quest.id);
-    if (!feedback) continue;
-    const item = node('article', 'day-snapshot-item');
-    item.append(node('span', 'tag', resultLabels[feedback.result]), node('p', 'day-snapshot-copy', quest.title));
-    results.append(item);
-  }
-  content.append(results);
-
   const close = node('button', 'button button-secondary', '关闭');
   close.type = 'button';
   close.addEventListener('click', () => dialog.close());
-  const full = node('button', 'button button-primary', '打开完整回顾');
-  full.type = 'button';
-  full.addEventListener('click', () => { dialog.close(); go({ name: 'day', date }); });
-  actions.append(close, full);
+  actions.append(close);
   dialog.showModal();
-  close.focus();
+  captionInput.focus();
 }
 
 async function calendarPage(): Promise<HTMLElement> {
@@ -2549,15 +2626,24 @@ async function calendarPage(): Promise<HTMLElement> {
   const selectedEntry = selectedEntries.at(-1);
   const selectedHabit = habitsById.get(selectedHabitLogs.at(-1)?.habitId ?? '');
   const previewLead = node('div', 'calendar-preview-lead');
+  const previewIcon = node('span', `calendar-preview-icon${selectedEntry?.kind === 'success' ? ' is-success' : ''}`);
+  if (selectedEntry) previewIcon.append(pixelIcon(selectedEntry.kind === 'success' ? 'trophy' : 'record'));
+  else if (selectedQuests.length) previewIcon.append(pixelIcon('board'));
+  else if (selectedHabit) previewIcon.append(pixelIcon('growth'));
   previewLead.append(
-    node('span', `calendar-preview-icon${selectedEntry?.kind === 'success' ? ' is-success' : ''}`, selectedEntry?.kind === 'success' ? '★' : selectedEntry ? '▤' : selectedQuests.length ? '✓' : selectedHabit ? '◆' : '·'),
+    previewIcon,
     node('p', selectedEntry ? 'line-clamp' : 'empty-copy', selectedEntry?.body ?? selectedQuests[0]?.title ?? selectedHabit?.name ?? '这一天还没有记录或完成事项'),
   );
   selectedPreview.append(previewLead);
+  const previewActions = node('div', 'calendar-preview-actions');
+  const editCaption = node('button', 'section-text-action', '编辑当日一句');
+  editCaption.type = 'button';
+  editCaption.addEventListener('click', () => { void openDayCaptionDialog(calendarSelectedDate, selectedEntries); });
   const openReview = node('button', 'section-text-action', '打开回顾 ›');
   openReview.type = 'button';
   openReview.addEventListener('click', () => go({ name: 'day', date: calendarSelectedDate }));
-  selectedPreview.append(openReview);
+  previewActions.append(editCaption, openReview);
+  selectedPreview.append(previewActions);
   main.append(selectedPreview);
 
   const monthStart = localDate(new Date(calendarCursor.getFullYear(), calendarCursor.getMonth(), 1));
@@ -3345,7 +3431,9 @@ async function dayPage(date: string): Promise<HTMLElement> {
     const moreSummary = node('summary', '', '›');
     moreSummary.setAttribute('aria-label', `管理记录：${entry.body.slice(0, 30)}`);
     more.append(moreSummary, moreButtons);
-    item.append(node('span', 'day-record-icon', entry.kind === 'success' ? '★' : entry.kind === 'fun' ? '☺' : '▤'), copy, more);
+    const recordIcon = node('span', 'day-record-icon');
+    recordIcon.append(pixelIcon(entry.kind === 'success' ? 'trophy' : 'record'));
+    item.append(recordIcon, copy, more);
     journal.append(item);
   }
 
@@ -3370,8 +3458,10 @@ async function dayPage(date: string): Promise<HTMLElement> {
     const copy = node('span', 'day-action-copy');
     copy.append(node('strong', '', quest.title));
     if (feedback?.actual) copy.append(node('span', 'caption line-clamp', feedback.actual));
+    const actionIcon = node('span', 'day-action-icon');
+    actionIcon.append(pixelIcon(quest.sourceType === 'habit' ? 'growth' : quest.sourceType === 'recovery' ? 'today' : 'board'));
     row.append(
-      node('span', 'day-action-icon', quest.sourceType === 'habit' ? '◆' : quest.sourceType === 'recovery' ? '↗' : '★'),
+      actionIcon,
       copy,
       result,
       node('span', 'day-action-chevron', '›'),
@@ -3417,12 +3507,16 @@ async function dayPage(date: string): Promise<HTMLElement> {
   if (entries.length || quests.length) {
     const evidence = node('details', 'day-evidence-details');
     const summary = node('summary', 'day-evidence-card');
-    summary.append(node('span', 'day-evidence-icon', '▤'), node('span', 'day-evidence-copy', evidenceCopy), node('span', 'day-evidence-action', '查看整理 ›'));
+    const evidenceIcon = node('span', 'day-evidence-icon');
+    evidenceIcon.append(pixelIcon('record'));
+    summary.append(evidenceIcon, node('span', 'day-evidence-copy', evidenceCopy), node('span', 'day-evidence-action', '查看整理 ›'));
     evidence.append(summary, await dailyAnalysisSection(date, entries, quests));
     main.append(evidence);
   } else {
     const evidence = node('section', 'day-evidence-card is-empty');
-    evidence.append(node('span', 'day-evidence-icon', '▤'), node('span', 'day-evidence-copy', evidenceCopy));
+    const evidenceIcon = node('span', 'day-evidence-icon');
+    evidenceIcon.append(pixelIcon('record'));
+    evidence.append(evidenceIcon, node('span', 'day-evidence-copy', evidenceCopy));
     main.append(evidence);
   }
 
@@ -3716,6 +3810,9 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   const completedTasks = periodQuests.filter((quest) => quest.status === 'completed' || quest.status === 'partial').length;
   const habitChecks = periodQuests.filter((quest) => quest.sourceType === 'habit' && (quest.status === 'completed' || quest.status === 'partial')).length;
   const summary = node('section', 'review-summary-card');
+  const summaryIcon = node('span', 'review-summary-icon');
+  summaryIcon.append(pixelIcon('growth'));
+  summary.append(summaryIcon);
   summary.append(node('h2', '', completedTasks || habitChecks || weekEntries.length ? '这周做得不错' : '这一周还在开始'));
   const summaryStats = node('div', 'review-summary-stats');
   summaryStats.append(
@@ -3744,8 +3841,10 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   }
 
   const focus = node('section', 'review-focus-card');
+  const focusIcon = node('span', 'review-section-icon is-target');
+  focusIcon.append(pixelIcon('target'));
   focus.append(
-    node('span', 'review-section-icon is-target', '◎'),
+    focusIcon,
     node('h2', '', '下周重点'),
     node('strong', '', review.nextTheme),
     node('p', 'muted', review.nextThemeReason || '这是本周证据里最值得继续的一步。'),
@@ -3753,8 +3852,10 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   main.append(focus);
 
   const proposedExperiment = node('section', 'review-proposed-experiment');
+  const experimentIcon = node('span', 'review-section-icon is-idea');
+  experimentIcon.append(pixelIcon('book'));
   proposedExperiment.append(
-    node('span', 'review-section-icon is-idea', '◇'),
+    experimentIcon,
     node('h2', '', '一个小尝试'),
     node('strong', '', review.nextExperiment.hypothesis),
     node('p', 'muted', `判断有没有效果：${review.nextExperiment.metric}`),
@@ -3762,7 +3863,9 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   main.append(proposedExperiment);
 
   const adjustments = node('section', 'review-adjustments');
-  adjustments.append(node('span', 'review-section-icon is-adjust', '⌁'), node('h2', '', '会调整什么'));
+  const adjustmentIcon = node('span', 'review-section-icon is-adjust');
+  adjustmentIcon.append(pixelIcon('rules'));
+  adjustments.append(adjustmentIcon, node('h2', '', '会调整什么'));
   const adjustmentList = node('ul', 'review-adjustment-list');
   const decisions = review.habitDecisions.slice(0, 2).map((item) => {
     const habitName = habits.find((habit) => habit.id === item.habitId)?.name ?? '当前习惯';
@@ -4061,7 +4164,6 @@ async function openGoalDialog(): Promise<void> {
     status.textContent = '目标内容已经改变；请重新生成拆解草案。';
   };
   const showPlan = (draft: GoalDecompositionResult) => {
-    result.value = draft.refinedResult;
     evidence.value = draft.completionEvidence;
     nextStep.value = draft.nextStep.title;
     nextStepDraft = draft.nextStep;
@@ -4070,6 +4172,7 @@ async function openGoalDialog(): Promise<void> {
     plan.replaceChildren(
       node('h3', '', '可编辑的拆解草案'),
       node('p', '', draft.rationale),
+      ...(draft.refinedResult !== result.value.trim() ? [node('p', 'goal-plan-fact', `建议表述：${draft.refinedResult}`)] : []),
       node('p', 'goal-plan-fact', `最终完成证据：${draft.completionEvidence}`),
       node('p', 'goal-plan-fact', `当前阶段：${draft.currentStage}`),
       node('p', 'goal-plan-fact', `预计投入：${draft.estimatedInvestment}`),
@@ -4225,7 +4328,7 @@ async function openGoalSettingsDialog(goal: Goal): Promise<void> {
   }
   const status = node('p', 'save-state');
   content.append(
-    labelledControl('目标结果', result), labelledControl('为什么', why), labelledControl('完成证据', evidence),
+    labelledControl('目标名称', result), labelledControl('为什么', why), labelledControl('完成证据', evidence),
     labelledControl('下一步', nextStep), labelledControl('生活分类', area), labelledControl('想提升什么', branch),
     labelledControl('推进优先级', role), labelledControl('目标状态', goalStatus), status,
   );
@@ -4616,7 +4719,7 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
 }
 
 async function openGoalDetailDialog(goal: Goal): Promise<void> {
-  const [milestones, areas, branches] = await Promise.all([db.listMilestones(goal.id), db.listAreas(), db.listBranches()]);
+  const [milestones, areas, branches, allQuests] = await Promise.all([db.listMilestones(goal.id), db.listAreas(), db.listBranches(), db.listQuests()]);
   const { dialog, content, actions } = dialogShell('目标详情');
   dialog.classList.add('full-screen-editor', 'goal-detail-dialog');
   addDialogBack(dialog, content);
@@ -4638,9 +4741,9 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
   const areaName = area && ['学习与能力', '工作与责任'].includes(area.name) ? '学习/工作' : area ? areaDisplayName(area) : '未分类';
   const goalMeta = node('section', 'goal-detail-meta-grid');
   goalMeta.append(
-    node('span', '', `▣ ${goal.targetDate ? `截止 ${formatDate(goal.targetDate)}` : '未设截止日期'}`),
-    node('span', '', `▤ ${areaName}`),
-    node('span', '', `◇ ${branch ? branchDisplayName(branch) : '未设置方向'}`),
+    node('span', '', goal.targetDate ? `截止 ${formatDate(goal.targetDate)}` : '未设截止日期'),
+    node('span', '', areaName),
+    node('span', '', branch ? branchDisplayName(branch) : '未设置方向'),
   );
   hero.append(goalMeta);
   const more = node('button', 'detail-header-more', '⋮');
@@ -4668,11 +4771,7 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
       toggle.addEventListener('click', async () => {
         toggle.disabled = true;
         try {
-          if (milestone.status === 'completed') await db.undoMilestone(milestone.id);
-          else await db.completeMilestone(milestone.id);
-          dialog.close();
-          await render();
-          showToast(milestone.status === 'completed' ? '阶段完成已撤销。' : '阶段已完成，获得 50 经验。');
+          await settleMilestone(milestone, () => dialog.close());
         } catch (error) { toggle.disabled = false; showToast(errorMessage(error), 'error'); }
       });
       row.append(toggle);
@@ -4681,7 +4780,31 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
   });
   content.append(stages);
   const next = node('section', 'goal-detail-next');
-  next.append(node('h3', '', '下一步'), node('strong', '', goal.nextStep), primaryButton('放入今天', () => { dialog.close(); void openQuestDialog(goal); }));
+  next.append(node('h3', '', '下一步'), node('strong', '', goal.nextStep));
+  if (goal.role !== 'wishlist' && goal.status === 'active') {
+    const today = localDate();
+    const questType: QuestType = goal.role === 'main' ? 'main' : 'side';
+    const hasRoom = canAddQuest(questType, allQuests.filter((quest) => quest.localDate === today && quest.status === 'pending' && !quest.systemRetiredAt).map((quest) => quest.type));
+    const capacityCandidate = allQuests.filter((quest) => quest.sourceType === 'goal' && quest.sourceId === goal.id
+      && quest.systemRetiredReason === 'capacity' && quest.milestoneId
+      && milestones.some((item) => item.id === quest.milestoneId && item.status === 'pending'))
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0];
+    if (hasRoom) {
+      const schedule = primaryButton('放入今天', () => {
+        if (!capacityCandidate) { dialog.close(); void openQuestDialog(goal); return; }
+        schedule.disabled = true;
+        void db.scheduleCapacityQuest(capacityCandidate.id, today).then(async (restored) => {
+          if (!restored) { schedule.disabled = false; showToast('这一步暂时不能安排；请核对今天的任务位置。'); return; }
+          dialog.close();
+          focusAfterRenderSelector = `[data-quest-id="${CSS.escape(restored.id)}"]`;
+          showToast(`已把保留的${capacityQuestSourceLabel(capacityCandidate)}安排到今天。`);
+          await render();
+        }).catch((error) => { schedule.disabled = false; showToast(errorMessage(error), 'error'); });
+      });
+      schedule.setAttribute('aria-label', `安排“${goal.result}”的下一步`);
+      next.append(schedule);
+    } else next.append(node('span', 'caption', questType === 'main' ? '今日重点已安排' : '其他任务已排满'));
+  }
   content.append(next);
   const edit = node('button', 'button button-quiet', '编辑目标');
   edit.type = 'button';
@@ -4705,17 +4828,17 @@ async function openHabitDetailDialog(habit: Habit): Promise<void> {
   habitIcon.append(pixelIcon('book'));
   hero.append(habitIcon, node('h3', '', habit.name), node('p', 'success-copy', habit.status === 'active' && habit.bonusEnabled ? '● 进行中' : '● 已暂停'));
   const habitMeta = node('section', 'habit-detail-meta');
-  const metaRow = (icon: string, label: string, value: string): HTMLElement => {
+  const metaRow = (label: string, value: string): HTMLElement => {
     const row = node('p', 'habit-detail-meta-row');
-    row.append(node('span', 'habit-detail-meta-icon', icon), node('span', 'muted', label), node('strong', '', value));
+    row.append(node('span', 'muted', label), node('strong', '', value));
     return row;
   };
   habitMeta.append(
-    metaRow('✎', '最小动作', habit.minimumAction),
-    metaRow('◷', '触发方式', `${habit.trigger || '未设置'} · ${habit.scheduleDays.map((day) => `周${'一二三四五六日'[day - 1]}`).join('、')}`),
+    metaRow('最小动作', habit.minimumAction),
+    metaRow('触发方式', `${habit.trigger || '未设置'} · ${habitScheduleLabel(habit.scheduleDays)}`),
   );
   const branch = branches.find((item) => item.id === habit.branchId);
-  habitMeta.append(metaRow('▱', '分类', `学习/工作 · ${branch ? branchDisplayName(branch) : '未设置方向'}`));
+  habitMeta.append(metaRow('分类', `学习/工作 · ${branch ? branchDisplayName(branch) : '未设置方向'}`));
   hero.append(habitMeta);
   const more = node('button', 'detail-header-more', '⋮');
   more.type = 'button';
@@ -4733,8 +4856,8 @@ async function openHabitDetailDialog(habit: Habit): Promise<void> {
     item.append(node('span', '', label), node('strong', '', value), node('small', '', caption));
     return item;
   };
-  stats.append(stat(`本周（计划${habit.scheduleDays.length}天）`, `${weekCompleted}/${habit.scheduleDays.length}`, '已完成 / 计划天数'), stat('连续', `${momentum} 次`, '连续打卡天数'), stat('累计', `${habitLogs.length} 次`, '总打卡次数'));
-  stats.append(node('p', 'caption habit-stats-note', `ⓘ　本周共有 ${habit.scheduleDays.length} 个计划日，目前已完成 ${weekCompleted} 天。`));
+  stats.append(stat(`本周（计划${habit.scheduleDays.length}天）`, `${weekCompleted}/${habit.scheduleDays.length}`, '已完成 / 计划天数'), stat('近7计划日', `${momentum}/5`, '完成节奏'), stat('累计', `${habitLogs.length} 次`, '总打卡次数'));
+  stats.append(node('p', 'caption habit-stats-note', `本周共有 ${habit.scheduleDays.length} 个计划日，目前已完成 ${weekCompleted} 天。`));
   content.append(stats);
   const weekCard = node('section', 'habit-week-card');
   const week = node('section', 'habit-week');
@@ -4750,7 +4873,14 @@ async function openHabitDetailDialog(habit: Habit): Promise<void> {
   content.append(weekCard);
   const todayQuest = quests.find((quest) => quest.localDate === localDate() && quest.sourceType === 'habit' && quest.sourceId === habit.id);
   const checkinActions = node('div', 'habit-detail-checkin-actions');
-  if (todayQuest?.status === 'pending') checkinActions.append(primaryButton('完成今天打卡', () => { dialog.close(); void openQuestFeedbackDialog(todayQuest, 'completed'); }));
+  if (todayQuest?.status === 'pending') {
+    checkinActions.append(primaryButton('完成今天打卡', () => { dialog.close(); void openQuestFeedbackDialog(todayQuest, 'completed'); }));
+  } else if (todayQuest) {
+    const completed = node('button', 'button habit-checkin-complete', todayQuest.status === 'partial' ? '今天已有进展' : '今日已完成');
+    completed.type = 'button';
+    completed.disabled = true;
+    checkinActions.append(completed);
+  }
   const makeUp = node('button', 'button button-quiet', '补记');
   makeUp.type = 'button';
   makeUp.addEventListener('click', () => {
@@ -4870,10 +5000,6 @@ async function tasksPage(): Promise<HTMLElement> {
   const day = node('section', 'task-board');
   const dayHeading = node('div', 'section-heading');
   dayHeading.append(node('h2', '', '今日重点'));
-  if (quests.length) {
-    const pending = quests.filter((item) => item.status === 'pending').length;
-    dayHeading.append(node('span', 'caption', pending ? `${pending} 项待完成` : '今天已完成'));
-  }
   day.append(dayHeading);
   if (!quests.length) {
     day.append(node('p', 'empty-copy', '暂无任务'));
@@ -4931,7 +5057,10 @@ async function tasksPage(): Promise<HTMLElement> {
   planPanel.append(planIntro);
   const goalSection = node('section', 'task-goals');
   const goalHeading = node('div', 'section-heading');
+  const goalHeadingIcon = node('span', 'plan-heading-icon');
+  goalHeadingIcon.append(pixelIcon('target'));
   goalHeading.append(
+    goalHeadingIcon,
     node('h2', '', '目标'),
     node('span', 'plan-section-count', `全部 ${goals.length}`),
     iconButton('新建', null, () => { void openGoalDialog(); }, 'button button-primary button-compact'),
@@ -4943,6 +5072,8 @@ async function tasksPage(): Promise<HTMLElement> {
     const isFeaturedGoal = goal.id === featuredGoalId;
     const card = node('article', `goal-row${isFeaturedGoal ? ' is-main' : ' is-compact-plan'}`);
     card.dataset.goalRole = goal.role;
+    const cardIcon = node('span', 'plan-card-icon');
+    cardIcon.append(pixelIcon(isFeaturedGoal ? 'trophy' : 'target'));
     const statusLabel = ({ idea: '想法', active: '进行中', paused: '暂停', completed: '已完成', abandoned: '已放下' } as const)[goal.status];
     const goalMilestones = (milestonesByGoal[index] ?? []).filter((item) => item.status !== 'superseded');
     const completedMilestones = goalMilestones.filter((item) => item.status === 'completed').length;
@@ -4954,6 +5085,7 @@ async function tasksPage(): Promise<HTMLElement> {
       ? Math.round(100 * completedWeekQuests / weekQuests.length)
       : goalMilestones.length ? Math.round(100 * completedMilestones / goalMilestones.length) : 0;
     card.append(
+      cardIcon,
       node('h3', 'goal-title', goal.result),
       node('p', `goal-status is-${goal.status}`, goal.role === 'wishlist' ? '愿望库' : statusLabel),
     );
@@ -5029,18 +5161,7 @@ async function tasksPage(): Promise<HTMLElement> {
         const milestoneButtons = [...card.querySelectorAll<HTMLButtonElement>('.milestone-row button')];
         milestoneButtons.forEach((item) => { item.disabled = true; });
         try {
-          let notice = '阶段目标经验已撤销。';
-          let achievementsBefore: Set<string> | undefined;
-          if (milestone.status === 'completed') {
-            await db.undoMilestone(milestone.id);
-          } else {
-            achievementsBefore = await growthBadgeIds();
-            await db.completeMilestone(milestone.id);
-            notice = '阶段目标已完成，获得 50 经验。';
-          }
-          await render();
-          if (achievementsBefore) await announceNewGrowthBadge(achievementsBefore, notice);
-          else showToast(notice);
+          await settleMilestone(milestone);
         } catch (error) {
           milestoneButtons.forEach((item) => { item.disabled = false; });
           showToast(errorMessage(error), 'error');
@@ -5053,7 +5174,9 @@ async function tasksPage(): Promise<HTMLElement> {
   });
   const habitSection = node('section', 'task-habits');
   const habitHeading = node('div', 'section-heading');
-  habitHeading.append(node('h2', '', '习惯'), node('span', 'plan-section-count', `全部 ${habits.length}`));
+  const habitHeadingIcon = node('span', 'plan-heading-icon');
+  habitHeadingIcon.append(pixelIcon('growth'));
+  habitHeading.append(habitHeadingIcon, node('h2', '', '习惯'), node('span', 'plan-section-count', `全部 ${habits.length}`));
   habitSection.append(habitHeading);
   if (!habits.length) habitSection.append(node('p', 'empty-copy', '暂无习惯'));
   const activeHabits = habits.filter((habit) => habit.status === 'active' && habit.bonusEnabled);
@@ -5067,12 +5190,15 @@ async function tasksPage(): Promise<HTMLElement> {
     const todayLabel = !todayQuest ? '休息日' : todayQuest.status === 'pending' ? '待打卡'
       : todayQuest.status === 'completed' ? '已完成' : todayQuest.status === 'partial' ? '有进展' : '已跳过';
     const row = node('article', 'habit-row');
+    const rowIcon = node('span', 'plan-card-icon');
+    rowIcon.append(pixelIcon('book'));
+    row.append(rowIcon);
     const copy = node('div');
     copy.append(node('h3', '', habit.name));
     const stats = node('div', 'habit-plan-stats');
     for (const [label, value, className = ''] of [
       ['本周', `${weekCompleted}/${habit.scheduleDays.length} 次`],
-      ['连续', `${momentums[habitIndex] ?? 0} 次`],
+      ['近7计划日', `${momentums[habitIndex] ?? 0}/5`],
       ['今日', todayLabel, todayLabel === '待打卡' ? 'is-pending' : todayLabel === '已完成' ? 'is-complete' : ''],
     ]) {
       const stat = node('span', className);
@@ -5192,24 +5318,17 @@ async function openBranchDialog(): Promise<void> {
   name.focus();
 }
 
-const BADGE_PIXEL_ICONS: Record<GrowthBadge['theme'], PixelIcon> = {
-  health: 'today', judgment: 'board', knowledge: 'books', trust: 'character', leverage: 'desk', autonomy: 'window',
-  habit: 'growth', recovery: 'today', experiment: 'board',
-};
+function growthBadgeIcon(badge: GrowthBadge): PixelIcon {
+  if (badge.sourceType === 'goal') return 'trophy';
+  if (badge.sourceType === 'habit') return 'growth';
+  if (badge.sourceType === 'recovery') return 'heart';
+  if (badge.sourceType === 'experiment') return 'quill';
+  return 'book';
+}
 
 const BRANCH_PIXEL_ICONS: Record<GrowthBranch['rootAsset'], PixelIcon> = {
   health: 'growth', judgment: 'board', knowledge: 'board', trust: 'character', leverage: 'desk', autonomy: 'window',
 };
-
-function growthBadgeLabel(badge: GrowthBadge): string {
-  if (badge.sourceType === 'milestone') return ({
-    health: '健康阶段', judgment: '决策阶段', knowledge: '学习阶段', trust: '关系阶段', leverage: '创作阶段', autonomy: '自主阶段',
-  } as const)[badge.branchAsset];
-  if (badge.sourceType === 'goal') return '目标完成';
-  if (badge.sourceType === 'habit') return `完成 ${badge.threshold ?? badge.count ?? 1} 次`;
-  if (badge.sourceType === 'recovery') return `恢复 ${badge.threshold ?? badge.count ?? 1} 次`;
-  return '完成小尝试';
-}
 
 function openBadgeEvidenceDialog(badge: GrowthBadge): void {
   const { dialog, content, actions } = dialogShell('徽章证据');
@@ -5240,8 +5359,8 @@ function growthBadgeButton(badge: GrowthBadge): HTMLButtonElement {
   button.setAttribute('aria-describedby', description.id);
   const mark = node('span', 'badge-mark');
   mark.setAttribute('aria-hidden', 'true');
-  mark.append(pixelIcon(BADGE_PIXEL_ICONS[badge.theme]));
-  button.append(mark, node('strong', 'badge-name', growthBadgeLabel(badge)), node('time', 'caption', formatDate(badge.earnedOn)), description);
+  mark.append(pixelIcon(growthBadgeIcon(badge)));
+  button.append(mark, node('strong', 'badge-name', badge.name), node('time', 'caption', formatDate(badge.earnedOn)), description);
   button.addEventListener('click', () => openBadgeEvidenceDialog(badge));
   return button;
 }
@@ -5265,15 +5384,19 @@ async function growthPage(): Promise<HTMLElement> {
   const overallLevel = Math.floor(totalXp / 100) + 1;
   const levelXp = totalXp % 100;
   const overview = node('section', 'growth-overview');
-  overview.append(
-    node('span', 'caption', '本月获得'), node('strong', 'growth-month-xp', `${monthXp}`), node('span', '', '经验'),
-    node('span', 'caption', '等级'), node('strong', 'growth-overall-level', `${overallLevel}`),
-  );
+  const monthStat = node('div', 'growth-overview-stat growth-month-stat');
+  const monthValue = node('span', 'growth-overview-value');
+  monthValue.append(node('strong', 'growth-month-xp', `${monthXp}`), node('span', '', '经验'));
+  monthStat.append(node('span', 'caption', '本月获得'), monthValue);
+  const levelStat = node('div', 'growth-overview-stat growth-level-stat');
+  levelStat.append(node('span', 'caption', '等级'), node('strong', 'growth-overall-level', `${overallLevel}`));
   const overallProgress = node('progress', 'xp-progress growth-overall-progress');
   overallProgress.max = 100;
   overallProgress.value = levelXp;
   overallProgress.setAttribute('aria-label', `等级 ${overallLevel}，本级经验 ${levelXp}/100`);
-  overview.append(node('span', 'growth-level-progress', `${levelXp} / 100`), overallProgress, node('span', 'growth-seed', '♣'));
+  const progressStat = node('div', 'growth-overview-stat growth-progress-stat');
+  progressStat.append(node('span', 'growth-level-progress', `${levelXp} / 100`), overallProgress);
+  overview.append(monthStat, levelStat, progressStat, node('span', 'growth-seed', ''));
   main.append(overview);
 
   const badges = selectGrowthBadges({ milestones, goals, branches, ledger, habits, habitLogs, quests, feedbacks, reviews });
@@ -5373,7 +5496,7 @@ async function growthPage(): Promise<HTMLElement> {
       for (const habit of branchHabits) {
         const habitStatus = ({ active: '培养中', paused: '暂停', ended: '已结束' } as const)[habit.status];
         const momentum = momentums[habits.findIndex((item) => item.id === habit.id)] ?? 0;
-        relatedHabits.append(node('p', 'branch-link-row', `${habit.name} · ${habitStatus} · 最近坚持 ${momentum}/5 · ${habit.trigger ? `在${habit.trigger}开始 · ` : ''}最小动作：${habit.minimumAction}`));
+        relatedHabits.append(node('p', 'branch-link-row', `${habit.name} · ${habitStatus} · 近 7 计划日动量 ${momentum}/5 · ${habit.trigger ? `在${habit.trigger}开始 · ` : ''}最小动作：${habit.minimumAction}`));
       }
       details.append(relatedHabits);
     }
@@ -5384,7 +5507,9 @@ async function growthPage(): Promise<HTMLElement> {
   main.append(grid);
 
   const maintenance = node('details', 'growth-maintenance');
-  maintenance.append(node('summary', '', '管理提升方向'));
+  const maintenanceSummary = node('summary');
+  maintenanceSummary.append(pixelIcon('system'), node('span', '', '管理提升方向'));
+  maintenance.append(maintenanceSummary);
   if (dormantBranches.length) {
     maintenance.append(node('p', 'growth-dormant-heading', `暂未开始的方向 · ${dormantBranches.length}`));
     const list = node('ul', 'growth-dormant-list');
@@ -6279,7 +6404,7 @@ function aiPermissionSettings(): HTMLElement {
   section.append(
     availability, intro, permission, node('h3', 'ai-group-title', '服务信息'), serviceInfo,
     node('h3', 'ai-group-title', '默认发送范围'), scopeSummary,
-    node('h3', 'ai-group-title', '密钥与高级设置'), advanced, node('p', 'caption ai-privacy-note', '▣　内容只会按确认范围发送给所选服务方。'),
+    node('h3', 'ai-group-title', '密钥与高级设置'), advanced, node('p', 'caption ai-privacy-note', '内容只会按确认范围发送给所选服务方。'),
   );
   updateAiConfigStatus();
   return section;
@@ -6467,7 +6592,6 @@ async function systemPage(): Promise<HTMLElement> {
     }
   });
   importLabel.append(file);
-  const deleteButton = iconButton('删除全部数据', null, () => { void deleteAllDialog(); }, 'button button-danger');
   const backupDismissKey = `qiguang.backup-reminder-dismissed.${localDate()}`;
   const lastBackup = localStorage.getItem('qiguang.last-backup-at');
   const backupDue = entries.length > 0 && (!lastBackup || Date.now() - Date.parse(lastBackup) >= 30 * 86_400_000);
@@ -6482,9 +6606,7 @@ async function systemPage(): Promise<HTMLElement> {
   }
   const transferActions = node('div', 'data-transfer-actions');
   transferActions.append(exportButton, importLabel);
-  const dangerZone = node('section', 'data-danger-zone');
-  dangerZone.append(node('h3', '', '危险操作'), deleteButton);
-  data.append(transferActions, dangerZone);
+  data.append(transferActions);
   const storageSettings = await installStorageSettings();
   featureSettings.append(storageSettings);
   dataSettings.append(data);
@@ -6722,12 +6844,12 @@ async function taskAnalysisPage(): Promise<HTMLElement> {
 
     const categorySection = node('section', 'analysis-section analysis-category-section');
     categorySection.append(node('h2', '', '分类完成'));
-    for (const [key, label, icon] of [['study', '学习/工作', '▤'], ['life', '生活', '♣']] as const) {
+    for (const [key, label] of [['study', '学习/工作'], ['life', '生活']] as const) {
       const values = current.filter(({ quest }) => (key === 'study') === isStudy(quest));
       const done = values.filter(({ result }) => result === 'completed').length;
       const percent = analysisPercent(done, values.length);
       const row = node('div', 'analysis-category-row');
-      row.append(node('span', 'analysis-category-icon', icon), node('strong', '', label));
+      row.append(node('strong', '', label));
       const meter = node('span', 'analysis-meter');
       meter.style.setProperty('--value', `${percent}%`);
       row.append(meter, node('span', 'analysis-category-value', `${done}项 · ${percent}%`));
@@ -6796,7 +6918,7 @@ async function habitAnalysisPage(habitId: string): Promise<HTMLElement> {
     const rate = analysisPercent(completed, plannedDates.length);
     body.replaceChildren();
     const summary = node('section', 'analysis-summary-grid');
-    for (const [label, value] of [['计划日', String(plannedDates.length)], ['完成', String(completed)], ['达成率', `${rate}%`], ['当前连续', `${momentum} 天`]]) {
+    for (const [label, value] of [['计划日', String(plannedDates.length)], ['完成', String(completed)], ['达成率', `${rate}%`], ['近 7 计划日动量', `${momentum}/5`]]) {
       const stat = node('span');
       stat.append(node('small', '', label), node('strong', '', value));
       summary.append(stat);
@@ -7037,6 +7159,7 @@ const verifyWidgetPin = () => {
   window.setTimeout(() => {
     sessionStorage.removeItem('qiguang.widget-pin-pending');
     const pinned = widgetPinState() === 'pinned';
+    document.querySelector<HTMLDialogElement>('.settings-detail-dialog[open]')?.close();
     void render().then(() => showToast(pinned ? '桌面小组件已添加。' : '没有检测到小组件；可以重新添加，或从桌面小组件列表选择栖光。', pinned ? 'normal' : 'error'));
   }, 300);
 };
@@ -7044,6 +7167,7 @@ window.addEventListener('qiguang-native-resume', verifyWidgetPin);
 window.addEventListener('focus', verifyWidgetPin);
 
 window.addEventListener('hashchange', () => {
+  document.querySelectorAll<HTMLDialogElement>('dialog[open]').forEach((dialog) => dialog.close());
   sessionStorage.setItem(`qiguang.scroll.${previousRouteKey}`, String(window.scrollY));
   previousRouteKey = routeKey(parseRoute());
   routeNavigationPending = true;
