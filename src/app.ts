@@ -3458,14 +3458,7 @@ async function dayPage(date: string): Promise<HTMLElement> {
     const copy = node('span', 'day-action-copy');
     copy.append(node('strong', '', quest.title));
     if (feedback?.actual) copy.append(node('span', 'caption line-clamp', feedback.actual));
-    const actionIcon = node('span', 'day-action-icon');
-    actionIcon.append(pixelIcon(quest.sourceType === 'habit' ? 'growth' : quest.sourceType === 'recovery' ? 'today' : 'board'));
-    row.append(
-      actionIcon,
-      copy,
-      result,
-      node('span', 'day-action-chevron', '›'),
-    );
+    row.append(copy, result);
     row.addEventListener('click', () => { void openQuestFeedbackDialog(quest); });
     actionResults.append(row);
   });

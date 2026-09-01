@@ -924,6 +924,14 @@ test('success diary prompts stay optional and AI goal decomposition requires con
     await savedGoal.getByRole('button', { name: '查看目标“发布一篇文章”的阶段' }).click();
     const savedGoalDetail = page.getByRole('dialog', { name: '目标详情' });
     await assert.doesNotReject(() => savedGoalDetail.getByText('完成第一段可检查成果', { exact: true }).waitFor());
+    const nextStepLayout = await savedGoalDetail.locator('.goal-detail-next').evaluate((row) => {
+      const items = [...row.children].map((item) => item.getBoundingClientRect());
+      return {
+        oneRow: items.every((item) => item.bottom > items[0].top && item.top < items[0].bottom),
+        hiddenDecoration: getComputedStyle(row.parentElement.querySelector('.entity-detail-icon')).display === 'none',
+      };
+    });
+    assert.deepEqual(nextStepLayout, { oneRow: true, hiddenDecoration: true });
     await savedGoalDetail.getByRole('button', { name: '返回' }).click();
     await assert.doesNotReject(() => savedGoal.getByText('更多', { exact: true }).waitFor());
     await openTaskView(page, '今天');
@@ -994,7 +1002,14 @@ test('calendar opens an in-place day snapshot before the full review', async () 
     await assert.doesNotReject(() => page.waitForURL(new RegExp(`#\\/day\\/${date}$`)));
     await page.goto(`${baseUrl}/#/calendar`);
     const calendarUrl = page.url();
-    await page.locator('.calendar-day[aria-current="date"]').click();
+    const todayCell = page.locator('.calendar-day[aria-current="date"]');
+    const calendarLayout = await todayCell.evaluate((cell) => {
+      const style = getComputedStyle(cell);
+      const gridStyle = getComputedStyle(cell.parentElement);
+      return { borderRadius: style.borderRadius, rowGap: gridStyle.rowGap, marginBottom: gridStyle.marginBottom };
+    });
+    assert.deepEqual(calendarLayout, { borderRadius: '2px', rowGap: '6px', marginBottom: '12px' });
+    await todayCell.click();
     const preview = page.locator('.calendar-day-preview');
     await assert.doesNotReject(() => preview.getByText('日历快照里的真实记录', { exact: true }).waitFor());
     assert.equal(page.url(), calendarUrl, 'opening a date must keep the calendar route and scroll context');
@@ -2417,6 +2432,13 @@ test('late completion evidence belongs to the real feedback day, not the planned
     const feedback = page.locator('.day-action-results');
     const feedbackAction = feedback.getByRole('button', { name: '查看并修改“跨日完成证据”的任务结果' });
     await assert.doesNotReject(() => feedbackAction.waitFor());
+    assert.equal(await feedbackAction.locator('.day-action-icon, .day-action-chevron').count(), 0);
+    const feedbackLayout = await feedbackAction.evaluate((row) => {
+      const title = row.querySelector('.day-action-copy').getBoundingClientRect();
+      const result = row.querySelector('.day-action-result').getBoundingClientRect();
+      return { resultAtRight: result.left >= title.right, columns: getComputedStyle(row).gridTemplateColumns.split(' ').length };
+    });
+    assert.deepEqual(feedbackLayout, { resultAtRight: true, columns: 2 });
 
     await feedbackAction.click();
     const noteEdit = page.getByRole('dialog', { name: '修改任务结果' });
@@ -2775,7 +2797,7 @@ test('an exported backup restores records after deleting all local data', async 
     await page.getByRole('button', { name: '查找记录' }).click();
     await page.getByRole('searchbox', { name: '搜索记录文字' }).fill(marker);
     await page.getByRole('button', { name: '查找', exact: true }).click();
-    await assert.doesNotReject(() => page.getByText(marker, { exact: true }).waitFor());
+    await assert.doesNotReject(() => page.locator('.search-results').getByText(marker, { exact: true }).waitFor());
     assert.deepEqual(apiRequests, []);
   } finally {
     await context.close();

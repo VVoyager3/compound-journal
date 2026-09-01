@@ -20,7 +20,7 @@
   --paper-warm: #efe1bd;
   --warn: #e0a72e;
   --danger: #c83e3e;
-  --focus: #0b78d0;
+  --focus: #35513d;
   --line: 1px;
   --shadow: 5px 5px 0 rgb(40 50 40 / 88%);
   --shadow-small: 3px 3px 0 rgb(40 50 40 / 88%);
@@ -8209,16 +8209,42 @@ h3 { font-size: .96875rem; }
   -webkit-line-clamp: 2;
 }
 .page-day .day-record-row { min-height: 80px; }
-.page-day .day-action-row { min-height: 56px; padding-block: 8px; }
+.page-day .day-action-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 56px;
+  padding-block: 8px;
+}
+.page-day .day-action-result {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.page-day .day-action-status {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-weight: 520;
+}
 .page-day .day-evidence-details { margin-top: 8px; }
 .page-day .day-evidence-card { min-height: 80px; padding: 11px 12px; }
 .page-day .day-evidence-copy { font-size: .875rem; line-height: 1.5; }
 .page-day .day-evidence-action { font-size: .78rem; }
 
-.goal-detail-dialog .entity-detail-icon,
+.goal-detail-dialog .entity-detail-icon { display: none; }
 .habit-detail-dialog .entity-detail-icon { width: 52px; height: 52px; }
-.goal-detail-dialog .entity-detail-hero,
+.goal-detail-dialog .entity-detail-hero { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
 .habit-detail-dialog .entity-detail-hero { grid-template-columns: 58px minmax(0, 1fr); gap: 10px; }
+.goal-detail-next {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.goal-detail-next h3,
+.goal-detail-next .button { grid-column: auto; grid-row: auto; white-space: nowrap; }
+.goal-detail-next .button { min-height: 44px; }
+.goal-detail-next > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .habit-detail-checkin-actions .habit-checkin-complete:disabled {
   border-color: rgb(80 124 69 / 26%);
   color: #466b3e;
@@ -8310,7 +8336,20 @@ select.input { min-height: 44px; }
 .page-review .review-period-nav,
 .page-review .review-period-nav .button,
 .page-growth .badge-all > summary { min-height: 44px; }
-.page-calendar .calendar-day.is-selected { width: 44px; height: 44px; }
+.page-calendar .calendar-grid { row-gap: 6px; margin-bottom: 12px; }
+.page-calendar .calendar-day { min-height: 50px; }
+.page-calendar .calendar-day.is-selected {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 2px;
+  background: rgb(224 184 62 / 14%);
+}
+.page-calendar .calendar-day.is-today {
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 2px #c99514;
+}
 .monthly-area-details > summary {
   display: flex;
   min-height: 44px;
