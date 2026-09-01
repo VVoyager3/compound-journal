@@ -8409,3 +8409,11 @@ select.input { min-height: 44px; }
   border-radius: 2px;
   box-shadow: none;
 }
+
+.page-tasks .task-list-copy h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-calendar .calendar-day.is-outside:not(.is-selected) { background: transparent; }
