@@ -133,7 +133,6 @@ async function completeHabit(page) {
   const complete = page.getByRole('button', { name: `完成：${HABIT}` });
   await complete.waitFor();
   await complete.click();
-  await page.getByRole('dialog', { name: '记录任务结果' }).getByRole('button', { name: '保存结果' }).click();
   await complete.waitFor({ state: 'detached' });
 }
 
@@ -142,7 +141,6 @@ async function completeQuest(page, title) {
   const complete = page.getByRole('button', { name: `完成：${title}` });
   await complete.waitFor();
   await complete.click();
-  await page.getByRole('dialog', { name: '记录任务结果' }).getByRole('button', { name: '保存结果' }).click();
   await complete.waitFor({ state: 'detached' });
 }
 
@@ -190,12 +188,16 @@ async function saveHabitStatus(page, status) {
   if (status === 'active') {
     const management = page.locator('.paused-habit-management');
     await management.locator(':scope > summary').click();
-    await management.getByRole('button', { name: `开始“${HABIT}”的计划日打卡` }).click();
-    await page.getByRole('status').filter({ hasText: '已开始计划日打卡。' }).waitFor();
+    await management.getByRole('button', { name: `编辑习惯“${HABIT}”` }).click();
+    const dialog = page.getByRole('dialog', { name: '编辑习惯' });
+    await dialog.getByRole('combobox', { name: '状态' }).selectOption('active');
+    await dialog.getByRole('checkbox', { name: '按计划日加入今日任务' }).check();
+    await dialog.getByRole('button', { name: '保存习惯' }).click();
+    await page.getByRole('status').filter({ hasText: '习惯设置已保存。' }).waitFor();
     return;
   }
   const row = page.locator('.habit-row').filter({ hasText: HABIT });
-  await row.getByText('更多', { exact: true }).click();
+  await row.getByText('编辑', { exact: true }).click();
   await row.getByRole('button', { name: `编辑习惯“${HABIT}”` }).click();
   const dialog = page.getByRole('dialog', { name: '编辑习惯' });
   await dialog.getByRole('combobox', { name: '状态' }).selectOption(status);
@@ -232,16 +234,14 @@ async function createGoalAndHabit(page) {
   await moveQuestToTomorrow(page, FIRST_MILESTONE);
 
   await openTaskPlan(page);
-  const habitManagement = page.locator('.paused-habit-management');
-  await habitManagement.locator(':scope > summary').click();
-  await habitManagement.getByRole('button', { name: '新建习惯', exact: true }).click();
+  await page.locator('.task-habits > .section-heading').getByRole('button', { name: '新建', exact: true }).click();
   const habitDialog = page.getByRole('dialog', { name: '新建习惯' });
   await habitDialog.getByRole('searchbox', { name: '习惯名称' }).fill(HABIT);
   await habitDialog.getByRole('checkbox', { name: '周六' }).check();
   await habitDialog.getByRole('checkbox', { name: '周日' }).check();
   await habitDialog.getByRole('button', { name: '建立习惯' }).click();
   const habit = page.locator('.habit-row').filter({ hasText: HABIT });
-  await habit.getByText('更多', { exact: true }).click();
+  await habit.getByText('编辑', { exact: true }).click();
   await habit.getByRole('button', { name: `暂停“${HABIT}”的计划日打卡` }).waitFor();
 }
 
@@ -249,7 +249,7 @@ async function finishGoal(page) {
   await page.goto(`${baseUrl}/#/tasks`);
   await openTaskPlan(page);
   const goal = page.locator('.goal-row').filter({ hasText: GOAL });
-  await goal.getByText('更多', { exact: true }).click();
+  await goal.getByText('编辑', { exact: true }).click();
   await goal.getByRole('button', { name: `编辑目标“${GOAL}”` }).click();
   const dialog = page.getByRole('dialog', { name: '编辑目标' });
   await dialog.getByRole('combobox', { name: '目标状态' }).selectOption('completed');
@@ -377,8 +377,8 @@ test('formal pages sustain a 30 day loop without historic debt', async () => {
     await assert.doesNotReject(() => page.locator('.branch-card').first().waitFor());
     await assert.doesNotReject(() => page.getByRole('heading', { name: '成果徽章' }).waitFor());
     await page.locator('.badge-all > summary').click();
-    await page.getByRole('button', { name: '查看徽章证据：完成第一段可检查成果' }).click();
-    const badgeEvidence = page.getByRole('dialog', { name: '徽章证据' });
+    await page.getByRole('button', { name: '查看徽章详情：完成第一段可检查成果' }).click();
+    const badgeEvidence = page.getByRole('dialog', { name: '徽章详情' });
     assert.equal(await badgeEvidence.getByText(GOAL, { exact: true }).count(), 0, 'badge details should not repeat the whole goal title');
     await assert.doesNotReject(() => badgeEvidence.getByText('留下一份可以查看或使用的初版成果。').first().waitFor());
     assert.deepEqual(apiRequests.map((item) => item.operation), ['goal_decomposition', 'weekly_review']);

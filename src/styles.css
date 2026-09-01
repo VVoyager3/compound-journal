@@ -8349,3 +8349,63 @@ select.input { min-height: 44px; }
 .page-tasks .habit-row .habit-actions > .habit-plan-checkin,
 .page-calendar .monthly-area-details > summary,
 .page-day > .secondary-page-header .secondary-back { min-height: 44px; }
+
+/* Current mobile audit: direct actions, calmer task rows and a complete calendar marker. */
+.page-today .today-focus-list { padding-inline: 14px; }
+.page-today .task-list-item,
+.page-today .task-row-action { min-height: 60px; }
+.page-today .task-row-action {
+  grid-template-columns: 22px minmax(0, 1fr);
+  padding-block: 7px;
+}
+.page-today .task-list-copy { row-gap: 0; }
+.page-today .task-list-copy .caption,
+.page-today .task-row-minimum,
+.page-today .task-primary-cta,
+.page-today .task-secondary-cta { display: none; }
+.page-today .task-list-item.is-main::before { height: 44px; }
+
+.task-goals > .section-heading > .button:last-child,
+.task-habits > .section-heading > .button:last-child { margin-left: auto; }
+
+.record-kind-hint {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--muted);
+  background: rgb(55 61 55 / 7%);
+  font-size: .8rem;
+  line-height: 1.5;
+}
+.page-record .journal-input {
+  height: clamp(210px, 30vh, 280px);
+  min-height: 210px;
+  max-height: 280px;
+  overflow-y: auto;
+  resize: none;
+}
+.page-record .journal-editor {
+  padding-bottom: calc(64px + var(--bottom-nav-height) + 24px + env(safe-area-inset-bottom));
+}
+.record-submit-bar {
+  right: auto;
+  bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
+  left: 50%;
+  width: min(100%, 480px);
+  grid-template-columns: 1fr;
+  transform: translateX(-50%);
+}
+.record-submit-bar .button { min-height: 58px; }
+
+.page-calendar .calendar-day.is-selected {
+  width: auto;
+  height: auto;
+  min-height: 50px;
+  justify-self: stretch;
+  border: 0;
+  background: rgb(224 184 62 / 14%);
+}
+.page-calendar .calendar-day.is-today {
+  border: 2px solid #c99514;
+  border-radius: 2px;
+  box-shadow: none;
+}
