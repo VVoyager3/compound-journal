@@ -3803,9 +3803,6 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   const completedTasks = periodQuests.filter((quest) => quest.status === 'completed' || quest.status === 'partial').length;
   const habitChecks = periodQuests.filter((quest) => quest.sourceType === 'habit' && (quest.status === 'completed' || quest.status === 'partial')).length;
   const summary = node('section', 'review-summary-card');
-  const summaryIcon = node('span', 'review-summary-icon');
-  summaryIcon.append(pixelIcon('growth'));
-  summary.append(summaryIcon);
   summary.append(node('h2', '', completedTasks || habitChecks || weekEntries.length ? '这周做得不错' : '这一周还在开始'));
   const summaryStats = node('div', 'review-summary-stats');
   summaryStats.append(
@@ -5050,10 +5047,7 @@ async function tasksPage(): Promise<HTMLElement> {
   planPanel.append(planIntro);
   const goalSection = node('section', 'task-goals');
   const goalHeading = node('div', 'section-heading');
-  const goalHeadingIcon = node('span', 'plan-heading-icon');
-  goalHeadingIcon.append(pixelIcon('target'));
   goalHeading.append(
-    goalHeadingIcon,
     node('h2', '', '目标'),
     node('span', 'plan-section-count', `全部 ${goals.length}`),
     iconButton('新建', null, () => { void openGoalDialog(); }, 'button button-primary button-compact'),
@@ -5065,8 +5059,6 @@ async function tasksPage(): Promise<HTMLElement> {
     const isFeaturedGoal = goal.id === featuredGoalId;
     const card = node('article', `goal-row${isFeaturedGoal ? ' is-main' : ' is-compact-plan'}`);
     card.dataset.goalRole = goal.role;
-    const cardIcon = node('span', 'plan-card-icon');
-    cardIcon.append(pixelIcon(isFeaturedGoal ? 'trophy' : 'target'));
     const statusLabel = ({ idea: '想法', active: '进行中', paused: '暂停', completed: '已完成', abandoned: '已放下' } as const)[goal.status];
     const goalMilestones = (milestonesByGoal[index] ?? []).filter((item) => item.status !== 'superseded');
     const completedMilestones = goalMilestones.filter((item) => item.status === 'completed').length;
@@ -5078,7 +5070,6 @@ async function tasksPage(): Promise<HTMLElement> {
       ? Math.round(100 * completedWeekQuests / weekQuests.length)
       : goalMilestones.length ? Math.round(100 * completedMilestones / goalMilestones.length) : 0;
     card.append(
-      cardIcon,
       node('h3', 'goal-title', goal.result),
       node('p', `goal-status is-${goal.status}`, goal.role === 'wishlist' ? '愿望库' : statusLabel),
     );
@@ -5167,9 +5158,7 @@ async function tasksPage(): Promise<HTMLElement> {
   });
   const habitSection = node('section', 'task-habits');
   const habitHeading = node('div', 'section-heading');
-  const habitHeadingIcon = node('span', 'plan-heading-icon');
-  habitHeadingIcon.append(pixelIcon('growth'));
-  habitHeading.append(habitHeadingIcon, node('h2', '', '习惯'), node('span', 'plan-section-count', `全部 ${habits.length}`));
+  habitHeading.append(node('h2', '', '习惯'), node('span', 'plan-section-count', `全部 ${habits.length}`));
   habitSection.append(habitHeading);
   if (!habits.length) habitSection.append(node('p', 'empty-copy', '暂无习惯'));
   const activeHabits = habits.filter((habit) => habit.status === 'active' && habit.bonusEnabled);
@@ -5183,9 +5172,6 @@ async function tasksPage(): Promise<HTMLElement> {
     const todayLabel = !todayQuest ? '休息日' : todayQuest.status === 'pending' ? '待打卡'
       : todayQuest.status === 'completed' ? '已完成' : todayQuest.status === 'partial' ? '有进展' : '已跳过';
     const row = node('article', 'habit-row');
-    const rowIcon = node('span', 'plan-card-icon');
-    rowIcon.append(pixelIcon('book'));
-    row.append(rowIcon);
     const copy = node('div');
     copy.append(node('h3', '', habit.name));
     const stats = node('div', 'habit-plan-stats');
@@ -5389,7 +5375,7 @@ async function growthPage(): Promise<HTMLElement> {
   overallProgress.setAttribute('aria-label', `等级 ${overallLevel}，本级经验 ${levelXp}/100`);
   const progressStat = node('div', 'growth-overview-stat growth-progress-stat');
   progressStat.append(node('span', 'growth-level-progress', `${levelXp} / 100`), overallProgress);
-  overview.append(monthStat, levelStat, progressStat, node('span', 'growth-seed', ''));
+  overview.append(monthStat, levelStat, progressStat);
   main.append(overview);
 
   const badges = selectGrowthBadges({ milestones, goals, branches, ledger, habits, habitLogs, quests, feedbacks, reviews });
