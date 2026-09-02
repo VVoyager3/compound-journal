@@ -1090,7 +1090,7 @@ export function parseBackup(text: string): BackupBundle {
     if (!isLocalDate(entry.localDate)) throw new Error('记录日期无效。');
     validateBody(entry.body);
     if (!['text', 'import'].includes(entry.inputMethod)) throw new Error('记录输入方式无效。');
-    if (entry.kind !== undefined) assertOneOf(entry.kind, ['journal', 'success'], '记录类型');
+    if (entry.kind !== undefined) assertOneOf(entry.kind, ['journal', 'success', 'fun'], '记录类型');
     assertOneOf(entry.analysisStatus, ['not-submitted', 'queued', 'processing', 'succeeded', 'failed'], '记录整理状态');
   });
   uniqueIds(entries, '记录');
@@ -1113,7 +1113,7 @@ export function parseBackup(text: string): BackupBundle {
     assertInteger(revision.fromVersion, 1, Number.MAX_SAFE_INTEGER, '修改版本号');
     if (revision.fromVersion >= (entryVersions.get(revision.entryId) ?? 0)) throw new Error('修改版本号超出记录版本。');
     validateBody(revision.previousBody);
-    if (revision.previousKind !== undefined) assertOneOf(revision.previousKind, ['journal', 'success'], '修改前记录类型');
+    if (revision.previousKind !== undefined) assertOneOf(revision.previousKind, ['journal', 'success', 'fun'], '修改前记录类型');
     if (!['user-edit', 'undo', 'import'].includes(revision.reason)) throw new Error('修改原因无效。');
     if (revision.undoneAt !== undefined) {
       assertTimestamp(revision.undoneAt, '撤销时间');
@@ -1288,6 +1288,7 @@ export function parseBackup(text: string): BackupBundle {
   quests.forEach((item) => {
     assertCommonRecord(item, '任务');
     if (!isLocalDate(item.localDate)) throw new Error('任务日期无效。');
+    if (item.sortOrder !== undefined) assertInteger(item.sortOrder, 0, Number.MAX_SAFE_INTEGER, '任务顺序');
     assertOneOf(item.type, ['main', 'bonus', 'side'], '任务类型');
     assertOneOf(item.sourceType, ['goal', 'habit', 'recovery', 'manual'], '任务来源');
     if (item.sourceType === 'goal' && (!item.sourceId || !goalIds.has(item.sourceId))) throw new Error('目标任务来源无效。');
@@ -1298,9 +1299,9 @@ export function parseBackup(text: string): BackupBundle {
     assertInteger(item.settlementVersion, 0, Number.MAX_SAFE_INTEGER, '任务结算版本');
     assertText(item.title, '任务标题', 160);
     assertText(item.reason, '任务理由', 500);
-    assertText(item.minimumAction, '任务最小动作', 200);
+    if (item.minimumAction !== undefined) assertText(item.minimumAction, '任务最小动作', 200);
     if (item.completionCriteria !== undefined) assertText(item.completionCriteria, '任务完成标准', 500);
-    assertInteger(item.estimatedMinutes, 1, 24 * 60, '任务预计时间');
+    if (item.estimatedMinutes !== undefined) assertInteger(item.estimatedMinutes, 1, 24 * 60, '任务预计时间');
     if (item.deadlineAt !== undefined) assertTimestamp(item.deadlineAt, '任务截止时间');
     if (item.targetCount !== undefined) {
       assertInteger(item.targetCount, 2, 1_000, '任务目标次数');
@@ -1544,7 +1545,7 @@ export class QiguangDb {
   ): Promise<JournalEntry> {
     if (!isLocalDate(date)) throw new Error('记录日期无效。');
     assertOneOf(inputMethod, ['text', 'import'], '记录输入方式');
-    assertOneOf(kind, ['journal', 'success'], '记录类型');
+    assertOneOf(kind, ['journal', 'success', 'fun'], '记录类型');
     const timestamp = nowIso();
     const entry: JournalEntry = {
       id: crypto.randomUUID(),
@@ -1644,7 +1645,7 @@ export class QiguangDb {
       throw new Error('记录已在其他页面修改，请刷新后重试。');
     }
     const body = validateBody(bodyValue);
-    if (kind !== undefined) assertOneOf(kind, ['journal', 'success'], '记录类型');
+    if (kind !== undefined) assertOneOf(kind, ['journal', 'success', 'fun'], '记录类型');
     const currentKind = current.kind ?? 'journal';
     const updatedKind = kind ?? currentKind;
     if (body === current.body && updatedKind === currentKind) {
@@ -3094,7 +3095,7 @@ export class QiguangDb {
     const quests = transaction.objectStore('quests');
     const openBonuses = (await requestResult(quests.index('bySourceId').getAll(id)) as Quest[])
       .filter((quest) => quest.type === 'bonus' && quest.sourceType === 'habit'
-        && (quest.status === 'pending' || quest.systemRetiredReason === 'capacity'));
+        && (quest.status === 'pending' || ['capacity', 'schedule-changed', 'tracking-disabled'].includes(quest.systemRetiredReason ?? '')));
     for (const quest of openBonuses) {
       const weekday = parseLocalDate(quest.localDate).getDay() || 7;
       const isCapacityCandidate = quest.systemRetiredReason === 'capacity';
@@ -3102,7 +3103,21 @@ export class QiguangDb {
       const retireReason: QuestSystemRetiredReason | null = withinChangedSchedule && !trackingEnabled
         ? 'tracking-disabled'
         : withinChangedSchedule && scheduleChanged && !updated.scheduleDays.includes(weekday) ? 'schedule-changed' : null;
-      if (retireReason) quests.put(systemRetireQuest(quest, retireReason, updated.updatedAt));
+      const liveFields = quest.userModified ? {} : {
+        title: updated.name, minimumAction: updated.minimumAction, targetCount: updated.targetCount,
+        progressCount: updated.targetCount ? Math.min(quest.progressCount ?? 0, updated.targetCount - 1) : undefined,
+        countUnit: updated.countUnit, difficulty: updated.difficulty, dimension: updated.dimension, branchId: updated.branchId,
+      };
+      if (retireReason) {
+        const changed = { ...quest, ...liveFields };
+        quests.put(changed.systemRetiredReason === retireReason
+          ? { ...changed, updatedAt: updated.updatedAt, version: quest.version + 1 }
+          : systemRetireQuest(changed, retireReason, updated.updatedAt));
+      } else if (withinChangedSchedule && trackingEnabled && updated.scheduleDays.includes(weekday) && !isCapacityCandidate) {
+        quests.put(restoreSystemRetiredQuest(quest, { ...liveFields, status: 'pending', updatedAt: updated.updatedAt, version: quest.version + 1 }));
+      } else if (withinChangedSchedule && !quest.userModified) {
+        quests.put({ ...quest, ...liveFields, updatedAt: updated.updatedAt, version: quest.version + 1 });
+      }
     }
     habits.put(updated);
     await transactionDone(transaction);
@@ -3116,19 +3131,38 @@ export class QiguangDb {
     await transactionDone(transaction);
     const typeOrder: Record<QuestType, number> = { main: 0, bonus: 1, side: 2 };
     return quests.filter((quest) => !quest.userRemovedAt)
-      .sort((left, right) => typeOrder[left.type] - typeOrder[right.type] || left.createdAt.localeCompare(right.createdAt));
+      .sort((left, right) => (left.sortOrder ?? Number.MAX_SAFE_INTEGER) - (right.sortOrder ?? Number.MAX_SAFE_INTEGER)
+        || typeOrder[left.type] - typeOrder[right.type] || left.createdAt.localeCompare(right.createdAt));
   }
 
-  /** Every overdue action remains user-decided so a real late completion can still be recorded. */
+  async reorderPendingQuests(date: string, orderedIds: string[]): Promise<void> {
+    if (!isLocalDate(date) || orderedIds.length !== new Set(orderedIds).size) throw new Error('任务顺序无效。');
+    const transaction = this.database.transaction('quests', 'readwrite');
+    const store = transaction.objectStore('quests');
+    const quests = (await requestResult(store.index('byLocalDate').getAll(date)) as Quest[])
+      .filter((quest) => quest.status === 'pending' && quest.sourceType !== 'habit' && !quest.systemRetiredAt && !quest.userRemovedAt);
+    if (quests.length !== orderedIds.length || quests.some((quest) => !orderedIds.includes(quest.id))) {
+      transaction.abort();
+      throw new Error('任务列表已变化，请刷新后重试。');
+    }
+    const timestamp = nowIso();
+    orderedIds.forEach((id, sortOrder) => {
+      const quest = quests.find((item) => item.id === id)!;
+      if (quest.sortOrder !== sortOrder) store.put({ ...quest, sortOrder, updatedAt: timestamp, version: quest.version + 1 });
+    });
+    await transactionDone(transaction);
+  }
+
+  /** Only one-off actions become decisions; missed habits stay on their original day without becoming debt. */
   async listPendingBefore(date = localDate()): Promise<Quest[]> {
     if (!isLocalDate(date)) throw new Error('任务日期无效。');
     const quests = await this.listQuests();
     return quests
-      .filter((quest) => quest.status === 'pending' && quest.localDate < date)
+      .filter((quest) => quest.status === 'pending' && quest.sourceType !== 'habit' && quest.localDate < date)
       .sort((left, right) => left.localDate.localeCompare(right.localDate) || left.createdAt.localeCompare(right.createdAt));
   }
 
-  async addQuest(input: Pick<Quest, 'localDate' | 'type' | 'sourceType' | 'title' | 'reason' | 'minimumAction' | 'estimatedMinutes' | 'difficulty'> & Partial<Pick<Quest, 'sourceId' | 'actionId' | 'dimension' | 'branchId' | 'milestoneId' | 'completionCriteria' | 'aiSuggested' | 'userModified' | 'deadlineAt' | 'targetCount' | 'countUnit'>>): Promise<Quest> {
+  async addQuest(input: Pick<Quest, 'localDate' | 'type' | 'sourceType' | 'title' | 'reason' | 'difficulty'> & Partial<Pick<Quest, 'sourceId' | 'actionId' | 'dimension' | 'branchId' | 'milestoneId' | 'minimumAction' | 'completionCriteria' | 'estimatedMinutes' | 'aiSuggested' | 'userModified' | 'deadlineAt' | 'targetCount' | 'countUnit'>>): Promise<Quest> {
     if (!isLocalDate(input.localDate)) throw new Error('任务日期无效。');
     assertOneOf(input.type, ['main', 'bonus', 'side'], '任务类型');
     assertOneOf(input.sourceType, ['goal', 'habit', 'recovery', 'manual'], '任务来源');
@@ -3136,9 +3170,9 @@ export class QiguangDb {
     if (input.dimension !== undefined) assertOneOf(input.dimension, DIMENSIONS.map((item) => item.key), '任务状态维度');
     assertText(input.title, '任务标题', 160);
     assertText(input.reason, '任务理由', 500);
-    assertText(input.minimumAction, '任务最小动作', 200);
+    if (input.minimumAction !== undefined) assertText(input.minimumAction, '任务最小动作', 200);
     if (input.completionCriteria !== undefined) assertText(input.completionCriteria, '任务完成标准', 500);
-    assertInteger(input.estimatedMinutes, 1, 24 * 60, '任务预计时间');
+    if (input.estimatedMinutes !== undefined) assertInteger(input.estimatedMinutes, 1, 24 * 60, '任务预计时间');
     if (input.deadlineAt !== undefined) assertTimestamp(input.deadlineAt, '任务截止时间');
     if (input.targetCount !== undefined) {
       assertInteger(input.targetCount, 2, 1_000, '任务目标次数');
@@ -3175,7 +3209,7 @@ export class QiguangDb {
     const quest: Quest = {
       id: crypto.randomUUID(), localDate: input.localDate, type: input.type, sourceType: input.sourceType,
       sourceId: input.sourceId, milestoneId: input.milestoneId, actionId: validatedActionId, settlementVersion: 0,
-      title: input.title.trim(), reason: input.reason.trim(), minimumAction: input.minimumAction.trim(), completionCriteria: input.completionCriteria?.trim() || input.minimumAction.trim(),
+      title: input.title.trim(), reason: input.reason.trim(), minimumAction: input.minimumAction?.trim(), completionCriteria: input.completionCriteria?.trim(),
       estimatedMinutes: input.estimatedMinutes, difficulty: input.difficulty, dimension: input.dimension,
       deadlineAt: input.deadlineAt, targetCount: input.targetCount, progressCount: input.targetCount ? 0 : undefined, countUnit: input.countUnit?.trim(),
       branchId: input.branchId, status: 'pending', aiSuggested: input.aiSuggested ?? false, userModified: input.userModified ?? true,
@@ -3194,9 +3228,12 @@ export class QiguangDb {
       transaction.abort();
       throw new Error('只有待完成任务可以调整。');
     }
-    const updated = {
+    const updated: Quest = {
       ...current,
       ...patch,
+      minimumAction: 'minimumAction' in patch ? patch.minimumAction?.trim() || undefined : current.minimumAction,
+      completionCriteria: 'completionCriteria' in patch ? patch.completionCriteria?.trim() || undefined : current.completionCriteria,
+      estimatedMinutes: 'estimatedMinutes' in patch ? patch.estimatedMinutes : current.estimatedMinutes,
       progressCount: 'targetCount' in patch ? (patch.targetCount ? current.progressCount ?? 0 : undefined) : current.progressCount,
       userModified: true,
       updatedAt: nowIso(),
@@ -3208,9 +3245,9 @@ export class QiguangDb {
     }
     assertText(updated.title, '任务标题', 160);
     assertText(updated.reason, '任务理由', 500);
-    assertText(updated.minimumAction, '任务最小动作', 200);
+    if (updated.minimumAction !== undefined) assertText(updated.minimumAction, '任务最小动作', 200);
     if (updated.completionCriteria !== undefined) assertText(updated.completionCriteria, '任务完成标准', 500);
-    assertInteger(updated.estimatedMinutes, 1, 24 * 60, '任务预计时间');
+    if (updated.estimatedMinutes !== undefined) assertInteger(updated.estimatedMinutes, 1, 24 * 60, '任务预计时间');
     assertOneOf(updated.difficulty, Object.keys(DIFFICULTY_XP), '任务难度');
     if (updated.deadlineAt !== undefined) assertTimestamp(updated.deadlineAt, '任务截止时间');
     if (updated.targetCount !== undefined) {
@@ -3309,7 +3346,7 @@ export class QiguangDb {
         actionId: validateActionId(`habit:${habit.id}:${date}`), settlementVersion: 0, title: habit.name,
         reason: '这是你主动放入每日可选任务的习惯。', minimumAction: habit.minimumAction,
         targetCount: habit.targetCount, progressCount: habit.targetCount ? 0 : undefined, countUnit: habit.countUnit,
-        estimatedMinutes: 10, difficulty: habit.difficulty, dimension: habit.dimension, branchId: habit.branchId,
+        difficulty: habit.difficulty, dimension: habit.dimension, branchId: habit.branchId,
         status: 'pending', aiSuggested: false, userModified: false,
         createdAt: timestamp, updatedAt: timestamp, version: 1,
       };

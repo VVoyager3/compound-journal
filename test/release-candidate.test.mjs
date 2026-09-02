@@ -67,7 +67,7 @@ test('every companion action has its own tightly cropped transparent PNG', async
         ...Array.from({ length: 6 }, (_, index) => `${13 + index}-walk-left-${index + 1}.png`),
         ...Array.from({ length: 6 }, (_, index) => `${19 + index}-walk-right-${index + 1}.png`),
       ],
-      `${gender} horizontal files must keep the manually verified visual direction in their names`,
+      `${gender} horizontal files must keep the stable horizontal frame naming contract`,
     );
     for (const file of files) {
       const png = await readFile(path.join(directory, file));
@@ -97,6 +97,7 @@ test('room movement uses sprite frames instead of stretching the whole character
   assert.match(styles, /--walk-left-1:\s*0px -168px/);
   assert.match(styles, /--walk-right-1:\s*0px -252px/);
   assert.match(styles, /\.room-character\.has-motion\.is-female\s*\{[^}]*--rest-frame:\s*var\(--face-front-frame\)/s);
+  assert.match(styles, /\.room-character\.has-motion\.is-male\s*\{[^}]*--face-left-frame:\s*-252px 0;[^}]*--face-right-frame:\s*-84px 0;[^}]*--walk-left-1:\s*0px -252px;[^}]*--walk-left-6:\s*-420px -252px;[^}]*--walk-right-1:\s*0px -168px;[^}]*--walk-right-6:\s*-420px -168px;/s);
   assert.match(styles, /room-action 960ms steps\(6, jump-none\)/);
   assert.match(styles, /room-ambient-stroll 6200ms steps\(1, end\)/);
   assert.doesNotMatch(styles, /inset\(0 8px 22px 4px\)/);
@@ -110,30 +111,42 @@ test('room movement uses sprite frames instead of stretching the whole character
   assert.match(app, /room-background\.png/);
 });
 
-test('record editor keeps three concise prompts on one row', async () => {
+test('record editor uses the same three record types when creating and editing', async () => {
   const app = await read('src/app.ts');
   const styles = await read('src/styles.css');
-  assert.match(app, /'成功小记'/);
-  assert.match(app, /'珍藏小记'/);
-  assert.match(app, /'趣事小记'/);
+  assert.match(app, /'日常记录'/);
+  assert.match(app, /'成功记录'/);
+  assert.match(app, /'趣事记录'/);
+  assert.doesNotMatch(app, /成功小记|珍藏小记|趣事小记|普通记录/);
   assert.match(app, /'今日一句'/);
   assert.match(app, /'历年今天'/);
   assert.match(app, /saveDayCaption\(saved\.localDate, summaryInput\.value\)/);
   assert.match(app, /snapshotVariantFor/);
   assert.match(styles, /\.room-stage\.is-snapshot-(?:rest|focus|play|connection|bright)/);
-  assert.doesNotMatch(app, /\['成功记录',[\s\S]*\['感受'/);
-  assert.match(styles, /\.record-prompt-actions\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(styles, /\.record-prompt-actions\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s);
   assert.doesNotMatch(styles, /\.record-prompt-actions\s*\{[^}]*overflow-x:\s*auto/s);
 });
 
 test('typography and settings density follow the global UI rules', async () => {
   const styles = await read('src/styles.css');
   const checklist = await read('DESIGN-CHECKLIST.md');
+  assert.match(styles, /--line:\s*1px/);
+  assert.match(styles, /--text-page:\s*clamp\(2rem,\s*7\.5vw,\s*2\.25rem\)/);
   assert.match(styles, /h1,[\s\S]*h3\s*\{[^}]*font-family:\s*inherit/s);
   assert.doesNotMatch(styles, /Noto Serif SC|Source Han Serif SC|Songti SC/);
-  assert.match(styles, /\.page-system\s*\{[^}]*gap:\s*10px/s);
-  assert.match(checklist, /### 字体与排版规则/);
-  assert.match(checklist, /能删掉的描述先删/);
+  assert.match(styles, /\.button\s*\{[^}]*min-height:\s*48px;[^}]*border:\s*1px solid var\(--forest\);[^}]*box-shadow:\s*none/s);
+  assert.match(styles, /\.input,[\s\S]*\.journal-input\s*\{[^}]*border:\s*1px solid rgb\(40 50 40 \/ 48%\);[^}]*box-shadow:\s*none/s);
+  assert.match(styles, /\.page\s*\{[^}]*padding:\s*18px var\(--page-pad\) var\(--page-bottom-space\)/s);
+  assert.match(styles, /--page-bottom-space:\s*calc\(var\(--bottom-nav-height\) \+ 64px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.doesNotMatch(await read('src/app.ts'), /record-number-tools|record-attachment-button/);
+  assert.match(styles, /\.trail-tabs\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(styles, /\.review-actions > \.button\s*\{[^}]*width:\s*100%/s);
+  assert.match(styles, /\.milestone-action\.is-complete[\s\S]*\.milestone-action\.is-undo/);
+  assert.match(await read('src/app.ts'), /date-filter-placeholder', '选择日期'/);
+  assert.match(styles, /max-height:\s*min\(calc\(var\(--dialog-viewport-height/);
+  assert.match(styles, /\.page-system\s*\{[^}]*gap:\s*18px/s);
+  assert.match(checklist, /## 二、信息与文案/);
+  assert.match(checklist, /非必要说明已经删除/);
 });
 
 test('Android launcher and splash use the Qiguang identity instead of Capacitor defaults', async () => {
@@ -154,6 +167,9 @@ test('Android launcher and splash use the Qiguang identity instead of Capacitor 
   assert.match(styles, /postSplashScreenTheme[^\n]+AppTheme\.NoActionBar/);
   assert.match(styles, /Theme\.AppCompat\.Light\.NoActionBar/);
   assert.match(activity, /SplashScreen\.installSplashScreen\(this\)/);
+  assert.match(activity, /OnBackPressedCallback/);
+  assert.match(activity, /querySelectorAll\('dialog\[open\]'\)/, 'Android back must close the active form before leaving the app');
+  assert.match(activity, /querySelector\('\.secondary-back'\)/, 'Android back must return from secondary pages before leaving the app');
   const capacitorConfig = JSON.parse(await read('capacitor.config.json'));
   assert.equal(capacitorConfig.android?.adjustMarginsForEdgeToEdge, 'force', 'native content must stay outside system bars and display cutouts');
   assert(existsSync(path.join(root, 'android/app/src/main/res/drawable-port-xxhdpi/splash.png')));
@@ -363,6 +379,7 @@ test('Android widget ships three responsive layouts without overlay or notificat
   assert.match(bridge, /hasPinnedWidget\(\)/, 'settings must avoid duplicate widget requests');
   const activity = await read('android/app/src/main/java/com/vvoyager3/qiguang/MainActivity.java');
   assert.match(activity, /qiguang-widget-action/);
+  assert.match(activity, /qiguang-native-resume/);
   assert.doesNotMatch(activity, /getWebView\(\)\.reload\(\)/, 'widget actions must not reload and blank the active WebView');
 });
 

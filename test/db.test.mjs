@@ -6,6 +6,17 @@ import 'fake-indexeddb/auto';
 import { selectGrowthBadges } from '../src/badges.ts';
 import { DB_VERSION, LEGACY_SUCCESS_PROMPT, QiguangDb, migrateLegacyJournalContent, parseBackup } from '../src/db.ts';
 
+test('unfinished tasks keep the user-defined order', async (t) => {
+  const db = await withDatabase(t, 'task-order');
+  const first = await db.addQuest({ localDate: '2026-09-02', type: 'side', sourceType: 'manual', title: '第一项', reason: '手动安排', difficulty: 'light' });
+  const second = await db.addQuest({ localDate: '2026-09-02', type: 'side', sourceType: 'manual', title: '第二项', reason: '手动安排', difficulty: 'light' });
+
+  await db.reorderPendingQuests('2026-09-02', [second.id, first.id]);
+
+  assert.deepEqual((await db.listQuests('2026-09-02')).map((quest) => quest.id), [second.id, first.id]);
+  await assert.rejects(() => db.reorderPendingQuests('2026-09-02', [first.id]), /列表已变化/);
+});
+
 function databaseName(label) {
   return `qiguang-test-${label}-${crypto.randomUUID()}`;
 }
@@ -1018,6 +1029,30 @@ test('goals and habits can be edited or paused without deleting their history', 
   assert.equal(parseBackup(JSON.stringify(parseBackup(JSON.stringify(legacyGoalBackup)))).data.goals.find((item) => item.id === goal.id).completedDate, '2026-08-14');
 });
 
+test('editing or resuming a habit updates the pending daily check-in instead of leaving a stale snapshot', async (t) => {
+  const db = await withDatabase(t, 'i4-habit-live-checkin');
+  await db.ensureI2Defaults();
+  const branch = (await db.listBranches())[0];
+  const habit = await db.addHabit({
+    name: '复习错题十分钟', minimumAction: '看一道错题', scheduleDays: [5], dimension: 'progress',
+    branchId: branch.id, difficulty: 'light', bonusEnabled: true,
+  }, '2026-08-14');
+  const quest = (await db.ensureTodayBonusQuests('2026-08-14'))[0];
+  assert(quest);
+
+  await db.saveHabit(habit.id, { name: '复习错题十五分钟', minimumAction: '诊断一道错题', status: 'paused' }, '2026-08-14');
+  let synced = (await db.listQuests('2026-08-14')).find((item) => item.id === quest.id);
+  assert.deepEqual({ title: synced?.title, minimum: synced?.minimumAction, status: synced?.status, reason: synced?.systemRetiredReason }, {
+    title: '复习错题十五分钟', minimum: '诊断一道错题', status: 'exempt', reason: 'tracking-disabled',
+  });
+
+  await db.saveHabit(habit.id, { status: 'active' }, '2026-08-14');
+  synced = (await db.listQuests('2026-08-14')).find((item) => item.id === quest.id);
+  assert.deepEqual({ title: synced?.title, minimum: synced?.minimumAction, status: synced?.status, retired: synced?.systemRetiredAt }, {
+    title: '复习错题十五分钟', minimum: '诊断一道错题', status: 'pending', retired: undefined,
+  });
+});
+
 test('goal status transitions close related pending tasks', async (t) => {
   const db = await withDatabase(t, 'i2-goal-close-tasks');
   await db.ensureI2Defaults();
@@ -1343,7 +1378,7 @@ test('a count habit creates an independent count BONUS for each scheduled day', 
   assert.deepEqual({ progress: next.progressCount, target: next.targetCount }, { progress: 0, target: 8 });
 });
 
-test('overdue habit BONUS stays user-decided and accepts a real late completion or no-penalty exemption', async (t) => {
+test('missed habit BONUS stays on its original day without becoming overdue debt', async (t) => {
   const db = await withDatabase(t, 'i2-bonus-elapsed');
   await db.ensureI2Defaults();
   const branch = (await db.listBranches())[0];
@@ -1353,7 +1388,7 @@ test('overdue habit BONUS stays user-decided and accepts a real late completion 
   }, '2026-08-14');
   const first = (await db.ensureTodayBonusQuests('2026-08-14'))[0];
   assert(first);
-  assert.deepEqual((await db.listPendingBefore('2026-08-15')).map((item) => item.id), [first.id]);
+  assert.deepEqual((await db.listPendingBefore('2026-08-15')).map((item) => item.id), []);
 
   const next = (await db.ensureTodayBonusQuests('2026-08-15'))[0];
   const overdue = (await db.listQuests('2026-08-14')).find((item) => item.id === first.id);
@@ -2023,8 +2058,10 @@ test('success journal kind defaults explicitly, is editable and undoable, and su
   const db = await withDatabase(t, 'success-journal-kind');
   const regular = await db.addEntry('普通记录', '2026-08-14');
   const success = await db.addEntry('我完成了困难的一步', '2026-08-14', 'text', 'success');
+  const fun = await db.addEntry('午休时听到一个好笑的故事', '2026-08-14', 'text', 'fun');
   assert.equal(regular.kind, 'journal');
   assert.equal(success.kind, 'success');
+  assert.equal(fun.kind, 'fun');
 
   const corrected = await db.editEntry(success.id, success.version, success.body, 'journal');
   assert.equal(corrected.kind, 'journal');
@@ -2038,6 +2075,7 @@ test('success journal kind defaults explicitly, is editable and undoable, and su
   await db.importBundle(JSON.stringify(backup));
   assert.deepEqual((await db.exportBundle()).data, backup.data);
   assert.equal((await db.getEntry(success.id)).kind, 'success');
+  assert.equal((await db.getEntry(fun.id)).kind, 'fun');
 
   const legacy = structuredClone(backup);
   legacy.data.entries[0].body = `普通正文\n\n ${LEGACY_SUCCESS_PROMPT}\n拆分出的成功`;

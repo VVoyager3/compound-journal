@@ -18,7 +18,7 @@ type HabitAchievementThreshold = typeof HABIT_ACHIEVEMENT_THRESHOLDS[number];
 type RecoveryAchievementThreshold = typeof RECOVERY_ACHIEVEMENT_THRESHOLDS[number];
 
 const HABIT_ACHIEVEMENT_TITLES: Record<HabitAchievementThreshold, string> = {
-  1: '第一次兑现', 3: '开始生根', 7: '留下节奏', 14: '稳步积累', 30: '成为日常',
+  1: '第一次完成', 3: '开始生根', 7: '留下节奏', 14: '稳步积累', 30: '成为日常',
   60: '持续同行', 100: '百次沉淀', 180: '深深扎根', 365: '长期相伴',
 };
 const RECOVERY_ACHIEVEMENT_TITLES: Record<RecoveryAchievementThreshold, string> = {
