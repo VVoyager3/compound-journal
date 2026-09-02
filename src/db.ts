@@ -1288,6 +1288,7 @@ export function parseBackup(text: string): BackupBundle {
   quests.forEach((item) => {
     assertCommonRecord(item, '任务');
     if (!isLocalDate(item.localDate)) throw new Error('任务日期无效。');
+    if (item.sortOrder !== undefined) assertInteger(item.sortOrder, 0, Number.MAX_SAFE_INTEGER, '任务顺序');
     assertOneOf(item.type, ['main', 'bonus', 'side'], '任务类型');
     assertOneOf(item.sourceType, ['goal', 'habit', 'recovery', 'manual'], '任务来源');
     if (item.sourceType === 'goal' && (!item.sourceId || !goalIds.has(item.sourceId))) throw new Error('目标任务来源无效。');
@@ -3130,7 +3131,26 @@ export class QiguangDb {
     await transactionDone(transaction);
     const typeOrder: Record<QuestType, number> = { main: 0, bonus: 1, side: 2 };
     return quests.filter((quest) => !quest.userRemovedAt)
-      .sort((left, right) => typeOrder[left.type] - typeOrder[right.type] || left.createdAt.localeCompare(right.createdAt));
+      .sort((left, right) => (left.sortOrder ?? Number.MAX_SAFE_INTEGER) - (right.sortOrder ?? Number.MAX_SAFE_INTEGER)
+        || typeOrder[left.type] - typeOrder[right.type] || left.createdAt.localeCompare(right.createdAt));
+  }
+
+  async reorderPendingQuests(date: string, orderedIds: string[]): Promise<void> {
+    if (!isLocalDate(date) || orderedIds.length !== new Set(orderedIds).size) throw new Error('任务顺序无效。');
+    const transaction = this.database.transaction('quests', 'readwrite');
+    const store = transaction.objectStore('quests');
+    const quests = (await requestResult(store.index('byLocalDate').getAll(date)) as Quest[])
+      .filter((quest) => quest.status === 'pending' && quest.sourceType !== 'habit' && !quest.systemRetiredAt && !quest.userRemovedAt);
+    if (quests.length !== orderedIds.length || quests.some((quest) => !orderedIds.includes(quest.id))) {
+      transaction.abort();
+      throw new Error('任务列表已变化，请刷新后重试。');
+    }
+    const timestamp = nowIso();
+    orderedIds.forEach((id, sortOrder) => {
+      const quest = quests.find((item) => item.id === id)!;
+      if (quest.sortOrder !== sortOrder) store.put({ ...quest, sortOrder, updatedAt: timestamp, version: quest.version + 1 });
+    });
+    await transactionDone(transaction);
   }
 
   /** Only one-off actions become decisions; missed habits stay on their original day without becoming debt. */

@@ -130,7 +130,7 @@ async function readStores(page, names) {
 
 async function completeHabit(page) {
   await page.goto(`${baseUrl}/#/today`);
-  const complete = page.getByRole('button', { name: `完成：${HABIT}` });
+  const complete = page.getByRole('button', { name: new RegExp(`记录今天的习惯“${HABIT}”`) });
   await complete.waitFor();
   await complete.click();
   await complete.waitFor({ state: 'detached' });
@@ -225,7 +225,6 @@ async function createGoalAndHabit(page) {
   await page.getByRole('dialog', { name: '安排目标下一步' }).getByRole('button', { name: '安排任务' }).click();
   await page.getByRole('tab', { name: '今天', exact: true }).click();
   await page.getByRole('button', { name: `完成：${INITIAL_STEP}` }).click();
-  await page.getByRole('dialog', { name: '记录任务结果' }).getByRole('button', { name: '保存结果' }).click();
   await page.getByRole('heading', { name: FIRST_MILESTONE }).waitFor();
 
   const initial = await readStores(page, ['milestones', 'xpLedger']);
@@ -329,7 +328,7 @@ test('formal pages sustain a 30 day loop without historic debt', async () => {
     assert.equal(await directionTitle(page, true), '记录');
     await recordDay(page, 9);
     await page.goto(`${baseUrl}/#/today`);
-    await page.getByRole('button', { name: `完成：${HABIT}` }).waitFor();
+    await page.getByRole('button', { name: new RegExp(`记录今天的习惯“${HABIT}”`) }).waitFor();
     await saveHabitStatus(page, 'paused');
     assert.equal((await readStores(page, ['quests'])).quests.filter((item) => item.localDate === dayDate(9) && item.status === 'pending').length, 0, 'pausing must settle today\'s generated BONUS without debt');
 

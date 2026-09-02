@@ -6,6 +6,17 @@ import 'fake-indexeddb/auto';
 import { selectGrowthBadges } from '../src/badges.ts';
 import { DB_VERSION, LEGACY_SUCCESS_PROMPT, QiguangDb, migrateLegacyJournalContent, parseBackup } from '../src/db.ts';
 
+test('unfinished tasks keep the user-defined order', async (t) => {
+  const db = await withDatabase(t, 'task-order');
+  const first = await db.addQuest({ localDate: '2026-09-02', type: 'side', sourceType: 'manual', title: '第一项', reason: '手动安排', difficulty: 'light' });
+  const second = await db.addQuest({ localDate: '2026-09-02', type: 'side', sourceType: 'manual', title: '第二项', reason: '手动安排', difficulty: 'light' });
+
+  await db.reorderPendingQuests('2026-09-02', [second.id, first.id]);
+
+  assert.deepEqual((await db.listQuests('2026-09-02')).map((quest) => quest.id), [second.id, first.id]);
+  await assert.rejects(() => db.reorderPendingQuests('2026-09-02', [first.id]), /列表已变化/);
+});
+
 function databaseName(label) {
   return `qiguang-test-${label}-${crypto.randomUUID()}`;
 }

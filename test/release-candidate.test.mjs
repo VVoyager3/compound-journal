@@ -138,7 +138,7 @@ test('typography and settings density follow the global UI rules', async () => {
   assert.match(styles, /\.input,[\s\S]*\.journal-input\s*\{[^}]*border:\s*1px solid rgb\(40 50 40 \/ 48%\);[^}]*box-shadow:\s*none/s);
   assert.match(styles, /\.page\s*\{[^}]*padding:\s*18px var\(--page-pad\) var\(--page-bottom-space\)/s);
   assert.match(styles, /--page-bottom-space:\s*calc\(var\(--bottom-nav-height\) \+ 64px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(styles, /\.record-number-tools\s*\{[^}]*grid-template-columns:\s*auto repeat\(3, 36px\)/s);
+  assert.doesNotMatch(await read('src/app.ts'), /record-number-tools|record-attachment-button/);
   assert.match(styles, /\.trail-tabs\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
   assert.match(styles, /\.review-actions > \.button\s*\{[^}]*width:\s*100%/s);
   assert.match(styles, /\.milestone-action\.is-complete[\s\S]*\.milestone-action\.is-undo/);

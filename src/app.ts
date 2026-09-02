@@ -1258,6 +1258,12 @@ async function changeCountQuestProgress(quest: Quest, delta: -1 | 1, controls: H
   }
 }
 
+function recordQuestCheckIn(quest: Quest, controls: HTMLElement): void {
+  const target = quest.targetCount ?? 1;
+  if ((quest.progressCount ?? 0) + 1 < target) void changeCountQuestProgress(quest, 1, controls);
+  else void completeQuestFromRow(quest, controls);
+}
+
 function countQuestActions(quest: Quest): HTMLElement {
   const actions = node('div', 'quest-actions quest-count-actions');
   const progress = quest.progressCount ?? 0;
@@ -1796,7 +1802,7 @@ async function openQuestAdjustmentDialog(quest: Quest): Promise<void> {
   actions.append(cancel, save); dialog.showModal(); title.focus();
 }
 
-function taskListQuest(quest: Quest, overdue = false, detailed = false, directComplete = false): HTMLElement {
+function taskListQuest(quest: Quest, overdue = false, directComplete = false, reorderable = false): HTMLElement {
   const deadlinePassed = Boolean(quest.deadlineAt && Date.parse(quest.deadlineAt) < Date.now() && quest.status === 'pending');
   const item = node('article', `task-list-item is-${quest.type} is-${quest.status} is-source-${quest.sourceType}${quest.targetCount ? ' has-count' : ''}${overdue ? ' is-overdue' : ''}${deadlinePassed ? ' is-deadline-passed' : ''}`);
   item.dataset.questId = quest.id;
@@ -1808,13 +1814,6 @@ function taskListQuest(quest: Quest, overdue = false, detailed = false, directCo
   action.type = 'button';
   const copy = node('span', 'task-list-copy');
   copy.append(node('h3', '', quest.title));
-  const meta = overdue ? `原计划 ${formatDate(quest.localDate)}` : deadlinePassed ? '已过截止时间' : quest.deadlineAt
-    ? `${new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(quest.deadlineAt))} 截止` : '';
-  if (meta) copy.append(node('span', deadlinePassed ? 'caption danger-copy' : 'caption', meta));
-  const sourceLabel = quest.type === 'main' ? '今日重点' : ({ goal: '目标任务', habit: '习惯', recovery: '状态照顾', manual: '其他任务' } as const)[quest.sourceType];
-  const planning = [quest.estimatedMinutes ? `${quest.estimatedMinutes} 分钟` : '', sourceLabel].filter(Boolean).join(' · ');
-  copy.append(node('span', 'caption', planning));
-  if (quest.minimumAction && quest.minimumAction !== quest.title) copy.append(node('span', 'task-row-minimum', quest.minimumAction));
   if (!quest.targetCount) action.append(node('span', `task-check is-${quest.status}`, quest.status === 'completed' ? '✓' : quest.status === 'partial' ? '–' : ''));
   action.append(copy);
   if (quest.targetCount) {
@@ -1823,41 +1822,115 @@ function taskListQuest(quest: Quest, overdue = false, detailed = false, directCo
       node('span', 'task-count-value', `${progress}/${target} ${quest.countUnit || '次'}`),
       node('span', 'task-count-meter', ''),
     );
-    if (detailed) count.append(node('span', 'task-count-continue', '继续'));
     action.append(count);
   }
-  else if (quest.type === 'main' && quest.status === 'pending' && !overdue) action.append(node('span', 'task-primary-cta', '完成'));
-  else if (quest.sourceType === 'habit' && quest.status === 'pending' && !overdue) action.append(node('span', 'task-secondary-cta', '打卡'));
   action.setAttribute('aria-label', quest.status !== 'pending' ? `修改任务“${quest.title}”的反馈` : overdue
     ? `记录“${quest.title}”的实际结果` : quest.targetCount ? `记录一次：${quest.title}，当前 ${progress}/${target}${quest.countUnit || '次'}` : `完成：${quest.title}`);
   action.addEventListener('click', () => {
     if (quest.status !== 'pending' || overdue) { void openQuestFeedbackDialog(quest, overdue ? 'completed' : undefined); return; }
-    if (quest.targetCount) void changeCountQuestProgress(quest, 1, item);
+    if (quest.targetCount && directComplete) recordQuestCheckIn(quest, item);
+    else if (quest.targetCount) void changeCountQuestProgress(quest, 1, item);
     else if (directComplete) void completeQuestFromRow(quest, item);
     else void openQuestFeedbackDialog(quest, 'completed');
   });
   const details = node('button', 'task-item-details', '⋯');
   details.type = 'button';
   details.dataset.questFeedbackFor = quest.id;
-  details.setAttribute('aria-label', `${directComplete ? '编辑' : '查看'}任务：${quest.title}`);
+  details.setAttribute('aria-label', `${directComplete && !reorderable ? '编辑' : '查看'}任务：${quest.title}`);
   details.addEventListener('click', () => {
-    if (directComplete && quest.status === 'pending' && !overdue) void openQuestAdjustmentDialog(quest);
+    if (directComplete && !reorderable && quest.status === 'pending' && !overdue) void openQuestAdjustmentDialog(quest);
     else void openQuestFeedbackDialog(quest);
   });
-  item.append(action, details);
-  if (detailed && quest.type === 'main' && quest.status === 'pending' && !overdue) {
-    const partial = node('button', 'task-progress-cta', '有进展');
-    partial.type = 'button';
-    partial.addEventListener('click', () => { void openQuestFeedbackDialog(quest, 'partial'); });
-    item.classList.add('has-progress-action');
-    item.append(partial);
+  item.append(action);
+  if (reorderable) {
+    item.dataset.reorderable = 'true';
+    const drag = node('button', 'task-drag-handle', '≡');
+    drag.type = 'button';
+    drag.setAttribute('aria-label', `拖动调整“${quest.title}”的位置`);
+    item.append(drag);
   }
+  item.append(details);
   return item;
+}
+
+function enableTaskReordering(list: HTMLElement, date: string): void {
+  const rows = () => [...list.querySelectorAll<HTMLElement>('.task-list-item[data-reorderable="true"]')];
+  const persist = async (): Promise<void> => {
+    try {
+      await db.reorderPendingQuests(date, rows().map((item) => item.dataset.questId!));
+      showToast('任务顺序已保存。');
+    } catch (error) {
+      showToast(errorMessage(error), 'error');
+      await render();
+    }
+  };
+  rows().forEach((item) => {
+    const handle = item.querySelector<HTMLButtonElement>('.task-drag-handle')!;
+    let dragging = false;
+    handle.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
+      dragging = true;
+      handle.setPointerCapture(event.pointerId);
+      item.classList.add('is-dragging');
+    });
+    handle.addEventListener('pointermove', (event) => {
+      if (!dragging) return;
+      event.preventDefault();
+      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('.task-list-item[data-reorderable="true"]');
+      if (!target || target === item || target.parentElement !== list) return;
+      const after = event.clientY > target.getBoundingClientRect().top + target.getBoundingClientRect().height / 2;
+      list.insertBefore(item, after ? target.nextSibling : target);
+    });
+    handle.addEventListener('pointerup', (event) => {
+      if (!dragging) return;
+      dragging = false;
+      handle.releasePointerCapture(event.pointerId);
+      item.classList.remove('is-dragging');
+      void persist();
+    });
+    handle.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+      event.preventDefault();
+      const sibling = event.key === 'ArrowUp' ? item.previousElementSibling : item.nextElementSibling;
+      if (!(sibling instanceof HTMLElement) || sibling.dataset.reorderable !== 'true') return;
+      if (event.key === 'ArrowUp') list.insertBefore(item, sibling);
+      else list.insertBefore(sibling, item);
+      void persist();
+      handle.focus();
+    });
+  });
+}
+
+function habitTodayRow(habit: Habit, quest: Quest): HTMLElement {
+  const row = node('article', `today-habit-row is-${quest.status}`);
+  row.dataset.questId = quest.id;
+  const target = quest.targetCount ?? 1;
+  const progress = quest.status === 'completed' ? target : quest.progressCount ?? 0;
+  const copy = node('span', 'today-habit-copy');
+  copy.append(node('h3', '', habit.name), node('span', 'caption', `今天 ${progress}/${target} ${quest.countUnit || '次'}`));
+  row.append(copy);
+  if (quest.status === 'pending') {
+    const checkIn = node('button', 'button button-secondary habit-today-checkin', quest.targetCount ? '+1' : '打卡');
+    checkIn.type = 'button';
+    checkIn.setAttribute('aria-label', `记录今天的习惯“${habit.name}”，当前 ${progress}/${target}${quest.countUnit || '次'}`);
+    checkIn.addEventListener('click', () => recordQuestCheckIn(quest, row));
+    row.append(checkIn);
+  } else {
+    const completed = node('span', 'habit-today-completed', '已完成');
+    completed.setAttribute('aria-label', `${habit.name}今天已完成`);
+    row.append(completed);
+  }
+  const details = node('button', 'task-item-details', '⋯');
+  details.type = 'button';
+  details.setAttribute('aria-label', `查看习惯：${habit.name}`);
+  details.addEventListener('click', () => { void openHabitDetailDialog(habit); });
+  row.append(details);
+  return row;
 }
 
 function questCard(quest: Quest, compact = false, milestone?: { description: string }, taskList = false): HTMLElement {
   const deadlinePassed = Boolean(quest.deadlineAt && Date.parse(quest.deadlineAt) < Date.now() && quest.status === 'pending');
-  if (taskList && !quest.systemRetiredAt) return taskListQuest(quest, false, true);
+  if (taskList && !quest.systemRetiredAt) return taskListQuest(quest);
   const card = node('article', `${compact ? 'quest-row' : 'surface quest-card'} is-${quest.type} is-${quest.status}${deadlinePassed ? ' is-deadline-passed' : ''}`);
   card.dataset.questId = quest.id;
   card.tabIndex = -1;
@@ -2076,9 +2149,9 @@ function overdueQuestPanel(quests: Quest[], limit = 3): HTMLElement {
 async function todayPage(): Promise<HTMLElement> {
   const today = localDate();
   await db.ensureTodayBonusQuests(today);
-  const [entries, observations, quests, profile, entryHistory, overdueQuests, allQuests, allFeedback, previousAnalyses, goals, milestones, areas] = await Promise.all([
+  const [entries, observations, quests, profile, entryHistory, overdueQuests, allQuests, allFeedback, previousAnalyses, goals, milestones, areas, habits] = await Promise.all([
     db.listEntries(today), db.resolvedStateAtOrBefore(today), db.listQuests(today), db.getProfile(), db.listEntries(),
-    db.listPendingBefore(today), db.listQuests(), db.listQuestFeedback(), db.listDailyAnalyses(shiftDate(today, -1)), db.listGoals(), db.listMilestones(), db.listAreas(),
+    db.listPendingBefore(today), db.listQuests(), db.listQuestFeedback(), db.listDailyAnalyses(shiftDate(today, -1)), db.listGoals(), db.listMilestones(), db.listAreas(), db.listHabits(),
   ]);
   const main = node('main', 'page page-today');
   main.append(pageHeader(formatDate(today), '今天'));
@@ -2193,12 +2266,19 @@ async function todayPage(): Promise<HTMLElement> {
 
   const todayTasks = node('section', 'today-focus-list');
   const todayTasksHeading = node('div', 'section-heading');
-  const pendingToday = quests.filter((quest) => quest.status === 'pending' && !quest.systemRetiredAt);
+  const pendingToday = quests.filter((quest) => quest.status === 'pending' && quest.sourceType !== 'habit' && !quest.systemRetiredAt);
   todayTasksHeading.append(node('h2', '', '今天要做的'), node('span', 'caption', `${pendingToday.length} 项待完成`));
   todayTasks.append(todayTasksHeading);
-  const orderedToday = [...pendingToday].sort((left, right) => ({ main: 0, side: 1, bonus: 2 })[left.type] - ({ main: 0, side: 1, bonus: 2 })[right.type]);
-  if (!orderedToday.length) todayTasks.append(node('p', 'empty-copy', '今天已经安排好了'));
-  orderedToday.slice(0, 3).forEach((quest) => todayTasks.append(taskListQuest(quest, false, false, true)));
+  if (!pendingToday.length) todayTasks.append(node('p', 'empty-copy', '今天已经安排好了'));
+  pendingToday.slice(0, 3).forEach((quest) => todayTasks.append(taskListQuest(quest, false, true)));
+  const todayHabitQuests = quests.filter((quest) => quest.sourceType === 'habit' && !quest.systemRetiredAt);
+  if (todayHabitQuests.length) {
+    todayTasks.append(node('h3', 'today-habit-heading', '习惯打卡'));
+    todayHabitQuests.forEach((quest) => {
+      const habit = habits.find((item) => item.id === quest.sourceId);
+      if (habit) todayTasks.append(habitTodayRow(habit, quest));
+    });
+  }
   main.append(todayTasks);
 
   const todayRecord = node('section', 'today-record-preview');
@@ -2208,26 +2288,22 @@ async function todayPage(): Promise<HTMLElement> {
   openDay.addEventListener('click', () => go({ name: 'day', date: today }));
   recordHeading.append(node('h2', '', '今天留下的'), openDay);
   todayRecord.append(recordHeading);
-  const latestTodayEntry = entries.at(-1);
-  if (latestTodayEntry) {
+  const recentTodayEntries = entries.slice(-3).reverse();
+  if (recentTodayEntries.length) {
+    recentTodayEntries.forEach((entry) => {
     const preview = node('button', 'today-record-row');
     preview.type = 'button';
-    const previewIcon = node('span', `today-record-icon is-${latestTodayEntry.kind}`);
-    previewIcon.append(pixelIcon(latestTodayEntry.kind === 'success' ? 'trophy' : 'record'));
+    const previewIcon = node('span', `today-record-icon is-${entry.kind}`);
+    previewIcon.append(pixelIcon(entry.kind === 'success' ? 'trophy' : 'record'));
     preview.append(
       previewIcon,
-      node('span', 'line-clamp', latestTodayEntry.body),
-      node('time', 'caption', new Date(latestTodayEntry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })),
+      node('span', 'today-record-copy', entry.body),
+      node('time', 'caption', new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })),
     );
-    preview.addEventListener('click', () => go({ name: 'day', date: today }));
+    preview.addEventListener('click', () => { void openEntryDetailDialog(entry); });
     todayRecord.append(preview);
+    });
   } else todayRecord.append(node('p', 'empty-copy', '今天还没有记录'));
-  const write = node('button', 'record-fab');
-  write.append(pixelIcon('record'));
-  write.type = 'button';
-  write.setAttribute('aria-label', '写记录');
-  write.addEventListener('click', () => go({ name: 'record' }));
-  todayRecord.append(write);
   main.append(todayRecord);
 
   return main;
@@ -2309,38 +2385,13 @@ async function recordPage(route: Route): Promise<HTMLElement> {
 
   const bodySection = node('section', 'record-body-section');
   const bodyHeading = node('div', 'record-body-heading');
-  const numberTools = node('div', 'record-number-tools');
-  const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
-  const circledNumbers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
-  const insertNumber = (style: 'arabic' | 'chinese' | 'circled') => {
-    const numberedLines = textarea.value.split('\n').filter((line) => /^\s*(?:\d+[.、]|[一二三四五六七八九十]+、|[①②③④⑤⑥⑦⑧⑨⑩])/.test(line)).length;
-    const index = Math.min(numberedLines, 9);
-    const marker = style === 'arabic' ? `${index + 1}. ` : style === 'chinese' ? `${chineseNumbers[index]}、` : `${circledNumbers[index]} `;
-    const before = textarea.value.slice(0, textarea.selectionStart);
-    const prefix = before && !before.endsWith('\n') ? `\n${marker}` : marker;
-    textarea.setRangeText(prefix, textarea.selectionStart, textarea.selectionEnd, 'end');
-    updateDraftState();
-    textarea.focus();
-  };
-  for (const [style, label, aria] of [['arabic', '1.', '数字序号'], ['chinese', '一、', '中文序号'], ['circled', '①', '圆圈序号']] as const) {
-    const button = node('button', 'record-number-button', label);
-    button.type = 'button';
-    button.setAttribute('aria-label', `插入${aria}`);
-    button.addEventListener('click', () => insertNumber(style));
-    numberTools.append(button);
-  }
-  bodyHeading.append(node('strong', '', '正文'), numberTools);
+  bodyHeading.append(node('strong', '', '正文'));
   bodySection.append(bodyHeading, textarea, counter);
 
   const saveState = node('p', 'save-state', textarea.value ? '草稿已本地保存' : '尚未保存');
   saveState.setAttribute('role', 'status');
-  const attachment = node('button', 'record-attachment-button');
-  attachment.type = 'button';
-  attachment.title = '当前版本仅保存文字记录';
-  attachment.append(node('span', '', '添加图片'));
-  attachment.addEventListener('click', () => showToast('为保证备份可靠，当前版本暂不保存图片。'));
   const editorMeta = node('div', 'record-editor-meta');
-  editorMeta.append(attachment, saveState);
+  editorMeta.append(saveState);
   const submit = node('button', 'button button-primary button-wide', '保存记录');
   submit.type = 'submit';
   const submitBar = node('div', 'record-submit-bar');
@@ -3064,6 +3115,37 @@ async function openAnalysisPreview(date: string, entries: JournalEntry[], retryJ
   cancel.focus();
 }
 
+async function deleteEntry(entry: JournalEntry, dialog?: HTMLDialogElement): Promise<void> {
+  if (!await confirmAction('删除这条记录？', '正文及其修改历史会从本机永久删除，无法撤销。', '删除', true)) return;
+  try {
+    await db.deleteEntry(entry.id);
+    dialog?.close();
+    showToast('记录已从本机删除。');
+    await render();
+  } catch (error) { showToast(errorMessage(error), 'error'); }
+}
+
+async function openEntryDetailDialog(entry: JournalEntry): Promise<void> {
+  const { dialog, content, actions } = dialogShell('记录详情');
+  const kind = entry.kind === 'success' ? '成功记录' : entry.kind === 'fun' ? '趣事记录' : '日常记录';
+  content.append(
+    node('p', 'caption', `${formatDate(entry.localDate)} · ${new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })} · ${kind}`),
+    node('p', 'entry-detail-body', entry.body),
+  );
+  const remove = node('button', 'button button-quiet danger-button', '删除');
+  remove.type = 'button';
+  remove.addEventListener('click', () => { void deleteEntry(entry, dialog); });
+  const history = node('button', 'button button-secondary', '修改历史');
+  history.type = 'button';
+  history.addEventListener('click', () => { dialog.close(); void openHistoryDialog(entry); });
+  const edit = node('button', 'button button-primary', '编辑');
+  edit.type = 'button';
+  edit.addEventListener('click', () => { dialog.close(); void openEditDialog(entry); });
+  actions.append(remove, history, edit);
+  dialog.showModal();
+  edit.focus();
+}
+
 async function openEditDialog(entry: JournalEntry): Promise<void> {
   const { dialog, content, actions } = dialogShell('修改记录');
   const bodyLabel = node('label', 'field-label', '正文');
@@ -3414,7 +3496,9 @@ async function dayPage(date: string): Promise<HTMLElement> {
   journal.append(node('h2', '', '今天留下的'));
   if (!entries.length) journal.append(node('p', 'journal-empty', '暂无记录'));
   for (const entry of entries) {
-    const item = node('article', `day-record-row is-${entry.kind ?? 'journal'}`);
+    const item = node('button', `day-record-row is-${entry.kind ?? 'journal'}`);
+    item.type = 'button';
+    item.setAttribute('aria-label', `查看记录详情：${entry.body.slice(0, 30)}`);
     const copy = node('div', 'day-record-copy');
     const meta = node('div', 'day-record-meta');
     meta.append(
@@ -3422,26 +3506,10 @@ async function dayPage(date: string): Promise<HTMLElement> {
       node('span', 'day-record-kind', entry.kind === 'success' ? '成功记录' : entry.kind === 'fun' ? '趣事记录' : '日常记录'),
     );
     copy.append(meta, node('p', 'day-record-body', entry.body));
-    const more = node('details', 'day-record-more');
-    const moreButtons = node('div', 'day-record-actions');
-    moreButtons.append(
-      iconButton('编辑', null, () => { void openEditDialog(entry); }, 'button button-secondary button-compact'),
-      iconButton('查看版本', null, () => { void openHistoryDialog(entry); }, 'button button-quiet button-compact'),
-      iconButton('删除', null, async () => {
-        if (!await confirmAction('删除这条记录？', '正文及其修改历史会从本机永久删除，无法撤销。', '删除', true)) return;
-        try {
-          await db.deleteEntry(entry.id);
-          showToast('记录已从本机删除。');
-          await render();
-        } catch (error) { showToast(errorMessage(error), 'error'); }
-      }, 'button button-quiet danger-button button-compact'),
-    );
-    const moreSummary = node('summary', '', '›');
-    moreSummary.setAttribute('aria-label', `管理记录：${entry.body.slice(0, 30)}`);
-    more.append(moreSummary, moreButtons);
     const recordIcon = node('span', 'day-record-icon');
     recordIcon.append(pixelIcon(entry.kind === 'success' ? 'trophy' : 'record'));
-    item.append(recordIcon, copy, more);
+    item.append(recordIcon, copy);
+    item.addEventListener('click', () => { void openEntryDetailDialog(entry); });
     journal.append(item);
   }
 
@@ -4667,7 +4735,7 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
     labelledControl('分类', dimension), labelledControl('提升方向', branch), labelledControl('难度', difficulty), bonusLabel,
     labelledControl('状态', habitStatus), status,
   );
-  if (habit?.targetCount) content.insertBefore(advanced, status);
+  content.insertBefore(advanced, status);
   const cancel = node('button', 'button button-secondary', '取消');
   cancel.type = 'button';
   cancel.addEventListener('click', () => dialog.close());
@@ -4854,12 +4922,17 @@ async function openHabitDetailDialog(habit: Habit): Promise<void> {
     cell.append(node('span', 'habit-week-label', `周${'一二三四五六日'[offset]}`), node('span', 'habit-week-mark', completed ? '✓' : planned ? '○' : '—'));
     week.append(cell);
   }
-  weekCard.append(week, node('p', 'caption habit-week-legend', '✓ 已完成　　○ 今天待完成　　— 未计划/未到'));
+  weekCard.append(week);
   content.append(weekCard);
   const todayQuest = quests.find((quest) => quest.localDate === localDate() && quest.sourceType === 'habit' && quest.sourceId === habit.id);
   const checkinActions = node('div', 'habit-detail-checkin-actions');
   if (todayQuest?.status === 'pending') {
-    checkinActions.append(primaryButton('完成今天打卡', () => { dialog.close(); void openQuestFeedbackDialog(todayQuest, 'completed'); }));
+    const target = todayQuest.targetCount ?? 1;
+    const progress = todayQuest.progressCount ?? 0;
+    checkinActions.append(primaryButton(todayQuest.targetCount ? `打卡 ${progress}/${target}` : '完成今天打卡', () => {
+      dialog.close();
+      recordQuestCheckIn(todayQuest, content);
+    }));
   } else if (todayQuest) {
     const completed = node('button', 'button habit-checkin-complete', todayQuest.status === 'partial' ? '今天已有进展' : '今日已完成');
     completed.type = 'button';
@@ -4966,8 +5039,9 @@ async function tasksPage(): Promise<HTMLElement> {
   });
   tabs.append(todayTab, planTab);
   main.append(header, tabs, todayPanel, planPanel);
-  const pendingCount = quests.filter((item) => item.status === 'pending').length;
-  const completedCount = quests.filter((item) => item.status === 'completed').length;
+  const pendingCount = quests.filter((item) => item.status === 'pending' && item.sourceType !== 'habit').length;
+  const completedCount = quests.filter((item) => item.status === 'completed' && item.sourceType !== 'habit').length;
+  const habitPendingCount = quests.filter((item) => item.status === 'pending' && item.sourceType === 'habit').length;
   todayPanel.append(node('p', 'task-summary', `${pendingCount} 待完成　·　${completedCount} 已完成`));
   if (overdueQuests.length) todayPanel.append(overdueQuestPanel(overdueQuests, Number.POSITIVE_INFINITY));
   const capacityCandidates = allQuests.filter((quest) => quest.systemRetiredReason === 'capacity')
@@ -4984,29 +5058,29 @@ async function tasksPage(): Promise<HTMLElement> {
 
   const day = node('section', 'task-board');
   const dayHeading = node('div', 'section-heading');
-  dayHeading.append(node('h2', '', '今日重点'));
+  dayHeading.append(node('h2', '', '今天要做'));
   day.append(dayHeading);
   if (!quests.length) {
     day.append(node('p', 'empty-copy', '暂无任务'));
   } else {
-    const pendingQuests = quests.filter((quest) => quest.status === 'pending');
-    const settledQuests = quests.filter((quest) => quest.status !== 'pending' && !quest.systemRetiredAt);
+    const pendingQuests = quests.filter((quest) => quest.status === 'pending' && quest.sourceType !== 'habit');
+    const habitQuests = quests.filter((quest) => quest.sourceType === 'habit' && !quest.systemRetiredAt);
+    const settledQuests = quests.filter((quest) => quest.status !== 'pending' && quest.sourceType !== 'habit' && !quest.systemRetiredAt);
     const retiredQuests = quests.filter((quest) => quest.systemRetiredAt && quest.systemRetiredReason !== 'capacity');
-    const mainQuests = pendingQuests.filter((quest) => quest.type === 'main');
-    const otherQuests = pendingQuests.filter((quest) => quest.type !== 'main');
-    mainQuests.forEach((quest) => {
-      const card = questCard(quest, false, quest.milestoneId ? milestonesByGoal.flat().find((item) => item.id === quest.milestoneId) : undefined, true);
-      day.append(card);
-    });
-    if (!mainQuests.length) day.append(node('p', 'empty-copy', '今天还没有重点任务'));
-    if (otherQuests.length) {
-      day.append(node('h2', 'task-subheading', '其他任务'));
-      const otherGroup = node('div', 'task-other-group');
-      otherQuests.forEach((quest) => {
-        const card = questCard(quest, false, quest.milestoneId ? milestonesByGoal.flat().find((item) => item.id === quest.milestoneId) : undefined, true);
-        otherGroup.append(card);
+    if (pendingQuests.length) {
+      const taskGroup = node('div', 'task-today-list');
+      pendingQuests.forEach((quest) => taskGroup.append(taskListQuest(quest, false, true, true)));
+      day.append(taskGroup);
+      enableTaskReordering(taskGroup, today);
+    } else day.append(node('p', 'empty-copy', '今天的任务已经完成'));
+    if (habitQuests.length) {
+      const habitGroup = node('section', 'task-today-habits');
+      habitGroup.append(node('h3', '', `习惯打卡 · ${habitPendingCount} 项待打卡`));
+      habitQuests.forEach((quest) => {
+        const habit = storedHabits.find((item) => item.id === quest.sourceId);
+        if (habit) habitGroup.append(habitTodayRow(habit, quest));
       });
-      day.append(otherGroup);
+      day.append(habitGroup);
     }
     if (settledQuests.length) {
       const settled = node('details', 'task-settled optional-details');
@@ -5166,7 +5240,9 @@ async function tasksPage(): Promise<HTMLElement> {
     const weekCompleted = allHabitLogs.filter((item) => item.habitId === habit.id
       && item.localDate >= period.start && item.localDate <= period.end && item.result === 'completed').length;
     const todayQuest = quests.find((quest) => quest.sourceType === 'habit' && quest.sourceId === habit.id && !quest.systemRetiredAt);
-    const todayLabel = !todayQuest ? '休息日' : todayQuest.status === 'pending' ? '待打卡'
+    const todayLabel = !todayQuest ? '休息日' : todayQuest.targetCount
+      ? `${todayQuest.status === 'completed' ? todayQuest.targetCount : todayQuest.progressCount ?? 0}/${todayQuest.targetCount} ${todayQuest.countUnit || '次'}`
+      : todayQuest.status === 'pending' ? '待打卡'
       : todayQuest.status === 'completed' ? '已完成' : todayQuest.status === 'partial' ? '有进展' : '已跳过';
     const row = node('article', 'habit-row');
     const copy = node('div');
@@ -5184,10 +5260,12 @@ async function tasksPage(): Promise<HTMLElement> {
     copy.append(stats);
     const habitActions = node('div', 'quest-actions habit-actions');
     if (todayQuest?.status === 'pending') {
-      const checkIn = node('button', 'button button-secondary button-compact habit-plan-checkin', '打卡');
+      const checkIn = node('button', 'button button-secondary button-compact habit-plan-checkin', todayQuest.targetCount ? '+1' : '打卡');
       checkIn.type = 'button';
-      checkIn.setAttribute('aria-label', `完成今天的习惯“${habit.name}”`);
-      checkIn.addEventListener('click', () => { void openQuestFeedbackDialog(todayQuest, 'completed'); });
+      const target = todayQuest.targetCount ?? 1;
+      const progress = todayQuest.progressCount ?? 0;
+      checkIn.setAttribute('aria-label', `记录今天的习惯“${habit.name}”，当前 ${progress}/${target}${todayQuest.countUnit || '次'}`);
+      checkIn.addEventListener('click', () => recordQuestCheckIn(todayQuest, row));
       habitActions.append(checkIn);
     } else if (todayQuest?.status === 'completed') {
       const completed = node('span', 'habit-plan-completed', '✓');

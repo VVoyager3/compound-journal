@@ -188,6 +188,8 @@ export interface Milestone extends ImportableEntity {
 
 export interface Quest extends ImportableEntity {
   localDate: string;
+  /** User-defined position within the unfinished task list for this date. */
+  sortOrder?: number;
   type: QuestType;
   sourceType: 'goal' | 'habit' | 'recovery' | 'manual';
   sourceId?: string;
