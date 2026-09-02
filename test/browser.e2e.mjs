@@ -107,6 +107,50 @@ async function xpLedgerCount(page) {
   }));
 }
 
+test('analysis heatmaps keep square cells and contain horizontal overflow', async () => {
+  const { context, page } = await freshPage({ now: new Date(2026, 9, 5, 10, 0, 0).getTime() });
+  try {
+    await finishOnboarding(page);
+    await page.goto(`${baseUrl}/#/task-analysis`);
+
+    for (const width of [320, 393, 430]) {
+      await page.setViewportSize({ width, height: 800 });
+      for (const [tabName, weeks] of [['12周', 12], ['半年', 26], ['全年', 52]]) {
+        await page.getByRole('tab', { name: tabName, exact: true }).click();
+        const geometry = await page.locator('.analysis-heat-scroll').evaluate((viewport) => {
+          const cells = [...viewport.querySelectorAll('.analysis-heat-cell')];
+          const lastMonth = viewport.querySelector('.analysis-heat-months span:last-child');
+          return {
+            pageClientWidth: document.documentElement.clientWidth,
+            pageScrollWidth: document.documentElement.scrollWidth,
+            clientWidth: viewport.clientWidth,
+            scrollWidth: viewport.scrollWidth,
+            overflowX: getComputedStyle(viewport).overflowX,
+            cells: cells.map((cell) => {
+              const box = cell.getBoundingClientRect();
+              return { width: box.width, height: box.height };
+            }),
+            lastMonth: lastMonth ? { text: lastMonth.textContent, column: getComputedStyle(lastMonth).gridColumnStart } : null,
+          };
+        });
+
+        assert.equal(geometry.cells.length, weeks * 7);
+        assert.equal(geometry.cells.every((cell) => Math.abs(cell.width - cell.height) < 0.01), true, `${weeks} weeks must stay square at ${width}px`);
+        assert.ok(geometry.pageScrollWidth <= geometry.pageClientWidth, `${weeks} weeks must not overflow the page at ${width}px`);
+        if (weeks === 12) {
+          assert.deepEqual(geometry.lastMonth, { text: '10月', column: '12' }, 'the widest month label should occupy the final column');
+          assert.ok(geometry.scrollWidth <= geometry.clientWidth, `12 weeks must fit without chart overflow at ${width}px`);
+        } else {
+          assert.equal(geometry.overflowX, 'auto');
+          assert.ok(geometry.scrollWidth > geometry.clientWidth, `${weeks} weeks must scroll inside the chart at ${width}px`);
+        }
+      }
+    }
+  } finally {
+    await context.close();
+  }
+});
+
 test('first use selects a companion, records, edits, and undoes locally', async () => {
   const { context, page, apiRequests } = await freshPage();
   try {

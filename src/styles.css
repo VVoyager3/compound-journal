@@ -6582,6 +6582,7 @@ h3 { font-weight: 560; }
   font-variant-numeric: tabular-nums;
 }
 .analysis-heat-months span { white-space: nowrap; }
+.analysis-heat-months span:last-child { justify-self: end; }
 .analysis-heat-body { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 7px; }
 .analysis-weekday-labels {
   display: grid;
