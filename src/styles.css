@@ -8174,3 +8174,52 @@ select.input { min-height: 44px; }
   .ai-info-icon .semantic-icon { width: 28px; height: 28px; }
   .habit-analysis-hero .semantic-icon { width: 42px; height: 42px; }
 }
+
+/* Visual audit follow-up: add air without changing the approved proportions. */
+.page-tasks .goal-row.is-main {
+  gap: 8px;
+  padding-top: 20px;
+}
+.page-tasks .goal-row.is-main > .goal-detail-link { margin-top: 4px; }
+
+.page-day {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+.app-shell.is-secondary .page-day { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+.page-day .day-navigation { margin-top: auto; }
+
+.monthly-stat-trend {
+  width: 100%;
+  height: 14px;
+  margin-top: 2px;
+  overflow: visible;
+  color: var(--monthly-color);
+}
+.monthly-stat-trend polyline {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.monthly-stat-trend circle { fill: currentcolor; }
+
+.task-feedback-dialog .dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.task-feedback-dialog .dialog-actions .button { flex: 0 0 auto; }
+.task-feedback-dialog .dialog-actions .button-primary { flex: 1 1 auto; }
+.task-feedback-dialog .feedback-undo-action {
+  color: var(--danger);
+  font-weight: 560;
+}
+
+.is-ai-settings .ai-service-info + .ai-group-title,
+.is-ai-settings .ai-scope-summary + .ai-group-title {
+  margin-top: 18px;
+  margin-bottom: 4px;
+}

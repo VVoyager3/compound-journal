@@ -1660,7 +1660,7 @@ async function openQuestFeedbackDialog(quest: Quest, initialResult?: FeedbackRes
   const cancel = node('button', 'button button-quiet', '取消');
   cancel.type = 'button';
   cancel.addEventListener('click', () => dialog.close());
-  const secondaryAction = node('button', 'button button-quiet', '撤销结果');
+  const secondaryAction = node('button', 'button button-quiet feedback-undo-action', '撤销结果');
   secondaryAction.type = 'button';
   if (quest.status === 'pending') {
     const taskSettings = node('details', 'feedback-extra task-item-management');
@@ -2828,19 +2828,39 @@ async function calendarPage(): Promise<HTMLElement> {
   const monthHabitRate = habitRate(monthStart, observedEnd(monthStart, monthEnd));
   const previousHabitRate = habitRate(previousMonthStart, observedEnd(previousMonthStart, previousMonthEnd));
   const comparison = (difference: number, unit: string): string => difference === 0 ? '与上月持平' : `较上月 ${difference > 0 ? '+' : ''}${difference}${unit}`;
-  const stat = (label: string, value: string, comparisonText: string, kind: 'entry' | 'task' | 'habit', progress?: number): HTMLElement => {
+  const stat = (label: string, value: string, comparisonText: string, kind: 'entry' | 'task' | 'habit', current: number, previous: number): HTMLElement => {
     const item = node('article', `monthly-stat is-${kind}`);
     item.append(node('span', 'monthly-stat-label', label), node('strong', '', value), node('span', 'monthly-stat-comparison', comparisonText));
-    const meter = node('span', 'monthly-stat-meter');
-    meter.setAttribute('aria-hidden', 'true');
-    meter.style.setProperty('--monthly-value', `${Math.max(0, Math.min(100, progress ?? Number.parseInt(value, 10) * 5))}%`);
-    item.append(meter);
+    if (kind === 'habit') {
+      const meter = node('span', 'monthly-stat-meter');
+      meter.setAttribute('aria-hidden', 'true');
+      meter.style.setProperty('--monthly-value', `${Math.max(0, Math.min(100, current))}%`);
+      item.append(meter);
+    } else {
+      const maximum = Math.max(current, previous, 1);
+      const y = (amount: number): number => 15 - Math.round(amount / maximum * 10);
+      const trend = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      trend.classList.add('monthly-stat-trend');
+      trend.setAttribute('viewBox', '0 0 72 18');
+      trend.setAttribute('aria-hidden', 'true');
+      const line = document.createElementNS(trend.namespaceURI, 'polyline');
+      line.setAttribute('points', `4,${y(previous)} 68,${y(current)}`);
+      trend.append(line);
+      for (const [x, amount] of [[4, previous], [68, current]] as const) {
+        const point = document.createElementNS(trend.namespaceURI, 'circle');
+        point.setAttribute('cx', String(x));
+        point.setAttribute('cy', String(y(amount)));
+        point.setAttribute('r', '2');
+        trend.append(point);
+      }
+      item.append(trend);
+    }
     return item;
   };
   monthlyStats.append(
-    stat('记录', `${monthRecordDays} 天`, comparison(monthRecordDays - previousRecordDays, ' 天'), 'entry'),
-    stat('完成任务', `${monthTaskCount} 项`, comparison(monthTaskCount - previousTaskCount, ' 项'), 'task'),
-    stat('习惯养成率', `${monthHabitRate}%`, comparison(monthHabitRate - previousHabitRate, '%'), 'habit', monthHabitRate),
+    stat('记录', `${monthRecordDays} 天`, comparison(monthRecordDays - previousRecordDays, ' 天'), 'entry', monthRecordDays, previousRecordDays),
+    stat('完成任务', `${monthTaskCount} 项`, comparison(monthTaskCount - previousTaskCount, ' 项'), 'task', monthTaskCount, previousTaskCount),
+    stat('习惯养成率', `${monthHabitRate}%`, comparison(monthHabitRate - previousHabitRate, '%'), 'habit', monthHabitRate, previousHabitRate),
   );
   monthly.append(monthlyStats);
   const areaDetails = node('details', 'monthly-area-details optional-details');
