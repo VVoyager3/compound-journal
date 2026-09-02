@@ -6849,7 +6849,6 @@ function analysisHeatmap(
   const viewport = node('div', 'analysis-heat-scroll');
   const chart = node('div', 'analysis-heat-chart');
   chart.style.setProperty('--heat-weeks', String(weeks));
-  if (weeks > 12) chart.style.minWidth = `${52 + weeks * 25}px`;
   const months = node('div', 'analysis-heat-months');
   let previousMonth = -1;
   for (let week = 0; week < weeks; week += 1) {
