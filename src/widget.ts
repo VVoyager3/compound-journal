@@ -3,7 +3,7 @@ import type { Quest } from './model.ts';
 export interface WidgetTask {
   id: string;
   title: string;
-  type: Quest['type'];
+  sourceType: Quest['sourceType'];
   targetCount?: number;
   progressCount?: number;
   countUnit?: string;
@@ -31,17 +31,17 @@ declare global {
 }
 
 export function buildWidgetSnapshot(input: { quests: Quest[]; localDate: string; generatedAt: string }): WidgetSnapshot {
-  const priority: Record<Quest['type'], number> = { main: 0, bonus: 1, side: 2 };
   return {
     version: 1,
     generatedAt: input.generatedAt,
     localDate: input.localDate,
     tasks: input.quests
       .filter((quest) => quest.status === 'pending' && !quest.systemRetiredAt)
-      .sort((left, right) => priority[left.type] - priority[right.type])
+      .sort((left, right) => (left.sortOrder ?? Number.MAX_SAFE_INTEGER) - (right.sortOrder ?? Number.MAX_SAFE_INTEGER)
+        || left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id))
       .slice(0, 6)
       .map((quest) => ({
-        id: quest.id, title: quest.title.slice(0, 80), type: quest.type,
+        id: quest.id, title: quest.title.slice(0, 80), sourceType: quest.sourceType,
         ...(quest.targetCount ? { targetCount: quest.targetCount, progressCount: quest.progressCount ?? 0, countUnit: quest.countUnit || '次' } : {}),
       })),
   };

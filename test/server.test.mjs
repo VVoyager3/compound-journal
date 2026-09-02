@@ -6,13 +6,13 @@ import { hasImmediateDangerSignal, modelPayload, startServer } from '../server.m
 
 function requestEnvelope(requestId = 'server-request', text = '今天会议很多，晚上散步后好了一些。') {
   return {
-    contractVersion: '1.0', operation: 'daily_analysis', requestId, locale: 'zh-CN',
+    contractVersion: '2.0', operation: 'daily_analysis', requestId, locale: 'zh-CN',
     timeZone: 'Asia/Shanghai', localDate: '2026-08-14',
     userInput: { entries: [{ entryId: 'entry-1', revision: 1, text }] },
-    context: { confirmedEvents: [], recentStates: [], goals: [], bonusHabits: [], memories: [], constraints: [] },
+    context: { confirmedEvents: [], recentStates: [], goals: [], bonusHabits: [], recentTaskResults: [], memories: [], constraints: [] },
     permissions: {
       entryIds: ['entry-1'], includeConfirmedEvents: false, includeRecentStates: false,
-      includeGoals: false, includeBonusHabits: false, memoryIds: [],
+      includeGoals: false, includeBonusHabits: false, taskResultQuestIds: [], memoryIds: [],
     },
   };
 }
@@ -22,12 +22,12 @@ function responseEnvelope(request) {
   const characters = Array.from(request.userInput.entries[0].text);
   const start = characters.join('').indexOf(quote);
   return {
-    contractVersion: '1.0', requestId: request.requestId, operation: 'daily_analysis',
+    contractVersion: '2.0', requestId: request.requestId, operation: 'daily_analysis',
     result: {
       title: '会议之后恢复', summary: '会议较多，晚间散步后有所缓解。', explicitMoods: ['缓和'],
       events: [{
         candidateId: 'event-1', title: '会议较多', description: '用户明确写到会议很多。',
-        sourceType: 'explicit', confirmation: 'confirmed_by_default', confidence: 'high',
+        sourceType: 'explicit', confirmation: 'pending', confidence: 'high',
         evidence: [{ entryId: 'entry-1', quote, start, end: start + Array.from(quote).length }],
         stateImpactCandidates: [], growthEvidenceCandidate: null,
       }],
@@ -43,7 +43,7 @@ function responseEnvelope(request) {
 
 function taskFeedbackEnvelope() {
   return {
-    contractVersion: '1.0', operation: 'task_feedback', requestId: 'task-feedback-server', locale: 'zh-CN',
+    contractVersion: '2.0', operation: 'task_feedback', requestId: 'task-feedback-server', locale: 'zh-CN',
     timeZone: 'Asia/Shanghai', localDate: '2026-08-14',
     userInput: { questId: 'quest-1', questTitle: '列清需求', minimumAction: '列出三条', currentDifficulty: 'standard', feedbackText: '我只做了前半部分' },
     permissions: { questId: 'quest-1' },
@@ -52,7 +52,7 @@ function taskFeedbackEnvelope() {
 
 function weeklyEnvelope() {
   return {
-    contractVersion: '1.0', operation: 'weekly_review', requestId: 'weekly-server', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    contractVersion: '2.0', operation: 'weekly_review', requestId: 'weekly-server', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
     period: { start: '2026-08-10', end: '2026-08-14' }, userInput: { note: '' },
     context: { events: [], stateSnapshots: [], taskResults: [], habits: [], growth: [], goals: [], experiments: [], memories: [] },
     permissions: {
@@ -64,7 +64,7 @@ function weeklyEnvelope() {
 
 function systemCandidateEnvelope() {
   return {
-    contractVersion: '1.0', operation: 'system_candidate_review', requestId: 'memory-server', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    contractVersion: '2.0', operation: 'system_candidate_review', requestId: 'memory-server', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
     userInput: { candidates: [
       { memoryId: 'memory-a', version: 1, type: 'constraint', statement: '高负荷后需要过渡。', evidenceEvents: [], counterEvidence: [], confidence: 'low', status: 'candidate' },
       { memoryId: 'memory-b', version: 2, type: 'constraint', statement: '会议后适合留十分钟。', evidenceEvents: [], counterEvidence: [], confidence: 'low', status: 'confirmed' },
@@ -74,12 +74,10 @@ function systemCandidateEnvelope() {
 
 function goalDecompositionEnvelope() {
   return {
-    contractVersion: '1.0', operation: 'goal_decomposition', requestId: 'goal-plan-server', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
-    userInput: { result: '发布一篇文章', why: '沉淀经验', completionEvidence: '文章有可访问链接' },
-    context: {
-      area: { areaId: 'area-1', name: '创造与作品', mode: 'build' },
-      branch: { branchId: 'branch-1', name: '写作实践' }, currentGoals: [], executionEvidence: [], memories: [],
-    }, permissions: { memoryIds: [], questIds: [], goalIds: [] },
+    contractVersion: '2.0', operation: 'goal_decomposition', requestId: 'goal-plan-server', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    userInput: { result: '发布一篇文章', why: '沉淀经验', completionEvidence: '文章有可访问链接', targetDate: null },
+    context: { currentGoals: [], executionEvidence: [], memories: [] },
+    permissions: { memoryIds: [], questIds: [], goalIds: [] },
   };
 }
 
@@ -290,6 +288,10 @@ test('same-origin fixture routes auxiliary AI operations through their strict co
     }
     server.close(); await once(server, 'close');
   });
+  const daily = await nativeFetch(`${base}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestEnvelope('daily-fixture-no-task-type')) });
+  assert.equal(daily.status, 200);
+  const dailySuggestion = (await daily.json()).result.questSuggestions[0];
+  assert.equal('type' in dailySuggestion, false);
   const feedback = await nativeFetch(`${base}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(taskFeedbackEnvelope()) });
   assert.equal(feedback.status, 200);
   assert.equal((await feedback.json()).result.completionCandidate, 'partial');

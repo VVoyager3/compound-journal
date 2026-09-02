@@ -1,17 +1,15 @@
 export const DIFFICULTY_XP = {
-  light: 5,
-  standard: 10,
-  hard: 20,
-  challenge: 40,
+  light: 2,
+  standard: 4,
+  hard: 7,
 } as const;
 
-export const QUEST_LIMITS = { main: 1, bonus: 3, side: 2 } as const;
+export const MILESTONE_XP = 5;
 
 export type Difficulty = keyof typeof DIFFICULTY_XP;
-export type QuestType = keyof typeof QUEST_LIMITS;
+export type LegacyDifficulty = Difficulty | 'challenge';
 export type FeedbackResult = 'completed' | 'partial' | 'skipped' | 'exempt';
 export type HabitResult = FeedbackResult | 'pending';
-export type MonthlyAreaSignal = 'progress' | 'maintain' | 'decline' | 'missing' | 'paused';
 
 export interface LevelProgress {
   level: number;
@@ -57,6 +55,10 @@ export function questXp(difficulty: Difficulty, result: FeedbackResult): number 
   return 0;
 }
 
+export function normalizeDifficulty(value: LegacyDifficulty): Difficulty {
+  return value === 'challenge' ? 'hard' : value;
+}
+
 export function levelRequirement(level: number): number {
   if (!Number.isInteger(level) || level < 0) throw new Error('等级无效。');
   if (level === 0) return 20;
@@ -68,7 +70,7 @@ export function levelRequirement(level: number): number {
 }
 
 export function levelFromXp(totalXp: number): LevelProgress {
-  if (!Number.isSafeInteger(totalXp) || totalXp < 0) throw new Error('经验总量无效。');
+  if (!Number.isSafeInteger(totalXp) || totalXp < 0) throw new Error('成长值总量无效。');
   let level = 0;
   let currentXp = totalXp;
   while (level < 30 && currentXp >= levelRequirement(level)) {
@@ -86,7 +88,7 @@ export function totalXp(values: LedgerValue[]): number {
   const seen = new Set<string>();
   return values.reduce((sum, value) => {
     if (value.reversedAt || seen.has(value.settlementKey)) return sum;
-    if (!Number.isSafeInteger(value.finalXp) || value.finalXp < 0) throw new Error('经验明细无效。');
+    if (!Number.isSafeInteger(value.finalXp) || value.finalXp < 0) throw new Error('成长值明细无效。');
     seen.add(value.settlementKey);
     return sum + value.finalXp;
   }, 0);
@@ -149,24 +151,6 @@ export function resolveStateTimeline(values: StateTimelineValue[], throughDate?:
   return results;
 }
 
-export function canAddQuest(type: QuestType, current: QuestType[]): boolean {
-  return current.filter((value) => value === type).length < QUEST_LIMITS[type];
-}
-
-export function monthlyAreaSignal(
-  mode: 'build' | 'maintain' | 'explore' | 'pause',
-  currentEvidence: number,
-  previousEvidence: number,
-  monthEnd: string,
-  today: string,
-): MonthlyAreaSignal {
-  if (mode === 'pause') return 'paused';
-  if (currentEvidence === 0) return monthEnd < today && previousEvidence > 0 ? 'decline' : 'missing';
-  if (mode === 'maintain') return 'maintain';
-  if (monthEnd < today && currentEvidence < previousEvidence) return 'decline';
-  return currentEvidence > previousEvidence ? 'progress' : 'maintain';
-}
-
 export interface DailyDirection {
   kind: 'recovery' | 'main' | 'goal' | 'reflection' | 'explore';
   reason: string;
@@ -179,8 +163,6 @@ export interface DailyDirectionInput {
   previousStepAvailable: boolean;
   milestoneDue?: boolean;
   stagnantGoal?: boolean;
-  areaBalanceNeeded?: boolean;
-  goalMode?: 'build' | 'maintain' | 'explore' | 'pause';
 }
 
 /**
@@ -189,11 +171,11 @@ export interface DailyDirectionInput {
  */
 export function chooseDailyDirection(input: DailyDirectionInput): DailyDirection {
   if (input.recoveryAvailable) return { kind: 'recovery', reason: '近期行动能力较低，先恢复再推进；原任务不会因此失败。' };
-  if (input.mainQuest?.status === 'pending') return { kind: 'main', reason: input.mainQuest.deadlineRisk ? '这条主线的可选截止时间临近，先处理最小版本；截止后仍由你决定。' : input.mainQuest.carriedFromPreviousDay ? '这是昨天反馈后生成的下一步；先核对它今天是否仍适合。' : '今天已经有一条确认过的主线，先完成最小版本。' };
-  if (input.mainQuest) return { kind: 'main', reason: '今天的主线已经留下反馈，可以决定继续、维持或停下。' };
+  if (input.mainQuest?.status === 'pending') return { kind: 'main', reason: input.mainQuest.deadlineRisk ? '这项任务临近完成日期，先做最小版本；之后仍可调整。' : input.mainQuest.carriedFromPreviousDay ? '这是昨天留下的下一步，先看看今天是否仍然合适。' : '今天已经选好一项任务，先完成它的最小版本。' };
+  if (input.mainQuest) return { kind: 'main', reason: '这项任务已经留下反馈，可以决定继续、调整或停下。' };
   if (input.activeGoalAvailable) return {
     kind: 'goal',
-    reason: input.stagnantGoal ? '这个目标近 7 天没有推进记录，先缩小一步；仍由你决定是否换路。' : input.milestoneDue ? '当前重点目标的下一阶段已有明确完成标准，先推进它。' : input.areaBalanceNeeded ? '这个重点生活分类近 7 天的推进记录较少，先补一个最小行动。' : input.goalMode === 'maintain' ? '这个生活分类当前选择保持现状，先做一个不会透支的小行动。' : input.goalMode === 'explore' ? '这个生活分类当前想先试试看，用一个小行动获得真实反馈。' : '当前重点目标已经提供了下一步。',
+    reason: input.stagnantGoal ? '这个目标近 7 天没有推进记录，先把下一步缩小。' : input.milestoneDue ? '这个目标已有明确的下一项任务，可以继续推进。' : '这个目标已经有一个可以开始的下一步。',
   };
   if (input.previousStepAvailable) return { kind: 'reflection', reason: '昨天留下了一个可核对的最小步骤。' };
   return { kind: 'explore', reason: '还没有足够依据指定方向，先记录真实发生的事。' };

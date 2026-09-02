@@ -4,7 +4,6 @@ import {
   DIMENSIONS,
   ROOT_ASSETS,
   type Area,
-  type AreaMode,
   type AnalysisJob,
   type AppSettings,
   type BackupBundle,
@@ -13,7 +12,6 @@ import {
   type DayCaption,
   type Dimension,
   type Goal,
-  type GoalRole,
   type GrowthBranch,
   type Habit,
   type HabitLog,
@@ -51,14 +49,108 @@ import {
   type WeeklyReviewRequest,
   type WeeklyReviewResponse,
 } from './analysis-contract.ts';
-import { DIFFICULTY_XP, canAddQuest, habitMomentum, levelFromXp, questXp, resolveStateTimeline, totalXp, type Difficulty, type FeedbackResult, type QuestType } from './rules.ts';
+import { DIFFICULTY_XP, MILESTONE_XP, habitMomentum, levelFromXp, normalizeDifficulty, questXp, resolveStateTimeline, totalXp, type Difficulty, type FeedbackResult, type LegacyDifficulty } from './rules.ts';
 
 export const DB_NAME = 'qiguang';
-export const DB_VERSION = 6;
-export const BACKUP_FORMAT_VERSION = 5;
-export const APP_VERSION = '0.6.18';
+export const DB_VERSION = 7;
+export const BACKUP_FORMAT_VERSION = 6;
+export const APP_VERSION = '0.7.0';
 export const LEGACY_SUCCESS_PROMPT = '今天做成或推进了什么？哪怕很小：';
 const MAX_ACTION_ID_LENGTH = 180;
+
+const LEGACY_AREA_DIMENSIONS: Record<string, Dimension> = {
+  '身心健康': 'energy',
+  '工作与责任': 'progress',
+  '创造与作品': 'progress',
+  '学习与能力': 'progress',
+  '关系与连接': 'connection',
+  '内在与情绪': 'mind',
+  '生活与兴趣': 'play',
+  '财富与自主': 'progress',
+};
+const LEGACY_ASSET_DIMENSIONS: Record<GrowthBranch['rootAsset'], Dimension> = {
+  health: 'energy', judgment: 'mind', knowledge: 'progress', trust: 'connection', leverage: 'progress', autonomy: 'progress',
+};
+
+function legacyDimension(area?: Area, branch?: GrowthBranch): Dimension | undefined {
+  return (area ? LEGACY_AREA_DIMENSIONS[area.name] : undefined) ?? (branch ? LEGACY_ASSET_DIMENSIONS[branch.rootAsset] : undefined);
+}
+
+function legacyDailyEntryIds(request: unknown): string[] {
+  const entries = (request as { userInput?: { entries?: Array<{ entryId?: unknown }> } })?.userInput?.entries;
+  return Array.isArray(entries) ? entries.flatMap((item) => typeof item?.entryId === 'string' ? [item.entryId] : []) : [];
+}
+
+function resolveLedgerDimension(
+  item: XpLedger,
+  data: { quests: Quest[]; habits: Habit[]; milestones: Milestone[]; goals: Goal[]; areas: Area[]; branches: GrowthBranch[] },
+): Dimension | undefined {
+  if (item.dimension) return item.dimension;
+  const branchById = new Map(data.branches.map((value) => [value.id, value]));
+  const areaById = new Map(data.areas.map((value) => [value.id, value]));
+  const goalById = new Map(data.goals.map((value) => [value.id, value]));
+  const goalDimension = (goal?: Goal): Dimension | undefined => goal?.dimension ?? legacyDimension(
+    goal?.areaId ? areaById.get(goal.areaId) : undefined,
+    goal?.branchId ? branchById.get(goal.branchId) : undefined,
+  );
+  if (item.sourceType === 'quest') {
+    const quest = data.quests.find((value) => value.id === item.sourceId);
+    if (quest?.dimension) return quest.dimension;
+    if (quest?.sourceType === 'habit') return data.habits.find((value) => value.id === quest.sourceId)?.dimension;
+    if (quest?.sourceType === 'goal') return goalDimension(goalById.get(quest.sourceId ?? ''));
+  }
+  if (item.sourceType === 'habit') return data.habits.find((value) => value.id === item.sourceId)?.dimension;
+  if (item.sourceType === 'milestone') {
+    const milestone = data.milestones.find((value) => value.id === item.sourceId);
+    if (milestone?.completionSourceQuestId) {
+      const quest = data.quests.find((value) => value.id === milestone.completionSourceQuestId);
+      if (quest?.dimension) return quest.dimension;
+    }
+    return goalDimension(goalById.get(milestone?.goalId ?? ''));
+  }
+  return item.branchId ? legacyDimension(undefined, branchById.get(item.branchId)) : undefined;
+}
+
+type LegacyQuestRecord = Omit<Quest, 'difficulty'> & { difficulty: LegacyDifficulty };
+
+function normalizeQuestDimensions(
+  quests: LegacyQuestRecord[],
+  data: { habits: Habit[]; goals: Goal[]; areas: Area[]; branches: GrowthBranch[] },
+): Quest[] {
+  const areaById = new Map(data.areas.map((item) => [item.id, item]));
+  const branchById = new Map(data.branches.map((item) => [item.id, item]));
+  const goalById = new Map(data.goals.map((item) => [item.id, item]));
+  const habitById = new Map(data.habits.map((item) => [item.id, item]));
+  return quests.map((item) => {
+    const normalized = item.difficulty === 'challenge'
+      ? { ...item, difficulty: normalizeDifficulty(item.difficulty), legacyDifficulty: 'challenge' as const }
+      : item as Quest;
+    const sourceGoal = normalized.sourceType === 'goal' ? goalById.get(normalized.sourceId ?? '') : undefined;
+    const dimension = normalized.dimension
+      ?? (normalized.sourceType === 'habit' ? habitById.get(normalized.sourceId ?? '')?.dimension : undefined)
+      ?? sourceGoal?.dimension
+      ?? legacyDimension(
+        sourceGoal?.areaId ? areaById.get(sourceGoal.areaId) : undefined,
+        normalized.branchId ? branchById.get(normalized.branchId) : sourceGoal?.branchId ? branchById.get(sourceGoal.branchId) : undefined,
+      )
+      ?? 'progress';
+    return { ...normalized, dimension };
+  });
+}
+
+function normalizeLedgerDimensions(
+  ledger: XpLedger[],
+  data: { quests: Quest[]; habits: Habit[]; milestones: Milestone[]; goals: Goal[]; areas: Area[]; branches: GrowthBranch[] },
+): XpLedger[] {
+  return ledger.map((item) => {
+    const normalized = item.difficulty === 'challenge' ? { ...item, difficulty: 'hard' as const } : item;
+    return {
+      ...normalized,
+      dimension: resolveLedgerDimension(normalized, data) ?? 'progress',
+      ruleVersion: normalized.ruleVersion ?? 1,
+    };
+  });
+}
 
 interface LegacyJournalMigrationPlan {
   body: string;
@@ -186,6 +278,91 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
     transaction.addEventListener('abort', () => reject(transaction.error ?? new Error('数据库事务已取消。')), { once: true });
     transaction.addEventListener('error', () => reject(transaction.error ?? new Error('数据库事务失败。')), { once: true });
   });
+}
+
+type LegacyAnalysisMigrationData = Pick<BackupData,
+  'entries' | 'analyses' | 'events' | 'observations' | 'snapshots' | 'xpLedger' | 'memories' | 'analysisJobs'>;
+
+function migrateLegacyAnalysisContracts(data: LegacyAnalysisMigrationData, timestamp: string): LegacyAnalysisMigrationData {
+  const legacyAnalysisIds = new Set(data.analyses
+    .filter((analysis) => analysis.contractVersion !== ANALYSIS_CONTRACT_VERSION
+      || analysis.modelOutputVersion !== ANALYSIS_CONTRACT_VERSION)
+    .map((analysis) => analysis.id));
+  const legacyAnalysisRequestIds = new Set(data.analyses
+    .filter((analysis) => legacyAnalysisIds.has(analysis.id))
+    .map((analysis) => analysis.requestId));
+  const legacyEntryIds = new Set(data.analyses
+    .filter((analysis) => legacyAnalysisIds.has(analysis.id))
+    .flatMap((analysis) => analysis.sourceEntries.map((source) => source.entryId)));
+  const currentReadyEntryIds = new Set(data.analyses
+    .filter((analysis) => analysis.contractVersion === ANALYSIS_CONTRACT_VERSION
+      && analysis.modelOutputVersion === ANALYSIS_CONTRACT_VERSION && analysis.status === 'ready')
+    .flatMap((analysis) => analysis.sourceEntries.map((source) => source.entryId)));
+  const analyses = data.analyses.map((analysis) => legacyAnalysisIds.has(analysis.id) && analysis.status !== 'stale'
+    ? { ...analysis, status: 'stale' as const, updatedAt: timestamp, version: analysis.version + 1 }
+    : analysis);
+  const entries = data.entries.map((entry) => legacyEntryIds.has(entry.id) && !currentReadyEntryIds.has(entry.id)
+    && entry.analysisStatus !== 'not-submitted'
+    ? { ...entry, analysisStatus: 'not-submitted' as const, updatedAt: timestamp }
+    : entry);
+  const legacyEventIds = new Set(data.events
+    .filter((event) => legacyAnalysisIds.has(event.analysisId))
+    .map((event) => event.id));
+  const events = data.events.map((event) => legacyEventIds.has(event.id) && event.active
+    ? { ...event, active: false, updatedAt: timestamp, version: event.version + 1 }
+    : event);
+  const observations = data.observations.map((observation) => observation.active && observation.evidenceId
+    && legacyEventIds.has(observation.evidenceId)
+    ? { ...observation, active: false, updatedAt: timestamp, version: observation.version + 1 }
+    : observation);
+  const xpLedger = data.xpLedger.map((item) => item.sourceType === 'journal-event' && legacyEventIds.has(item.sourceId) && !item.reversedAt
+    ? { ...item, reversedAt: timestamp, updatedAt: timestamp, version: item.version + 1 }
+    : item);
+  const eventById = new Map(events.map((event) => [event.id, event]));
+  const memories = data.memories.map((memory) => {
+    if (!memory.evidenceIds.some((id) => legacyEventIds.has(id))) return memory;
+    const evidenceIds = memory.evidenceIds.filter((id) => !legacyEventIds.has(id));
+    const needsReview = memory.status === 'confirmed' && !evidenceIds.some((id) => {
+      const evidence = eventById.get(id);
+      return evidence?.active && evidence.confirmation === 'confirmed';
+    });
+    const { confirmedAt: _confirmedAt, ...withoutConfirmation } = memory;
+    return {
+      ...(needsReview ? withoutConfirmation : memory),
+      evidenceIds,
+      status: needsReview ? 'candidate' as const : memory.status,
+      updatedAt: timestamp,
+      version: memory.version + 1,
+    };
+  });
+  const analysisJobs = data.analysisJobs.map((job) => {
+    const linkedLegacyAnalysis = legacyAnalysisIds.has(job.analysisId ?? '') || legacyAnalysisRequestIds.has(job.requestId);
+    const staleDailyJob = job.operation === 'daily_analysis'
+      && (job.contractVersion !== ANALYSIS_CONTRACT_VERSION || linkedLegacyAnalysis);
+    const staleInFlightJob = job.contractVersion !== ANALYSIS_CONTRACT_VERSION
+      && ['queued', 'processing', 'failed', 'safety-review'].includes(job.status);
+    if ((!staleDailyJob && !staleInFlightJob)
+      || (job.status === 'stale' && job.errorCode === undefined && job.nextAttemptAt === undefined)) return job;
+    const { errorCode: _errorCode, nextAttemptAt: _nextAttemptAt, ...withoutRetry } = job;
+    return {
+      ...withoutRetry,
+      status: 'stale' as const,
+      errorMessage: '分析合约已升级，请重新整理。',
+      updatedAt: timestamp,
+      version: job.version + 1,
+    };
+  });
+  return {
+    ...data,
+    entries,
+    analyses,
+    events,
+    observations,
+    snapshots: legacyAnalysisIds.size ? [] : data.snapshots,
+    xpLedger,
+    memories,
+    analysisJobs,
+  };
 }
 
 function openRawDatabase(name: string): Promise<IDBDatabase> {
@@ -364,12 +541,30 @@ function openRawDatabase(name: string): Promise<IDBDatabase> {
         store.createIndex('byLocalDate', 'localDate');
         store.createIndex('byStatus', 'status');
         store.createIndex('bySourceId', 'sourceId');
+      } else if ((event as IDBVersionChangeEvent).oldVersion < 7) {
+        const store = request.transaction?.objectStore('quests');
+        store?.openCursor().addEventListener('success', (cursorEvent) => {
+          const cursor = (cursorEvent.target as IDBRequest<IDBCursorWithValue | null>).result;
+          if (!cursor) return;
+          const value = cursor.value as Omit<Quest, 'difficulty'> & { difficulty: LegacyDifficulty };
+          if (value.difficulty === 'challenge') cursor.update({ ...value, difficulty: 'hard', legacyDifficulty: 'challenge' });
+          cursor.continue();
+        });
       }
       if (!database.objectStoreNames.contains('questFeedback')) {
         database.createObjectStore('questFeedback', { keyPath: 'id' }).createIndex('byQuestId', 'questId');
       }
       if (!database.objectStoreNames.contains('habits')) {
         database.createObjectStore('habits', { keyPath: 'id' }).createIndex('byStatus', 'status');
+      } else if ((event as IDBVersionChangeEvent).oldVersion < 7) {
+        const store = request.transaction?.objectStore('habits');
+        store?.openCursor().addEventListener('success', (cursorEvent) => {
+          const cursor = (cursorEvent.target as IDBRequest<IDBCursorWithValue | null>).result;
+          if (!cursor) return;
+          const value = cursor.value as Omit<Habit, 'difficulty'> & { difficulty: LegacyDifficulty };
+          if (value.difficulty === 'challenge') cursor.update({ ...value, difficulty: 'hard', legacyDifficulty: 'challenge' });
+          cursor.continue();
+        });
       }
       if (!database.objectStoreNames.contains('habitLogs')) {
         database.createObjectStore('habitLogs', { keyPath: 'id' }).createIndex('byHabitDate', ['habitId', 'localDate'], { unique: true });
@@ -381,7 +576,11 @@ function openRawDatabase(name: string): Promise<IDBDatabase> {
         const store = database.createObjectStore('xpLedger', { keyPath: 'id' });
         store.createIndex('bySettlementKey', 'settlementKey', { unique: true });
         store.createIndex('byBranchId', 'branchId');
+        store.createIndex('byDimension', 'dimension');
         store.createIndex('byLocalDate', 'localDate');
+      } else {
+        const store = request.transaction?.objectStore('xpLedger');
+        if (store && !store.indexNames.contains('byDimension')) store.createIndex('byDimension', 'dimension');
       }
       if (!database.objectStoreNames.contains('reviews')) {
         const store = database.createObjectStore('reviews', { keyPath: 'id' });
@@ -399,6 +598,68 @@ function openRawDatabase(name: string): Promise<IDBDatabase> {
         store.createIndex('byNextAttemptAt', 'nextAttemptAt');
         store.createIndex('byRequestId', 'requestId', { unique: true });
         store.createIndex('byLocalDate', 'localDate');
+      }
+      if ((event as IDBVersionChangeEvent).oldVersion > 0 && (event as IDBVersionChangeEvent).oldVersion < 7) {
+        const transaction = request.transaction!;
+        void (async () => {
+          const analyses = transaction.objectStore('analyses');
+          const entries = transaction.objectStore('entries');
+          const events = transaction.objectStore('events');
+          const observations = transaction.objectStore('observations');
+          const snapshots = transaction.objectStore('snapshots');
+          const ledger = transaction.objectStore('xpLedger');
+          const quests = transaction.objectStore('quests');
+          const areas = transaction.objectStore('areas');
+          const branches = transaction.objectStore('branches');
+          const goals = transaction.objectStore('goals');
+          const milestones = transaction.objectStore('milestones');
+          const habits = transaction.objectStore('habits');
+          const memories = transaction.objectStore('memories');
+          const jobs = transaction.objectStore('analysisJobs');
+          const [allAnalyses, allEntries, allEvents, allObservations, allSnapshots, allLedger, allMemories, allJobs,
+            allQuests, allAreas, allBranches, allGoals, allMilestones, allHabits] = await Promise.all([
+            requestResult(analyses.getAll()) as Promise<DailyAnalysis[]>,
+            requestResult(entries.getAll()) as Promise<JournalEntry[]>,
+            requestResult(events.getAll()) as Promise<JournalEvent[]>,
+            requestResult(observations.getAll()) as Promise<StateObservation[]>,
+            requestResult(snapshots.getAll()) as Promise<StateSnapshot[]>,
+            requestResult(ledger.getAll()) as Promise<XpLedger[]>,
+            requestResult(memories.getAll()) as Promise<SystemMemory[]>,
+            requestResult(jobs.getAll()) as Promise<AnalysisJob[]>,
+            requestResult(quests.getAll()) as Promise<LegacyQuestRecord[]>,
+            requestResult(areas.getAll()) as Promise<Area[]>,
+            requestResult(branches.getAll()) as Promise<GrowthBranch[]>,
+            requestResult(goals.getAll()) as Promise<Goal[]>,
+            requestResult(milestones.getAll()) as Promise<Milestone[]>,
+            requestResult(habits.getAll()) as Promise<Habit[]>,
+          ]);
+          const normalizedQuests = normalizeQuestDimensions(allQuests, {
+            habits: allHabits, goals: allGoals, areas: allAreas, branches: allBranches,
+          });
+          const normalizedLedger = normalizeLedgerDimensions(allLedger, {
+            quests: normalizedQuests, habits: allHabits, milestones: allMilestones,
+            goals: allGoals, areas: allAreas, branches: allBranches,
+          });
+          const migrated = migrateLegacyAnalysisContracts({
+            analyses: allAnalyses,
+            entries: allEntries,
+            events: allEvents,
+            observations: allObservations,
+            snapshots: allSnapshots,
+            xpLedger: normalizedLedger,
+            memories: allMemories,
+            analysisJobs: allJobs,
+          }, migrationTimestamp);
+          migrated.analyses.forEach((item, index) => { if (item !== allAnalyses[index]) analyses.put(item); });
+          migrated.entries.forEach((item, index) => { if (item !== allEntries[index]) entries.put(item); });
+          migrated.events.forEach((item, index) => { if (item !== allEvents[index]) events.put(item); });
+          migrated.observations.forEach((item, index) => { if (item !== allObservations[index]) observations.put(item); });
+          normalizedQuests.forEach((item, index) => { if (item.dimension !== allQuests[index]?.dimension || item.difficulty !== allQuests[index]?.difficulty) quests.put(item); });
+          migrated.xpLedger.forEach((item, index) => { if (item !== allLedger[index]) ledger.put(item); });
+          migrated.memories.forEach((item, index) => { if (item !== allMemories[index]) memories.put(item); });
+          migrated.analysisJobs.forEach((item, index) => { if (item !== allJobs[index]) jobs.put(item); });
+          if (migrated.snapshots !== allSnapshots) snapshots.clear();
+        })().catch(() => transaction.abort());
       }
     });
     request.addEventListener('blocked', () => {
@@ -463,7 +724,7 @@ function assertOneOf<T extends string>(value: unknown, allowed: readonly T[], fi
 }
 
 const WEEKLY_REVIEW_SOURCE_STORES = [
-  'events', 'quests', 'questFeedback', 'habits', 'habitLogs', 'branches', 'xpLedger',
+  'events', 'quests', 'questFeedback', 'habits', 'habitLogs', 'areas', 'branches', 'milestones', 'xpLedger',
   'goals', 'reviews', 'memories', 'observations',
 ] as const satisfies readonly StoreName[];
 
@@ -483,7 +744,7 @@ function sameStateValues(
   left: Record<string, number | undefined>,
   right: Record<string, number | undefined>,
 ): boolean {
-  return ['energy', 'mental', 'connection', 'progress', 'play'].every((key) => left[key] === right[key]);
+  return ['energy', 'mind', 'connection', 'progress', 'play'].every((key) => left[key] === right[key]);
 }
 
 function localDateInTimeZone(timestamp: string, timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone): string {
@@ -530,7 +791,7 @@ async function weeklyReviewSourcesCurrent(transaction: IDBTransaction, request: 
   if (!versions) return false;
 
   const stores = {
-    quests: 'quests', questFeedback: 'questFeedback', habits: 'habits', habitLogs: 'habitLogs', branches: 'branches',
+    quests: 'quests', questFeedback: 'questFeedback', habits: 'habits', habitLogs: 'habitLogs',
     xpLedger: 'xpLedger', goals: 'goals', reviews: 'reviews', memories: 'memories', stateObservations: 'observations',
   } as const;
   const current = {} as Record<keyof typeof stores, Array<{ id: string; version: number }>>;
@@ -543,12 +804,14 @@ async function weeklyReviewSourcesCurrent(transaction: IDBTransaction, request: 
     current[key] = values as Array<{ id: string; version: number }>;
   }
 
-  const [allQuests, allFeedback, allHabits, allHabitLogs, allBranches, allLedger, allGoals, allReviews, allMemories, allObservations] = await Promise.all([
+  const [allQuests, allFeedback, allHabits, allHabitLogs, allAreas, allBranches, allMilestones, allLedger, allGoals, allReviews, allMemories, allObservations] = await Promise.all([
     requestResult(transaction.objectStore('quests').getAll()) as Promise<Quest[]>,
     requestResult(transaction.objectStore('questFeedback').getAll()) as Promise<QuestFeedback[]>,
     requestResult(transaction.objectStore('habits').getAll()) as Promise<Habit[]>,
     requestResult(transaction.objectStore('habitLogs').getAll()) as Promise<HabitLog[]>,
+    requestResult(transaction.objectStore('areas').getAll()) as Promise<Area[]>,
     requestResult(transaction.objectStore('branches').getAll()) as Promise<GrowthBranch[]>,
+    requestResult(transaction.objectStore('milestones').getAll()) as Promise<Milestone[]>,
     requestResult(transaction.objectStore('xpLedger').getAll()) as Promise<XpLedger[]>,
     requestResult(transaction.objectStore('goals').getAll()) as Promise<Goal[]>,
     requestResult(transaction.objectStore('reviews').getAll()) as Promise<Review[]>,
@@ -580,14 +843,11 @@ async function weeklyReviewSourcesCurrent(transaction: IDBTransaction, request: 
   }
   if (request.permissions.includeGrowth) {
     const eligibleLedger = allLedger.filter((item) => !item.reversedAt && item.localDate >= request.period.start && item.localDate <= request.period.end);
-    const branchIds = new Set(eligibleLedger.map((item) => item.branchId));
-    const eligibleBranches = allBranches.filter((item) => branchIds.has(item.id));
-    if (!sameVersionSet(eligibleBranches, versions.branches) || !sameVersionSet(eligibleLedger, versions.xpLedger)) return false;
+    if (!sameVersionSet(eligibleLedger, versions.xpLedger)) return false;
   }
   if (request.permissions.includeGoals) {
-    const roleOrder: Record<GoalRole, number> = { main: 0, secondary: 1, wishlist: 2 };
-    const eligibleGoals = allGoals.filter((item) => item.status === 'active' && ['main', 'secondary'].includes(item.role) && existedByPeriodEnd(item.createdAt))
-      .sort((left, right) => roleOrder[left.role] - roleOrder[right.role] || right.updatedAt.localeCompare(left.updatedAt)).slice(0, 3);
+    const eligibleGoals = allGoals.filter((item) => item.status === 'active' && existedByPeriodEnd(item.createdAt))
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id)).slice(0, 3);
     if (!sameVersionSet(eligibleGoals, versions.goals)) return false;
   }
   if (request.permissions.includeExperiments) {
@@ -621,21 +881,20 @@ async function weeklyReviewSourcesCurrent(transaction: IDBTransaction, request: 
   })) return false;
   if ((current.habitLogs as HabitLog[]).some((log) => !habits.some((habit) => habit.id === log.habitId))) return false;
 
-  const branches = current.branches as GrowthBranch[];
+  const dimensionData = { quests: allQuests, habits: allHabits, milestones: allMilestones, goals: allGoals, areas: allAreas, branches: allBranches };
   if (request.context.growth.some((summary) => {
-    const branch = branches.find((item) => item.id === summary.branchId);
-    const xp = allLedger.filter((item) => item.branchId === summary.branchId && !item.reversedAt
+    const xp = allLedger.filter((item) => resolveLedgerDimension(item, dimensionData) === summary.dimension && !item.reversedAt
       && item.localDate >= request.period.start && item.localDate <= request.period.end)
       .reduce((sum, item) => sum + item.finalXp, 0);
-    return !branch || branch.name !== summary.name || xp !== summary.xp;
+    return xp !== summary.xp;
   })) return false;
   if ((current.xpLedger as XpLedger[]).some((item) => item.reversedAt || item.localDate < request.period.start
-    || item.localDate > request.period.end || !branches.some((branch) => branch.id === item.branchId))) return false;
+    || item.localDate > request.period.end || !resolveLedgerDimension(item, dimensionData))) return false;
 
   const goals = current.goals as Goal[];
   if (request.context.goals.some((summary) => {
     const goal = goals.find((item) => item.id === summary.goalId);
-    return !goal || goal.status !== 'active' || goal.result !== summary.result || goal.role !== summary.role;
+    return !goal || goal.status !== 'active' || goal.result !== summary.result;
   })) return false;
   const reviews = current.reviews as Review[];
   if (request.context.experiments.some((summary) => {
@@ -652,7 +911,7 @@ async function weeklyReviewSourcesCurrent(transaction: IDBTransaction, request: 
 
   for (const snapshot of request.context.stateSnapshots) {
     const resolved = resolveStateTimeline(allObservations, snapshot.localDate);
-    const values = Object.fromEntries(resolved.map((item) => [item.dimension === 'mind' ? 'mental' : item.dimension, item.value]));
+    const values = Object.fromEntries(resolved.map((item) => [item.dimension, item.value]));
     if (!sameStateValues(values, snapshot.values)) return false;
   }
   const usedObservationIds = new Set(request.context.stateSnapshots.flatMap((snapshot) => resolveStateTimeline(allObservations, snapshot.localDate)
@@ -719,13 +978,13 @@ function habitScheduleOn(habit: Habit, date: string): HabitScheduleHistory[numbe
 }
 
 function goalIsActionable(goal: Goal): boolean {
-  return goal.status === 'active' && goal.role !== 'wishlist';
+  return goal.status === 'active';
 }
 
 async function settleMilestoneXp(
   ledger: IDBObjectStore,
   milestoneId: string,
-  branchId: string,
+  dimension: Dimension,
   date: string,
   timestamp: string,
 ): Promise<{ ledger: XpLedger; changed: boolean }> {
@@ -734,33 +993,46 @@ async function settleMilestoneXp(
   if (!existing) {
     const created = {
       id: crypto.randomUUID(), settlementKey, sourceType: 'milestone', sourceId: milestoneId,
-      branchId, baseXp: 50, ratio: 1, finalXp: 50, difficulty: 'milestone', localDate: date,
+      dimension, ruleVersion: 2, baseXp: MILESTONE_XP, ratio: 1, finalXp: MILESTONE_XP, difficulty: 'milestone', localDate: date,
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     } satisfies XpLedger;
     ledger.add(created);
     return { ledger: created, changed: true };
   }
-  if (!existing.reversedAt && existing.branchId === branchId && existing.localDate === date) return { ledger: existing, changed: false };
+  if (!existing.reversedAt && (existing.dimension === dimension || existing.ruleVersion !== 2) && existing.localDate === date) return { ledger: existing, changed: false };
   const { reversedAt: _reversedAt, ...active } = existing;
-  const updated = { ...active, branchId, localDate: date, updatedAt: timestamp, version: existing.version + 1 };
+  const updated = { ...active, dimension: existing.dimension ?? dimension, localDate: date, updatedAt: timestamp, version: existing.version + 1 };
   ledger.put(updated);
   return { ledger: updated, changed: true };
 }
 
 function resolveGoalNextStep(goal: Goal, quests: Quest[], milestones: Milestone[]): string {
   const milestoneById = new Map(milestones.map((item) => [item.id, item]));
+  const questById = new Map(quests.map((item) => [item.id, item]));
+  const ancestorsWithConfirmedProgress = new Set<string>();
+  quests.filter((item) => item.status === 'completed' || item.status === 'partial').forEach((item) => {
+    let predecessorId = item.predecessorQuestId;
+    const visited = new Set<string>();
+    while (predecessorId && !visited.has(predecessorId)) {
+      visited.add(predecessorId);
+      ancestorsWithConfirmedProgress.add(predecessorId);
+      predecessorId = questById.get(predecessorId)?.predecessorQuestId;
+    }
+  });
   const pendingQuest = quests
     .filter((item) => item.sourceType === 'goal' && item.sourceId === goal.id
-      && (item.status === 'pending' || item.systemRetiredReason === 'capacity')
+      && item.status === 'pending' && !item.systemRetiredAt && !item.userRemovedAt
+      && !ancestorsWithConfirmedProgress.has(item.id)
       && (!item.milestoneId || milestoneById.get(item.milestoneId)?.status === 'pending'))
-    .sort((left, right) => right.localDate.localeCompare(left.localDate)
-      || right.createdAt.localeCompare(left.createdAt)
-      || (milestoneById.get(right.milestoneId ?? '')?.order ?? -1) - (milestoneById.get(left.milestoneId ?? '')?.order ?? -1)
-      || right.id.localeCompare(left.id))[0];
+    .sort((left, right) => (milestoneById.get(left.milestoneId ?? '')?.order ?? Number.MAX_SAFE_INTEGER)
+      - (milestoneById.get(right.milestoneId ?? '')?.order ?? Number.MAX_SAFE_INTEGER)
+      || left.localDate.localeCompare(right.localDate)
+      || left.createdAt.localeCompare(right.createdAt)
+      || left.id.localeCompare(right.id))[0];
   const pendingMilestone = milestones
     .filter((item) => item.status === 'pending')
     .sort((left, right) => (left.order ?? -1) - (right.order ?? -1) || left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id))[0];
-  return pendingQuest?.title ?? pendingMilestone?.description.slice(0, 160) ?? goal.nextStep;
+  return pendingQuest?.title ?? pendingMilestone?.description.slice(0, 160) ?? (goal.status === 'active' ? '添加下一个子任务' : goal.nextStep);
 }
 
 /** Remove only unconfirmed descendants; later confirmed actions remain facts and keep their current frontier. */
@@ -785,7 +1057,7 @@ async function rollbackGoalQuestProgression(
   const completedMilestone = goalMilestones.find((item) => item.status === 'completed' && item.completionSourceQuestId === quest.id);
   const projectedMilestones = goalMilestones.map((item) => {
     if (item.id !== completedMilestone?.id) return item;
-    const updated = { ...item, status: 'pending' as const, completedAt: undefined, completionSourceQuestId: undefined, xpSettled: false, updatedAt: timestamp, version: item.version + 1 };
+    const updated = { ...item, status: 'pending' as const, completedAt: undefined, completedDate: undefined, completionSourceQuestId: undefined, xpSettled: false, updatedAt: timestamp, version: item.version + 1 };
     milestones.put(updated);
     return updated;
   });
@@ -796,7 +1068,7 @@ async function rollbackGoalQuestProgression(
 
   const projectedQuests = allQuests.map((item) => {
     if (item.id === quest.id) return { ...item, status: nextStatus };
-    if ((item.status !== 'pending' && item.systemRetiredReason !== 'capacity') || item.predecessorQuestId !== quest.id) return item;
+    if ((item.status !== 'pending' && item.systemRetiredReason !== 'goal-inactive') || item.predecessorQuestId !== quest.id) return item;
     const updated = systemRetireQuest(item, 'source-invalidated', timestamp);
     quests.put(updated);
     return updated;
@@ -851,6 +1123,7 @@ async function invalidateAnalysisForEntry(transaction: IDBTransaction, entryId: 
   const events = transaction.objectStore('events');
   const observations = transaction.objectStore('observations');
   const memories = transaction.objectStore('memories');
+  const ledger = transaction.objectStore('xpLedger');
   const [allJobs, allAnalyses, relatedEvents, allEvents] = await Promise.all([
     requestResult(jobs.getAll()) as Promise<AnalysisJob[]>,
     requestResult(analyses.getAll()) as Promise<DailyAnalysis[]>,
@@ -858,7 +1131,7 @@ async function invalidateAnalysisForEntry(transaction: IDBTransaction, entryId: 
     requestResult(events.getAll()) as Promise<JournalEvent[]>,
   ]);
   for (const job of allJobs) {
-    if (job.operation !== 'daily_analysis' || !parseDailyAnalysisRequest(job.request).userInput.entries.some((entry) => entry.entryId === entryId) || job.status === 'stale') continue;
+    if (job.operation !== 'daily_analysis' || !legacyDailyEntryIds(job.request).includes(entryId) || job.status === 'stale') continue;
     const { errorCode: _errorCode, nextAttemptAt: _nextAttemptAt, ...withoutRetry } = job;
     jobs.put({ ...withoutRetry, status: 'stale', errorMessage: '记录版本已经改变，请重新整理。', updatedAt: timestamp, version: job.version + 1 });
   }
@@ -871,6 +1144,9 @@ async function invalidateAnalysisForEntry(transaction: IDBTransaction, entryId: 
     if (!item.active) continue;
     events.put({ ...item, active: false, updatedAt: timestamp, version: item.version + 1 });
   }
+  const journalXp = await requestResult(ledger.getAll()) as XpLedger[];
+  journalXp.filter((item) => item.sourceType === 'journal-event' && eventIds.has(item.sourceId) && !item.reversedAt)
+    .forEach((item) => ledger.put({ ...item, reversedAt: timestamp, updatedAt: timestamp, version: item.version + 1 }));
   const allObservations = await requestResult(observations.getAll()) as StateObservation[];
   for (const observation of allObservations) {
     if (observation.active && observation.evidenceId && eventIds.has(observation.evidenceId)) {
@@ -1022,7 +1298,7 @@ export function parseBackup(text: string): BackupBundle {
   const bundle = raw as Partial<BackupBundle>;
   if (bundle.format !== 'qiguang-backup') throw new Error('这不是栖光备份文件。');
   const formatVersion = (bundle as { formatVersion?: number }).formatVersion;
-  if (![3, 4, BACKUP_FORMAT_VERSION].includes(formatVersion ?? -1)) throw new Error('备份版本不受支持。');
+  if (![3, 4, 5, BACKUP_FORMAT_VERSION].includes(formatVersion ?? -1)) throw new Error('备份版本不受支持。');
   assertTimestamp(bundle.exportedAt, '备份导出时间');
   if (typeof bundle.appVersion !== 'string' || !bundle.appVersion) throw new Error('备份应用版本无效。');
   if (!bundle.data || typeof bundle.data !== 'object') throw new Error('备份缺少数据。');
@@ -1033,7 +1309,9 @@ export function parseBackup(text: string): BackupBundle {
     if (!Array.isArray(data[key])) throw new Error(`备份缺少 ${key} 数据。`);
   }
   if (formatVersion === 3 && (data.reviews as Review[]).length) throw new Error('旧版复盘备份无法安全迁移。');
-  migrateLegacyBackupJournals(data, nowIso());
+  const migrationTimestamp = nowIso();
+  migrateLegacyBackupJournals(data, migrationTimestamp);
+  Object.assign(data, migrateLegacyAnalysisContracts(data as LegacyAnalysisMigrationData, migrationTimestamp));
   const backupTimeZone = (data.profile as Profile[])[0]?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
   data.goals = (data.goals as Goal[]).map((goal) => {
     if (goal?.status !== 'completed') return goal;
@@ -1060,29 +1338,29 @@ export function parseBackup(text: string): BackupBundle {
 
   const areas = data.areas as Area[];
   areas.forEach((item) => {
-    assertCommonRecord(item, '生活分类');
-    assertText(item.name, '领域名称', 40);
-    assertOneOf(item.mode, ['build', 'maintain', 'explore', 'pause'], '领域模式');
-    assertInteger(item.order, 0, 10_000, '领域排序');
-    if (typeof item.isDefault !== 'boolean') throw new Error('领域默认标记无效。');
+    assertCommonRecord(item, '旧版兼容项');
+    assertText(item.name, '旧版兼容项名称', 40);
+    assertOneOf(item.mode, ['build', 'maintain', 'explore', 'pause'], '旧版兼容项状态');
+    assertInteger(item.order, 0, 10_000, '旧版兼容项顺序');
+    if (typeof item.isDefault !== 'boolean') throw new Error('旧版兼容项标记无效。');
   });
-  uniqueIds(areas, '生活分类');
-  if (areas.filter((item) => item.mode === 'build').length > 2) throw new Error('重点建设领域超过两个。');
+  uniqueIds(areas, '旧版兼容项');
+  if (areas.filter((item) => item.mode === 'build').length > 2) throw new Error('旧版兼容数据无效。');
   const areaIds = new Set(areas.map((item) => item.id));
 
   const branches = data.branches as GrowthBranch[];
   const assetKeys = ROOT_ASSETS.map((item) => item.key);
   branches.forEach((item) => {
-    assertCommonRecord(item, '成长分支');
-    assertOneOf(item.rootAsset, assetKeys, '主要提升');
-    assertText(item.name, '成长分支名称', 60);
-    assertInteger(item.order, 0, 10_000, '成长分支排序');
-    assertOneOf(item.status, ['active', 'paused'], '成长分支状态');
-    if (item.parentId !== undefined && typeof item.parentId !== 'string') throw new Error('父成长分支无效。');
+    assertCommonRecord(item, '旧版兼容关系');
+    assertOneOf(item.rootAsset, assetKeys, '旧版兼容关系类型');
+    assertText(item.name, '旧版兼容关系名称', 60);
+    assertInteger(item.order, 0, 10_000, '旧版兼容关系顺序');
+    assertOneOf(item.status, ['active', 'paused'], '旧版兼容关系状态');
+    if (item.parentId !== undefined && typeof item.parentId !== 'string') throw new Error('旧版兼容关系无效。');
   });
-  uniqueIds(branches, '成长分支');
+  uniqueIds(branches, '旧版兼容关系');
   const branchIds = new Set(branches.map((item) => item.id));
-  if (branches.some((item) => item.parentId && !branchIds.has(item.parentId))) throw new Error('备份存在孤立的成长分支。');
+  if (branches.some((item) => item.parentId && !branchIds.has(item.parentId))) throw new Error('备份存在无效的旧版兼容关系。');
 
   const entries = data.entries as JournalEntry[];
   entries.forEach((entry) => {
@@ -1128,7 +1406,8 @@ export function parseBackup(text: string): BackupBundle {
   const analyses = data.analyses as DailyAnalysis[];
   analyses.forEach((item) => {
     assertCommonRecord(item, '每日整理');
-    if (!isLocalDate(item.localDate) || item.contractVersion !== ANALYSIS_CONTRACT_VERSION || item.modelOutputVersion !== ANALYSIS_CONTRACT_VERSION) throw new Error('每日整理版本或日期无效。');
+    if (!isLocalDate(item.localDate) || !['1.0', ANALYSIS_CONTRACT_VERSION].includes(item.contractVersion)
+      || !['1.0', ANALYSIS_CONTRACT_VERSION].includes(item.modelOutputVersion)) throw new Error('每日整理版本或日期无效。');
     assertText(item.requestId, '整理请求 ID', 200);
     assertOneOf(item.status, ['ready', 'stale'], '每日整理状态');
     if (!Array.isArray(item.sourceEntries) || !item.sourceEntries.length || item.sourceEntries.length > 30) throw new Error('每日整理来源无效。');
@@ -1216,8 +1495,9 @@ export function parseBackup(text: string): BackupBundle {
     assertText(item.why, '目标意义', 500, true);
     assertText(item.evidence, '目标证据', 500, true);
     assertText(item.nextStep, '目标下一步', 160);
-    if (!areaIds.has(item.areaId) || !branchIds.has(item.branchId)) throw new Error('目标领域或成长分支无效。');
-    assertOneOf(item.role, ['main', 'secondary', 'wishlist'], '目标角色');
+    if ((item.areaId !== undefined && !areaIds.has(item.areaId)) || (item.branchId !== undefined && !branchIds.has(item.branchId))) throw new Error('目标包含无效的旧版关联。');
+    if (item.dimension !== undefined && !dimensionKeys.has(item.dimension)) throw new Error('目标维度无效。');
+    if (item.role !== undefined) assertOneOf(item.role, ['main', 'secondary', 'wishlist'], '目标角色');
     assertOneOf(item.status, ['idea', 'active', 'paused', 'completed', 'abandoned'], '目标状态');
     if (item.startDate !== undefined && !isLocalDate(item.startDate)) throw new Error('目标开始日期无效。');
     if (item.targetDate !== undefined && !isLocalDate(item.targetDate)) throw new Error('目标时间范围无效。');
@@ -1231,10 +1511,6 @@ export function parseBackup(text: string): BackupBundle {
     if (item.status === 'completed' && (!item.completedAt || !item.completedDate)) throw new Error('目标完成时间不完整。');
   });
   uniqueIds(goals, '目标');
-  const activeGoals = goals.filter((item) => !['completed', 'abandoned'].includes(item.status));
-  if (activeGoals.filter((item) => item.role === 'main').length > 1 || activeGoals.filter((item) => item.role === 'secondary').length > 2) {
-    throw new Error('当前目标角色超过上限。');
-  }
   const goalIds = new Set(goals.map((item) => item.id));
 
   const milestones = data.milestones as Milestone[];
@@ -1246,12 +1522,16 @@ export function parseBackup(text: string): BackupBundle {
     if (item.order !== undefined) assertInteger(item.order, 0, 10_000, '阶段目标顺序');
     assertOneOf(item.status, ['pending', 'completed', 'superseded'], '阶段目标状态');
     if (item.completedAt !== undefined) assertTimestamp(item.completedAt, '阶段目标完成时间');
+    if (item.completedDate !== undefined && !isLocalDate(item.completedDate)) throw new Error('阶段目标完成日期无效。');
     if (item.completionSourceQuestId !== undefined) assertText(item.completionSourceQuestId, '阶段目标完成来源', 200);
     if (typeof item.xpSettled !== 'boolean') throw new Error('阶段目标结算状态无效。');
   });
   uniqueIds(milestones, '阶段目标');
   const milestoneIds = new Set(milestones.map((item) => item.id));
 
+  data.habits = (data.habits as Array<Omit<Habit, 'difficulty'> & { difficulty: LegacyDifficulty }>).map((item) => item.difficulty === 'challenge'
+    ? { ...item, difficulty: normalizeDifficulty(item.difficulty), legacyDifficulty: 'challenge' }
+    : item) as Habit[];
   const habits = data.habits as Habit[];
   habits.forEach((item) => {
     assertCommonRecord(item, '习惯');
@@ -1275,21 +1555,21 @@ export function parseBackup(text: string): BackupBundle {
       });
     }
     if (item.trigger !== undefined) assertText(item.trigger, '习惯触发条件', 120);
-    if (!dimensionKeys.has(item.dimension) || !branchIds.has(item.branchId)) throw new Error('习惯状态或成长分支无效。');
+    if (!dimensionKeys.has(item.dimension) || (item.branchId !== undefined && !branchIds.has(item.branchId))) throw new Error('习惯状态维度或旧版关联无效。');
     assertOneOf(item.difficulty, Object.keys(DIFFICULTY_XP), '习惯难度');
     assertOneOf(item.status, ['active', 'paused', 'ended'], '习惯状态');
-    if (typeof item.bonusEnabled !== 'boolean') throw new Error('每日可选任务设置无效。');
+    if (typeof item.bonusEnabled !== 'boolean') throw new Error('习惯打卡设置无效。');
   });
   uniqueIds(habits, '习惯');
-  if (habits.filter((item) => item.status === 'active' && item.bonusEnabled).length > 3) throw new Error('启用的每日可选习惯超过三个。');
   const habitIds = new Set(habits.map((item) => item.id));
 
+  data.quests = normalizeQuestDimensions(data.quests as LegacyQuestRecord[], { habits, goals, areas, branches });
   const quests = data.quests as Quest[];
   quests.forEach((item) => {
     assertCommonRecord(item, '任务');
     if (!isLocalDate(item.localDate)) throw new Error('任务日期无效。');
     if (item.sortOrder !== undefined) assertInteger(item.sortOrder, 0, Number.MAX_SAFE_INTEGER, '任务顺序');
-    assertOneOf(item.type, ['main', 'bonus', 'side'], '任务类型');
+    if (item.type !== undefined) assertOneOf(item.type, ['main', 'bonus', 'side'], '任务类型');
     assertOneOf(item.sourceType, ['goal', 'habit', 'recovery', 'manual'], '任务来源');
     if (item.sourceType === 'goal' && (!item.sourceId || !goalIds.has(item.sourceId))) throw new Error('目标任务来源无效。');
     if (item.sourceType === 'habit' && (!item.sourceId || !habitIds.has(item.sourceId))) throw new Error('习惯任务来源无效。');
@@ -1312,12 +1592,12 @@ export function parseBackup(text: string): BackupBundle {
     } else if (item.progressCount !== undefined || item.countUnit !== undefined) throw new Error('任务计数设置无效。');
     assertOneOf(item.difficulty, Object.keys(DIFFICULTY_XP), '任务难度');
     if (item.dimension !== undefined && !dimensionKeys.has(item.dimension)) throw new Error('任务状态维度无效。');
-    if (item.branchId !== undefined && !branchIds.has(item.branchId)) throw new Error('任务成长分支无效。');
+    if (item.branchId !== undefined && !branchIds.has(item.branchId)) throw new Error('任务包含无效的旧版关联。');
     assertOneOf(item.status, ['pending', 'completed', 'partial', 'skipped', 'exempt'], '任务状态');
     if ((item.systemRetiredAt === undefined) !== (item.systemRetiredReason === undefined)) throw new Error('任务系统收束信息不完整。');
     if (item.systemRetiredAt !== undefined) {
       assertTimestamp(item.systemRetiredAt, '任务系统收束时间');
-      assertOneOf(item.systemRetiredReason, ['elapsed', 'schedule-changed', 'tracking-disabled', 'capacity', 'source-invalidated'], '任务系统收束原因');
+      assertOneOf(item.systemRetiredReason, ['elapsed', 'schedule-changed', 'tracking-disabled', 'capacity', 'source-invalidated', 'goal-inactive'], '任务系统收束原因');
       if (item.status !== 'exempt') throw new Error('任务系统收束状态无效。');
     }
     if (item.userRemovedAt !== undefined) {
@@ -1335,11 +1615,6 @@ export function parseBackup(text: string): BackupBundle {
   milestones.forEach((item) => {
     if (item.completionSourceQuestId !== undefined && (item.status !== 'completed' || questById.get(item.completionSourceQuestId)?.milestoneId !== item.id)) throw new Error('阶段目标完成来源无效。');
   });
-  for (const date of new Set(quests.map((item) => item.localDate))) {
-    const types = quests.filter((item) => item.localDate === date && item.status === 'pending').map((item) => item.type);
-    if (types.filter((item) => item === 'main').length > 1 || types.filter((item) => item === 'bonus').length > 3 || types.filter((item) => item === 'side').length > 2) throw new Error('每日任务数量超过上限。');
-  }
-
   const feedback = data.questFeedback as QuestFeedback[];
   feedback.forEach((item) => {
     assertCommonRecord(item, '任务反馈');
@@ -1364,21 +1639,36 @@ export function parseBackup(text: string): BackupBundle {
   uniqueIds(habitLogs, '习惯记录');
   if (new Set(habitLogs.map((item) => `${item.habitId}:${item.localDate}`)).size !== habitLogs.length) throw new Error('同一习惯日期重复。');
 
+  const dimensionData = { quests, habits, milestones, goals, areas, branches };
+  data.xpLedger = normalizeLedgerDimensions(data.xpLedger as XpLedger[], dimensionData);
   const ledger = data.xpLedger as XpLedger[];
-  const settlementSources = new Set([...quests.map((item) => item.actionId), ...milestoneIds]);
+  const settlementSources = new Set([...quests.map((item) => item.actionId), ...milestoneIds, ...eventIds]);
   ledger.forEach((item) => {
     assertCommonRecord(item, '经验账本');
     assertText(item.settlementKey, '经验结算键', 200);
-    assertOneOf(item.sourceType, ['quest', 'habit', 'milestone'], '经验来源');
+    assertOneOf(item.sourceType, ['quest', 'habit', 'milestone', 'journal-event'], '经验来源');
     if (item.sourceType === 'quest' && !questIds.has(item.sourceId)) throw new Error('任务经验来源无效。');
     if (item.sourceType === 'habit' && !habitIds.has(item.sourceId)) throw new Error('习惯经验来源无效。');
     if (item.sourceType === 'milestone' && !milestoneIds.has(item.sourceId)) throw new Error('阶段目标经验来源无效。');
-    if (!branchIds.has(item.branchId) || !isLocalDate(item.localDate)) throw new Error('经验成长分支或日期无效。');
+    if (item.sourceType === 'journal-event' && !eventIds.has(item.sourceId)) throw new Error('记录成长来源无效。');
+    if (!item.dimension || !dimensionKeys.has(item.dimension) || (item.branchId !== undefined && !branchIds.has(item.branchId)) || !isLocalDate(item.localDate)) throw new Error('经验状态维度、旧版关联或日期无效。');
+    if (item.ruleVersion !== 1 && item.ruleVersion !== 2) throw new Error('经验规则版本无效。');
     assertInteger(item.baseXp, 1, 50, '基础经验');
     if (item.ratio !== 0.5 && item.ratio !== 1) throw new Error('经验结算比例无效。');
     assertInteger(item.finalXp, 1, 50, '最终经验');
-    if (item.difficulty !== 'milestone') assertOneOf(item.difficulty, Object.keys(DIFFICULTY_XP), '经验难度');
     if (item.finalXp !== Math.ceil(item.baseXp * item.ratio)) throw new Error('经验结算结果无效。');
+    if (item.ruleVersion === 2) {
+      if (item.sourceType === 'quest') {
+        assertOneOf(item.difficulty, Object.keys(DIFFICULTY_XP), '经验难度');
+        if (item.baseXp !== DIFFICULTY_XP[item.difficulty as Difficulty]) throw new Error('任务经验不符合当前规则。');
+      } else if (item.sourceType === 'milestone' && (item.difficulty !== 'milestone' || item.finalXp !== MILESTONE_XP || item.ratio !== 1)) {
+        throw new Error('阶段目标经验不符合当前规则。');
+      } else if (item.sourceType === 'journal-event' && (item.difficulty !== 'journal' || item.finalXp > 3 || item.ratio !== 1)) {
+        throw new Error('记录成长值不符合当前规则。');
+      }
+    } else if (item.difficulty !== 'milestone' && item.difficulty !== 'journal') {
+      assertOneOf(item.difficulty, Object.keys(DIFFICULTY_XP), '旧经验难度');
+    }
     const keyMatch = item.settlementKey.match(/^(.+):([1-9]\d*)$/);
     if (!keyMatch || !settlementSources.has(keyMatch[1] ?? '')) throw new Error('经验结算键与现实行动不一致。');
     if (item.reversedAt !== undefined) assertTimestamp(item.reversedAt, '经验撤销时间');
@@ -1391,12 +1681,13 @@ export function parseBackup(text: string): BackupBundle {
     assertCommonRecord(item, '周期复盘');
     assertText(item.requestId, '周期复盘请求 ID', 200);
     assertOneOf(item.type, ['weekly', 'monthly'], '复盘类型');
-    if (!isLocalDate(item.periodStart) || !isLocalDate(item.periodEnd) || item.periodStart > item.periodEnd || item.contractVersion !== ANALYSIS_CONTRACT_VERSION) throw new Error('复盘周期无效。');
+    if (!isLocalDate(item.periodStart) || !isLocalDate(item.periodEnd) || item.periodStart > item.periodEnd
+      || !['1.0', ANALYSIS_CONTRACT_VERSION].includes(item.contractVersion)) throw new Error('复盘周期无效。');
     assertOneOf(item.status, ['candidate', 'confirmed', 'rejected'], '复盘确认状态');
     if (item.rejectedAt !== undefined) assertTimestamp(item.rejectedAt, '复盘拒绝时间');
     if (item.type !== 'weekly') throw new Error('当前备份版本只支持周复盘。');
-    const request = parseWeeklyReviewRequest(item.request);
-    if (request.requestId !== item.requestId || request.period.start !== item.periodStart || request.period.end !== item.periodEnd) throw new Error('周期复盘请求信封不一致。');
+    const request = item.contractVersion === ANALYSIS_CONTRACT_VERSION ? parseWeeklyReviewRequest(item.request) : null;
+    if (request && (request.requestId !== item.requestId || request.period.start !== item.periodStart || request.period.end !== item.periodEnd)) throw new Error('周期复盘请求信封不一致。');
     if (!Array.isArray(item.stateTrends) || !Array.isArray(item.recurringBenefits) || !Array.isArray(item.recurringCosts) || !Array.isArray(item.growthDeposits) || !Array.isArray(item.habitDecisions)) throw new Error('复盘内容无效。');
     assertText(item.nextTheme, '下周期主题', 200);
     assertText(item.nextThemeReason, '下周期主题理由', 500);
@@ -1410,20 +1701,21 @@ export function parseBackup(text: string): BackupBundle {
     assertText(item.rawResponse, '复盘原始响应', 200_000);
     let raw: unknown;
     try { raw = JSON.parse(item.rawResponse); } catch { throw new Error('周期复盘原始响应不是有效 JSON。'); }
-    const parsed = parseWeeklyReviewResponse(raw, request);
-    const expectedStateTrends = parsed.result.stateTrends.map((trend) => ({ ...trend, dimension: trend.dimension === 'mental' ? 'mind' : trend.dimension }));
-    const immutableMatches = JSON.stringify(item.stateTrends) === JSON.stringify(expectedStateTrends)
-      && JSON.stringify(item.recurringBenefits) === JSON.stringify(parsed.result.recurringBenefits)
-      && JSON.stringify(item.recurringCosts) === JSON.stringify(parsed.result.recurringCosts)
-      && JSON.stringify(item.growthDeposits) === JSON.stringify(parsed.result.growthDeposits)
-      && JSON.stringify(item.habitDecisions) === JSON.stringify(parsed.result.habitDecisions)
-      && item.nextThemeReason === parsed.result.nextWeekTheme.reason
-      && JSON.stringify(item.warnings) === JSON.stringify(parsed.warnings);
-    const editableMatches = item.status === 'confirmed' || (
-      item.nextTheme === parsed.result.nextWeekTheme.title
-      && JSON.stringify(item.nextExperiment) === JSON.stringify(parsed.result.nextExperiment)
-    );
-    if (!immutableMatches || !editableMatches) throw new Error('周期复盘结果与原始响应不一致。');
+    if (request) {
+      const parsed = parseWeeklyReviewResponse(raw, request);
+      const immutableMatches = JSON.stringify(item.stateTrends) === JSON.stringify(parsed.result.stateTrends)
+        && JSON.stringify(item.recurringBenefits) === JSON.stringify(parsed.result.recurringBenefits)
+        && JSON.stringify(item.recurringCosts) === JSON.stringify(parsed.result.recurringCosts)
+        && JSON.stringify(item.growthDeposits) === JSON.stringify(parsed.result.growthDeposits)
+        && JSON.stringify(item.habitDecisions) === JSON.stringify(parsed.result.habitDecisions)
+        && item.nextThemeReason === parsed.result.nextWeekTheme.reason
+        && JSON.stringify(item.warnings) === JSON.stringify(parsed.warnings);
+      const editableMatches = item.status === 'confirmed' || (
+        item.nextTheme === parsed.result.nextWeekTheme.title
+        && JSON.stringify(item.nextExperiment) === JSON.stringify(parsed.result.nextExperiment)
+      );
+      if (!immutableMatches || !editableMatches) throw new Error('周期复盘结果与原始响应不一致。');
+    }
   });
   uniqueIds(reviews, '周期复盘');
   if (new Set(reviews.map((item) => item.requestId)).size !== reviews.length) throw new Error('周期复盘请求 ID 重复。');
@@ -1457,11 +1749,18 @@ export function parseBackup(text: string): BackupBundle {
   jobs.forEach((item) => {
     assertCommonRecord(item, '整理队列');
     assertText(item.requestId, '整理队列请求 ID', 200);
-    if (!['daily_analysis', 'weekly_review'].includes(item.operation) || !isLocalDate(item.localDate) || item.contractVersion !== ANALYSIS_CONTRACT_VERSION) throw new Error('整理队列操作无效。');
+    if (!['daily_analysis', 'weekly_review'].includes(item.operation) || !isLocalDate(item.localDate)
+      || !['1.0', ANALYSIS_CONTRACT_VERSION].includes(item.contractVersion)) throw new Error('整理队列操作无效。');
     assertText(item.idempotencyKey, '整理幂等键', 500);
-    const request = item.operation === 'daily_analysis' ? parseDailyAnalysisRequest(item.request) : parseWeeklyReviewRequest(item.request);
-    if (request.requestId !== item.requestId || (request.operation === 'daily_analysis' ? request.localDate : request.period.end) !== item.localDate) throw new Error('整理队列请求信封不一致。');
+    const request = item.contractVersion === ANALYSIS_CONTRACT_VERSION
+      ? item.operation === 'daily_analysis' ? parseDailyAnalysisRequest(item.request) : parseWeeklyReviewRequest(item.request)
+      : null;
+    if (request && (request.requestId !== item.requestId || (request.operation === 'daily_analysis' ? request.localDate : request.period.end) !== item.localDate)) throw new Error('整理队列请求信封不一致。');
     assertOneOf(item.status, ['queued', 'processing', 'succeeded', 'failed', 'stale', 'safety-review'], '整理队列状态');
+    if (item.contractVersion !== ANALYSIS_CONTRACT_VERSION && ['queued', 'processing', 'failed', 'safety-review'].includes(item.status)) {
+      item.status = 'stale';
+      item.errorMessage = '分析合约已升级，请重新整理。';
+    }
     assertInteger(item.attemptCount, 0, 100, '整理尝试次数');
     if (item.nextAttemptAt !== undefined) assertTimestamp(item.nextAttemptAt, '整理下次尝试时间');
     if (item.errorCode !== undefined) assertOneOf(item.errorCode, ['OFFLINE', 'INPUT_TOO_LARGE', 'RATE_LIMITED', 'MODEL_TIMEOUT', 'INVALID_MODEL_OUTPUT', 'UNSUPPORTED_CONTRACT', 'SAFETY_REVIEW', 'SERVICE_UNAVAILABLE'], '整理错误码');
@@ -1477,8 +1776,12 @@ export function parseBackup(text: string): BackupBundle {
     let raw: unknown;
     try { raw = JSON.parse(analysis.rawResponse); } catch { throw new Error('每日整理原始响应不是有效 JSON。'); }
     if (job.operation !== 'daily_analysis') throw new Error('每日整理对应了错误的队列操作。');
-    const parsed = parseDailyAnalysisResponse(raw, parseDailyAnalysisRequest(job.request));
-    if (JSON.stringify(parsed.result) !== JSON.stringify(analysis.result)) throw new Error('每日整理结果与原始响应不一致。');
+    if (analysis.contractVersion === ANALYSIS_CONTRACT_VERSION
+      && analysis.modelOutputVersion === ANALYSIS_CONTRACT_VERSION
+      && job.contractVersion === ANALYSIS_CONTRACT_VERSION) {
+      const parsed = parseDailyAnalysisResponse(raw, parseDailyAnalysisRequest(job.request));
+      if (JSON.stringify(parsed.result) !== JSON.stringify(analysis.result)) throw new Error('每日整理结果与原始响应不一致。');
+    }
   }
 
   const settings = data.settings as AppSettings[];
@@ -1521,15 +1824,44 @@ export class QiguangDb {
   }
 
   static async restoreFromBackup(text: string, name = DB_NAME): Promise<QiguangDb> {
-    parseBackup(text);
-    await deleteRawDatabase(name);
-    const restored = await QiguangDb.open(name);
+    const bundle = parseBackup(text);
+    let restored: QiguangDb;
     try {
-      await restored.importBundle(text);
+      restored = await QiguangDb.open(name);
+    } catch (error) {
+      if (!(error instanceof DOMException) || !['AbortError', 'VersionError'].includes(error.name)) throw error;
+      return QiguangDb.rebuildFromValidatedBundle(bundle, name);
+    }
+    try {
+      await restored.replaceWithBundle(bundle);
       return restored;
     } catch (error) {
       restored.close();
       throw error;
+    }
+  }
+
+  private static async rebuildFromValidatedBundle(bundle: BackupBundle, name: string): Promise<QiguangDb> {
+    const validationName = `${name}-restore-check-${crypto.randomUUID()}`;
+    let validation: QiguangDb | undefined;
+    try {
+      validation = await QiguangDb.open(validationName);
+      await validation.replaceWithBundle(bundle);
+      validation.close();
+      validation = undefined;
+
+      await deleteRawDatabase(name);
+      const rebuilt = await QiguangDb.open(name);
+      try {
+        await rebuilt.replaceWithBundle(bundle);
+        return rebuilt;
+      } catch (error) {
+        rebuilt.close();
+        throw error;
+      }
+    } finally {
+      validation?.close();
+      await deleteRawDatabase(validationName);
     }
   }
 
@@ -1633,7 +1965,7 @@ export class QiguangDb {
     bodyValue: string,
     kind?: NonNullable<JournalEntry['kind']>,
   ): Promise<JournalEntry> {
-    const transaction = this.database.transaction(['entries', 'revisions', 'analyses', 'events', 'observations', 'snapshots', 'memories', 'analysisJobs'], 'readwrite');
+    const transaction = this.database.transaction(['entries', 'revisions', 'analyses', 'events', 'observations', 'snapshots', 'memories', 'analysisJobs', 'xpLedger'], 'readwrite');
     const entries = transaction.objectStore('entries');
     const current = await requestResult(entries.get(id)) as JournalEntry | undefined;
     if (!current) {
@@ -1681,7 +2013,7 @@ export class QiguangDb {
   }
 
   async undoLastEdit(id: string): Promise<JournalEntry> {
-    const transaction = this.database.transaction(['entries', 'revisions', 'analyses', 'events', 'observations', 'snapshots', 'memories', 'analysisJobs'], 'readwrite');
+    const transaction = this.database.transaction(['entries', 'revisions', 'analyses', 'events', 'observations', 'snapshots', 'memories', 'analysisJobs', 'xpLedger'], 'readwrite');
     const entries = transaction.objectStore('entries');
     const revisions = transaction.objectStore('revisions');
     const current = await requestResult(entries.get(id)) as JournalEntry | undefined;
@@ -1725,7 +2057,7 @@ export class QiguangDb {
   }
 
   async deleteEntry(id: string): Promise<void> {
-    const transaction = this.database.transaction(['entries', 'revisions', 'analyses', 'events', 'observations', 'snapshots', 'memories', 'analysisJobs'], 'readwrite');
+    const transaction = this.database.transaction(['entries', 'revisions', 'analyses', 'events', 'observations', 'snapshots', 'memories', 'analysisJobs', 'xpLedger'], 'readwrite');
     transaction.objectStore('entries').delete(id);
     const cursorPromise = cursorDelete(transaction.objectStore('revisions').index('byEntryId').openCursor(id));
     const done = transactionDone(transaction);
@@ -1909,6 +2241,10 @@ export class QiguangDb {
       transaction.abort();
       throw new Error(job.status === 'stale' ? '记录已改变，请重新整理。' : '这次整理不需要重复提交。');
     }
+    if (job.contractVersion !== ANALYSIS_CONTRACT_VERSION) {
+      transaction.abort();
+      throw new Error('旧版分析任务已失效，请重新整理。');
+    }
     const entries = transaction.objectStore('entries');
     const dailyRequest = job.operation === 'daily_analysis' ? parseDailyAnalysisRequest(job.request) : undefined;
     const weeklyRequest = job.operation === 'weekly_review' ? parseWeeklyReviewRequest(job.request) : undefined;
@@ -1967,7 +2303,7 @@ export class QiguangDb {
   }
 
   async saveDailyAnalysis(id: string, value: unknown, expectedProcessingVersion?: number): Promise<DailyAnalysis> {
-    const transaction = this.database.transaction(['entries', 'analyses', 'events', 'observations', 'snapshots', 'memories', 'analysisJobs'], 'readwrite');
+    const transaction = this.database.transaction(['entries', 'analyses', 'events', 'observations', 'snapshots', 'memories', 'analysisJobs', 'xpLedger'], 'readwrite');
     const jobs = transaction.objectStore('analysisJobs');
     const job = await requestResult(jobs.get(id)) as AnalysisJob | undefined;
     if (!job) {
@@ -1977,6 +2313,10 @@ export class QiguangDb {
     if (job.operation !== 'daily_analysis') {
       transaction.abort();
       throw new Error('这不是每日整理任务。');
+    }
+    if (job.contractVersion !== ANALYSIS_CONTRACT_VERSION) {
+      transaction.abort();
+      throw new Error('旧版分析任务已失效，请重新整理。');
     }
     const request = parseDailyAnalysisRequest(job.request);
     const response = parseDailyAnalysisResponse(value, request);
@@ -2013,6 +2353,10 @@ export class QiguangDb {
       const previousEvents = (await requestResult(eventStore.index('byLocalDate').getAll(job.localDate)) as JournalEvent[]).filter((item) => previousIds.has(item.analysisId));
       const previousEventIds = new Set(previousEvents.map((item) => item.id));
       previousEvents.forEach((item) => eventStore.put({ ...item, active: false, updatedAt: timestamp, version: item.version + 1 }));
+      const ledger = transaction.objectStore('xpLedger');
+      const previousXp = await requestResult(ledger.getAll()) as XpLedger[];
+      previousXp.filter((item) => item.sourceType === 'journal-event' && previousEventIds.has(item.sourceId) && !item.reversedAt)
+        .forEach((item) => ledger.put({ ...item, reversedAt: timestamp, updatedAt: timestamp, version: item.version + 1 }));
       const [allObservations, allMemories, allEvents] = await Promise.all([
         requestResult(observationStore.getAll()) as Promise<StateObservation[]>,
         requestResult(memories.getAll()) as Promise<SystemMemory[]>,
@@ -2058,7 +2402,6 @@ export class QiguangDb {
     for (const candidate of response.result.events) {
       const eventId = `${analysis.id}:event:${candidate.candidateId}`;
       candidateToEvent.set(candidate.candidateId, eventId);
-      const confirmed = candidate.sourceType === 'explicit';
       const event: JournalEvent = {
         id: eventId,
         analysisId: analysis.id,
@@ -2068,7 +2411,7 @@ export class QiguangDb {
         title: candidate.title,
         description: candidate.description,
         sourceType: candidate.sourceType,
-        confirmation: confirmed ? 'confirmed' : 'pending',
+        confirmation: 'pending',
         confidence: candidate.confidence,
         evidence: candidate.evidence,
         stateImpactCandidates: candidate.stateImpactCandidates,
@@ -2080,26 +2423,6 @@ export class QiguangDb {
         version: 1,
       };
       eventStore.add(event);
-      if (!confirmed) continue;
-      for (const impact of candidate.stateImpactCandidates) {
-        const dimension = impact.dimension === 'mental' ? 'mind' : impact.dimension;
-        const observation: StateObservation = {
-          id: `${eventId}:state:${dimension}`,
-          assessmentId: `event:${eventId}`,
-          localDate: analysis.localDate,
-          dimension,
-          kind: 'event-impact',
-          delta: impact.suggestedDelta,
-          evidenceId: eventId,
-          reason: impact.reason,
-          active: true,
-          observedAt: timestamp,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          version: 1,
-        };
-        observationStore.add(observation);
-      }
     }
     response.result.memoryCandidates.forEach((candidate, index) => {
       const memory: SystemMemory = {
@@ -2129,11 +2452,16 @@ export class QiguangDb {
 
   async acceptAnalysisQuestSuggestion(analysisId: string, suggestionIndex: number): Promise<{ quest: Quest; created: boolean }> {
     assertInteger(suggestionIndex, 0, 2, '任务建议序号');
-    const transaction = this.database.transaction(['analyses', 'entries', 'goals', 'branches', 'quests'], 'readwrite');
+    const transaction = this.database.transaction(['analyses', 'entries', 'goals', 'quests'], 'readwrite');
     const analysis = await requestResult(transaction.objectStore('analyses').get(analysisId)) as DailyAnalysis | undefined;
     if (!analysis || analysis.status !== 'ready') {
       transaction.abort();
       throw new Error('这份整理已经过期，请重新整理。');
+    }
+    if (analysis.contractVersion !== ANALYSIS_CONTRACT_VERSION
+      || analysis.modelOutputVersion !== ANALYSIS_CONTRACT_VERSION) {
+      transaction.abort();
+      throw new Error('旧版整理结果仅供查看，请重新整理。');
     }
     const suggestion: QuestSuggestion | undefined = analysis.result.questSuggestions[suggestionIndex];
     if (!suggestion) {
@@ -2155,21 +2483,15 @@ export class QiguangDb {
       await transactionDone(transaction);
       return { quest: existing, created: false };
     }
-    if (!canAddQuest(suggestion.type, currentQuests.filter((item) => item.status === 'pending').map((item) => item.type))) {
-      transaction.abort();
-      throw new Error('下一天的任务位置已满；没有覆盖现有计划。');
-    }
     const goal = suggestion.sourceGoalId ? await requestResult(transaction.objectStore('goals').get(suggestion.sourceGoalId)) as Goal | undefined : undefined;
-    const branch = suggestion.growthBranchId ? await requestResult(transaction.objectStore('branches').get(suggestion.growthBranchId)) as GrowthBranch | undefined : undefined;
     const timestamp = nowIso();
     const quest: Quest = {
-      id: crypto.randomUUID(), localDate: targetDate, type: suggestion.type,
+      id: crypto.randomUUID(), localDate: targetDate,
       sourceType: goal?.status === 'active' ? 'goal' : suggestion.isRecovery ? 'recovery' : 'manual',
       sourceId: goal?.status === 'active' ? goal.id : undefined,
       actionId, settlementVersion: 0, title: suggestion.title, reason: suggestion.why,
       minimumAction: suggestion.minimumVersion, estimatedMinutes: suggestion.estimatedMinutes, difficulty: suggestion.difficulty,
-      dimension: suggestion.primaryState === 'mental' ? 'mind' : suggestion.primaryState,
-      branchId: branch?.status === 'active' ? branch.id : undefined,
+      dimension: suggestion.dimension,
       status: 'pending', aiSuggested: true, userModified: false,
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
@@ -2185,6 +2507,10 @@ export class QiguangDb {
     if (!job || job.operation !== 'weekly_review') {
       transaction.abort();
       throw new Error('周复盘任务不存在。');
+    }
+    if (job.contractVersion !== ANALYSIS_CONTRACT_VERSION) {
+      transaction.abort();
+      throw new Error('旧版周复盘任务已失效，请重新生成。');
     }
     const request = parseWeeklyReviewRequest(job.request);
     const response = parseWeeklyReviewResponse(value, request);
@@ -2211,7 +2537,7 @@ export class QiguangDb {
     const review: Review = {
       id: job.requestId, requestId: job.requestId, type: 'weekly', periodStart: request.period.start, periodEnd: request.period.end,
       contractVersion: ANALYSIS_CONTRACT_VERSION, status: 'candidate', request,
-      stateTrends: response.result.stateTrends.map((item) => ({ ...item, dimension: item.dimension === 'mental' ? 'mind' : item.dimension })),
+      stateTrends: response.result.stateTrends,
       recurringBenefits: response.result.recurringBenefits,
       recurringCosts: response.result.recurringCosts,
       growthDeposits: response.result.growthDeposits,
@@ -2273,6 +2599,10 @@ export class QiguangDb {
       transaction.abort();
       throw new Error('这份周复盘已经处理过。');
     }
+    if (current.contractVersion !== ANALYSIS_CONTRACT_VERSION) {
+      transaction.abort();
+      throw new Error('旧版周复盘仅供查看，请重新生成后再确认。');
+    }
     if (!await weeklyReviewSourcesCurrent(transaction, current.request)) {
       transaction.abort();
       throw new Error('周复盘来源已改变，请重新生成复盘后再确认。');
@@ -2294,18 +2624,16 @@ export class QiguangDb {
     let questCreated = false;
     let questScheduled = false;
     if (!currentQuests.some((item) => item.actionId === actionId)) {
-      const hasCapacity = canAddQuest('main', currentQuests.filter((item) => item.status === 'pending').map((item) => item.type));
       const quest: Quest = {
-        id: crypto.randomUUID(), localDate: targetDate, type: 'main', sourceType: 'manual', actionId, settlementVersion: 0,
+        id: crypto.randomUUID(), localDate: targetDate, sourceType: 'manual', actionId, settlementVersion: 0,
         title: review.nextTheme, reason: review.nextThemeReason, minimumAction: nextExperiment.minimumAction,
-        estimatedMinutes: 10, difficulty: 'light', status: hasCapacity ? 'pending' : 'exempt',
-        ...(hasCapacity ? {} : { systemRetiredAt: timestamp, systemRetiredReason: 'capacity' as const }),
+        estimatedMinutes: 10, difficulty: 'light', dimension: 'progress', status: 'pending',
         aiSuggested: true, userModified: true,
         createdAt: timestamp, updatedAt: timestamp, version: 1,
       };
       quests.add(quest);
       questCreated = true;
-      questScheduled = hasCapacity;
+      questScheduled = true;
     } else {
       questScheduled = currentQuests.some((item) => item.actionId === actionId && item.status === 'pending');
     }
@@ -2346,10 +2674,21 @@ export class QiguangDb {
     return values.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
   }
 
-  async decideEvent(id: string, confirmation: JournalEvent['confirmation'], patch: Partial<Pick<JournalEvent, 'title' | 'description'>> = {}): Promise<JournalEvent> {
+  async decideEvent(
+    id: string,
+    confirmation: JournalEvent['confirmation'],
+    patch: Partial<Pick<JournalEvent, 'title' | 'description' | 'growthEvidenceCandidate'>> = {},
+  ): Promise<JournalEvent> {
     if (patch.title !== undefined) assertText(patch.title, '事件标题', 60);
     if (patch.description !== undefined) assertText(patch.description, '事件说明', 500);
-    const transaction = this.database.transaction(['analyses', 'events', 'observations', 'snapshots', 'memories'], 'readwrite');
+    if (patch.growthEvidenceCandidate) {
+      assertOneOf(patch.growthEvidenceCandidate.dimension, DIMENSIONS.map((item) => item.key), '成长维度');
+      assertInteger(patch.growthEvidenceCandidate.suggestedXp, 1, 3, '建议成长值');
+      if (patch.growthEvidenceCandidate.matchedQuestId !== null) {
+        assertText(patch.growthEvidenceCandidate.matchedQuestId, '重复任务 ID', 200);
+      }
+    }
+    const transaction = this.database.transaction(['analyses', 'events', 'observations', 'snapshots', 'memories', 'xpLedger', 'quests', 'questFeedback'], 'readwrite');
     const events = transaction.objectStore('events');
     const current = await requestResult(events.get(id)) as JournalEvent | undefined;
     if (!current) {
@@ -2361,6 +2700,11 @@ export class QiguangDb {
       transaction.abort();
       throw new Error('这份整理已经过期，请重新整理后再确认。');
     }
+    if (analysis.contractVersion !== ANALYSIS_CONTRACT_VERSION
+      || analysis.modelOutputVersion !== ANALYSIS_CONTRACT_VERSION) {
+      transaction.abort();
+      throw new Error('旧版整理事件仅供查看，请重新整理。');
+    }
     const timestamp = nowIso();
     const updated: JournalEvent = {
       ...current,
@@ -2369,16 +2713,46 @@ export class QiguangDb {
       description: patch.description?.trim() ?? current.description,
       confirmation,
       active: true,
-      userEdited: current.userEdited || patch.title !== undefined || patch.description !== undefined,
+      userEdited: current.userEdited || patch.title !== undefined || patch.description !== undefined || patch.growthEvidenceCandidate !== undefined,
       updatedAt: timestamp,
       version: current.version + 1,
     };
     events.put(updated);
+    const ledger = transaction.objectStore('xpLedger');
+    const growth = updated.growthEvidenceCandidate;
+    const settlementKey = `${id}:1`;
+    const existingXp = await requestResult(ledger.index('bySettlementKey').get(settlementKey)) as XpLedger | undefined;
+    let alreadySettledByTask = false;
+    if (growth?.matchedQuestId) {
+      const [matchedQuest, matchedFeedback, allXp] = await Promise.all([
+        requestResult(transaction.objectStore('quests').get(growth.matchedQuestId)) as Promise<Quest | undefined>,
+        requestResult(transaction.objectStore('questFeedback').index('byQuestId').getAll(growth.matchedQuestId)) as Promise<QuestFeedback[]>,
+        requestResult(ledger.getAll()) as Promise<XpLedger[]>,
+      ]);
+      alreadySettledByTask = Boolean(matchedQuest && (
+        matchedFeedback.some((item) => !item.undoneAt && (item.result === 'completed' || item.result === 'partial'))
+        || allXp.some((item) => item.sourceType === 'quest' && item.sourceId === matchedQuest.id && !item.reversedAt && item.finalXp > 0)
+      ));
+    }
+    if (confirmation === 'confirmed' && growth && !alreadySettledByTask) {
+      const dimension = growth.dimension;
+      const value: XpLedger = {
+        id: existingXp?.id ?? crypto.randomUUID(), settlementKey, sourceType: 'journal-event', sourceId: id,
+        dimension, ruleVersion: 2, baseXp: growth.suggestedXp, ratio: 1, finalXp: growth.suggestedXp,
+        difficulty: 'journal', localDate: current.localDate,
+        createdAt: existingXp?.createdAt ?? timestamp, updatedAt: timestamp, version: (existingXp?.version ?? 0) + 1,
+      };
+      const unchanged = existingXp && !existingXp.reversedAt && existingXp.dimension === value.dimension
+        && existingXp.finalXp === value.finalXp && existingXp.localDate === value.localDate;
+      if (!unchanged) existingXp ? ledger.put(value) : ledger.add(value);
+    } else if (existingXp && !existingXp.reversedAt) {
+      ledger.put({ ...existingXp, reversedAt: timestamp, updatedAt: timestamp, version: existingXp.version + 1 });
+    }
     const observations = transaction.objectStore('observations');
     const existing = await requestResult(observations.index('byEvidenceId').getAll(id)) as StateObservation[];
     const existingByDimension = new Map(existing.map((item) => [item.dimension, item]));
     for (const impact of current.stateImpactCandidates) {
-      const dimension = impact.dimension === 'mental' ? 'mind' : impact.dimension;
+      const dimension = impact.dimension;
       const previous = existingByDimension.get(dimension);
       const observation: StateObservation = previous ? {
         ...previous,
@@ -2456,7 +2830,7 @@ export class QiguangDb {
     const current = await requestResult(store.get(id)) as SystemMemory | undefined;
     if (!current || current.status !== 'confirmed') {
       transaction.abort();
-      throw new Error('只有已确认记忆可以调整提醒。');
+      throw new Error('只有已保存的信息可以调整提醒。');
     }
     const updated = { ...current, reminderMuted, updatedAt: nowIso(), version: current.version + 1 };
     store.put(updated);
@@ -2566,15 +2940,9 @@ export class QiguangDb {
   }
 
   async ensureI2Defaults(): Promise<void> {
-    const transaction = this.database.transaction(['profile', 'areas', 'branches'], 'readwrite');
+    const transaction = this.database.transaction('profile', 'readwrite');
     const profileStore = transaction.objectStore('profile');
-    const areaStore = transaction.objectStore('areas');
-    const branchStore = transaction.objectStore('branches');
-    const [profiles, areas, branches] = await Promise.all([
-      requestResult(profileStore.getAll()) as Promise<Profile[]>,
-      requestResult(areaStore.getAll()) as Promise<Area[]>,
-      requestResult(branchStore.getAll()) as Promise<GrowthBranch[]>,
-    ]);
+    const profiles = await requestResult(profileStore.getAll()) as Profile[];
     const timestamp = nowIso();
     if (!profiles.length) {
       profileStore.add({
@@ -2583,18 +2951,6 @@ export class QiguangDb {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai', weekStartsOn: 1,
         createdAt: timestamp, updatedAt: timestamp, version: 1,
       } satisfies Profile);
-    }
-    if (!areas.length) {
-      DEFAULT_AREA_NAMES.forEach((name, order) => areaStore.add({
-        id: `default-area-${order + 1}`, name, mode: 'explore', order, isDefault: true,
-        createdAt: timestamp, updatedAt: timestamp, version: 1,
-      } satisfies Area));
-    }
-    if (!branches.length) {
-      ROOT_ASSETS.forEach(({ key, name }, order) => branchStore.add({
-        id: `root-${key}`, rootAsset: key, name, order, status: 'active',
-        createdAt: timestamp, updatedAt: timestamp, version: 1,
-      } satisfies GrowthBranch));
     }
     await transactionDone(transaction);
   }
@@ -2628,82 +2984,6 @@ export class QiguangDb {
     return areas.sort((left, right) => left.order - right.order || left.createdAt.localeCompare(right.createdAt));
   }
 
-  async addArea(name: string, mode: AreaMode = 'explore'): Promise<Area> {
-    assertText(name, '领域名称', 40);
-    assertOneOf(mode, ['build', 'maintain', 'explore', 'pause'], '领域模式');
-    const transaction = this.database.transaction('areas', 'readwrite');
-    const store = transaction.objectStore('areas');
-    const areas = await requestResult(store.getAll()) as Area[];
-    if (areas.some((item) => item.name.trim() === name.trim())) {
-      transaction.abort();
-      throw new Error('已经有同名领域。');
-    }
-    if (mode === 'build' && areas.filter((item) => item.mode === 'build').length >= 2) {
-      transaction.abort();
-      throw new Error('重点建设领域最多两个。');
-    }
-    const timestamp = nowIso();
-    const area: Area = {
-      id: crypto.randomUUID(), name: name.trim(), mode, order: Math.max(-1, ...areas.map((item) => item.order)) + 1,
-      isDefault: false, createdAt: timestamp, updatedAt: timestamp, version: 1,
-    };
-    store.add(area);
-    await transactionDone(transaction);
-    return area;
-  }
-
-  async saveArea(id: string, patch: Partial<Pick<Area, 'name' | 'mode' | 'order'>>): Promise<Area> {
-    const transaction = this.database.transaction('areas', 'readwrite');
-    const store = transaction.objectStore('areas');
-    const [current, areas] = await Promise.all([
-      requestResult(store.get(id)) as Promise<Area | undefined>,
-      requestResult(store.getAll()) as Promise<Area[]>,
-    ]);
-    if (!current) {
-      transaction.abort();
-      throw new Error('领域不存在。');
-    }
-    const updated = { ...current, ...patch, updatedAt: nowIso(), version: current.version + 1 };
-    assertText(updated.name, '领域名称', 40);
-    assertOneOf(updated.mode, ['build', 'maintain', 'explore', 'pause'], '领域模式');
-    assertInteger(updated.order, 0, 10_000, '领域排序');
-    if (areas.some((item) => item.id !== id && item.name.trim() === updated.name.trim())) {
-      transaction.abort();
-      throw new Error('已经有同名领域。');
-    }
-    if (updated.mode === 'build' && areas.filter((item) => item.id !== id && item.mode === 'build').length >= 2) {
-      transaction.abort();
-      throw new Error('重点建设领域最多两个。');
-    }
-    store.put(updated);
-    await transactionDone(transaction);
-    return updated;
-  }
-
-  async deleteArea(id: string, replacementId?: string): Promise<void> {
-    if (replacementId === id) throw new Error('合并目标不能是当前领域。');
-    const transaction = this.database.transaction(['areas', 'goals'], 'readwrite');
-    const areas = transaction.objectStore('areas');
-    const goals = transaction.objectStore('goals');
-    const [current, replacement, allGoals] = await Promise.all([
-      requestResult(areas.get(id)) as Promise<Area | undefined>,
-      replacementId ? requestResult(areas.get(replacementId)) as Promise<Area | undefined> : Promise.resolve(undefined),
-      requestResult(goals.getAll()) as Promise<Goal[]>,
-    ]);
-    if (!current || (replacementId && !replacement)) {
-      transaction.abort();
-      throw new Error('领域不存在。');
-    }
-    const linked = allGoals.filter((goal) => goal.areaId === id);
-    if (linked.length && !replacementId) {
-      transaction.abort();
-      throw new Error('这个领域仍有目标，请先选择合并到哪个领域。');
-    }
-    linked.forEach((goal) => goals.put({ ...goal, areaId: replacementId, updatedAt: nowIso(), version: goal.version + 1 }));
-    areas.delete(id);
-    await transactionDone(transaction);
-  }
-
   async listBranches(): Promise<GrowthBranch[]> {
     const transaction = this.database.transaction('branches', 'readonly');
     const branches = await requestResult(transaction.objectStore('branches').getAll()) as GrowthBranch[];
@@ -2711,104 +2991,91 @@ export class QiguangDb {
     return branches.sort((left, right) => left.order - right.order || left.createdAt.localeCompare(right.createdAt));
   }
 
-  async addBranch(name: string, rootAsset: GrowthBranch['rootAsset'], parentId?: string): Promise<GrowthBranch> {
-    assertText(name, '成长分支名称', 60);
-    assertOneOf(rootAsset, ROOT_ASSETS.map((item) => item.key), '主要提升');
-    const transaction = this.database.transaction('branches', 'readwrite');
-    const store = transaction.objectStore('branches');
-    const branches = await requestResult(store.getAll()) as GrowthBranch[];
-    if (parentId && !branches.some((item) => item.id === parentId)) {
-      transaction.abort();
-      throw new Error('父成长分支不存在。');
-    }
-    const timestamp = nowIso();
-    const branch: GrowthBranch = {
-      id: crypto.randomUUID(), rootAsset, parentId, name: name.trim(),
-      order: Math.max(-1, ...branches.map((item) => item.order)) + 1, status: 'active',
-      createdAt: timestamp, updatedAt: timestamp, version: 1,
-    };
-    store.add(branch);
-    await transactionDone(transaction);
-    return branch;
-  }
-
   async listGoals(): Promise<Goal[]> {
     const transaction = this.database.transaction('goals', 'readonly');
     const goals = await requestResult(transaction.objectStore('goals').getAll()) as Goal[];
     await transactionDone(transaction);
-    const roleOrder: Record<GoalRole, number> = { main: 0, secondary: 1, wishlist: 2 };
-    return goals.sort((left, right) => roleOrder[left.role] - roleOrder[right.role] || right.updatedAt.localeCompare(left.updatedAt));
+    return goals.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id));
   }
 
-  async addGoal(input: Pick<Goal, 'result' | 'why' | 'evidence' | 'nextStep'> & Partial<Pick<Goal, 'areaId' | 'branchId' | 'startDate' | 'targetDate' | 'role'>>): Promise<Goal> {
+  async addGoal(input: Pick<Goal, 'result'> & Partial<Pick<Goal, 'why' | 'evidence' | 'nextStep' | 'startDate' | 'targetDate'>>): Promise<Goal> {
+    return (await this.addGoalWithStages(input, [])).goal;
+  }
+
+  async addGoalWithStages(
+    input: Pick<Goal, 'result'> & Partial<Pick<Goal, 'why' | 'evidence' | 'nextStep' | 'startDate' | 'targetDate'>>,
+    stages: Array<{
+      title: string;
+      evidence?: string;
+      localDate: string;
+      deadlineAt?: string;
+      dimension: Dimension;
+      difficulty: Difficulty;
+      aiSuggested?: boolean;
+    }>,
+  ): Promise<{ goal: Goal; milestones: Milestone[]; quests: Quest[] }> {
     assertText(input.result, '目标结果', 160);
-    assertText(input.why, '目标意义', 500, true);
-    assertText(input.evidence, '目标证据', 500, true);
-    assertText(input.nextStep, '目标下一步', 160);
+    assertText(input.why ?? '', '目标意义', 500, true);
+    assertText(input.evidence ?? '', '目标证据', 500, true);
+    assertText(input.nextStep ?? stages[0]?.title ?? input.result, '目标下一步', 160);
     if (input.startDate !== undefined && !isLocalDate(input.startDate)) throw new Error('目标开始日期无效。');
     if (input.targetDate !== undefined && !isLocalDate(input.targetDate)) throw new Error('目标日期无效。');
-    assertOneOf(input.role ?? 'wishlist', ['main', 'secondary', 'wishlist'], '目标角色');
-    const transaction = this.database.transaction(['goals', 'areas', 'branches'], 'readwrite');
+    if (stages.length > 5) throw new Error('一次最多保存 5 个子任务。');
+    stages.forEach((stage) => {
+      assertText(stage.title, '子任务名称', 160);
+      if (stage.evidence !== undefined) assertText(stage.evidence, '子任务完成标准', 500);
+      if (!isLocalDate(stage.localDate)) throw new Error('子任务日期无效。');
+      if (stage.deadlineAt !== undefined) assertTimestamp(stage.deadlineAt, '任务提醒时间');
+      assertOneOf(stage.dimension, DIMENSIONS.map((item) => item.key), '任务状态维度');
+      assertOneOf(stage.difficulty, Object.keys(DIFFICULTY_XP), '任务难度');
+    });
+    if (new Set(stages.map((stage) => stage.title.trim())).size !== stages.length) throw new Error('子任务不能重复。');
+    const transaction = this.database.transaction(['goals', 'milestones', 'quests'], 'readwrite');
     const goals = transaction.objectStore('goals');
-    const [allGoals, allAreas, allBranches] = await Promise.all([
-      requestResult(goals.getAll()) as Promise<Goal[]>,
-      requestResult(transaction.objectStore('areas').getAll()) as Promise<Area[]>,
-      requestResult(transaction.objectStore('branches').getAll()) as Promise<GrowthBranch[]>,
-    ]);
-    if (!allAreas.length || !allBranches.length) {
-      transaction.abort();
-      throw new Error('目标的领域或成长分支不存在。');
-    }
-    const chosenArea = input.areaId ? allAreas.find((item) => item.id === input.areaId) : undefined;
-    const chosenBranch = input.branchId ? allBranches.find((item) => item.id === input.branchId) : undefined;
-    if (input.areaId && !chosenArea) {
-      transaction.abort();
-      throw new Error('目标的领域或成长分支不存在。');
-    }
-    if (input.branchId && !chosenBranch) {
-      transaction.abort();
-      throw new Error('目标的领域或成长分支不存在。');
-    }
-    const fallbackArea = allAreas.find((item) => item.isDefault) ?? [...allAreas].sort((left, right) => left.order - right.order || left.createdAt.localeCompare(right.createdAt))[0];
-    const fallbackBranch = [...allBranches].sort((left, right) => {
-      if (left.status === right.status) return left.order - right.order || left.createdAt.localeCompare(right.createdAt);
-      return left.status === 'active' ? -1 : 1;
-    })[0];
-    if (!fallbackArea || !fallbackBranch) {
-      transaction.abort();
-      throw new Error('目标的领域或成长分支不存在。');
-    }
-    const requestedRole = input.role ?? 'wishlist';
-    const active = allGoals.filter((item) => !['completed', 'abandoned'].includes(item.status));
-    const role = requestedRole === 'main' && active.some((item) => item.role === 'main')
-      ? 'wishlist'
-      : requestedRole === 'secondary' && active.filter((item) => item.role === 'secondary').length >= 2 ? 'wishlist' : requestedRole;
+    const milestones = transaction.objectStore('milestones');
+    const quests = transaction.objectStore('quests');
     const timestamp = nowIso();
     const goal: Goal = {
-      id: crypto.randomUUID(), result: input.result.trim(), why: input.why.trim(), evidence: input.evidence.trim(),
-      nextStep: input.nextStep.trim(), areaId: chosenArea?.id ?? fallbackArea.id, branchId: chosenBranch?.id ?? fallbackBranch.id,
-      startDate: input.startDate, targetDate: input.targetDate, role, status: role === 'wishlist' ? 'idea' : 'active',
+      id: crypto.randomUUID(), result: input.result.trim(), why: input.why?.trim() ?? '', evidence: input.evidence?.trim() ?? '',
+      nextStep: input.nextStep?.trim() || stages[0]?.title.trim() || input.result.trim(),
+      startDate: input.startDate, targetDate: input.targetDate, status: 'active',
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
+    const createdMilestones = stages.map((stage, order): Milestone => ({
+      id: crypto.randomUUID(), goalId: goal.id, order, description: stage.title.trim(),
+      evidence: stage.evidence?.trim() || `完成“${stage.title.trim()}”`,
+      status: 'pending', xpSettled: false, createdAt: timestamp, updatedAt: timestamp, version: 1,
+    }));
+    const createdQuests = createdMilestones.map((milestone, index): Quest => {
+      const stage = stages[index]!;
+      return {
+        id: crypto.randomUUID(), localDate: stage.localDate, sourceType: 'goal', sourceId: goal.id,
+        milestoneId: milestone.id, actionId: validateActionId(`goal:${goal.id}:milestone:${milestone.id}`), settlementVersion: 0,
+        title: milestone.description, reason: `来自目标“${goal.result}”。`, completionCriteria: milestone.evidence,
+        difficulty: stage.difficulty, dimension: stage.dimension, deadlineAt: stage.deadlineAt,
+        status: 'pending', aiSuggested: stage.aiSuggested ?? false, userModified: !stage.aiSuggested,
+        createdAt: timestamp, updatedAt: timestamp, version: 1,
+      };
+    });
     goals.add(goal);
+    createdMilestones.forEach((milestone) => milestones.add(milestone));
+    createdQuests.forEach((quest) => quests.add(quest));
     await transactionDone(transaction);
-    return goal;
+    return { goal, milestones: createdMilestones, quests: createdQuests };
   }
 
-  async saveGoal(id: string, patch: Partial<Pick<Goal, 'result' | 'why' | 'evidence' | 'nextStep' | 'areaId' | 'branchId' | 'startDate' | 'targetDate' | 'role' | 'status'>>): Promise<Goal> {
-    const transaction = this.database.transaction(['goals', 'areas', 'branches', 'quests'], 'readwrite');
+  async saveGoal(id: string, patch: Partial<Pick<Goal, 'result' | 'why' | 'evidence' | 'nextStep' | 'startDate' | 'targetDate' | 'status'>>): Promise<Goal> {
+    const transaction = this.database.transaction(['goals', 'quests'], 'readwrite');
     const goals = transaction.objectStore('goals');
     const quests = transaction.objectStore('quests');
-    const [current, allGoals] = await Promise.all([
-      requestResult(goals.get(id)) as Promise<Goal | undefined>,
-      requestResult(goals.getAll()) as Promise<Goal[]>,
-    ]);
+    const current = await requestResult(goals.get(id)) as Goal | undefined;
     if (!current) {
       transaction.abort();
       throw new Error('目标不存在。');
     }
     const timestamp = nowIso();
-    const merged = { ...current, ...patch, updatedAt: timestamp, version: current.version + 1 };
+    const { role: _ignoredLegacyRole, ...currentPatch } = patch as typeof patch & { role?: Goal['role'] };
+    const merged = { ...current, ...currentPatch, updatedAt: timestamp, version: current.version + 1 };
     const updated: Goal = merged.status === 'completed'
       ? {
           ...merged,
@@ -2822,31 +3089,23 @@ export class QiguangDb {
     assertText(updated.why, '目标意义', 500, true);
     assertText(updated.evidence, '目标证据', 500, true);
     assertText(updated.nextStep, '目标下一步', 160);
-    assertOneOf(updated.role, ['main', 'secondary', 'wishlist'], '目标角色');
+    if (updated.role !== undefined) assertOneOf(updated.role, ['main', 'secondary', 'wishlist'], '目标角色');
     assertOneOf(updated.status, ['idea', 'active', 'paused', 'completed', 'abandoned'], '目标状态');
-    if (!await requestResult(transaction.objectStore('areas').get(updated.areaId)) || !await requestResult(transaction.objectStore('branches').get(updated.branchId))) {
-      transaction.abort();
-      throw new Error('目标的领域或成长分支不存在。');
-    }
     if (updated.startDate !== undefined && !isLocalDate(updated.startDate)) throw new Error('目标开始日期无效。');
     if (updated.targetDate !== undefined && !isLocalDate(updated.targetDate)) throw new Error('目标日期无效。');
     const shouldCloseQuestFlow = !goalIsActionable(updated);
-    if (shouldCloseQuestFlow) {
+    const shouldRestoreQuestFlow = !goalIsActionable(current) && goalIsActionable(updated);
+    if (shouldCloseQuestFlow || shouldRestoreQuestFlow) {
       const allQuests = await requestResult(quests.getAll()) as Quest[];
-      for (const quest of allQuests.filter((item) => item.sourceType === 'goal' && item.sourceId === id
-        && (item.status === 'pending' || item.systemRetiredReason === 'capacity'))) {
-        quests.put(systemRetireQuest(quest, 'source-invalidated', timestamp));
-      }
-    }
-    if (!['completed', 'abandoned'].includes(updated.status)) {
-      const otherActive = allGoals.filter((item) => item.id !== id && !['completed', 'abandoned'].includes(item.status));
-      if (updated.role === 'main' && otherActive.some((item) => item.role === 'main')) {
-        transaction.abort();
-        throw new Error('当前已经有一个主目标。');
-      }
-      if (updated.role === 'secondary' && otherActive.filter((item) => item.role === 'secondary').length >= 2) {
-        transaction.abort();
-        throw new Error('当前已经有两个次要目标。');
+      if (shouldCloseQuestFlow) {
+        for (const quest of allQuests.filter((item) => item.sourceType === 'goal' && item.sourceId === id && item.status === 'pending')) {
+          quests.put(systemRetireQuest(quest, 'goal-inactive', timestamp));
+        }
+      } else {
+        for (const quest of allQuests.filter((item) => item.sourceType === 'goal' && item.sourceId === id
+          && item.status === 'exempt' && item.systemRetiredReason === 'goal-inactive' && !item.userRemovedAt)) {
+          quests.put(restoreSystemRetiredQuest(quest, { status: 'pending', updatedAt: timestamp, version: quest.version + 1 }));
+        }
       }
     }
     goals.put(updated);
@@ -2865,15 +3124,29 @@ export class QiguangDb {
   async replaceGoalPlan(
     goalId: string,
     patch: Pick<Goal, 'result' | 'evidence' | 'nextStep'>,
-    replacements: Array<{ description: string; evidence: string }>,
+    replacements: Array<{
+      description: string;
+      evidence: string;
+      localDate: string;
+      deadlineAt?: string;
+      dimension: Dimension;
+      difficulty: Difficulty;
+    }>,
     expectedGoalVersion?: number,
-  ): Promise<{ goal: Goal; milestones: Milestone[] }> {
+  ): Promise<{ goal: Goal; milestones: Milestone[]; quests: Quest[] }> {
     assertText(patch.result, '目标结果', 160);
     assertText(patch.evidence, '目标证据', 500);
     assertText(patch.nextStep, '目标下一步', 160);
-    if (replacements.length < 2 || replacements.length > 5) throw new Error('新计划需要保留 2—5 个阶段目标。');
-    replacements.forEach((item) => { assertText(item.description, '阶段目标描述', 200); assertText(item.evidence, '阶段目标完成标准', 500); });
-    if (new Set(replacements.map((item) => item.description.trim())).size !== replacements.length) throw new Error('阶段目标不能重复。');
+    if (replacements.length < 1 || replacements.length > 5) throw new Error('新计划需要保留 1—5 个子任务。');
+    replacements.forEach((item) => {
+      assertText(item.description, '子任务名称', 160);
+      assertText(item.evidence, '子任务完成标准', 500);
+      if (!isLocalDate(item.localDate)) throw new Error('子任务日期无效。');
+      if (item.deadlineAt !== undefined) assertTimestamp(item.deadlineAt, '任务提醒时间');
+      assertOneOf(item.dimension, DIMENSIONS.map((dimension) => dimension.key), '任务状态维度');
+      assertOneOf(item.difficulty, Object.keys(DIFFICULTY_XP), '任务难度');
+    });
+    if (new Set(replacements.map((item) => item.description.trim())).size !== replacements.length) throw new Error('子任务不能重复。');
     const transaction = this.database.transaction(['goals', 'milestones', 'quests'], 'readwrite');
     const goals = transaction.objectStore('goals');
     const milestones = transaction.objectStore('milestones');
@@ -2882,6 +3155,10 @@ export class QiguangDb {
     if (!current) {
       transaction.abort();
       throw new Error('目标不存在。');
+    }
+    if (!goalIsActionable(current)) {
+      transaction.abort();
+      throw new Error('只有进行中的目标可以更新计划。');
     }
     if (expectedGoalVersion !== undefined && current.version !== expectedGoalVersion) {
       transaction.abort();
@@ -2905,9 +3182,22 @@ export class QiguangDb {
     allQuests.filter((item) => item.sourceType === 'goal' && item.sourceId === goalId
       && (item.status === 'pending' || item.systemRetiredReason === 'capacity'))
       .forEach((item) => quests.put(systemRetireQuest(item, 'source-invalidated', timestamp)));
+    const createdQuests = created.map((milestone, index): Quest => {
+      const item = replacements[index]!;
+      return {
+        id: crypto.randomUUID(), localDate: item.localDate, sourceType: 'goal', sourceId: goalId,
+        milestoneId: milestone.id, actionId: validateActionId(`goal:${goalId}:milestone:${milestone.id}`), settlementVersion: 0,
+        title: milestone.description, reason: `来自目标“${goal.result}”。`, completionCriteria: milestone.evidence,
+        difficulty: item.difficulty, dimension: item.dimension, deadlineAt: item.deadlineAt,
+        status: 'pending',
+        aiSuggested: true, userModified: false,
+        createdAt: timestamp, updatedAt: timestamp, version: 1,
+      };
+    });
+    createdQuests.forEach((item) => quests.add(item));
     goals.put(goal);
     await transactionDone(transaction);
-    return { goal, milestones: created };
+    return { goal, milestones: created, quests: createdQuests };
   }
 
   async addMilestone(goalId: string, description: string, evidence: string): Promise<Milestone> {
@@ -2915,9 +3205,14 @@ export class QiguangDb {
     assertText(evidence, '阶段目标完成标准', 500);
     const transaction = this.database.transaction(['goals', 'milestones'], 'readwrite');
     const milestoneStore = transaction.objectStore('milestones');
-    if (!await requestResult(transaction.objectStore('goals').get(goalId))) {
+    const goal = await requestResult(transaction.objectStore('goals').get(goalId)) as Goal | undefined;
+    if (!goal) {
       transaction.abort();
       throw new Error('目标不存在。');
+    }
+    if (!goalIsActionable(goal)) {
+      transaction.abort();
+      throw new Error('只有进行中的目标可以添加子任务。');
     }
     const existing = await requestResult(milestoneStore.index('byGoalId').getAll(goalId)) as Milestone[];
     const timestamp = nowIso();
@@ -2930,9 +3225,61 @@ export class QiguangDb {
     return milestone;
   }
 
+  async addGoalStageTask(goalId: string, input: {
+    title: string;
+    localDate: string;
+    deadlineAt?: string;
+    dimension: Dimension;
+    difficulty: Difficulty;
+    aiSuggested?: boolean;
+  }): Promise<{ milestone: Milestone; quest: Quest }> {
+    assertText(input.title, '子任务名称', 160);
+    if (!isLocalDate(input.localDate)) throw new Error('子任务日期无效。');
+    if (input.deadlineAt !== undefined) assertTimestamp(input.deadlineAt, '任务提醒时间');
+    assertOneOf(input.dimension, DIMENSIONS.map((item) => item.key), '任务状态维度');
+    assertOneOf(input.difficulty, Object.keys(DIFFICULTY_XP), '任务难度');
+    const transaction = this.database.transaction(['goals', 'milestones', 'quests'], 'readwrite');
+    const goals = transaction.objectStore('goals');
+    const milestones = transaction.objectStore('milestones');
+    const quests = transaction.objectStore('quests');
+    const goal = await requestResult(goals.get(goalId)) as Goal | undefined;
+    if (!goal) {
+      transaction.abort();
+      throw new Error('目标不存在。');
+    }
+    if (!goalIsActionable(goal)) {
+      transaction.abort();
+      throw new Error('只有进行中的目标可以添加子任务。');
+    }
+    const existingMilestones = await requestResult(milestones.index('byGoalId').getAll(goalId)) as Milestone[];
+    const timestamp = nowIso();
+    const title = input.title.trim();
+    const milestone: Milestone = {
+      id: crypto.randomUUID(), goalId,
+      order: Math.max(-1, ...existingMilestones.map((item, index) => item.order ?? index)) + 1,
+      description: title, evidence: `完成“${title}”`, status: 'pending', xpSettled: false,
+      createdAt: timestamp, updatedAt: timestamp, version: 1,
+    };
+    const quest: Quest = {
+      id: crypto.randomUUID(), localDate: input.localDate, sourceType: 'goal', sourceId: goal.id,
+      milestoneId: milestone.id, actionId: validateActionId(`goal:${goal.id}:milestone:${milestone.id}`), settlementVersion: 0,
+      title, reason: `来自目标“${goal.result}”。`, completionCriteria: milestone.evidence,
+      difficulty: input.difficulty, dimension: input.dimension, deadlineAt: input.deadlineAt,
+      status: 'pending', aiSuggested: input.aiSuggested ?? false, userModified: !input.aiSuggested,
+      createdAt: timestamp, updatedAt: timestamp, version: 1,
+    };
+    milestones.add(milestone);
+    quests.add(quest);
+    if (!existingMilestones.some((item) => item.status === 'pending')) {
+      goals.put({ ...goal, nextStep: title, updatedAt: timestamp, version: goal.version + 1 });
+    }
+    await transactionDone(transaction);
+    return { milestone, quest };
+  }
+
   async completeMilestone(id: string, date = localDate()): Promise<Milestone> {
     if (!isLocalDate(date)) throw new Error('阶段目标日期无效。');
-    const transaction = this.database.transaction(['milestones', 'goals', 'xpLedger'], 'readwrite');
+    const transaction = this.database.transaction(['milestones', 'goals', 'quests', 'xpLedger'], 'readwrite');
     const milestones = transaction.objectStore('milestones');
     const current = await requestResult(milestones.get(id)) as Milestone | undefined;
     if (!current) {
@@ -2949,13 +3296,16 @@ export class QiguangDb {
       throw new Error('阶段目标所属的目标不存在。');
     }
     const timestamp = nowIso();
+    const goalQuests = await requestResult(transaction.objectStore('quests').index('bySourceId').getAll(goal.id)) as Quest[];
+    const dimension = goalQuests.find((quest) => quest.milestoneId === current.id)?.dimension
+      ?? 'progress';
     const ledger = transaction.objectStore('xpLedger');
-    await settleMilestoneXp(ledger, current.id, goal.branchId, date, timestamp);
-    if (current.status === 'completed' && current.xpSettled) {
+    const settlement = await settleMilestoneXp(ledger, current.id, dimension, date, timestamp);
+    if (current.status === 'completed' && current.xpSettled && !settlement.changed && current.completedDate === date) {
       await transactionDone(transaction);
       return current;
     }
-    const updated = { ...current, status: 'completed' as const, completedAt: timestamp, completionSourceQuestId: undefined, xpSettled: true, updatedAt: timestamp, version: current.version + 1 };
+    const updated = { ...current, status: 'completed' as const, completedAt: timestamp, completedDate: date, xpSettled: true, updatedAt: timestamp, version: current.version + 1 };
     milestones.put(updated);
     await transactionDone(transaction);
     return updated;
@@ -2973,7 +3323,7 @@ export class QiguangDb {
     const ledger = transaction.objectStore('xpLedger');
     const settlement = await requestResult(ledger.index('bySettlementKey').get(`${id}:1`)) as XpLedger | undefined;
     if (settlement && !settlement.reversedAt) ledger.put({ ...settlement, reversedAt: timestamp, updatedAt: timestamp, version: settlement.version + 1 });
-    const updated = { ...current, status: 'pending' as const, completedAt: undefined, completionSourceQuestId: undefined, xpSettled: false, updatedAt: timestamp, version: current.version + 1 };
+    const updated = { ...current, status: 'pending' as const, completedAt: undefined, completedDate: undefined, completionSourceQuestId: undefined, xpSettled: false, updatedAt: timestamp, version: current.version + 1 };
     milestones.put(updated);
     await transactionDone(transaction);
     return updated;
@@ -2997,7 +3347,7 @@ export class QiguangDb {
   }
 
   async addHabit(
-    input: Pick<Habit, 'name' | 'minimumAction' | 'scheduleDays' | 'dimension' | 'branchId' | 'difficulty'> & Partial<Pick<Habit, 'trigger' | 'bonusEnabled' | 'targetCount' | 'countUnit'>>,
+    input: Pick<Habit, 'name' | 'minimumAction' | 'scheduleDays' | 'dimension' | 'difficulty'> & Partial<Pick<Habit, 'trigger' | 'bonusEnabled' | 'targetCount' | 'countUnit'>>,
     effectiveDate = localDate(),
   ): Promise<Habit> {
     if (!isLocalDate(effectiveDate)) throw new Error('习惯生效日期无效。');
@@ -3011,20 +3361,8 @@ export class QiguangDb {
     input.scheduleDays.forEach((day) => assertInteger(day, 1, 7, '习惯计划日'));
     assertOneOf(input.dimension, DIMENSIONS.map((item) => item.key), '习惯状态维度');
     assertOneOf(input.difficulty, Object.keys(DIFFICULTY_XP), '习惯难度');
-    const transaction = this.database.transaction(['habits', 'branches'], 'readwrite');
+    const transaction = this.database.transaction('habits', 'readwrite');
     const habits = transaction.objectStore('habits');
-    const [allHabits, branch] = await Promise.all([
-      requestResult(habits.getAll()) as Promise<Habit[]>,
-      requestResult(transaction.objectStore('branches').get(input.branchId)) as Promise<GrowthBranch | undefined>,
-    ]);
-    if (!branch) {
-      transaction.abort();
-      throw new Error('成长分支不存在。');
-    }
-    if (input.bonusEnabled && allHabits.filter((item) => item.status === 'active' && item.bonusEnabled).length >= 3) {
-      transaction.abort();
-      throw new Error('每日可选习惯最多三个，请先暂停或替换一个。');
-    }
     const timestamp = nowIso();
     const habit: Habit = {
       id: crypto.randomUUID(), name: input.name.trim(), minimumAction: input.minimumAction.trim(),
@@ -3035,7 +3373,7 @@ export class QiguangDb {
         scheduleDays: [...input.scheduleDays].sort(),
         trackingEnabled: Boolean(input.bonusEnabled),
       }],
-      dimension: input.dimension, branchId: input.branchId, difficulty: input.difficulty,
+      dimension: input.dimension, difficulty: input.difficulty,
       status: 'active', bonusEnabled: Boolean(input.bonusEnabled),
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
@@ -3046,16 +3384,13 @@ export class QiguangDb {
 
   async saveHabit(
     id: string,
-    patch: Partial<Pick<Habit, 'name' | 'minimumAction' | 'scheduleDays' | 'trigger' | 'dimension' | 'branchId' | 'difficulty' | 'status' | 'bonusEnabled' | 'targetCount' | 'countUnit'>>,
+    patch: Partial<Pick<Habit, 'name' | 'minimumAction' | 'scheduleDays' | 'trigger' | 'dimension' | 'difficulty' | 'status' | 'bonusEnabled' | 'targetCount' | 'countUnit'>>,
     effectiveDate = localDate(),
   ): Promise<Habit> {
     if (!isLocalDate(effectiveDate)) throw new Error('习惯生效日期无效。');
-    const transaction = this.database.transaction(['habits', 'branches', 'quests'], 'readwrite');
+    const transaction = this.database.transaction(['habits', 'quests'], 'readwrite');
     const habits = transaction.objectStore('habits');
-    const [current, allHabits] = await Promise.all([
-      requestResult(habits.get(id)) as Promise<Habit | undefined>,
-      requestResult(habits.getAll()) as Promise<Habit[]>,
-    ]);
+    const current = await requestResult(habits.get(id)) as Habit | undefined;
     if (!current) {
       transaction.abort();
       throw new Error('习惯不存在。');
@@ -3075,15 +3410,6 @@ export class QiguangDb {
     assertOneOf(updated.dimension, DIMENSIONS.map((item) => item.key), '习惯状态维度');
     assertOneOf(updated.difficulty, Object.keys(DIFFICULTY_XP), '习惯难度');
     assertOneOf(updated.status, ['active', 'paused', 'ended'], '习惯状态');
-    const branch = await requestResult(transaction.objectStore('branches').get(updated.branchId)) as GrowthBranch | undefined;
-    if (!branch) {
-      transaction.abort();
-      throw new Error('成长分支不存在。');
-    }
-    if (updated.status === 'active' && updated.bonusEnabled && allHabits.filter((item) => item.id !== id && item.status === 'active' && item.bonusEnabled).length >= 3) {
-      transaction.abort();
-      throw new Error('每日可选习惯最多三个，请先暂停或替换一个。');
-    }
     const trackingEnabled = updated.status === 'active' && updated.bonusEnabled;
     const currentTrackingEnabled = current.status === 'active' && current.bonusEnabled;
     const scheduleChanged = updated.scheduleDays.join(',') !== [...current.scheduleDays].sort().join(',');
@@ -3094,7 +3420,7 @@ export class QiguangDb {
     }
     const quests = transaction.objectStore('quests');
     const openBonuses = (await requestResult(quests.index('bySourceId').getAll(id)) as Quest[])
-      .filter((quest) => quest.type === 'bonus' && quest.sourceType === 'habit'
+      .filter((quest) => quest.sourceType === 'habit'
         && (quest.status === 'pending' || ['capacity', 'schedule-changed', 'tracking-disabled'].includes(quest.systemRetiredReason ?? '')));
     for (const quest of openBonuses) {
       const weekday = parseLocalDate(quest.localDate).getDay() || 7;
@@ -3106,7 +3432,7 @@ export class QiguangDb {
       const liveFields = quest.userModified ? {} : {
         title: updated.name, minimumAction: updated.minimumAction, targetCount: updated.targetCount,
         progressCount: updated.targetCount ? Math.min(quest.progressCount ?? 0, updated.targetCount - 1) : undefined,
-        countUnit: updated.countUnit, difficulty: updated.difficulty, dimension: updated.dimension, branchId: updated.branchId,
+        countUnit: updated.countUnit, difficulty: updated.difficulty, dimension: updated.dimension,
       };
       if (retireReason) {
         const changed = { ...quest, ...liveFields };
@@ -3129,10 +3455,9 @@ export class QiguangDb {
     const store = transaction.objectStore('quests');
     const quests = await requestResult(date ? store.index('byLocalDate').getAll(date) : store.getAll()) as Quest[];
     await transactionDone(transaction);
-    const typeOrder: Record<QuestType, number> = { main: 0, bonus: 1, side: 2 };
     return quests.filter((quest) => !quest.userRemovedAt)
       .sort((left, right) => (left.sortOrder ?? Number.MAX_SAFE_INTEGER) - (right.sortOrder ?? Number.MAX_SAFE_INTEGER)
-        || typeOrder[left.type] - typeOrder[right.type] || left.createdAt.localeCompare(right.createdAt));
+        || left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
   }
 
   async reorderPendingQuests(date: string, orderedIds: string[]): Promise<void> {
@@ -3162,12 +3487,11 @@ export class QiguangDb {
       .sort((left, right) => left.localDate.localeCompare(right.localDate) || left.createdAt.localeCompare(right.createdAt));
   }
 
-  async addQuest(input: Pick<Quest, 'localDate' | 'type' | 'sourceType' | 'title' | 'reason' | 'difficulty'> & Partial<Pick<Quest, 'sourceId' | 'actionId' | 'dimension' | 'branchId' | 'milestoneId' | 'minimumAction' | 'completionCriteria' | 'estimatedMinutes' | 'aiSuggested' | 'userModified' | 'deadlineAt' | 'targetCount' | 'countUnit'>>): Promise<Quest> {
+  async addQuest(input: Pick<Quest, 'localDate' | 'sourceType' | 'title' | 'reason' | 'difficulty' | 'dimension'> & Partial<Pick<Quest, 'sourceId' | 'actionId' | 'milestoneId' | 'minimumAction' | 'completionCriteria' | 'estimatedMinutes' | 'aiSuggested' | 'userModified' | 'deadlineAt' | 'targetCount' | 'countUnit'>>): Promise<Quest> {
     if (!isLocalDate(input.localDate)) throw new Error('任务日期无效。');
-    assertOneOf(input.type, ['main', 'bonus', 'side'], '任务类型');
     assertOneOf(input.sourceType, ['goal', 'habit', 'recovery', 'manual'], '任务来源');
     assertOneOf(input.difficulty, Object.keys(DIFFICULTY_XP), '任务难度');
-    if (input.dimension !== undefined) assertOneOf(input.dimension, DIMENSIONS.map((item) => item.key), '任务状态维度');
+    assertOneOf(input.dimension, DIMENSIONS.map((item) => item.key), '任务状态维度');
     assertText(input.title, '任务标题', 160);
     assertText(input.reason, '任务理由', 500);
     if (input.minimumAction !== undefined) assertText(input.minimumAction, '任务最小动作', 200);
@@ -3179,16 +3503,20 @@ export class QiguangDb {
       assertText(input.countUnit, '任务计数单位', 20);
     } else if (input.countUnit !== undefined) throw new Error('任务计数设置无效。');
     const validatedActionId = validateActionId(input.actionId ?? crypto.randomUUID());
-    const transaction = this.database.transaction(['quests', 'goals', 'habits', 'branches', 'milestones'], 'readwrite');
+    const transaction = this.database.transaction(['quests', 'goals', 'habits', 'milestones'], 'readwrite');
     const quests = transaction.objectStore('quests');
-    const existing = await requestResult(quests.index('byLocalDate').getAll(input.localDate)) as Quest[];
-    if (!canAddQuest(input.type, existing.filter((item) => item.status === 'pending').map((item) => item.type))) {
-      transaction.abort();
-      throw new Error('今天这类任务已经达到上限。');
-    }
-    if (input.sourceType === 'goal' && (!input.sourceId || !await requestResult(transaction.objectStore('goals').get(input.sourceId)))) {
-      transaction.abort();
-      throw new Error('任务所属目标不存在。');
+    if (input.sourceType === 'goal') {
+      const goal = input.sourceId
+        ? await requestResult(transaction.objectStore('goals').get(input.sourceId)) as Goal | undefined
+        : undefined;
+      if (!goal) {
+        transaction.abort();
+        throw new Error('任务所属目标不存在。');
+      }
+      if (!goalIsActionable(goal)) {
+        transaction.abort();
+        throw new Error('只有进行中的目标可以添加子任务。');
+      }
     }
     if (input.sourceType === 'habit' && (!input.sourceId || !await requestResult(transaction.objectStore('habits').get(input.sourceId)))) {
       transaction.abort();
@@ -3201,18 +3529,14 @@ export class QiguangDb {
         throw new Error('任务关联的阶段目标与目标不一致。');
       }
     }
-    if (input.branchId && !await requestResult(transaction.objectStore('branches').get(input.branchId))) {
-      transaction.abort();
-      throw new Error('任务成长分支不存在。');
-    }
     const timestamp = nowIso();
     const quest: Quest = {
-      id: crypto.randomUUID(), localDate: input.localDate, type: input.type, sourceType: input.sourceType,
+      id: crypto.randomUUID(), localDate: input.localDate, sourceType: input.sourceType,
       sourceId: input.sourceId, milestoneId: input.milestoneId, actionId: validatedActionId, settlementVersion: 0,
       title: input.title.trim(), reason: input.reason.trim(), minimumAction: input.minimumAction?.trim(), completionCriteria: input.completionCriteria?.trim(),
       estimatedMinutes: input.estimatedMinutes, difficulty: input.difficulty, dimension: input.dimension,
       deadlineAt: input.deadlineAt, targetCount: input.targetCount, progressCount: input.targetCount ? 0 : undefined, countUnit: input.countUnit?.trim(),
-      branchId: input.branchId, status: 'pending', aiSuggested: input.aiSuggested ?? false, userModified: input.userModified ?? true,
+      status: 'pending', aiSuggested: input.aiSuggested ?? false, userModified: input.userModified ?? true,
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
     quests.add(quest);
@@ -3220,7 +3544,7 @@ export class QiguangDb {
     return quest;
   }
 
-  async savePendingQuest(id: string, patch: Partial<Pick<Quest, 'localDate' | 'title' | 'reason' | 'minimumAction' | 'completionCriteria' | 'estimatedMinutes' | 'difficulty' | 'deadlineAt' | 'targetCount' | 'countUnit'>>): Promise<Quest> {
+  async savePendingQuest(id: string, patch: Partial<Pick<Quest, 'localDate' | 'title' | 'reason' | 'minimumAction' | 'completionCriteria' | 'estimatedMinutes' | 'difficulty' | 'dimension' | 'deadlineAt' | 'targetCount' | 'countUnit'>>): Promise<Quest> {
     const transaction = this.database.transaction(['quests', 'goals', 'milestones'], 'readwrite');
     const quests = transaction.objectStore('quests');
     const current = await requestResult(quests.get(id)) as Quest | undefined;
@@ -3239,6 +3563,9 @@ export class QiguangDb {
       updatedAt: nowIso(),
       version: current.version + 1,
     };
+    if ('title' in patch && current.milestoneId && current.completionCriteria === `完成“${current.title}”`) {
+      updated.completionCriteria = `完成“${updated.title.trim()}”`;
+    }
     if (!isLocalDate(updated.localDate)) {
       transaction.abort();
       throw new Error('任务日期无效。');
@@ -3249,16 +3576,12 @@ export class QiguangDb {
     if (updated.completionCriteria !== undefined) assertText(updated.completionCriteria, '任务完成标准', 500);
     if (updated.estimatedMinutes !== undefined) assertInteger(updated.estimatedMinutes, 1, 24 * 60, '任务预计时间');
     assertOneOf(updated.difficulty, Object.keys(DIFFICULTY_XP), '任务难度');
+    if (updated.dimension !== undefined) assertOneOf(updated.dimension, DIMENSIONS.map((item) => item.key), '任务状态维度');
     if (updated.deadlineAt !== undefined) assertTimestamp(updated.deadlineAt, '任务截止时间');
     if (updated.targetCount !== undefined) {
       assertInteger(updated.targetCount, Math.max(2, (updated.progressCount ?? 0) + 1), 1_000, '任务目标次数');
       assertText(updated.countUnit, '任务计数单位', 20);
     } else if (updated.countUnit !== undefined || updated.progressCount !== undefined) throw new Error('任务计数设置无效。');
-    const destination = await requestResult(quests.index('byLocalDate').getAll(updated.localDate)) as Quest[];
-    if (!canAddQuest(updated.type, destination.filter((item) => item.id !== id && item.status === 'pending').map((item) => item.type))) {
-      transaction.abort();
-      throw new Error('目标日期的这类任务已经达到上限。');
-    }
     quests.put(updated);
     if (updated.sourceType === 'goal' && updated.sourceId) {
       const [goal, allQuests, milestones] = await Promise.all([
@@ -3267,8 +3590,21 @@ export class QiguangDb {
         requestResult(transaction.objectStore('milestones').index('byGoalId').getAll(updated.sourceId)) as Promise<Milestone[]>,
       ]);
       if (goal) {
+        let projectedMilestones = milestones;
+        const linked = updated.milestoneId ? milestones.find((item) => item.id === updated.milestoneId) : undefined;
+        if (linked?.status === 'pending' && (linked.description !== updated.title.trim() || linked.evidence !== updated.completionCriteria)) {
+          const changed = {
+            ...linked,
+            description: updated.title.trim(),
+            evidence: updated.completionCriteria ?? linked.evidence,
+            updatedAt: updated.updatedAt,
+            version: linked.version + 1,
+          };
+          transaction.objectStore('milestones').put(changed);
+          projectedMilestones = milestones.map((item) => item.id === changed.id ? changed : item);
+        }
         const projected = allQuests.map((item) => item.id === updated.id ? updated : item);
-        const nextStep = resolveGoalNextStep(goal, projected, milestones);
+        const nextStep = resolveGoalNextStep(goal, projected, projectedMilestones);
         if (goal.nextStep !== nextStep) transaction.objectStore('goals').put({ ...goal, nextStep, updatedAt: updated.updatedAt, version: goal.version + 1 });
       }
     }
@@ -3296,8 +3632,15 @@ export class QiguangDb {
         requestResult(transaction.objectStore('milestones').index('byGoalId').getAll(removed.sourceId)) as Promise<Milestone[]>,
       ]);
       if (goal) {
+        let projectedMilestones = milestones;
+        const linked = removed.milestoneId ? milestones.find((item) => item.id === removed.milestoneId) : undefined;
+        if (linked?.status === 'pending') {
+          const superseded = { ...linked, status: 'superseded' as const, updatedAt: timestamp, version: linked.version + 1 };
+          transaction.objectStore('milestones').put(superseded);
+          projectedMilestones = milestones.map((item) => item.id === superseded.id ? superseded : item);
+        }
         const projected = allQuests.map((item) => item.id === removed.id ? removed : item);
-        const nextStep = resolveGoalNextStep(goal, projected, milestones);
+        const nextStep = resolveGoalNextStep(goal, projected, projectedMilestones);
         if (goal.nextStep !== nextStep) transaction.objectStore('goals').put({ ...goal, nextStep, updatedAt: timestamp, version: goal.version + 1 });
       }
     }
@@ -3340,13 +3683,12 @@ export class QiguangDb {
       return item.status === 'active' && item.bonusEnabled && schedule?.trackingEnabled && schedule.scheduleDays.includes(weekday);
     })) {
       if (current.some((item) => item.sourceType === 'habit' && item.sourceId === habit.id)) continue;
-      if (!canAddQuest('bonus', current.filter((item) => item.status === 'pending').map((item) => item.type))) break;
       const quest: Quest = {
-        id: crypto.randomUUID(), localDate: date, type: 'bonus', sourceType: 'habit', sourceId: habit.id,
+        id: crypto.randomUUID(), localDate: date, sourceType: 'habit', sourceId: habit.id,
         actionId: validateActionId(`habit:${habit.id}:${date}`), settlementVersion: 0, title: habit.name,
-        reason: '这是你主动放入每日可选任务的习惯。', minimumAction: habit.minimumAction,
+        reason: '习惯打卡。', minimumAction: habit.minimumAction,
         targetCount: habit.targetCount, progressCount: habit.targetCount ? 0 : undefined, countUnit: habit.countUnit,
-        difficulty: habit.difficulty, dimension: habit.dimension, branchId: habit.branchId,
+        difficulty: habit.difficulty, dimension: habit.dimension,
         status: 'pending', aiSuggested: false, userModified: false,
         createdAt: timestamp, updatedAt: timestamp, version: 1,
       };
@@ -3365,7 +3707,7 @@ export class QiguangDb {
     assertInteger(stateDelta, -15, 15, '状态变化');
     if (completedDate !== undefined && !isLocalDate(completedDate)) throw new Error('任务实际完成日期无效。');
     if (result === 'skipped' || result === 'exempt') stateDelta = 0;
-    const transaction = this.database.transaction(['quests', 'questFeedback', 'habitLogs', 'xpLedger', 'observations', 'milestones', 'goals'], 'readwrite');
+    const transaction = this.database.transaction(['quests', 'questFeedback', 'habitLogs', 'xpLedger', 'observations', 'milestones', 'goals', 'events'], 'readwrite');
     const feedback = await this.writeQuestFeedback(transaction, id, result, note, actual, difficulty, stateDelta, completedDate);
     await transactionDone(transaction);
     return feedback;
@@ -3379,7 +3721,7 @@ export class QiguangDb {
     assertInteger(stateDelta, -15, 15, '状态变化');
     if (completedDate !== undefined && !isLocalDate(completedDate)) throw new Error('任务实际完成日期无效。');
     if (result === 'skipped' || result === 'exempt') stateDelta = 0;
-    const transaction = this.database.transaction(['quests', 'questFeedback', 'habitLogs', 'xpLedger', 'observations', 'milestones', 'goals'], 'readwrite');
+    const transaction = this.database.transaction(['quests', 'questFeedback', 'habitLogs', 'xpLedger', 'observations', 'milestones', 'goals', 'events'], 'readwrite');
     try {
       const feedback = await this.writeQuestFeedback(transaction, id, result, note, actual, difficulty, stateDelta, completedDate);
       const progression = result === 'completed' || result === 'partial'
@@ -3442,16 +3784,24 @@ export class QiguangDb {
     const settlementVersion = reuseSettlement ? quest.settlementVersion : quest.settlementVersion + 1;
     const settlementKey = `${quest.actionId}:${settlementVersion}`;
     const xp = questXp(finalDifficulty, result);
+    const settlementDimension = quest.dimension ?? 'progress';
     const activeSameAction = priorLedger.some((item) => !item.reversedAt && item.sourceId !== id && item.settlementKey.startsWith(`${quest.actionId}:`));
-    if (xp > 0 && quest.branchId && !activeSameAction) {
+    if (xp > 0 && !activeSameAction) {
       const existingSettlement = await requestResult(ledgerStore.index('bySettlementKey').get(settlementKey)) as XpLedger | undefined;
       const value: XpLedger = {
         id: existingSettlement?.id ?? crypto.randomUUID(), settlementKey, sourceType: 'quest', sourceId: id,
-        branchId: quest.branchId, baseXp: DIFFICULTY_XP[finalDifficulty], ratio: result === 'partial' ? 0.5 : 1,
+        dimension: settlementDimension, ruleVersion: 2, baseXp: DIFFICULTY_XP[finalDifficulty], ratio: result === 'partial' ? 0.5 : 1,
         finalXp: xp, difficulty: finalDifficulty, localDate: actualCompletedDate,
         createdAt: existingSettlement?.createdAt ?? timestamp, updatedAt: timestamp, version: (existingSettlement?.version ?? 0) + 1,
       };
       existingSettlement ? ledgerStore.put(value) : ledgerStore.add(value);
+    }
+    if (xp > 0) {
+      const events = await requestResult(transaction.objectStore('events').getAll()) as JournalEvent[];
+      const duplicateEventIds = new Set(events.filter((item) => item.active && item.confirmation === 'confirmed'
+        && item.growthEvidenceCandidate?.matchedQuestId === id).map((item) => item.id));
+      priorLedger.filter((item) => item.sourceType === 'journal-event' && duplicateEventIds.has(item.sourceId) && !item.reversedAt)
+        .forEach((item) => ledgerStore.put({ ...item, reversedAt: timestamp, updatedAt: timestamp, version: item.version + 1 }));
     }
     const previousCompletedDate = activePrior?.completedDate ?? quest.localDate;
     if (quest.sourceType === 'goal' && quest.sourceId && quest.milestoneId && quest.status === 'completed'
@@ -3461,9 +3811,9 @@ export class QiguangDb {
         requestResult(transaction.objectStore('milestones').get(quest.milestoneId)) as Promise<Milestone | undefined>,
       ]);
       if (goal && milestone?.status === 'completed' && milestone.completionSourceQuestId === quest.id) {
-        const settlement = await settleMilestoneXp(ledgerStore, milestone.id, goal.branchId, actualCompletedDate, timestamp);
+        const settlement = await settleMilestoneXp(ledgerStore, milestone.id, quest.dimension ?? goal.dimension ?? 'progress', actualCompletedDate, timestamp);
         if (settlement.changed) transaction.objectStore('milestones').put({
-          ...milestone, completedAt: timestamp, xpSettled: true, updatedAt: timestamp, version: milestone.version + 1,
+          ...milestone, completedAt: timestamp, completedDate: actualCompletedDate, xpSettled: true, updatedAt: timestamp, version: milestone.version + 1,
         });
       }
     }
@@ -3527,7 +3877,7 @@ export class QiguangDb {
       return empty;
     }
     const goal = await requestResult(transaction.objectStore('goals').get(quest.sourceId)) as Goal | undefined;
-    if (!goal || !goalIsActionable(goal)) {
+    if (!goal || (!goalIsActionable(goal) && !quest.milestoneId)) {
       return empty;
     }
     const milestoneStore = transaction.objectStore('milestones');
@@ -3538,34 +3888,41 @@ export class QiguangDb {
     if (mode === 'completed' && linked?.status === 'pending') {
       const timestamp = nowIso();
       const ledger = transaction.objectStore('xpLedger');
-      await settleMilestoneXp(ledger, linked.id, goal.branchId, date, timestamp);
-      milestoneCompleted = { ...linked, status: 'completed', completedAt: timestamp, completionSourceQuestId: quest.id, xpSettled: true, updatedAt: timestamp, version: linked.version + 1 };
+      await settleMilestoneXp(ledger, linked.id, quest.dimension ?? goal.dimension ?? 'progress', date, timestamp);
+      milestoneCompleted = { ...linked, status: 'completed', completedAt: timestamp, completedDate: date, completionSourceQuestId: quest.id, xpSettled: true, updatedAt: timestamp, version: linked.version + 1 };
       milestoneStore.put(milestoneCompleted);
       milestones.splice(milestones.findIndex((item) => item.id === linked.id), 1, milestoneCompleted);
     } else if (mode === 'completed' && linked?.status === 'completed' && linked.completionSourceQuestId === quest.id) {
       const timestamp = nowIso();
-      const settlement = await settleMilestoneXp(transaction.objectStore('xpLedger'), linked.id, goal.branchId, date, timestamp);
+      const settlement = await settleMilestoneXp(transaction.objectStore('xpLedger'), linked.id, quest.dimension ?? goal.dimension ?? 'progress', date, timestamp);
       if (settlement.changed) {
-        milestoneCompleted = { ...linked, completedAt: timestamp, xpSettled: true, updatedAt: timestamp, version: linked.version + 1 };
+        milestoneCompleted = { ...linked, completedAt: timestamp, completedDate: date, xpSettled: true, updatedAt: timestamp, version: linked.version + 1 };
         milestoneStore.put(milestoneCompleted);
         milestones.splice(milestones.findIndex((item) => item.id === linked.id), 1, milestoneCompleted);
       }
+    }
+    if (!goalIsActionable(goal)) {
+      return { followUp: null, milestoneCompleted, goalReady: false };
     }
     const next = milestones.find((item) => item.status === 'pending' && item.id !== milestoneCompleted?.id);
     if (!next) {
       return { followUp: null, milestoneCompleted, goalReady: milestones.length > 0 && !milestones.some((item) => item.status === 'pending' && item.id !== milestoneCompleted?.id) };
     }
-    const actionId = validateActionId(`goal:${goal.id}:after:${quest.id}:milestone:${next.id}${mode === 'partial' ? ':partial' : ''}`);
     const allQuests = await requestResult(quests.getAll()) as Quest[];
+    const scheduledNext = allQuests.find((item) => item.milestoneId === next.id && item.status === 'pending' && !item.systemRetiredAt);
+    if (scheduledNext) {
+      if (goal.nextStep !== scheduledNext.title) {
+        transaction.objectStore('goals').put({ ...goal, nextStep: scheduledNext.title, updatedAt: nowIso(), version: goal.version + 1 });
+      }
+      return { followUp: null, milestoneCompleted, goalReady: false };
+    }
+    const actionId = validateActionId(`goal:${goal.id}:after:${quest.id}:milestone:${next.id}${mode === 'partial' ? ':partial' : ''}`);
     const existingFollowUp = allQuests.find((item) => item.actionId === actionId);
     if (existingFollowUp) {
-      if (existingFollowUp.status === 'exempt' && existingFollowUp.predecessorQuestId === quest.id) {
+      if (existingFollowUp.status === 'exempt' && existingFollowUp.systemRetiredReason === 'source-invalidated'
+        && existingFollowUp.predecessorQuestId === quest.id) {
         const feedback = await requestResult(transaction.objectStore('questFeedback').index('byQuestId').getAll(existingFollowUp.id)) as QuestFeedback[];
-        const current = await requestResult(quests.index('byLocalDate').getAll(date)) as Quest[];
-        const pendingTypes = current.filter((item) => item.id !== existingFollowUp.id && item.status === 'pending').map((item) => item.type);
-        const type: QuestType | null = goal.role === 'main' && canAddQuest('main', pendingTypes)
-          ? 'main' : canAddQuest('side', pendingTypes) ? 'side' : null;
-        if (!feedback.some((item) => !item.undoneAt) && type) {
+        if (!feedback.some((item) => !item.undoneAt)) {
           const timestamp = nowIso();
           const generated = {
             title: `${mode === 'partial' ? '缩小继续' : '推进'}：${next.description}`.slice(0, 160),
@@ -3573,21 +3930,13 @@ export class QiguangDb {
             minimumAction: `先用 5 分钟推进“${next.description}”。`.slice(0, 200), completionCriteria: next.evidence,
           };
           const restored = restoreSystemRetiredQuest(existingFollowUp, {
-            localDate: date, type, milestoneId: next.id, status: 'pending',
+            localDate: date, milestoneId: next.id, status: 'pending',
             ...(existingFollowUp.userModified ? {} : generated),
             updatedAt: timestamp, version: existingFollowUp.version + 1,
           });
           quests.put(restored);
           transaction.objectStore('goals').put({ ...goal, nextStep: restored.title, updatedAt: timestamp, version: goal.version + 1 });
           return { followUp: restored, milestoneCompleted, goalReady: false };
-        }
-        if (!feedback.some((item) => !item.undoneAt) && !type) {
-          const timestamp = nowIso();
-          const candidate = existingFollowUp.systemRetiredReason === 'capacity'
-            ? existingFollowUp : systemRetireQuest(existingFollowUp, 'capacity', timestamp);
-          if (candidate !== existingFollowUp) quests.put(candidate);
-          if (goal.nextStep !== candidate.title) transaction.objectStore('goals').put({ ...goal, nextStep: candidate.title, updatedAt: timestamp, version: goal.version + 1 });
-          return { followUp: candidate, milestoneCompleted, goalReady: false };
         }
       }
       const nextStep = resolveGoalNextStep(goal, allQuests, milestones);
@@ -3596,96 +3945,19 @@ export class QiguangDb {
       }
       return { followUp: null, milestoneCompleted, goalReady: false };
     }
-    const current = await requestResult(quests.index('byLocalDate').getAll(date)) as Quest[];
-    const pendingTypes = current.filter((item) => item.status === 'pending').map((item) => item.type);
-    const type: QuestType | null = goal.role === 'main' && canAddQuest('main', pendingTypes)
-      ? 'main' : canAddQuest('side', pendingTypes) ? 'side' : null;
     const timestamp = nowIso();
     const title = `${mode === 'partial' ? '缩小继续' : '推进'}：${next.description}`.slice(0, 160);
     const followUp: Quest = {
-      id: crypto.randomUUID(), localDate: date, type: type ?? (goal.role === 'main' ? 'main' : 'side'), sourceType: 'goal', sourceId: goal.id,
+      id: crypto.randomUUID(), localDate: date, sourceType: 'goal', sourceId: goal.id,
       milestoneId: next.id, predecessorQuestId: quest.id, actionId, settlementVersion: 0, title, reason: mode === 'partial' ? `上一行动已有部分进展；先缩小推进目标“${goal.result}”。` : `上一行动已完成；这是目标“${goal.result}”的下一个可验证阶段。`,
       minimumAction: `先用 5 分钟推进“${next.description}”。`.slice(0, 200), completionCriteria: next.evidence, estimatedMinutes: 10,
-      difficulty: 'light', branchId: goal.branchId, status: type ? 'pending' : 'exempt',
-      ...(type ? {} : { systemRetiredAt: timestamp, systemRetiredReason: 'capacity' as const }),
+      difficulty: 'light', dimension: quest.dimension ?? 'progress', status: 'pending',
       aiSuggested: false, userModified: false,
       createdAt: timestamp, updatedAt: timestamp, version: 1,
     };
     quests.add(followUp);
     transaction.objectStore('goals').put({ ...goal, nextStep: followUp.title, updatedAt: timestamp, version: goal.version + 1 });
     return { followUp, milestoneCompleted, goalReady: false };
-  }
-
-  /** Arrange any capacity-blocked action without changing its identity or user edits. */
-  async scheduleCapacityQuest(id: string, date = localDate()): Promise<Quest | null> {
-    if (!isLocalDate(date)) throw new Error('任务日期无效。');
-    const transaction = this.database.transaction(['quests', 'questFeedback', 'goals', 'milestones', 'habits'], 'readwrite');
-    const quests = transaction.objectStore('quests');
-    const candidate = await requestResult(quests.get(id)) as Quest | undefined;
-    if (!candidate || candidate.status !== 'exempt' || candidate.systemRetiredReason !== 'capacity') {
-      await transactionDone(transaction);
-      return null;
-    }
-    const [feedback, current] = await Promise.all([
-      requestResult(transaction.objectStore('questFeedback').index('byQuestId').getAll(candidate.id)) as Promise<QuestFeedback[]>,
-      requestResult(quests.index('byLocalDate').getAll(date)) as Promise<Quest[]>,
-    ]);
-    const invalidateCandidate = async (reason: QuestSystemRetiredReason): Promise<null> => {
-      quests.put(systemRetireQuest(candidate, reason, nowIso()));
-      await transactionDone(transaction);
-      return null;
-    };
-    if (feedback.some((item) => !item.undoneAt)) {
-      await transactionDone(transaction);
-      return null;
-    }
-    const pendingTypes = current.filter((item) => item.id !== id && item.status === 'pending').map((item) => item.type);
-    let goal: Goal | undefined;
-    let type: QuestType | null = canAddQuest(candidate.type, pendingTypes) ? candidate.type : null;
-    if (candidate.sourceType === 'goal') {
-      if (!candidate.sourceId) {
-        return invalidateCandidate('source-invalidated');
-      }
-      goal = await requestResult(transaction.objectStore('goals').get(candidate.sourceId)) as Goal | undefined;
-      if (!goal || !goalIsActionable(goal)) {
-        return invalidateCandidate('source-invalidated');
-      }
-      if (candidate.milestoneId) {
-        const milestone = await requestResult(transaction.objectStore('milestones').get(candidate.milestoneId)) as Milestone | undefined;
-        if (!milestone || milestone.goalId !== goal.id || milestone.status !== 'pending') {
-          return invalidateCandidate('source-invalidated');
-        }
-        type = goal.role === 'main' && canAddQuest('main', pendingTypes)
-          ? 'main' : canAddQuest('side', pendingTypes) ? 'side' : null;
-      }
-    } else if (candidate.sourceType === 'habit') {
-      if (!candidate.sourceId || candidate.type !== 'bonus') {
-        return invalidateCandidate('source-invalidated');
-      }
-      const habit = await requestResult(transaction.objectStore('habits').get(candidate.sourceId)) as Habit | undefined;
-      const schedule = habit ? habitScheduleOn(habit, date) : undefined;
-      const weekday = parseLocalDate(date).getDay() || 7;
-      if (!habit || habit.status !== 'active' || !habit.bonusEnabled || !schedule?.trackingEnabled || !schedule.scheduleDays.includes(weekday)) {
-        return invalidateCandidate(!habit || habit.status !== 'active' || !habit.bonusEnabled || !schedule?.trackingEnabled
-          ? 'tracking-disabled' : 'schedule-changed');
-      }
-    }
-    if (!type) {
-      await transactionDone(transaction);
-      return null;
-    }
-    const timestamp = nowIso();
-    const restored = restoreSystemRetiredQuest(candidate, {
-      localDate: date, type, status: 'pending', updatedAt: timestamp, version: candidate.version + 1,
-    });
-    quests.put(restored);
-    if (goal) transaction.objectStore('goals').put({ ...goal, nextStep: restored.title, updatedAt: timestamp, version: goal.version + 1 });
-    await transactionDone(transaction);
-    return restored;
-  }
-
-  async scheduleGoalFollowUpQuest(id: string, date = localDate()): Promise<Quest | null> {
-    return this.scheduleCapacityQuest(id, date);
   }
 
   async undoQuestFeedback(id: string): Promise<void> {
@@ -3709,8 +3981,12 @@ export class QiguangDb {
     const stateEffects = await requestResult(observations.index('byEvidenceId').getAll(active.id)) as StateObservation[];
     stateEffects.filter((item) => item.active).forEach((item) => observations.put({ ...item, active: false, updatedAt: timestamp, version: item.version + 1 }));
     const ledgerStore = transaction.objectStore('xpLedger');
+    const parentGoal = quest.sourceType === 'goal' && quest.sourceId
+      ? await requestResult(transaction.objectStore('goals').get(quest.sourceId)) as Goal | undefined
+      : undefined;
+    const canReopenGoalQuest = quest.sourceType !== 'goal' || Boolean(parentGoal && goalIsActionable(parentGoal));
     const ledger = quest.sourceType === 'goal'
-      ? await rollbackGoalQuestProgression(quest, 'pending', transaction, timestamp)
+      ? await rollbackGoalQuestProgression(quest, canReopenGoalQuest ? 'pending' : 'exempt', transaction, timestamp)
       : await requestResult(ledgerStore.getAll()) as XpLedger[];
     ledger.filter((item) => item.sourceType === 'quest' && item.sourceId === id && !item.reversedAt)
       .forEach((item) => ledgerStore.put({ ...item, reversedAt: timestamp, updatedAt: timestamp, version: item.version + 1 }));
@@ -3720,13 +3996,14 @@ export class QiguangDb {
         if (key !== undefined) transaction.objectStore('habitLogs').delete(key);
       }, { once: true });
     }
-    quests.put({
+    const reopened: Quest = {
       ...quest,
       status: 'pending',
       progressCount: quest.targetCount ? Math.min(quest.progressCount ?? 0, quest.targetCount - 1) : quest.progressCount,
       updatedAt: timestamp,
       version: quest.version + 1,
-    });
+    };
+    quests.put(canReopenGoalQuest ? reopened : systemRetireQuest({ ...reopened, version: quest.version }, 'goal-inactive', timestamp));
     await transactionDone(transaction);
   }
 
@@ -3738,17 +4015,39 @@ export class QiguangDb {
     return values.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
 
-  async listXpLedger(branchId?: string): Promise<XpLedger[]> {
-    const transaction = this.database.transaction('xpLedger', 'readonly');
+  async listXpLedger(): Promise<XpLedger[]> {
+    const transaction = this.database.transaction(['xpLedger', 'quests', 'habits', 'milestones', 'goals', 'areas', 'branches'], 'readonly');
     const store = transaction.objectStore('xpLedger');
-    const values = await requestResult(branchId ? store.index('byBranchId').getAll(branchId) : store.getAll()) as XpLedger[];
+    const [values, quests, habits, milestones, goals, areas, branches] = await Promise.all([
+      requestResult(store.getAll()) as Promise<XpLedger[]>,
+      requestResult(transaction.objectStore('quests').getAll()) as Promise<Quest[]>,
+      requestResult(transaction.objectStore('habits').getAll()) as Promise<Habit[]>,
+      requestResult(transaction.objectStore('milestones').getAll()) as Promise<Milestone[]>,
+      requestResult(transaction.objectStore('goals').getAll()) as Promise<Goal[]>,
+      requestResult(transaction.objectStore('areas').getAll()) as Promise<Area[]>,
+      requestResult(transaction.objectStore('branches').getAll()) as Promise<GrowthBranch[]>,
+    ]);
     await transactionDone(transaction);
-    return values.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    const data = { quests, habits, milestones, goals, areas, branches };
+    return values.map((item) => item.dimension ? item : { ...item, dimension: resolveLedgerDimension(item, data) })
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
 
-  async branchProgress(branchId: string): Promise<ReturnType<typeof levelFromXp> & { totalXp: number }> {
-    const values = await this.listXpLedger(branchId);
-    const xp = totalXp(values);
+  async dimensionProgress(dimension: Dimension): Promise<ReturnType<typeof levelFromXp> & { totalXp: number }> {
+    assertOneOf(dimension, DIMENSIONS.map((item) => item.key), '成长维度');
+    const transaction = this.database.transaction(['xpLedger', 'quests', 'habits', 'milestones', 'goals', 'areas', 'branches'], 'readonly');
+    const [ledger, quests, habits, milestones, goals, areas, branches] = await Promise.all([
+      requestResult(transaction.objectStore('xpLedger').getAll()) as Promise<XpLedger[]>,
+      requestResult(transaction.objectStore('quests').getAll()) as Promise<Quest[]>,
+      requestResult(transaction.objectStore('habits').getAll()) as Promise<Habit[]>,
+      requestResult(transaction.objectStore('milestones').getAll()) as Promise<Milestone[]>,
+      requestResult(transaction.objectStore('goals').getAll()) as Promise<Goal[]>,
+      requestResult(transaction.objectStore('areas').getAll()) as Promise<Area[]>,
+      requestResult(transaction.objectStore('branches').getAll()) as Promise<GrowthBranch[]>,
+    ]);
+    await transactionDone(transaction);
+    const data = { quests, habits, milestones, goals, areas, branches };
+    const xp = totalXp(ledger.filter((item) => resolveLedgerDimension(item, data) === dimension));
     return { totalXp: xp, ...levelFromXp(xp) };
   }
 
@@ -3778,6 +4077,21 @@ export class QiguangDb {
       appVersion: APP_VERSION,
       data,
     };
+  }
+
+  private async replaceWithBundle(bundle: BackupBundle): Promise<void> {
+    const transaction = this.database.transaction(STORE_NAMES, 'readwrite');
+    try {
+      for (const name of STORE_NAMES) {
+        const store = transaction.objectStore(name);
+        store.clear();
+        (bundle.data[name] as Array<{ id: string }>).forEach((item) => store.add(item));
+      }
+    } catch (error) {
+      transaction.abort();
+      throw error;
+    }
+    await transactionDone(transaction);
   }
 
   async importBundle(text: string, importDate = localDate()): Promise<BackupBundle> {
@@ -3841,12 +4155,7 @@ export class QiguangDb {
       };
     };
 
-    let buildSlots = Math.max(0, 2 - (existing.areas as Area[]).filter((item) => item.mode === 'build').length);
-    for (const area of bundle.data.areas) {
-      const mode = area.mode === 'build' && buildSlots === 0 ? 'explore' : area.mode;
-      if (mode === 'build') buildSlots -= 1;
-      stores.areas.add(imported(area, idMaps.areas, { mode }));
-    }
+    for (const area of bundle.data.areas) stores.areas.add(imported(area, idMaps.areas));
     for (const branch of bundle.data.branches) {
       stores.branches.add(imported(branch, idMaps.branches, {
         parentId: branch.parentId ? idMaps.branches.get(branch.parentId) : undefined,
@@ -3868,6 +4177,7 @@ export class QiguangDb {
     const remapDailyRequest = (request: DailyAnalysisRequest): DailyAnalysisRequest => {
       const entries = request.userInput.entries.map((entry) => ({ ...entry, entryId: idMaps.entries.get(entry.entryId) ?? entry.entryId }));
       const memories = request.context.memories.map((memory) => ({ ...memory, memoryId: idMaps.memories.get(memory.memoryId) ?? memory.memoryId }));
+      const recentTaskResults = request.context.recentTaskResults.map((item) => ({ ...item, questId: idMaps.quests.get(item.questId) ?? item.questId }));
       return {
         ...request,
         requestId: requestIdMap.get(request.requestId) ?? request.requestId,
@@ -3877,11 +4187,13 @@ export class QiguangDb {
           confirmedEvents: request.context.confirmedEvents.map((event) => ({ ...event, eventId: idMaps.events.get(event.eventId) ?? event.eventId })),
           goals: request.context.goals.map((goal) => ({ ...goal, goalId: idMaps.goals.get(goal.goalId) ?? goal.goalId })),
           bonusHabits: request.context.bonusHabits.map((habit) => ({ ...habit, habitId: idMaps.habits.get(habit.habitId) ?? habit.habitId })),
+          recentTaskResults,
           memories,
         },
         permissions: {
           ...request.permissions,
           entryIds: entries.map((entry) => entry.entryId),
+          taskResultQuestIds: recentTaskResults.map((item) => item.questId),
           memoryIds: memories.map((memory) => memory.memoryId),
         },
       };
@@ -3897,7 +4209,6 @@ export class QiguangDb {
         questFeedback: remapVersions(request.context.sourceVersions.questFeedback, 'questFeedback'),
         habits: remapVersions(request.context.sourceVersions.habits, 'habits'),
         habitLogs: remapVersions(request.context.sourceVersions.habitLogs, 'habitLogs'),
-        branches: remapVersions(request.context.sourceVersions.branches, 'branches'),
         xpLedger: remapVersions(request.context.sourceVersions.xpLedger, 'xpLedger'),
         goals: remapVersions(request.context.sourceVersions.goals, 'goals'),
         reviews: remapVersions(request.context.sourceVersions.reviews, 'reviews'),
@@ -3913,7 +4224,7 @@ export class QiguangDb {
           ...(sourceVersions ? { sourceVersions } : {}),
           taskResults: request.context.taskResults.map((item) => ({ ...item, questId: idMaps.quests.get(item.questId) ?? item.questId })),
           habits: request.context.habits.map((item) => ({ ...item, habitId: idMaps.habits.get(item.habitId) ?? item.habitId })),
-          growth: request.context.growth.map((item) => ({ ...item, branchId: idMaps.branches.get(item.branchId) ?? item.branchId })),
+          growth: request.context.growth,
           goals: request.context.goals.map((item) => ({ ...item, goalId: idMaps.goals.get(item.goalId) ?? item.goalId })),
           experiments: request.context.experiments.map((item) => ({ ...item, reviewId: idMaps.reviews.get(item.reviewId) ?? item.reviewId })),
           memories,
@@ -3923,17 +4234,29 @@ export class QiguangDb {
     };
     for (const analysis of bundle.data.analyses) {
       const requestId = requestIdMap.get(analysis.requestId) ?? analysis.requestId;
+      const sourceEntries = analysis.sourceEntries.map((entry) => ({ ...entry, entryId: idMaps.entries.get(entry.entryId) ?? entry.entryId }));
+      if (analysis.contractVersion !== ANALYSIS_CONTRACT_VERSION
+        || analysis.modelOutputVersion !== ANALYSIS_CONTRACT_VERSION) {
+        stores.analyses.add(imported(analysis, idMaps.analyses, { requestId, sourceEntries }));
+        continue;
+      }
       const result = {
         ...analysis.result,
         events: analysis.result.events.map((event) => ({
           ...event,
           evidence: event.evidence.map((evidence) => ({ ...evidence, entryId: idMaps.entries.get(evidence.entryId) ?? evidence.entryId })),
+          growthEvidenceCandidate: event.growthEvidenceCandidate ? {
+            ...event.growthEvidenceCandidate,
+            matchedQuestId: event.growthEvidenceCandidate.matchedQuestId
+              ? idMaps.quests.get(event.growthEvidenceCandidate.matchedQuestId) ?? event.growthEvidenceCandidate.matchedQuestId
+              : null,
+          } : null,
         })),
       };
       const raw = JSON.parse(analysis.rawResponse) as DailyAnalysisResponse;
       stores.analyses.add(imported(analysis, idMaps.analyses, {
         requestId,
-        sourceEntries: analysis.sourceEntries.map((entry) => ({ ...entry, entryId: idMaps.entries.get(entry.entryId) ?? entry.entryId })),
+        sourceEntries,
         result,
         rawResponse: JSON.stringify({ ...raw, requestId, result }),
       }));
@@ -3943,6 +4266,12 @@ export class QiguangDb {
         analysisId: idMaps.analyses.get(item.analysisId) ?? item.analysisId,
         sourceEntryIds: item.sourceEntryIds.map((entryId) => idMaps.entries.get(entryId) ?? entryId),
         evidence: item.evidence.map((evidence) => ({ ...evidence, entryId: idMaps.entries.get(evidence.entryId) ?? evidence.entryId })),
+        growthEvidenceCandidate: item.growthEvidenceCandidate ? {
+          ...item.growthEvidenceCandidate,
+          matchedQuestId: item.growthEvidenceCandidate.matchedQuestId
+            ? idMaps.quests.get(item.growthEvidenceCandidate.matchedQuestId) ?? item.growthEvidenceCandidate.matchedQuestId
+            : null,
+        } : null,
       }));
     }
 
@@ -3960,22 +4289,12 @@ export class QiguangDb {
     stores.snapshots.clear();
 
     const actionableImportedGoalIds = new Set<string>();
-    let mainSlots = Math.max(0, 1 - (existing.goals as Goal[]).filter((item) => item.role === 'main' && !['completed', 'abandoned'].includes(item.status)).length);
-    let secondarySlots = Math.max(0, 2 - (existing.goals as Goal[]).filter((item) => item.role === 'secondary' && !['completed', 'abandoned'].includes(item.status)).length);
     for (const goal of bundle.data.goals) {
-      let role = goal.role;
-      if (!['completed', 'abandoned'].includes(goal.status)) {
-        if (role === 'main' && mainSlots === 0) role = 'wishlist';
-        else if (role === 'main') mainSlots -= 1;
-        if (role === 'secondary' && secondarySlots === 0) role = 'wishlist';
-        else if (role === 'secondary') secondarySlots -= 1;
-      }
       const value = imported(goal, idMaps.goals, {
-        areaId: idMaps.areas.get(goal.areaId) ?? goal.areaId,
-        branchId: idMaps.branches.get(goal.branchId) ?? goal.branchId,
-        role,
+        areaId: goal.areaId ? idMaps.areas.get(goal.areaId) ?? goal.areaId : undefined,
+        branchId: goal.branchId ? idMaps.branches.get(goal.branchId) ?? goal.branchId : undefined,
       });
-      if (value.status === 'active' && value.role !== 'wishlist') actionableImportedGoalIds.add(value.id);
+      if (value.status === 'active') actionableImportedGoalIds.add(value.id);
       stores.goals.add(value);
     }
     for (const milestone of bundle.data.milestones) {
@@ -3986,19 +4305,9 @@ export class QiguangDb {
     }
 
     const actionableImportedHabitIds = new Set<string>();
-    let bonusSlots = Math.max(0, 3 - (existing.habits as Habit[]).filter((item) => item.status === 'active' && item.bonusEnabled).length);
     for (const habit of bundle.data.habits) {
-      const bonusEnabled = habit.status === 'active' && habit.bonusEnabled && bonusSlots > 0;
-      if (bonusEnabled) bonusSlots -= 1;
-      const scheduleHistory = habit.status === 'active' && habit.bonusEnabled && !bonusEnabled
-        ? [...habitScheduleHistory(habit).filter((item) => item.effectiveFrom < importDate), {
-          effectiveFrom: importDate, scheduleDays: [...habit.scheduleDays], trackingEnabled: false,
-        }]
-        : habit.scheduleHistory;
       const value = imported(habit, idMaps.habits, {
-        branchId: idMaps.branches.get(habit.branchId) ?? habit.branchId,
-        bonusEnabled,
-        scheduleHistory,
+        branchId: habit.branchId ? idMaps.branches.get(habit.branchId) ?? habit.branchId : undefined,
       });
       if (value.status === 'active' && value.bonusEnabled) actionableImportedHabitIds.add(value.id);
       stores.habits.add(value);
@@ -4015,28 +4324,20 @@ export class QiguangDb {
         actionIdMap.set(quest.actionId, reserveImportedId(reviewExperimentActions.get(quest.actionId) ?? quest.actionId, usedActionIds));
       }
     }
-    const pendingCounts = new Map<string, number>();
-    for (const quest of existing.quests as Quest[]) {
-      if (quest.status === 'pending') pendingCounts.set(`${quest.localDate}:${quest.type}`, (pendingCounts.get(`${quest.localDate}:${quest.type}`) ?? 0) + 1);
-    }
     for (const quest of bundle.data.quests) {
       const sourceId = quest.sourceType === 'goal' && quest.sourceId
         ? idMaps.goals.get(quest.sourceId)
         : quest.sourceType === 'habit' && quest.sourceId ? idMaps.habits.get(quest.sourceId) : quest.sourceId;
-      const countKey = `${quest.localDate}:${quest.type}`;
-      const current = pendingCounts.get(countKey) ?? 0;
       const openCandidate = quest.status === 'pending' || quest.systemRetiredReason === 'capacity';
       const lostSourceEligibility = openCandidate
         && ((quest.sourceType === 'goal' && (!sourceId || !actionableImportedGoalIds.has(sourceId)))
           || (quest.sourceType === 'habit' && (!sourceId || !actionableImportedHabitIds.has(sourceId))));
-      const overCapacity = quest.status === 'pending' && current >= ({ main: 1, bonus: 3, side: 2 } as const)[quest.type];
       const systemRetiredReason: QuestSystemRetiredReason | undefined = lostSourceEligibility
         ? quest.sourceType === 'habit' ? 'tracking-disabled' : 'source-invalidated'
-          : overCapacity ? 'capacity' : quest.systemRetiredReason;
+          : quest.systemRetiredReason;
       const status = systemRetiredReason ? 'exempt' : quest.status;
       const retirementChanged = Boolean(systemRetiredReason
         && (quest.systemRetiredReason !== systemRetiredReason || !quest.systemRetiredAt));
-      if (status === 'pending') pendingCounts.set(countKey, current + 1);
       stores.quests.add(imported(quest, idMaps.quests, {
         sourceId,
         milestoneId: quest.milestoneId ? idMaps.milestones.get(quest.milestoneId) : undefined,
@@ -4061,7 +4362,7 @@ export class QiguangDb {
       const separator = key.lastIndexOf(':');
       if (separator < 1) return key;
       const source = key.slice(0, separator);
-      return `${actionIdMap.get(source) ?? idMaps.milestones.get(source) ?? source}${key.slice(separator)}`;
+      return `${actionIdMap.get(source) ?? idMaps.milestones.get(source) ?? idMaps.events.get(source) ?? source}${key.slice(separator)}`;
     };
     for (const item of bundle.data.habitLogs) {
       stores.habitLogs.add(imported(item, idMaps.habitLogs, {
@@ -4072,16 +4373,20 @@ export class QiguangDb {
     }
     for (const item of bundle.data.xpLedger) {
       const sourceId = item.sourceType === 'quest' ? idMaps.quests.get(item.sourceId)
-        : item.sourceType === 'habit' ? idMaps.habits.get(item.sourceId) : idMaps.milestones.get(item.sourceId);
+        : item.sourceType === 'habit' ? idMaps.habits.get(item.sourceId)
+          : item.sourceType === 'milestone' ? idMaps.milestones.get(item.sourceId) : idMaps.events.get(item.sourceId);
       stores.xpLedger.add(imported(item, idMaps.xpLedger, {
         sourceId: sourceId ?? item.sourceId,
-        branchId: idMaps.branches.get(item.branchId) ?? item.branchId,
+        branchId: item.branchId ? idMaps.branches.get(item.branchId) ?? item.branchId : undefined,
         settlementKey: remapSettlementKey(item.settlementKey) ?? item.settlementKey,
       }));
     }
     for (const item of bundle.data.reviews) {
       const remapEvidence = (ids: string[]): string[] => ids.map((id) => idMaps.events.get(id) ?? id);
-      const request = remapWeeklyRequest(item.request);
+      const remappedRequestId = requestIdMap.get(item.requestId) ?? item.requestId;
+      const request = item.contractVersion === ANALYSIS_CONTRACT_VERSION
+        ? remapWeeklyRequest(parseWeeklyReviewRequest(item.request))
+        : { ...item.request, requestId: remappedRequestId } as WeeklyReviewRequest;
       const raw = JSON.parse(item.rawResponse) as WeeklyReviewResponse;
       const rawResult = {
         ...raw.result,
@@ -4090,7 +4395,6 @@ export class QiguangDb {
         recurringCosts: raw.result.recurringCosts.map((value) => ({ ...value, evidenceEventIds: remapEvidence(value.evidenceEventIds) })),
         growthDeposits: raw.result.growthDeposits.map((value) => ({
           ...value,
-          branchId: value.branchId ? idMaps.branches.get(value.branchId) ?? value.branchId : null,
           evidenceEventIds: remapEvidence(value.evidenceEventIds),
         })),
         habitDecisions: raw.result.habitDecisions.map((value) => ({ ...value, habitId: idMaps.habits.get(value.habitId) ?? value.habitId })),
@@ -4104,7 +4408,6 @@ export class QiguangDb {
         recurringCosts: item.recurringCosts.map((value) => ({ ...value, evidenceEventIds: remapEvidence(value.evidenceEventIds) })),
         growthDeposits: item.growthDeposits.map((value) => ({
           ...value,
-          branchId: value.branchId ? idMaps.branches.get(value.branchId) ?? value.branchId : null,
           evidenceEventIds: remapEvidence(value.evidenceEventIds),
         })),
         habitDecisions: item.habitDecisions.map((value) => ({ ...value, habitId: idMaps.habits.get(value.habitId) ?? value.habitId })),
@@ -4119,14 +4422,17 @@ export class QiguangDb {
       }));
     }
     for (const item of bundle.data.analysisJobs) {
-      const request = item.operation === 'daily_analysis'
-        ? remapDailyRequest(parseDailyAnalysisRequest(item.request))
-        : remapWeeklyRequest(parseWeeklyReviewRequest(item.request));
+      const remappedRequestId = requestIdMap.get(item.requestId) ?? item.requestId;
+      const request = item.contractVersion !== ANALYSIS_CONTRACT_VERSION
+        ? { ...item.request, requestId: remappedRequestId } as AnalysisJob['request']
+        : item.operation === 'daily_analysis'
+          ? remapDailyRequest(parseDailyAnalysisRequest(item.request))
+          : remapWeeklyRequest(parseWeeklyReviewRequest(item.request));
       const requestId = request.requestId;
       stores.analysisJobs.add(imported(item, idMaps.analysisJobs, {
         requestId,
         request,
-        idempotencyKey: request.operation === 'daily_analysis'
+        idempotencyKey: item.contractVersion !== ANALYSIS_CONTRACT_VERSION ? `legacy:${requestId}` : request.operation === 'daily_analysis'
           ? `daily:${request.localDate}:${request.userInput.entries.map((entry) => `${entry.entryId}@${entry.revision}`).sort().join(',')}`
           : `weekly:${request.period.start}:${request.period.end}:${request.context.events.map((event) => `${event.eventId}@${event.version}`).sort().join(',')}`,
         analysisId: item.analysisId ? idMaps.analyses.get(item.analysisId) ?? item.analysisId : undefined,

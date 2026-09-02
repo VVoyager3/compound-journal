@@ -1,5 +1,6 @@
-export const ANALYSIS_CONTRACT_VERSION = '1.0' as const;
-export const CONTRACT_DIMENSIONS = ['energy', 'mental', 'connection', 'progress', 'play'] as const;
+export const ANALYSIS_CONTRACT_VERSION = '2.0' as const;
+export const LEGACY_ANALYSIS_CONTRACT_VERSION = '1.0' as const;
+export const CONTRACT_DIMENSIONS = ['energy', 'mind', 'connection', 'progress', 'play'] as const;
 
 export type ContractDimension = (typeof CONTRACT_DIMENSIONS)[number];
 export type Confidence = 'high' | 'medium' | 'low';
@@ -29,8 +30,15 @@ export interface DailyAnalysisRequest {
       localDate: string;
       values: Partial<Record<ContractDimension, number>>;
     }>;
-    goals: Array<{ goalId: string; result: string; role: 'main' | 'secondary' }>;
+    goals: Array<{ goalId: string; result: string }>;
     bonusHabits: Array<{ habitId: string; name: string; minimumAction: string }>;
+    recentTaskResults: Array<{
+      questId: string;
+      localDate: string;
+      title: string;
+      result: 'completed' | 'partial';
+      actual: string;
+    }>;
     memories: Array<{
       memoryId: string;
       type: 'preference' | 'pattern' | 'principle' | 'strength' | 'constraint';
@@ -44,6 +52,7 @@ export interface DailyAnalysisRequest {
     includeRecentStates: boolean;
     includeGoals: boolean;
     includeBonusHabits: boolean;
+    taskResultQuestIds: string[];
     memoryIds: string[];
   };
 }
@@ -65,8 +74,10 @@ export interface StateImpactCandidate {
 }
 
 export interface GrowthEvidenceCandidate {
-  branchId: string | null;
-  suggestedBranchName: string | null;
+  dimension: ContractDimension;
+  suggestedXp: 1 | 2 | 3;
+  /** A settled task that already accounts for this action, when applicable. */
+  matchedQuestId: string | null;
   evidenceType: 'practice' | 'output' | 'feedback' | 'milestone';
   description: string;
   isMilestoneCandidate: boolean;
@@ -78,7 +89,7 @@ export interface DailyEventCandidate {
   title: string;
   description: string;
   sourceType: 'explicit' | 'inferred';
-  confirmation: 'confirmed_by_default' | 'pending';
+  confirmation: 'pending';
   confidence: Confidence;
   evidence: AnalysisEvidence[];
   stateImpactCandidates: StateImpactCandidate[];
@@ -97,14 +108,12 @@ export interface DailyReflection {
 }
 
 export interface QuestSuggestion {
-  type: 'main' | 'side';
   title: string;
   why: string;
   minimumVersion: string;
   estimatedMinutes: number;
-  difficulty: 'light' | 'standard' | 'hard' | 'challenge';
-  primaryState: ContractDimension;
-  growthBranchId: string | null;
+  difficulty: 'light' | 'standard' | 'hard';
+  dimension: ContractDimension;
   sourceGoalId: string | null;
   isRecovery: boolean;
 }
@@ -147,7 +156,7 @@ export interface TaskFeedbackRequest {
     questId: string;
     questTitle: string;
     minimumAction: string;
-    currentDifficulty: 'light' | 'standard' | 'hard' | 'challenge';
+    currentDifficulty: 'light' | 'standard' | 'hard';
     feedbackText: string;
   };
   permissions: { questId: string };
@@ -157,7 +166,7 @@ export interface TaskFeedbackResult {
   completionCandidate: 'complete' | 'partial' | 'skipped' | 'unclear';
   actualResult: string;
   evidenceQuote: string;
-  suggestedDifficultyCorrection: 'light' | 'standard' | 'hard' | 'challenge' | null;
+  suggestedDifficultyCorrection: 'light' | 'standard' | 'hard' | null;
   followUpQuestion: string | null;
   confidence: Confidence;
 }
@@ -178,7 +187,6 @@ export interface WeeklyReviewSourceVersions {
   questFeedback: Array<{ id: string; version: number }>;
   habits: Array<{ id: string; version: number }>;
   habitLogs: Array<{ id: string; version: number }>;
-  branches: Array<{ id: string; version: number }>;
   xpLedger: Array<{ id: string; version: number }>;
   goals: Array<{ id: string; version: number }>;
   reviews: Array<{ id: string; version: number }>;
@@ -201,8 +209,8 @@ export interface WeeklyReviewRequest {
     stateSnapshots: Array<{ localDate: string; values: Partial<Record<ContractDimension, number>> }>;
     taskResults: Array<{ questId: string; localDate: string; title: string; result: 'completed' | 'partial' | 'skipped' | 'exempt'; actual: string }>;
     habits: Array<{ habitId: string; name: string; minimumAction: string; momentum: number }>;
-    growth: Array<{ branchId: string; name: string; xp: number }>;
-    goals: Array<{ goalId: string; result: string; role: 'main' | 'secondary' }>;
+    growth: Array<{ dimension: ContractDimension; xp: number }>;
+    goals: Array<{ goalId: string; result: string }>;
     experiments: Array<{ reviewId: string; hypothesis: string; minimumAction: string; metric: string; endDate: string; stopCondition: string }>;
     memories: Array<{ memoryId: string; type: MemoryCandidate['type']; statement: string }>;
   };
@@ -229,7 +237,7 @@ export interface WeeklyReviewResult {
   stateTrends: Array<WeeklyEvidencePattern & { dimension: ContractDimension; direction: 'up' | 'down' | 'stable' | 'unknown' }>;
   recurringBenefits: WeeklyEvidencePattern[];
   recurringCosts: WeeklyEvidencePattern[];
-  growthDeposits: Array<{ branchId: string | null; branchName: string | null; summary: string; evidenceEventIds: string[] }>;
+  growthDeposits: Array<{ dimension: ContractDimension; summary: string; evidenceEventIds: string[] }>;
   habitDecisions: Array<{ habitId: string; action: HabitDecisionAction; reason: string }>;
   nextWeekTheme: { title: string; reason: string };
   nextExperiment: { hypothesis: string; minimumAction: string; metric: string; endDate: string; stopCondition: string };
@@ -291,11 +299,10 @@ export interface GoalDecompositionRequest {
     result: string;
     why: string;
     completionEvidence: string;
+    targetDate: string | null;
   };
   context: {
-    area: { areaId: string; name: string; mode: 'build' | 'maintain' | 'explore' | 'pause' };
-    branch: { branchId: string; name: string };
-    currentGoals: Array<{ goalId: string; result: string; role: 'main' | 'secondary' }>;
+    currentGoals: Array<{ goalId: string; result: string }>;
     executionEvidence: Array<{
       questId: string;
       title: string;
@@ -319,13 +326,14 @@ export interface GoalDecompositionResult {
   currentStage: string;
   estimatedInvestment: string;
   risks: string[];
-  milestones: Array<{ title: string; evidence: string }>;
+  milestones: Array<{ title: string; evidence: string; dimension: ContractDimension; difficulty: 'light' | 'standard' | 'hard' }>;
   nextStep: {
     title: string;
     why: string;
     minimumAction: string;
     estimatedMinutes: number;
-    difficulty: 'light' | 'standard' | 'hard' | 'challenge';
+    difficulty: 'light' | 'standard' | 'hard';
+    dimension: ContractDimension;
   };
   assumptions: string[];
 }
@@ -441,7 +449,7 @@ export function parseDailyAnalysisRequest(value: unknown): DailyAnalysisRequest 
   if (entries.reduce((sum, entry) => sum + Array.from(entry.text).length, 0) > 20_000) throw new Error('INPUT_TOO_LARGE');
 
   const context = objectValue(root.context, '上下文');
-  exactKeys(context, ['confirmedEvents', 'recentStates', 'goals', 'bonusHabits', 'memories', 'constraints'], '上下文');
+  exactKeys(context, ['confirmedEvents', 'recentStates', 'goals', 'bonusHabits', 'recentTaskResults', 'memories', 'constraints'], '上下文');
   const confirmedEvents = arrayValue(context.confirmedEvents, '已确认事件', 30).map((value, index) => {
     const item = objectValue(value, `已确认事件${index + 1}`);
     exactKeys(item, ['eventId', 'localDate', 'title'], `已确认事件${index + 1}`);
@@ -461,14 +469,26 @@ export function parseDailyAnalysisRequest(value: unknown): DailyAnalysisRequest 
   });
   const goals = arrayValue(context.goals, '当前目标', 3).map((value, index) => {
     const item = objectValue(value, `当前目标${index + 1}`);
-    exactKeys(item, ['goalId', 'result', 'role'], `当前目标${index + 1}`);
-    return { goalId: textValue(item.goalId, '目标 ID', 200), result: textValue(item.result, '目标结果', 160), role: enumValue(item.role, ['main', 'secondary'], '目标角色') };
+    exactKeys(item, ['goalId', 'result'], `当前目标${index + 1}`);
+    return { goalId: textValue(item.goalId, '目标 ID', 200), result: textValue(item.result, '目标结果', 160) };
   });
   const bonusHabits = arrayValue(context.bonusHabits, '每日可选习惯', 3).map((value, index) => {
     const item = objectValue(value, `每日可选习惯${index + 1}`);
     exactKeys(item, ['habitId', 'name', 'minimumAction'], `每日可选习惯${index + 1}`);
     return { habitId: textValue(item.habitId, '习惯 ID', 200), name: textValue(item.name, '习惯名称', 60), minimumAction: textValue(item.minimumAction, '习惯最小动作', 160) };
   });
+  const recentTaskResults = arrayValue(context.recentTaskResults, '近期任务结果', 30).map((value, index) => {
+    const item = objectValue(value, `近期任务结果${index + 1}`);
+    exactKeys(item, ['questId', 'localDate', 'title', 'result', 'actual'], `近期任务结果${index + 1}`);
+    return {
+      questId: textValue(item.questId, '任务 ID', 200),
+      localDate: localDateValue(item.localDate, '任务日期'),
+      title: textValue(item.title, '任务标题', 160),
+      result: enumValue(item.result, ['completed', 'partial'] as const, '任务结果'),
+      actual: textValue(item.actual, '实际完成内容', 2_000, true),
+    };
+  });
+  if (new Set(recentTaskResults.map((item) => item.questId)).size !== recentTaskResults.length) throw new Error('近期任务不能重复。');
   const memoryTypes = ['preference', 'pattern', 'principle', 'strength', 'constraint'] as const;
   const memories = arrayValue(context.memories, '系统记忆', 20).map((value, index) => {
     const item = objectValue(value, `系统记忆${index + 1}`);
@@ -478,11 +498,15 @@ export function parseDailyAnalysisRequest(value: unknown): DailyAnalysisRequest 
   const constraints = uniqueStrings(context.constraints, '现实约束', 10, 300);
 
   const permissions = objectValue(root.permissions, '发送权限');
-  exactKeys(permissions, ['entryIds', 'includeConfirmedEvents', 'includeRecentStates', 'includeGoals', 'includeBonusHabits', 'memoryIds'], '发送权限');
+  exactKeys(permissions, ['entryIds', 'includeConfirmedEvents', 'includeRecentStates', 'includeGoals', 'includeBonusHabits', 'taskResultQuestIds', 'memoryIds'], '发送权限');
   const entryIds = uniqueStrings(permissions.entryIds, '允许发送的记录 ID', 30);
   if (entryIds.length !== entries.length || entries.some((entry) => !entryIds.includes(entry.entryId))) throw new Error('发送权限与记录范围不一致。');
   const memoryIds = uniqueStrings(permissions.memoryIds, '允许发送的记忆 ID', 20);
   if (memoryIds.length !== memories.length || memories.some((memory) => !memoryIds.includes(memory.memoryId))) throw new Error('发送权限与记忆范围不一致。');
+  const taskResultQuestIds = uniqueStrings(permissions.taskResultQuestIds, '允许发送的任务 ID', 30);
+  if (taskResultQuestIds.length !== recentTaskResults.length || recentTaskResults.some((item) => !taskResultQuestIds.includes(item.questId))) {
+    throw new Error('发送权限与任务结果范围不一致。');
+  }
   const includeConfirmedEvents = booleanValue(permissions.includeConfirmedEvents, '事件发送权限');
   const includeRecentStates = booleanValue(permissions.includeRecentStates, '状态发送权限');
   const includeGoals = booleanValue(permissions.includeGoals, '目标发送权限');
@@ -499,13 +523,14 @@ export function parseDailyAnalysisRequest(value: unknown): DailyAnalysisRequest 
     timeZone,
     localDate,
     userInput: { entries },
-    context: { confirmedEvents, recentStates, goals, bonusHabits, memories, constraints },
+    context: { confirmedEvents, recentStates, goals, bonusHabits, recentTaskResults, memories, constraints },
     permissions: {
       entryIds,
       includeConfirmedEvents,
       includeRecentStates,
       includeGoals,
       includeBonusHabits,
+      taskResultQuestIds,
       memoryIds,
     },
   };
@@ -535,7 +560,7 @@ export function parseTaskFeedbackRequest(value: unknown): TaskFeedbackRequest {
       questId,
       questTitle: textValue(input.questTitle, '任务标题', 160),
       minimumAction: textValue(input.minimumAction, '任务最小动作', 200),
-      currentDifficulty: enumValue(input.currentDifficulty, ['light', 'standard', 'hard', 'challenge'], '当前难度'),
+      currentDifficulty: enumValue(input.currentDifficulty, ['light', 'standard', 'hard'], '当前难度'),
       feedbackText: textValue(input.feedbackText, '反馈文字', 2_000),
     },
     permissions: { questId },
@@ -569,7 +594,7 @@ export function parseWeeklyReviewRequest(value: unknown): WeeklyReviewRequest {
     if (context.sourceVersions === undefined) return undefined;
     const root = objectValue(context.sourceVersions, '来源版本');
     const keys: Array<keyof WeeklyReviewSourceVersions> = [
-      'quests', 'questFeedback', 'habits', 'habitLogs', 'branches', 'xpLedger', 'goals', 'reviews', 'memories', 'stateObservations',
+      'quests', 'questFeedback', 'habits', 'habitLogs', 'xpLedger', 'goals', 'reviews', 'memories', 'stateObservations',
     ];
     exactKeys(root, keys, '来源版本');
     return Object.fromEntries(keys.map((key) => {
@@ -625,13 +650,14 @@ export function parseWeeklyReviewRequest(value: unknown): WeeklyReviewRequest {
   });
   const growth = arrayValue(context.growth, '成长摘要', 30).map((value, index) => {
     const item = objectValue(value, `成长摘要${index + 1}`);
-    exactKeys(item, ['branchId', 'name', 'xp'], `成长摘要${index + 1}`);
-    return { branchId: textValue(item.branchId, '成长分支 ID', 200), name: textValue(item.name, '成长分支名称', 60), xp: integerValue(item.xp, '周期经验', 0, 100_000) };
+    exactKeys(item, ['dimension', 'xp'], `成长摘要${index + 1}`);
+    return { dimension: enumValue(item.dimension, CONTRACT_DIMENSIONS, '成长维度'), xp: integerValue(item.xp, '周期成长值', 0, 100_000) };
   });
+  if (new Set(growth.map((item) => item.dimension)).size !== growth.length) throw new Error('成长维度不能重复。');
   const goals = arrayValue(context.goals, '当前目标', 3).map((value, index) => {
     const item = objectValue(value, `当前目标${index + 1}`);
-    exactKeys(item, ['goalId', 'result', 'role'], `当前目标${index + 1}`);
-    return { goalId: textValue(item.goalId, '目标 ID', 200), result: textValue(item.result, '目标结果', 160), role: enumValue(item.role, ['main', 'secondary'] as const, '目标角色') };
+    exactKeys(item, ['goalId', 'result'], `当前目标${index + 1}`);
+    return { goalId: textValue(item.goalId, '目标 ID', 200), result: textValue(item.result, '目标结果', 160) };
   });
   const experiments = arrayValue(context.experiments, '当前实验', 4).map((value, index) => {
     const item = objectValue(value, `当前实验${index + 1}`);
@@ -668,7 +694,6 @@ export function parseWeeklyReviewRequest(value: unknown): WeeklyReviewRequest {
       && left.every((id) => right.includes(id));
     if (!sameIds(sourceVersions.quests.map((item) => item.id), taskResults.map((item) => item.questId))) throw new Error('任务来源版本与发送范围不一致。');
     if (!sameIds(sourceVersions.habits.map((item) => item.id), habits.map((item) => item.habitId))) throw new Error('习惯来源版本与发送范围不一致。');
-    if (!sameIds(sourceVersions.branches.map((item) => item.id), growth.map((item) => item.branchId))) throw new Error('成长来源版本与发送范围不一致。');
     if (!sameIds(sourceVersions.goals.map((item) => item.id), goals.map((item) => item.goalId))) throw new Error('目标来源版本与发送范围不一致。');
     if (!sameIds(sourceVersions.reviews.map((item) => item.id), experiments.map((item) => item.reviewId))) throw new Error('实验来源版本与发送范围不一致。');
     if (!sameIds(sourceVersions.memories.map((item) => item.id), memoryIds)) throw new Error('记忆来源版本与发送范围不一致。');
@@ -742,17 +767,13 @@ export function parseGoalDecompositionRequest(value: unknown): GoalDecomposition
   const timeZone = timeZoneValue(root.timeZone);
 
   const input = objectValue(root.userInput, '用户输入');
-  exactKeys(input, ['result', 'why', 'completionEvidence'], '用户输入');
+  exactKeys(input, ['result', 'why', 'completionEvidence', 'targetDate'], '用户输入');
   const context = objectValue(root.context, '上下文');
-  exactKeys(context, ['area', 'branch', 'currentGoals', 'executionEvidence', 'memories'], '上下文');
-  const area = objectValue(context.area, '生活分类');
-  exactKeys(area, ['areaId', 'name', 'mode'], '生活分类');
-  const branch = objectValue(context.branch, '成长分支');
-  exactKeys(branch, ['branchId', 'name'], '成长分支');
+  exactKeys(context, ['currentGoals', 'executionEvidence', 'memories'], '上下文');
   const currentGoals = arrayValue(context.currentGoals, '当前目标', 3).map((value, index) => {
     const item = objectValue(value, `当前目标${index + 1}`);
-    exactKeys(item, ['goalId', 'result', 'role'], `当前目标${index + 1}`);
-    return { goalId: textValue(item.goalId, '目标 ID', 200), result: textValue(item.result, '目标结果', 160), role: enumValue(item.role, ['main', 'secondary'] as const, '目标角色') };
+    exactKeys(item, ['goalId', 'result'], `当前目标${index + 1}`);
+    return { goalId: textValue(item.goalId, '目标 ID', 200), result: textValue(item.result, '目标结果', 160) };
   });
   if (new Set(currentGoals.map((item) => item.goalId)).size !== currentGoals.length) throw new Error('当前目标不能重复。');
   const executionEvidence = arrayValue(context.executionEvidence, '执行证据', 20).map((value, index) => {
@@ -795,17 +816,9 @@ export function parseGoalDecompositionRequest(value: unknown): GoalDecomposition
       result: textValue(input.result, '目标结果', 160),
       why: textValue(input.why, '目标理由', 500, true),
       completionEvidence: textValue(input.completionEvidence, '完成证据', 500, true),
+      targetDate: input.targetDate === null ? null : localDateValue(input.targetDate, '目标日期'),
     },
     context: {
-      area: {
-        areaId: textValue(area.areaId, '领域 ID', 200),
-        name: textValue(area.name, '领域名称', 60),
-        mode: enumValue(area.mode, ['build', 'maintain', 'explore', 'pause'] as const, '领域模式'),
-      },
-      branch: {
-        branchId: textValue(branch.branchId, '分支 ID', 200),
-        name: textValue(branch.name, '分支名称', 60),
-      },
       currentGoals,
       executionEvidence,
       memories,
@@ -846,28 +859,28 @@ function parseImpact(value: unknown, index: number): StateImpactCandidate {
   };
 }
 
-function parseGrowthEvidence(value: unknown): GrowthEvidenceCandidate | null {
+function parseGrowthEvidence(value: unknown, taskIds: Set<string>): GrowthEvidenceCandidate | null {
   if (value === null) return null;
   const record = objectValue(value, '成长证据');
-  exactKeys(record, ['branchId', 'suggestedBranchName', 'evidenceType', 'description', 'isMilestoneCandidate', 'reason'], '成长证据');
+  exactKeys(record, ['dimension', 'suggestedXp', 'matchedQuestId', 'evidenceType', 'description', 'isMilestoneCandidate', 'reason'], '成长证据');
+  const matchedQuestId = nullableText(record.matchedQuestId, '重复任务 ID', 200);
+  if (matchedQuestId && !taskIds.has(matchedQuestId)) throw new Error('成长证据引用了发送范围之外的任务。');
   return {
-    branchId: nullableText(record.branchId, '成长分支 ID', 200),
-    suggestedBranchName: nullableText(record.suggestedBranchName, '建议成长分支', 60),
+    dimension: enumValue(record.dimension, CONTRACT_DIMENSIONS, '成长维度'),
+    suggestedXp: integerValue(record.suggestedXp, '建议成长值', 1, 3) as 1 | 2 | 3,
+    matchedQuestId,
     evidenceType: enumValue(record.evidenceType, ['practice', 'output', 'feedback', 'milestone'], '成长证据类型'),
     description: textValue(record.description, '成长证据描述', 500),
-    isMilestoneCandidate: booleanValue(record.isMilestoneCandidate, '阶段目标建议'),
+    isMilestoneCandidate: booleanValue(record.isMilestoneCandidate, '子任务建议'),
     reason: textValue(record.reason, '成长证据理由', 500),
   };
 }
 
-function parseEvent(value: unknown, index: number, entries: Map<string, string>): DailyEventCandidate {
+function parseEvent(value: unknown, index: number, entries: Map<string, string>, taskIds: Set<string>): DailyEventCandidate {
   const record = objectValue(value, `事件${index + 1}`);
   exactKeys(record, ['candidateId', 'title', 'description', 'sourceType', 'confirmation', 'confidence', 'evidence', 'stateImpactCandidates', 'growthEvidenceCandidate'], `事件${index + 1}`);
   const sourceType = enumValue(record.sourceType, ['explicit', 'inferred'], '事件来源');
-  const confirmation = enumValue(record.confirmation, ['confirmed_by_default', 'pending'], '事件确认状态');
-  if ((sourceType === 'explicit' && confirmation !== 'confirmed_by_default') || (sourceType === 'inferred' && confirmation !== 'pending')) {
-    throw new Error('事实与推断的默认确认状态不符合合约。');
-  }
+  const confirmation = enumValue(record.confirmation, ['pending'] as const, '事件确认状态');
   const evidence = arrayValue(record.evidence, '事件证据', 12).map((item, evidenceIndex) => parseEvidence(item, evidenceIndex, entries));
   if (!evidence.length) throw new Error('每个事件至少需要一条证据。');
   const impacts = arrayValue(record.stateImpactCandidates, '状态候选', 5).map(parseImpact);
@@ -881,7 +894,7 @@ function parseEvent(value: unknown, index: number, entries: Map<string, string>)
     confidence: enumValue(record.confidence, ['high', 'medium', 'low'], '事件确定程度'),
     evidence,
     stateImpactCandidates: impacts,
-    growthEvidenceCandidate: parseGrowthEvidence(record.growthEvidenceCandidate),
+    growthEvidenceCandidate: parseGrowthEvidence(record.growthEvidenceCandidate, taskIds),
   };
 }
 
@@ -908,16 +921,14 @@ function parseReflection(value: unknown): DailyReflection {
 
 function parseQuestSuggestion(value: unknown, index: number): QuestSuggestion {
   const record = objectValue(value, `任务建议${index + 1}`);
-  exactKeys(record, ['type', 'title', 'why', 'minimumVersion', 'estimatedMinutes', 'difficulty', 'primaryState', 'growthBranchId', 'sourceGoalId', 'isRecovery'], `任务建议${index + 1}`);
+  exactKeys(record, ['title', 'why', 'minimumVersion', 'estimatedMinutes', 'difficulty', 'dimension', 'sourceGoalId', 'isRecovery'], `任务建议${index + 1}`);
   return {
-    type: enumValue(record.type, ['main', 'side'], '任务类型'),
     title: textValue(record.title, '任务标题', 160),
     why: textValue(record.why, '任务理由', 500),
     minimumVersion: textValue(record.minimumVersion, '任务最小版本', 200),
     estimatedMinutes: integerValue(record.estimatedMinutes, '任务预计时间', 1, 1440),
-    difficulty: enumValue(record.difficulty, ['light', 'standard', 'hard', 'challenge'], '任务难度'),
-    primaryState: enumValue(record.primaryState, CONTRACT_DIMENSIONS, '任务主要状态'),
-    growthBranchId: nullableText(record.growthBranchId, '成长分支 ID', 200),
+    difficulty: enumValue(record.difficulty, ['light', 'standard', 'hard'], '任务难度'),
+    dimension: enumValue(record.dimension, CONTRACT_DIMENSIONS, '任务维度'),
     sourceGoalId: nullableText(record.sourceGoalId, '目标 ID', 200),
     isRecovery: booleanValue(record.isRecovery, '恢复任务标记'),
   };
@@ -947,12 +958,10 @@ export function parseDailyAnalysisResponse(value: unknown, request: DailyAnalysi
   const resultRecord = objectValue(root.result, '整理结果');
   exactKeys(resultRecord, ['title', 'summary', 'explicitMoods', 'events', 'reflection', 'questSuggestions', 'memoryCandidates'], '整理结果');
   const entryTexts = new Map(request.userInput.entries.map((entry) => [entry.entryId, entry.text]));
-  const events = arrayValue(resultRecord.events, '事件', 6).map((item, index) => parseEvent(item, index, entryTexts));
+  const taskIds = new Set(request.context.recentTaskResults.map((item) => item.questId));
+  const events = arrayValue(resultRecord.events, '事件', 6).map((item, index) => parseEvent(item, index, entryTexts, taskIds));
   if (new Set(events.map((event) => event.candidateId)).size !== events.length) throw new Error('事件候选 ID 不能重复。');
   const questSuggestions = arrayValue(resultRecord.questSuggestions, '任务建议', 3).map(parseQuestSuggestion);
-  if (questSuggestions.filter((item) => item.type === 'main').length > 1 || questSuggestions.filter((item) => item.type === 'side').length > 2) {
-    throw new Error('任务建议超过一项今日重点或两项其他任务。');
-  }
   const eventIds = new Set(events.map((event) => event.candidateId));
   const result: DailyAnalysisResult = {
     title: textValue(resultRecord.title, '今日标题', 20),
@@ -995,7 +1004,7 @@ export function parseTaskFeedbackResponse(value: unknown, request: TaskFeedbackR
       evidenceQuote,
       suggestedDifficultyCorrection: result.suggestedDifficultyCorrection === null
         ? null
-        : enumValue(result.suggestedDifficultyCorrection, ['light', 'standard', 'hard', 'challenge'] as const, '难度修正候选'),
+        : enumValue(result.suggestedDifficultyCorrection, ['light', 'standard', 'hard'] as const, '难度修正候选'),
       followUpQuestion,
       confidence: enumValue(result.confidence, ['high', 'medium', 'low'], '反馈确定程度'),
     },
@@ -1047,15 +1056,15 @@ export function parseWeeklyReviewResponse(value: unknown, request: WeeklyReviewR
   if (new Set(stateTrends.map((item) => item.dimension)).size !== stateTrends.length) throw new Error('同一状态维度不能重复。');
   const recurringBenefits = arrayValue(result.recurringBenefits, '重复收益', 8).map((value, index) => parseWeeklyPattern(value, `重复收益${index + 1}`, eventDates));
   const recurringCosts = arrayValue(result.recurringCosts, '重复消耗', 8).map((value, index) => parseWeeklyPattern(value, `重复消耗${index + 1}`, eventDates));
-  const branchIds = new Set(request.context.growth.map((item) => item.branchId));
+  const growthDimensions = new Set(request.context.growth.map((item) => item.dimension));
   const growthDeposits = arrayValue(result.growthDeposits, '成长存入', 12).map((value, index) => {
     const record = objectValue(value, `成长存入${index + 1}`);
-    exactKeys(record, ['branchId', 'branchName', 'summary', 'evidenceEventIds'], `成长存入${index + 1}`);
-    const branchId = nullableText(record.branchId, '成长分支 ID', 200);
-    if (branchId && !branchIds.has(branchId)) throw new Error('成长存入引用了本次复盘之外的分支。');
+    exactKeys(record, ['dimension', 'summary', 'evidenceEventIds'], `成长存入${index + 1}`);
+    const dimension = enumValue(record.dimension, CONTRACT_DIMENSIONS, '成长维度');
+    if (!growthDimensions.has(dimension)) throw new Error('成长存入引用了本次复盘之外的维度。');
     const evidenceEventIds = uniqueStrings(record.evidenceEventIds, '成长事件证据', 20);
     if (evidenceEventIds.some((id) => !eventDates.has(id))) throw new Error('成长存入引用了本次复盘之外的事件。');
-    return { branchId, branchName: nullableText(record.branchName, '成长分支名称', 60), summary: textValue(record.summary, '成长存入摘要', 500), evidenceEventIds };
+    return { dimension, summary: textValue(record.summary, '成长存入摘要', 500), evidenceEventIds };
   });
   const habitIds = new Set(request.context.habits.map((item) => item.habitId));
   const habitDecisions = arrayValue(result.habitDecisions, '习惯建议', 20).map((value, index) => {
@@ -1137,16 +1146,18 @@ export function parseGoalDecompositionResponse(value: unknown, request: GoalDeco
   exactKeys(result, ['refinedResult', 'completionEvidence', 'rationale', 'currentStage', 'estimatedInvestment', 'risks', 'milestones', 'nextStep', 'assumptions'], '目标拆解结果');
   const milestones = arrayValue(result.milestones, '目标阶段', 5).map((value, index) => {
     const milestone = objectValue(value, `目标阶段${index + 1}`);
-    exactKeys(milestone, ['title', 'evidence'], `目标阶段${index + 1}`);
+    exactKeys(milestone, ['title', 'evidence', 'dimension', 'difficulty'], `目标阶段${index + 1}`);
     return {
-      title: textValue(milestone.title, '阶段目标标题', 200),
-      evidence: textValue(milestone.evidence, '阶段目标完成标准', 500),
+      title: textValue(milestone.title, '子任务标题', 200),
+      evidence: textValue(milestone.evidence, '子任务完成标准', 500),
+      dimension: enumValue(milestone.dimension, CONTRACT_DIMENSIONS, '子任务维度'),
+      difficulty: enumValue(milestone.difficulty, ['light', 'standard', 'hard'] as const, '子任务难度'),
     };
   });
-  if (milestones.length < 2) throw new Error('目标计划至少需要两个阶段目标。');
+  if (milestones.length < 2) throw new Error('目标计划至少需要两个子任务。');
   if (new Set(milestones.map((item) => item.title)).size !== milestones.length) throw new Error('目标阶段不能重复。');
   const nextStep = objectValue(result.nextStep, '目标下一步');
-  exactKeys(nextStep, ['title', 'why', 'minimumAction', 'estimatedMinutes', 'difficulty'], '目标下一步');
+  exactKeys(nextStep, ['title', 'why', 'minimumAction', 'estimatedMinutes', 'difficulty', 'dimension'], '目标下一步');
   const refinedResult = textValue(result.refinedResult, '优化后的目标结果', 160);
   const completionEvidence = textValue(result.completionEvidence, '完成证据', 500);
   const risks = uniqueStrings(result.risks, '关键风险', 5, 300);
@@ -1155,7 +1166,7 @@ export function parseGoalDecompositionResponse(value: unknown, request: GoalDeco
   const minimumAction = textValue(nextStep.minimumAction, '下一步最小动作', 200);
   const vagueOrOverbroad = /变得?更好|提升自己|全面发展|所有方面|全部做好|彻底改变|成为最好的/.test(request.userInput.result);
   if (vagueOrOverbroad && !request.userInput.completionEvidence && !assumptions.length) throw new Error('模糊或过大的目标必须列出待确认假设。');
-  if (request.context.currentGoals.some((goal) => goal.role === 'main') && !risks.length && !assumptions.length) throw new Error('存在当前主目标时必须说明优先级风险或假设。');
+  if (request.context.currentGoals.length && !risks.length && !assumptions.length) throw new Error('存在其他目标时必须说明优先级风险或假设。');
   const deadlinePattern = /(?:[一二三四五六七八九十百两\d]+\s*(?:天|周|个月|月|年)(?:内|后|前)|月底|年底|截止)/;
   if (!deadlinePattern.test(request.userInput.result) && deadlinePattern.test(refinedResult)) throw new Error('不能为没有截止时间的目标擅自添加期限。');
   if ([request.userInput.result, refinedResult].includes(nextTitle) || [request.userInput.result, refinedResult, nextTitle].includes(minimumAction)) {
@@ -1178,7 +1189,8 @@ export function parseGoalDecompositionResponse(value: unknown, request: GoalDeco
         why: textValue(nextStep.why, '下一步理由', 500),
         minimumAction,
         estimatedMinutes: integerValue(nextStep.estimatedMinutes, '下一步预计时间', 1, 240),
-        difficulty: enumValue(nextStep.difficulty, ['light', 'standard', 'hard', 'challenge'] as const, '下一步难度'),
+        difficulty: enumValue(nextStep.difficulty, ['light', 'standard', 'hard'] as const, '下一步难度'),
+        dimension: enumValue(nextStep.dimension, CONTRACT_DIMENSIONS, '下一步维度'),
       },
       assumptions,
     },

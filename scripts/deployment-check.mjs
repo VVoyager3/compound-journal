@@ -17,7 +17,7 @@ export async function verifyDeployment(rawUrl, appOrigin = 'https://localhost', 
   ensure(healthResponse.headers.get('access-control-allow-origin') === appOrigin, '服务没有允许当前 Android 应用来源。');
   const health = await healthResponse.json();
   ensure(health.configured === true, '服务已上线，但模型密钥尚未配置。');
-  ensure(health.contractVersion === '1.0' && typeof health.model === 'string' && health.model, '服务合约或模型标识无效。');
+  ensure(health.contractVersion === '2.0' && typeof health.model === 'string' && health.model, '服务合约或模型标识无效。');
 
   const preflight = await request(new URL('/api/analyze', base), {
     method: 'OPTIONS',

@@ -1,5 +1,6 @@
 import type {
   AssetKey,
+  Dimension,
   Goal,
   GrowthBranch,
   Habit,
@@ -27,7 +28,7 @@ const RECOVERY_ACHIEVEMENT_TITLES: Record<RecoveryAchievementThreshold, string> 
 };
 
 export type GrowthBadgeSourceType = 'milestone' | 'goal' | 'habit' | 'recovery' | 'experiment';
-export type GrowthBadgeTheme = AssetKey | 'habit' | 'recovery' | 'experiment';
+export type GrowthBadgeTheme = Dimension | 'habit' | 'recovery' | 'experiment';
 export type GrowthBadgeId = `milestone:${string}` | `goal:${string}` | `habit:${string}:${HabitAchievementThreshold}`
   | `recovery:${RecoveryAchievementThreshold}` | `experiment:${string}`;
 
@@ -44,9 +45,11 @@ export interface GrowthBadge {
   milestoneId: string;
   goalId: string;
   goalResult: string;
-  branchId: string;
-  branchName: string;
-  branchAsset: AssetKey;
+  dimension: Dimension;
+  /** Legacy display metadata; no longer required to earn a badge. */
+  branchId?: string;
+  branchName?: string;
+  branchAsset?: AssetKey;
   habitId?: string;
   habitName?: string;
   reviewId?: string;
@@ -66,7 +69,7 @@ export interface AchievementEvidenceInput {
 export interface GrowthBadgeSelectionInput extends AchievementEvidenceInput {
   milestones: readonly Milestone[];
   goals: readonly Goal[];
-  branches: readonly GrowthBranch[];
+  branches?: readonly GrowthBranch[];
   ledger: readonly XpLedger[];
   reviews?: readonly Review[];
 }
@@ -95,8 +98,8 @@ function newestById<T extends { id: string; updatedAt: string; version: number }
 
 function milestoneSettlements(ledger: readonly XpLedger[]): Map<string, XpLedger> {
   const result = new Map<string, XpLedger>();
-  ledger.filter((item) => item.sourceType === 'milestone' && item.difficulty === 'milestone' && item.baseXp === 50
-    && item.ratio === 1 && item.finalXp === 50 && !item.reversedAt)
+  ledger.filter((item) => item.sourceType === 'milestone' && item.difficulty === 'milestone'
+    && item.ratio === 1 && (item.finalXp === 5 || item.finalXp === 50) && item.baseXp === item.finalXp && !item.reversedAt)
     .slice()
     .sort((left, right) => right.localDate.localeCompare(left.localDate)
       || right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id))
@@ -157,7 +160,7 @@ function sortBadges(badges: GrowthBadge[]): GrowthBadge[] {
 
 export function selectGrowthBadges(input: GrowthBadgeSelectionInput): GrowthBadge[] {
   const goals = newestById(input.goals);
-  const branches = newestById(input.branches);
+  const branches = newestById(input.branches ?? []);
   const milestones = newestById(input.milestones);
   const quests = newestById(input.quests ?? []);
   const settlements = milestoneSettlements(input.ledger);
@@ -167,18 +170,20 @@ export function selectGrowthBadges(input: GrowthBadgeSelectionInput): GrowthBadg
     if (milestone.status !== 'completed' || !milestone.xpSettled || !milestone.completedAt) continue;
     const goal = goals.get(milestone.goalId);
     const settlement = settlements.get(milestone.id);
-    const branch = settlement ? branches.get(settlement.branchId) : undefined;
-    if (!goal || !settlement || !branch) continue;
+    const branch = settlement?.branchId ? branches.get(settlement.branchId) : undefined;
+    if (!goal || !settlement) continue;
     const sourceQuest = milestone.completionSourceQuestId ? quests.get(milestone.completionSourceQuestId) : undefined;
+    const dimension = settlement.dimension ?? sourceQuest?.dimension ?? goal.dimension ?? 'progress';
     const badge: GrowthBadge = {
-      id: `milestone:${milestone.id}`, sourceType: 'milestone', theme: branch.rootAsset,
+      id: `milestone:${milestone.id}`, sourceType: 'milestone', theme: dimension,
       milestoneId: milestone.id, name: milestone.description, evidence: milestone.evidence,
       earnedOn: settlement.localDate, completedAt: milestone.completedAt,
-      goalId: goal.id, goalResult: goal.result, branchId: branch.id, branchName: branch.name, branchAsset: branch.rootAsset,
+      goalId: goal.id, goalResult: goal.result, dimension,
       sourceAction: sourceQuest?.title ?? (milestone.completionSourceQuestId ? '已确认的阶段行动' : '由你手动确认阶段完成'),
       related: { type: 'goal', id: goal.id, name: goal.result },
       confirmation: milestone.completionSourceQuestId ? 'quest' : 'manual',
     };
+    if (branch) Object.assign(badge, { branchId: branch.id, branchName: branch.name, branchAsset: branch.rootAsset });
     if (milestone.completionSourceQuestId) badge.sourceQuestId = milestone.completionSourceQuestId;
     badges.push(badge);
   }
@@ -197,18 +202,20 @@ export function selectGrowthBadges(input: GrowthBadgeSelectionInput): GrowthBadg
     const sourceMilestone = settled.slice().sort((left, right) => settlements.get(right.id)!.localDate.localeCompare(settlements.get(left.id)!.localDate)
       || right.id.localeCompare(left.id))[0]!;
     const settlement = settlements.get(sourceMilestone.id)!;
-    const branch = branches.get(settlement.branchId);
-    if (!branch) continue;
+    const branch = settlement.branchId ? branches.get(settlement.branchId) : undefined;
     const sourceQuest = sourceMilestone.completionSourceQuestId ? quests.get(sourceMilestone.completionSourceQuestId) : undefined;
-    badges.push({
-      id: `goal:${goal.id}`, sourceType: 'goal', theme: branch.rootAsset,
+    const dimension = settlement.dimension ?? sourceQuest?.dimension ?? goal.dimension ?? 'progress';
+    const badge: GrowthBadge = {
+      id: `goal:${goal.id}`, sourceType: 'goal', theme: dimension,
       milestoneId: sourceMilestone.id, name: `完成目标：${goal.result}`,
-      evidence: goal.evidence.trim() || `当前计划的 ${path.length} 个阶段目标均已确认完成。`,
+      evidence: goal.evidence.trim() || `当前计划的 ${path.length} 个子任务均已确认完成。`,
       earnedOn: goal.completedDate, completedAt: goal.completedAt,
-      goalId: goal.id, goalResult: goal.result, branchId: branch.id, branchName: branch.name, branchAsset: branch.rootAsset,
+      goalId: goal.id, goalResult: goal.result, dimension,
       sourceQuestId: sourceMilestone.completionSourceQuestId, sourceAction: sourceQuest?.title ?? '由你确认目标完成',
       related: { type: 'goal', id: goal.id, name: goal.result }, confirmation: 'manual',
-    });
+    };
+    if (branch) Object.assign(badge, { branchId: branch.id, branchName: branch.name, branchAsset: branch.rootAsset });
+    badges.push(badge);
   }
 
   const habitLogs = completedHabitLogs(input.habitLogs ?? [], input.feedbacks ?? []);
@@ -218,17 +225,19 @@ export function selectGrowthBadges(input: GrowthBadgeSelectionInput): GrowthBadg
       const source = logs[threshold - 1];
       if (!source) continue;
       const sourceQuest = quests.get(source.log.questId);
-      const branch = branches.get(sourceQuest?.branchId ?? habit.branchId);
-      if (!branch) continue;
-      badges.push({
+      const legacyBranchId = sourceQuest?.branchId ?? habit.branchId;
+      const branch = legacyBranchId ? branches.get(legacyBranchId) : undefined;
+      const badge: GrowthBadge = {
         id: `habit:${habit.id}:${threshold}`, sourceType: 'habit', theme: 'habit', threshold, count: threshold,
         milestoneId: '', name: `${habit.name} · ${HABIT_ACHIEVEMENT_TITLES[threshold]}`, evidence: `已留下 ${threshold} 次真实完成记录；不要求连续。`,
         earnedOn: source.earnedOn, completedAt: source.completedAt,
-        goalId: '', goalResult: habit.name, branchId: branch.id, branchName: branch.name, branchAsset: branch.rootAsset,
+        goalId: '', goalResult: habit.name, dimension: sourceQuest?.dimension ?? habit.dimension,
         habitId: habit.id, habitName: habit.name, sourceQuestId: source.log.questId,
         sourceAction: sourceQuest?.title ?? habit.minimumAction,
         related: { type: 'habit', id: habit.id, name: habit.name }, confirmation: 'quest',
-      });
+      };
+      if (branch) Object.assign(badge, { branchId: branch.id, branchName: branch.name, branchAsset: branch.rootAsset });
+      badges.push(badge);
     }
   }
 
@@ -240,7 +249,7 @@ export function selectGrowthBadges(input: GrowthBadgeSelectionInput): GrowthBadg
       id: `recovery:${threshold}`, sourceType: 'recovery', theme: 'recovery', threshold, count: threshold,
       milestoneId: '', name: `恢复行动 · ${RECOVERY_ACHIEVEMENT_TITLES[threshold]}`, evidence: `已完成 ${threshold} 个由你确认的恢复行动。`,
       earnedOn: source.earnedOn, completedAt: source.feedback.updatedAt,
-      goalId: '', goalResult: '恢复能力', branchId: '', branchName: '恢复能力', branchAsset: 'health',
+      goalId: '', goalResult: '恢复能力', dimension: 'energy',
       sourceQuestId: source.quest.id, sourceAction: source.quest.title,
       related: { type: 'recovery', name: '恢复能力' }, confirmation: 'quest',
     });
@@ -255,15 +264,17 @@ export function selectGrowthBadges(input: GrowthBadgeSelectionInput): GrowthBadg
     if (!quest) continue;
     const result = feedback.get(quest.id)!;
     const branch = quest.branchId ? branches.get(quest.branchId) : undefined;
-    badges.push({
+    const badge: GrowthBadge = {
       id: `experiment:${review.id}`, sourceType: 'experiment', theme: 'experiment',
       milestoneId: '', name: `实践：${review.nextTheme}`,
       evidence: result.actual.trim() || result.note.trim() || review.nextExperiment.minimumAction,
       earnedOn: result.completedDate ?? quest.localDate, completedAt: result.updatedAt,
-      goalId: '', goalResult: review.nextTheme, branchId: branch?.id ?? '', branchName: branch?.name ?? '周实验', branchAsset: branch?.rootAsset ?? 'judgment',
+      goalId: '', goalResult: review.nextTheme, dimension: quest.dimension ?? 'mind',
       reviewId: review.id, sourceQuestId: quest.id, sourceAction: quest.title,
       related: { type: 'review', id: review.id, name: review.nextTheme }, confirmation: 'quest',
-    });
+    };
+    if (branch) Object.assign(badge, { branchId: branch.id, branchName: branch.name, branchAsset: branch.rootAsset });
+    badges.push(badge);
   }
 
   return sortBadges(badges);

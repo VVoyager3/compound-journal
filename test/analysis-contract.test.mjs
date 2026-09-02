@@ -26,7 +26,7 @@ function evidence(quote) {
 
 function validRequest() {
   return {
-    contractVersion: '1.0',
+    contractVersion: '2.0',
     operation: 'daily_analysis',
     requestId: 'request-1',
     locale: 'zh-CN',
@@ -35,9 +35,10 @@ function validRequest() {
     userInput: { entries: [{ entryId: 'entry-1', revision: 2, text: entryText }] },
     context: {
       confirmedEvents: [],
-      recentStates: [{ localDate: '2026-08-13', values: { energy: 55, mental: 60 } }],
-      goals: [{ goalId: 'goal-1', result: '完成可验证作品', role: 'main' }],
+      recentStates: [{ localDate: '2026-08-13', values: { energy: 55, mind: 60 } }],
+      goals: [{ goalId: 'goal-1', result: '完成可验证作品' }],
       bonusHabits: [{ habitId: 'habit-1', name: '散步', minimumAction: '走两分钟' }],
+      recentTaskResults: [{ questId: 'quest-1', localDate: '2026-08-13', title: '完成周报', result: 'completed', actual: '提交了周报。' }],
       memories: [],
       constraints: [],
     },
@@ -47,6 +48,7 @@ function validRequest() {
       includeRecentStates: true,
       includeGoals: true,
       includeBonusHabits: true,
+      taskResultQuestIds: ['quest-1'],
       memoryIds: [],
     },
   };
@@ -54,7 +56,7 @@ function validRequest() {
 
 function validResponse() {
   return {
-    contractVersion: '1.0',
+    contractVersion: '2.0',
     requestId: 'request-1',
     operation: 'daily_analysis',
     result: {
@@ -67,7 +69,7 @@ function validResponse() {
           title: '连续参加多场会议',
           description: '用户明确写到今天会议很多。',
           sourceType: 'explicit',
-          confirmation: 'confirmed_by_default',
+          confirmation: 'pending',
           confidence: 'high',
           evidence: [evidence('今天会议很多')],
           stateImpactCandidates: [{
@@ -85,7 +87,7 @@ function validResponse() {
           confidence: 'low',
           evidence: [evidence('散步后好了一些')],
           stateImpactCandidates: [{
-            dimension: 'mental', direction: 'positive', strength: 'small', suggestedDelta: 3,
+            dimension: 'mind', direction: 'positive', strength: 'small', suggestedDelta: 3,
             reason: '用户写到散步后好了一些。', confidence: 'low',
           }],
           growthEvidenceCandidate: null,
@@ -102,9 +104,9 @@ function validResponse() {
         nextSmallStep: '明天会议后留十分钟过渡。',
       },
       questSuggestions: [{
-        type: 'main', title: '会议后留十分钟过渡', why: '给心力恢复留出空间。',
+        title: '会议后留十分钟过渡', why: '给心力恢复留出空间。',
         minimumVersion: '十分钟不打开新工作。', estimatedMinutes: 10, difficulty: 'light',
-        primaryState: 'mental', growthBranchId: null, sourceGoalId: null, isRecovery: true,
+        dimension: 'mind', sourceGoalId: null, isRecovery: true,
       }],
       memoryCandidates: [{
         type: 'constraint', statement: '会议密集日的晚间可用注意力可能较低。', confidence: 'low',
@@ -151,12 +153,48 @@ test('daily request rejects oversized combined text without truncating it', () =
   assert.throws(() => parseDailyAnalysisRequest(request), /INPUT_TOO_LARGE/);
 });
 
-test('valid daily response keeps facts, inferences, evidence, and candidates separate', () => {
+test('valid daily response keeps every fact and inference pending for user confirmation', () => {
   const parsed = parseDailyAnalysisResponse(validResponse(), parseDailyAnalysisRequest(validRequest()));
-  assert.equal(parsed.result.events[0].confirmation, 'confirmed_by_default');
+  assert.equal(parsed.result.events[0].confirmation, 'pending');
   assert.equal(parsed.result.events[1].confirmation, 'pending');
-  assert.equal(parsed.result.questSuggestions[0].primaryState, 'mental');
+  assert.equal(parsed.result.questSuggestions[0].dimension, 'mind');
+  assert.equal('type' in parsed.result.questSuggestions[0], false);
   assert.equal(parsed.result.memoryCandidates[0].recommendedAction, 'observe');
+});
+
+test('daily task suggestions have no legacy type and are limited only by a total of three', () => {
+  const request = parseDailyAnalysisRequest(validRequest());
+  const three = validResponse();
+  three.result.questSuggestions = Array.from({ length: 3 }, (_, index) => ({
+    ...three.result.questSuggestions[0], title: `任务建议 ${index + 1}`,
+  }));
+  assert.equal(parseDailyAnalysisResponse(three, request).result.questSuggestions.length, 3);
+
+  const legacyType = validResponse();
+  legacyType.result.questSuggestions[0].type = 'main';
+  assert.throws(() => parseDailyAnalysisResponse(legacyType, request), /未知字段/);
+
+  const four = structuredClone(three);
+  four.result.questSuggestions.push({ ...three.result.questSuggestions[0], title: '任务建议 4' });
+  assert.throws(() => parseDailyAnalysisResponse(four, request), /任务建议无效/);
+});
+
+test('journal growth stays a five-dimension 1–3 point candidate and can reference only sent task evidence', () => {
+  const request = parseDailyAnalysisRequest(validRequest());
+  const response = validResponse();
+  response.result.events[0].growthEvidenceCandidate = {
+    dimension: 'progress', suggestedXp: 2, matchedQuestId: 'quest-1', evidenceType: 'output',
+    description: '完成并提交了周报。', isMilestoneCandidate: false, reason: '原文描述了可核对的真实产出。',
+  };
+  const parsed = parseDailyAnalysisResponse(response, request);
+  assert.deepEqual(parsed.result.events[0].growthEvidenceCandidate, response.result.events[0].growthEvidenceCandidate);
+
+  const tooMuch = structuredClone(response);
+  tooMuch.result.events[0].growthEvidenceCandidate.suggestedXp = 4;
+  assert.throws(() => parseDailyAnalysisResponse(tooMuch, request), /建议成长值/);
+  const unknownTask = structuredClone(response);
+  unknownTask.result.events[0].growthEvidenceCandidate.matchedQuestId = 'quest-outside-permission';
+  assert.throws(() => parseDailyAnalysisResponse(unknownTask, request), /发送范围之外/);
 });
 
 test('evidence positions use Unicode characters and must reproduce the exact quote', () => {
@@ -165,10 +203,10 @@ test('evidence positions use Unicode characters and must reproduce the exact quo
   assert.throws(() => parseDailyAnalysisResponse(response, parseDailyAnalysisRequest(validRequest())), /原文与字符位置不一致/);
 });
 
-test('inferences cannot arrive pre-confirmed and every event needs evidence', () => {
-  const confirmedInference = validResponse();
-  confirmedInference.result.events[1].confirmation = 'confirmed_by_default';
-  assert.throws(() => parseDailyAnalysisResponse(confirmedInference, parseDailyAnalysisRequest(validRequest())), /默认确认状态/);
+test('no model event can arrive pre-confirmed and every event needs evidence', () => {
+  const preconfirmedFact = validResponse();
+  preconfirmedFact.result.events[0].confirmation = 'confirmed_by_default';
+  assert.throws(() => parseDailyAnalysisResponse(preconfirmedFact, parseDailyAnalysisRequest(validRequest())), /事件确认状态/);
 
   const noEvidence = validResponse();
   noEvidence.result.events[0].evidence = [];
@@ -195,7 +233,7 @@ test('model JSON parser removes reasoning, fences, and one prose wrapper', () =>
 
 test('task feedback stays a user-confirmed candidate with exact evidence', () => {
   const request = parseTaskFeedbackRequest({
-    contractVersion: '1.0', operation: 'task_feedback', requestId: 'feedback-1', locale: 'zh-CN',
+    contractVersion: '2.0', operation: 'task_feedback', requestId: 'feedback-1', locale: 'zh-CN',
     timeZone: 'Asia/Shanghai', localDate: '2026-08-14',
     userInput: {
       questId: 'quest-1', questTitle: '整理需求', minimumAction: '列出三条需求', currentDifficulty: 'standard',
@@ -204,7 +242,7 @@ test('task feedback stays a user-confirmed candidate with exact evidence', () =>
     permissions: { questId: 'quest-1' },
   });
   const parsed = parseTaskFeedbackResponse({
-    contractVersion: '1.0', requestId: 'feedback-1', operation: 'task_feedback',
+    contractVersion: '2.0', requestId: 'feedback-1', operation: 'task_feedback',
     result: {
       completionCandidate: 'partial', actualResult: '完成了前半部分，并产出需求清单。',
       evidenceQuote: '只做了前半部分', suggestedDifficultyCorrection: 'light', followUpQuestion: null, confidence: 'high',
@@ -221,13 +259,13 @@ test('task feedback stays a user-confirmed candidate with exact evidence', () =>
 
 test('unclear task feedback asks exactly one necessary question', () => {
   const request = parseTaskFeedbackRequest({
-    contractVersion: '1.0', operation: 'task_feedback', requestId: 'feedback-2', locale: 'zh-CN',
+    contractVersion: '2.0', operation: 'task_feedback', requestId: 'feedback-2', locale: 'zh-CN',
     timeZone: 'Asia/Shanghai', localDate: '2026-08-14',
     userInput: { questId: 'quest-2', questTitle: '散步', minimumAction: '走两分钟', currentDifficulty: 'light', feedbackText: '差不多吧' },
     permissions: { questId: 'quest-2' },
   });
   const response = {
-    contractVersion: '1.0', requestId: 'feedback-2', operation: 'task_feedback',
+    contractVersion: '2.0', requestId: 'feedback-2', operation: 'task_feedback',
     result: {
       completionCandidate: 'unclear', actualResult: '完成情况不明确。', evidenceQuote: '差不多吧',
       suggestedDifficultyCorrection: null, followUpQuestion: '你实际做了这个动作的一部分吗？', confidence: 'low',
@@ -240,7 +278,7 @@ test('unclear task feedback asks exactly one necessary question', () => {
 
 function weeklyRequest() {
   return {
-    contractVersion: '1.0', operation: 'weekly_review', requestId: 'weekly-1', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    contractVersion: '2.0', operation: 'weekly_review', requestId: 'weekly-1', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
     period: { start: '2026-08-10', end: '2026-08-14' }, userInput: { note: '周三临时加班。' },
     context: {
       events: [
@@ -250,15 +288,15 @@ function weeklyRequest() {
       sourceVersions: {
         quests: [{ id: 'quest-1', version: 2 }], questFeedback: [{ id: 'feedback-1', version: 1 }],
         habits: [{ id: 'habit-1', version: 1 }], habitLogs: [{ id: 'habit-log-1', version: 1 }],
-        branches: [{ id: 'branch-1', version: 1 }], xpLedger: [{ id: 'ledger-1', version: 1 }],
+        xpLedger: [{ id: 'ledger-1', version: 1 }],
         goals: [{ id: 'goal-1', version: 1 }], reviews: [], memories: [],
         stateObservations: [{ id: 'observation-1', version: 1 }],
       },
       stateSnapshots: [{ localDate: '2026-08-11', values: { energy: 55 } }],
       taskResults: [{ questId: 'quest-1', localDate: '2026-08-11', title: '散步', result: 'completed', actual: '走了十分钟。' }],
       habits: [{ habitId: 'habit-1', name: '散步', minimumAction: '走两分钟', momentum: 4.2 }],
-      growth: [{ branchId: 'branch-1', name: '健康实践', xp: 20 }],
-      goals: [{ goalId: 'goal-1', result: '保持可持续节奏', role: 'main' }], experiments: [], memories: [],
+      growth: [{ dimension: 'energy', xp: 4 }],
+      goals: [{ goalId: 'goal-1', result: '保持可持续节奏' }], experiments: [], memories: [],
     },
     permissions: {
       eventIds: ['event-a', 'event-b'], includeStateSnapshots: true, includeTaskResults: true, includeHabits: true,
@@ -269,14 +307,14 @@ function weeklyRequest() {
 
 function weeklyResponse() {
   return {
-    contractVersion: '1.0', requestId: 'weekly-1', operation: 'weekly_review',
+    contractVersion: '2.0', requestId: 'weekly-1', operation: 'weekly_review',
     result: {
       stateTrends: [{
         dimension: 'energy', direction: 'up', summary: '两次散步都与能量恢复同时出现。', evidenceEventIds: ['event-a', 'event-b'],
         evidenceDates: ['2026-08-11', '2026-08-13'], relationship: 'correlation',
       }],
       recurringBenefits: [], recurringCosts: [],
-      growthDeposits: [{ branchId: 'branch-1', branchName: '健康实践', summary: '完成两次可核对行动。', evidenceEventIds: ['event-a', 'event-b'] }],
+      growthDeposits: [{ dimension: 'energy', summary: '完成两次可核对行动。', evidenceEventIds: ['event-a', 'event-b'] }],
       habitDecisions: [{ habitId: 'habit-1', action: 'keep', reason: '当前最小动作仍可持续。' }],
       nextWeekTheme: { title: '保护恢复节奏', reason: '继续验证低成本散步是否稳定有益。' },
       nextExperiment: { hypothesis: '午后短走有助于恢复。', minimumAction: '午后走两分钟。', metric: '记录开始次数和主观能量。', endDate: '2026-08-21', stopCondition: '连续三天增加明显负担。' },
@@ -308,14 +346,14 @@ test('weekly trends need evidence from two dates or an explicit insufficient-evi
 
 test('system candidate review can only suggest type-safe user-confirmed merges', () => {
   const request = parseSystemCandidateReviewRequest({
-    contractVersion: '1.0', operation: 'system_candidate_review', requestId: 'memory-review-1', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    contractVersion: '2.0', operation: 'system_candidate_review', requestId: 'memory-review-1', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
     userInput: { candidates: [
       { memoryId: 'memory-a', version: 1, type: 'constraint', statement: '高负荷后需要过渡。', evidenceEvents: [], counterEvidence: [], confidence: 'low', status: 'candidate' },
       { memoryId: 'memory-b', version: 2, type: 'constraint', statement: '会议后适合留十分钟。', evidenceEvents: [], counterEvidence: [], confidence: 'low', status: 'confirmed' },
     ] }, permissions: { memoryIds: ['memory-a', 'memory-b'] },
   });
   const response = parseSystemCandidateReviewResponse({
-    contractVersion: '1.0', requestId: 'memory-review-1', operation: 'system_candidate_review',
+    contractVersion: '2.0', requestId: 'memory-review-1', operation: 'system_candidate_review',
     result: { groups: [{ candidateMemoryIds: ['memory-a', 'memory-b'], action: 'merge', mergedStatement: '高负荷后可能需要十分钟过渡。', reason: '陈述和证据方向相近。', confidence: 'low' }] }, warnings: [],
   }, request);
   assert.equal(response.result.groups[0].action, 'merge');
@@ -336,27 +374,25 @@ test('weekly habit momentum accepts one decimal but rejects finer precision', ()
 
 test('goal decomposition stays a bounded editable draft with matching memory permission', () => {
   const request = parseGoalDecompositionRequest({
-    contractVersion: '1.0', operation: 'goal_decomposition', requestId: 'goal-plan-1', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
-    userInput: { result: '发布一篇可阅读的文章', why: '把经验整理成作品', completionEvidence: '文章获得公开链接' },
+    contractVersion: '2.0', operation: 'goal_decomposition', requestId: 'goal-plan-1', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    userInput: { result: '发布一篇可阅读的文章', why: '把经验整理成作品', completionEvidence: '文章获得公开链接', targetDate: null },
     context: {
-      area: { areaId: 'area-1', name: '创造与作品', mode: 'build' },
-      branch: { branchId: 'branch-1', name: '写作实践' },
-      currentGoals: [{ goalId: 'goal-main', result: '完成现有主项目', role: 'main' }],
+      currentGoals: [{ goalId: 'goal-main', result: '完成现有项目' }],
       executionEvidence: [{ questId: 'quest-1', title: '一次写完整稿', result: 'partial', actual: '完成了三个要点', completedDate: '2026-08-19' }],
       memories: [{ memoryId: 'memory-1', type: 'constraint', statement: '长时间连续写作容易耗尽注意力。' }],
     },
     permissions: { memoryIds: ['memory-1'], questIds: ['quest-1'], goalIds: ['goal-main'] },
   });
   const response = parseGoalDecompositionResponse({
-    contractVersion: '1.0', requestId: request.requestId, operation: 'goal_decomposition',
+    contractVersion: '2.0', requestId: request.requestId, operation: 'goal_decomposition',
     result: {
       refinedResult: '发布一篇有公开链接的文章', completionEvidence: '文章可以通过公开链接阅读', rationale: '先形成初稿，再用一次反馈修订。',
       currentStage: '已有主题，还没有形成提纲。', estimatedInvestment: '每周两次，每次三十分钟，预计三周。', risks: ['连续写作时间过长会耗尽注意力。'],
       milestones: [
-        { title: '完成文章初稿', evidence: '保存一份包含开头、正文和结尾的初稿。' },
-        { title: '完成一次反馈修订', evidence: '保留反馈和修订后的版本。' },
+        { title: '完成文章初稿', evidence: '保存一份包含开头、正文和结尾的初稿。', dimension: 'progress', difficulty: 'standard' },
+        { title: '完成一次反馈修订', evidence: '保留反馈和修订后的版本。', dimension: 'progress', difficulty: 'standard' },
       ],
-      nextStep: { title: '列出文章结构', why: '先降低开始成本', minimumAction: '只列三个要点', estimatedMinutes: 15, difficulty: 'light' },
+      nextStep: { title: '列出文章结构', why: '先降低开始成本', minimumAction: '只列三个要点', estimatedMinutes: 15, difficulty: 'light', dimension: 'progress' },
       assumptions: ['当前没有明确截止日期。'],
     }, warnings: [],
   }, request);
@@ -383,7 +419,7 @@ test('goal decomposition stays a bounded editable draft with matching memory per
 
   const oneSentence = parseGoalDecompositionRequest({
     ...request, requestId: 'goal-plan-minimal',
-    userInput: { result: '完成一次 5 公里跑', why: '', completionEvidence: '' },
+    userInput: { result: '完成一次 5 公里跑', why: '', completionEvidence: '', targetDate: null },
   });
   assert.equal(oneSentence.userInput.why, '');
   assert.equal(oneSentence.userInput.completionEvidence, '');
@@ -391,18 +427,21 @@ test('goal decomposition stays a bounded editable draft with matching memory per
 
 test('goal decomposition rejects vague, conflicting, invented-deadline, oversized, and non-actionable plans', () => {
   const requestFor = (result, currentGoals = []) => parseGoalDecompositionRequest({
-    contractVersion: '1.0', operation: 'goal_decomposition', requestId: `edge-${result}`, locale: 'zh-CN', timeZone: 'Asia/Shanghai',
-    userInput: { result, why: '', completionEvidence: '' },
-    context: { area: { areaId: 'area-1', name: '生活', mode: 'explore' }, branch: { branchId: 'branch-1', name: '实践' }, currentGoals, executionEvidence: [], memories: [] },
+    contractVersion: '2.0', operation: 'goal_decomposition', requestId: `edge-${result}`, locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    userInput: { result, why: '', completionEvidence: '', targetDate: null },
+    context: { currentGoals, executionEvidence: [], memories: [] },
     permissions: { memoryIds: [], questIds: [], goalIds: currentGoals.map((goal) => goal.goalId) },
   });
   const responseFor = (request) => ({
-    contractVersion: '1.0', requestId: request.requestId, operation: 'goal_decomposition',
+    contractVersion: '2.0', requestId: request.requestId, operation: 'goal_decomposition',
     result: {
       refinedResult: request.userInput.result, completionEvidence: '留下一份可检查成果', rationale: '先缩小范围。', currentStage: '尚未开始。',
       estimatedInvestment: '先投入二十分钟。', risks: [],
-      milestones: [{ title: '完成结构', evidence: '三个要点齐全' }, { title: '形成成果', evidence: '成果可以查看' }],
-      nextStep: { title: '列出三个要点', why: '降低开始成本', minimumAction: '只写第一个要点', estimatedMinutes: 10, difficulty: 'light' }, assumptions: [],
+      milestones: [
+        { title: '完成结构', evidence: '三个要点齐全', dimension: 'progress', difficulty: 'light' },
+        { title: '形成成果', evidence: '成果可以查看', dimension: 'progress', difficulty: 'standard' },
+      ],
+      nextStep: { title: '列出三个要点', why: '降低开始成本', minimumAction: '只写第一个要点', estimatedMinutes: 10, difficulty: 'light', dimension: 'progress' }, assumptions: [],
     }, warnings: [],
   });
 
@@ -412,7 +451,7 @@ test('goal decomposition rejects vague, conflicting, invented-deadline, oversize
   vagueResponse.result.assumptions = ['需要先选择本阶段最重要的一个方面。'];
   assert.doesNotThrow(() => parseGoalDecompositionResponse(vagueResponse, vague));
 
-  const conflicting = requestFor('开始一个新项目', [{ goalId: 'main-1', result: '完成现有项目', role: 'main' }]);
+  const conflicting = requestFor('开始一个新项目', [{ goalId: 'main-1', result: '完成现有项目' }]);
   const conflictResponse = responseFor(conflicting);
   assert.throws(() => parseGoalDecompositionResponse(conflictResponse, conflicting), /优先级风险/);
   conflictResponse.result.risks = ['新旧项目会竞争同一段可用时间。'];
@@ -424,7 +463,7 @@ test('goal decomposition rejects vague, conflicting, invented-deadline, oversize
   assert.throws(() => parseGoalDecompositionResponse(inventedDeadline, noDeadline), /擅自添加期限/);
 
   const oversized = responseFor(noDeadline);
-  oversized.result.milestones = Array.from({ length: 6 }, (_, index) => ({ title: `阶段 ${index + 1}`, evidence: `证据 ${index + 1}` }));
+  oversized.result.milestones = Array.from({ length: 6 }, (_, index) => ({ title: `阶段 ${index + 1}`, evidence: `证据 ${index + 1}`, dimension: 'progress', difficulty: 'standard' }));
   assert.throws(() => parseGoalDecompositionResponse(oversized, noDeadline), /目标阶段无效/);
 
   const nonActionable = responseFor(noDeadline);

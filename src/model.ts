@@ -2,11 +2,12 @@ export const DIMENSIONS = [
   { key: 'energy', label: '身体', description: '最近的睡眠、体力和恢复情况' },
   { key: 'mind', label: '心理', description: '最近的压力、情绪和安定感' },
   { key: 'connection', label: '关系', description: '最近是否有人交流、支持和陪伴' },
-  { key: 'progress', label: '学习/工作', description: '最近的学习或工作是否有方向、有推进' },
+  { key: 'progress', label: '工作/学习', description: '最近的工作或学习是否有方向、有推进' },
   { key: 'play', label: '玩乐', description: '最近是否有兴趣、放松和纯粹开心的时间' },
 ] as const;
 
 export type Dimension = (typeof DIMENSIONS)[number]['key'];
+export type AnalysisContractVersion = '1.0' | '2.0';
 
 export const DEFAULT_AREA_NAMES = ['身心健康', '工作与责任', '创造与作品', '学习与能力', '关系与连接', '内在与情绪', '生活与兴趣', '财富与自主'] as const;
 export const ROOT_ASSETS = [
@@ -24,7 +25,7 @@ export type GoalRole = 'main' | 'secondary' | 'wishlist';
 export type GoalStatus = 'idea' | 'active' | 'paused' | 'completed' | 'abandoned';
 export type QuestType = 'main' | 'bonus' | 'side';
 export type QuestStatus = 'pending' | 'completed' | 'partial' | 'skipped' | 'exempt';
-export type QuestSystemRetiredReason = 'elapsed' | 'schedule-changed' | 'tracking-disabled' | 'capacity' | 'source-invalidated';
+export type QuestSystemRetiredReason = 'elapsed' | 'schedule-changed' | 'tracking-disabled' | 'capacity' | 'source-invalidated' | 'goal-inactive';
 export type HabitStatus = 'active' | 'paused' | 'ended';
 
 export interface WeeklyReviewScope {
@@ -140,7 +141,7 @@ export interface Profile extends ImportableEntity {
 }
 
 export interface Area extends ImportableEntity {
-  /** User-facing “人生领域”; separate from the five recent-state sensors. */
+  /** Legacy backup compatibility only; current UI and writes do not use it. */
   name: string;
   mode: AreaMode;
   order: number;
@@ -148,7 +149,7 @@ export interface Area extends ImportableEntity {
 }
 
 export interface GrowthBranch extends ImportableEntity {
-  /** Internal entity behind the user-facing “成长方向”. */
+  /** Legacy backup compatibility only; current growth is dimension-based. */
   rootAsset: AssetKey;
   parentId?: string;
   name: string;
@@ -163,9 +164,12 @@ export interface Goal extends ImportableEntity {
   startDate?: string;
   targetDate?: string;
   nextStep: string;
-  areaId: string;
-  branchId: string;
-  role: GoalRole;
+  /** Optional compatibility hint; current goals derive their mix from child tasks. */
+  dimension?: Dimension;
+  /** Legacy compatibility only; current writes leave these absent. */
+  areaId?: string;
+  branchId?: string;
+  role?: GoalRole;
   status: GoalStatus;
   /** Real transition time into completed; absent on legacy completed goals. */
   completedAt?: string;
@@ -181,6 +185,7 @@ export interface Milestone extends ImportableEntity {
   evidence: string;
   status: 'pending' | 'completed' | 'superseded';
   completedAt?: string;
+  completedDate?: string;
   /** Present only when a confirmed task completion settled this milestone. */
   completionSourceQuestId?: string;
   xpSettled: boolean;
@@ -190,7 +195,8 @@ export interface Quest extends ImportableEntity {
   localDate: string;
   /** User-defined position within the unfinished task list for this date. */
   sortOrder?: number;
-  type: QuestType;
+  /** Legacy compatibility only; current writes leave this absent. */
+  type?: QuestType;
   sourceType: 'goal' | 'habit' | 'recovery' | 'manual';
   sourceId?: string;
   /** Explicit milestone provenance; actionId remains the idempotency key. */
@@ -211,6 +217,8 @@ export interface Quest extends ImportableEntity {
   progressCount?: number;
   countUnit?: string;
   difficulty: import('./rules.ts').Difficulty;
+  /** Preserves the old fourth tier while reads normalize it to hard. */
+  legacyDifficulty?: 'challenge';
   dimension?: Dimension;
   branchId?: string;
   status: QuestStatus;
@@ -226,8 +234,8 @@ export interface Quest extends ImportableEntity {
 export interface DailyAnalysis extends ImportableEntity {
   localDate: string;
   requestId: string;
-  contractVersion: '1.0';
-  modelOutputVersion: '1.0';
+  contractVersion: AnalysisContractVersion;
+  modelOutputVersion: AnalysisContractVersion;
   status: 'ready' | 'stale';
   sourceEntries: Array<{ entryId: string; revision: number }>;
   contextSummary: string;
@@ -264,7 +272,7 @@ export interface AnalysisJob extends ImportableEntity {
   requestId: string;
   operation: 'daily_analysis' | 'weekly_review';
   localDate: string;
-  contractVersion: '1.0';
+  contractVersion: AnalysisContractVersion;
   idempotencyKey: string;
   request: import('./analysis-contract.ts').DailyAnalysisRequest | import('./analysis-contract.ts').WeeklyReviewRequest;
   status: 'queued' | 'processing' | 'succeeded' | 'failed' | 'stale' | 'safety-review';
@@ -281,14 +289,14 @@ export interface Review extends ImportableEntity {
   type: 'weekly' | 'monthly';
   periodStart: string;
   periodEnd: string;
-  contractVersion: '1.0';
+  contractVersion: AnalysisContractVersion;
   status: 'candidate' | 'confirmed' | 'rejected';
   rejectedAt?: string;
   request: import('./analysis-contract.ts').WeeklyReviewRequest;
   stateTrends: Array<import('./analysis-contract.ts').WeeklyEvidencePattern & { dimension: Dimension; direction: 'up' | 'down' | 'stable' | 'unknown' }>;
   recurringBenefits: import('./analysis-contract.ts').WeeklyEvidencePattern[];
   recurringCosts: import('./analysis-contract.ts').WeeklyEvidencePattern[];
-  growthDeposits: Array<{ branchId: string | null; branchName: string | null; summary: string; evidenceEventIds: string[] }>;
+  growthDeposits: Array<{ dimension: Dimension; summary: string; evidenceEventIds: string[] }>;
   habitDecisions: Array<{ habitId: string; action: import('./analysis-contract.ts').HabitDecisionAction; reason: string }>;
   nextTheme: string;
   nextThemeReason: string;
@@ -345,8 +353,10 @@ export interface Habit extends ImportableEntity {
   }>;
   trigger?: string;
   dimension: Dimension;
-  branchId: string;
+  /** Legacy compatibility only; current writes leave this absent. */
+  branchId?: string;
   difficulty: import('./rules.ts').Difficulty;
+  legacyDifficulty?: 'challenge';
   status: HabitStatus;
   bonusEnabled: boolean;
 }
@@ -361,13 +371,18 @@ export interface HabitLog extends ImportableEntity {
 
 export interface XpLedger extends ImportableEntity {
   settlementKey: string;
-  sourceType: 'quest' | 'habit' | 'milestone';
+  sourceType: 'quest' | 'habit' | 'milestone' | 'journal-event';
   sourceId: string;
-  branchId: string;
+  /** Required for ruleVersion 2; absent only on untouched legacy rows. */
+  dimension?: Dimension;
+  /** Legacy compatibility only; current writes leave this absent. */
+  branchId?: string;
+  /** Absent means the legacy v1 rules. */
+  ruleVersion?: 1 | 2;
   baseXp: number;
   ratio: 0.5 | 1;
   finalXp: number;
-  difficulty: import('./rules.ts').Difficulty | 'milestone';
+  difficulty: import('./rules.ts').LegacyDifficulty | 'milestone' | 'journal';
   localDate: string;
   reversedAt?: string;
 }
@@ -398,7 +413,7 @@ export interface BackupData {
 
 export interface BackupBundle {
   format: 'qiguang-backup';
-  formatVersion: 5;
+  formatVersion: 6;
   exportedAt: string;
   appVersion: string;
   data: BackupData;

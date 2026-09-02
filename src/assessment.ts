@@ -92,18 +92,22 @@ export function assessmentQuestions(length: AssessmentLength): AssessmentQuestio
   })));
 }
 
-export function scoreAssessment(questions: AssessmentQuestion[], answers: Readonly<Record<string, number>>): Record<Dimension, number> {
-  const totals = Object.fromEntries(DIMENSIONS.map(({ key }) => [key, { total: 0, count: 0 }])) as Record<Dimension, { total: number; count: number }>;
-  for (const question of questions) {
+export function scoreDimensionAssessment(
+  dimension: Dimension,
+  questions: AssessmentQuestion[],
+  answers: Readonly<Record<string, number>>,
+): number {
+  const dimensionQuestions = questions.filter((question) => question.dimension === dimension);
+  if (!dimensionQuestions.length) throw new Error('问卷缺少状态维度。');
+  let total = 0;
+  for (const question of dimensionQuestions) {
     const answer = answers[question.id];
     if (typeof answer !== 'number' || !Number.isInteger(answer) || answer < 1 || answer > 5) throw new Error('请回答全部问题。');
-    const total = totals[question.dimension];
-    total.total += question.reverse ? 6 - answer : answer;
-    total.count += 1;
+    total += question.reverse ? 6 - answer : answer;
   }
-  return Object.fromEntries(DIMENSIONS.map(({ key }) => {
-    const result = totals[key];
-    if (!result.count) throw new Error('问卷缺少状态维度。');
-    return [key, Math.round(result.total / result.count * 20)];
-  })) as Record<Dimension, number>;
+  return Math.round(total / dimensionQuestions.length * 20);
+}
+
+export function scoreAssessment(questions: AssessmentQuestion[], answers: Readonly<Record<string, number>>): Record<Dimension, number> {
+  return Object.fromEntries(DIMENSIONS.map(({ key }) => [key, scoreDimensionAssessment(key, questions, answers)])) as Record<Dimension, number>;
 }

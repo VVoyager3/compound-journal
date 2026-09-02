@@ -5,24 +5,21 @@ import { selectGrowthBadges, selectNextAchievableAchievement } from '../src/badg
 
 const createdAt = '2026-08-01T08:00:00.000Z';
 const entity = (id, patch = {}) => ({ id, createdAt, updatedAt: createdAt, version: 1, ...patch });
-const branch = (id = 'branch-a', status = 'active') => ({
-  ...entity(id), rootAsset: 'knowledge', name: `方向 ${id}`, order: 0, status,
-});
-const goal = (id = 'goal-a', branchId = 'branch-a', status = 'active', patch = {}) => ({
+const goal = (id = 'goal-a', status = 'active', patch = {}) => ({
   ...entity(id), result: `目标 ${id}`, why: '值得推进', evidence: '完成证据', nextStep: '下一步',
-  areaId: 'area-a', branchId, role: 'main', status, ...patch,
+  dimension: 'progress', role: 'secondary', status, ...patch,
 });
 const milestone = (id = 'milestone-a', goalId = 'goal-a', patch = {}) => ({
   ...entity(id), goalId, order: 0, description: `里程碑 ${id}`, evidence: `证据 ${id}`,
   status: 'completed', completedAt: '2026-08-10T09:30:00.000Z', xpSettled: true, ...patch,
 });
-const settlement = (id = 'milestone-a', branchId = 'branch-a', patch = {}) => ({
-  ...entity(`ledger-${id}`), settlementKey: `${id}:1`, sourceType: 'milestone', sourceId: id, branchId,
-  baseXp: 50, ratio: 1, finalXp: 50, difficulty: 'milestone', localDate: '2026-08-10', ...patch,
+const settlement = (id = 'milestone-a', dimension = 'progress', patch = {}) => ({
+  ...entity(`ledger-${id}`), settlementKey: `${id}:1`, sourceType: 'milestone', sourceId: id, dimension,
+  ruleVersion: 2, baseXp: 5, ratio: 1, finalXp: 5, difficulty: 'milestone', localDate: '2026-08-10', ...patch,
 });
 const habit = (id = 'habit-a', status = 'active', patch = {}) => ({
   ...entity(id), name: `习惯 ${id}`, minimumAction: '完成最小动作', scheduleDays: [1, 3, 5],
-  dimension: 'progress', branchId: 'branch-a', difficulty: 'light', status, bonusEnabled: true, ...patch,
+  dimension: 'progress', difficulty: 'light', status, bonusEnabled: true, ...patch,
 });
 const dateAt = (index) => new Date(Date.UTC(2026, 0, index + 1)).toISOString().slice(0, 10);
 const habitLog = (habitId, index, patch = {}) => {
@@ -35,7 +32,7 @@ const habitLog = (habitId, index, patch = {}) => {
 const quest = (id, patch = {}) => ({
   ...entity(id), localDate: '2026-08-10', type: 'side', sourceType: 'recovery', actionId: `action:${id}`,
   settlementVersion: 1, title: `行动 ${id}`, reason: '有现实依据', minimumAction: '做最小一步',
-  estimatedMinutes: 5, difficulty: 'light', status: 'completed', aiSuggested: false, userModified: false, ...patch,
+  estimatedMinutes: 5, difficulty: 'light', dimension: 'progress', status: 'completed', aiSuggested: false, userModified: false, ...patch,
 });
 const feedback = (questId, patch = {}) => ({
   ...entity(`feedback-${questId}`), questId, result: 'completed', note: '', actual: `实际完成 ${questId}`,
@@ -46,53 +43,52 @@ const review = (id = 'review-a', patch = {}) => ({
   nextExperiment: { hypothesis: '更小更容易开始', minimumAction: '完成一次十分钟实验', metric: '是否完成', endDate: '2026-08-15', stopCondition: '不再有效' },
   ...patch,
 });
-const emptyInput = (patch = {}) => ({ milestones: [], goals: [], branches: [branch()], ledger: [], ...patch });
+const emptyInput = (patch = {}) => ({ milestones: [], goals: [], ledger: [], ...patch });
 
 test('a settled milestone keeps its compatible fields and adds UI-ready provenance', () => {
   const source = quest('quest-a', { sourceType: 'goal', title: '完成第一份作品' });
   const badges = selectGrowthBadges({
     milestones: [milestone('milestone-a', 'goal-a', { completionSourceQuestId: source.id })],
-    goals: [goal()], branches: [branch()], ledger: [settlement()], quests: [source],
+    goals: [goal()], ledger: [settlement()], quests: [source],
   });
   assert.deepEqual(badges, [{
-    id: 'milestone:milestone-a', sourceType: 'milestone', theme: 'knowledge',
+    id: 'milestone:milestone-a', sourceType: 'milestone', theme: 'progress',
     milestoneId: 'milestone-a', name: '里程碑 milestone-a', evidence: '证据 milestone-a',
     earnedOn: '2026-08-10', completedAt: '2026-08-10T09:30:00.000Z', goalId: 'goal-a', goalResult: '目标 goal-a',
-    branchId: 'branch-a', branchName: '方向 branch-a', branchAsset: 'knowledge', sourceQuestId: 'quest-a',
+    dimension: 'progress', sourceQuestId: 'quest-a',
     sourceAction: '完成第一份作品', related: { type: 'goal', id: 'goal-a', name: '目标 goal-a' }, confirmation: 'quest',
   }]);
 });
 
 test('pending, unsettled, reversed, or malformed milestone XP cannot derive a badge', () => {
-  const input = { goals: [goal()], branches: [branch()] };
+  const input = { goals: [goal()] };
   assert.equal(selectGrowthBadges({ ...input, milestones: [milestone('milestone-a', 'goal-a', { status: 'pending' })], ledger: [settlement()] }).length, 0);
   assert.equal(selectGrowthBadges({ ...input, milestones: [milestone('milestone-a', 'goal-a', { xpSettled: false })], ledger: [settlement()] }).length, 0);
-  assert.equal(selectGrowthBadges({ ...input, milestones: [milestone()], ledger: [settlement('milestone-a', 'branch-a', { reversedAt: '2026-08-11T08:00:00.000Z' })] }).length, 0);
-  assert.equal(selectGrowthBadges({ ...input, milestones: [milestone()], ledger: [settlement('milestone-a', 'branch-a', { sourceType: 'quest' })] }).length, 0);
-  assert.equal(selectGrowthBadges({ ...input, milestones: [milestone()], ledger: [settlement('milestone-a', 'branch-a', { finalXp: 40 })] }).length, 0);
+  assert.equal(selectGrowthBadges({ ...input, milestones: [milestone()], ledger: [settlement('milestone-a', 'progress', { reversedAt: '2026-08-11T08:00:00.000Z' })] }).length, 0);
+  assert.equal(selectGrowthBadges({ ...input, milestones: [milestone()], ledger: [settlement('milestone-a', 'progress', { sourceType: 'quest' })] }).length, 0);
+  assert.equal(selectGrowthBadges({ ...input, milestones: [milestone()], ledger: [settlement('milestone-a', 'progress', { finalXp: 4 })] }).length, 0);
 });
 
 test('a completed goal chapter requires a fully completed current path and one settled milestone', () => {
-  const completedGoal = goal('goal-a', 'branch-a', 'completed', { completedAt: '2026-08-15T09:00:00.000Z', completedDate: '2026-08-15', updatedAt: '2026-08-16T09:00:00.000Z' });
+  const completedGoal = goal('goal-a', 'completed', { completedAt: '2026-08-15T09:00:00.000Z', completedDate: '2026-08-15', updatedAt: '2026-08-16T09:00:00.000Z' });
   const current = [milestone('one'), milestone('two', 'goal-a', { order: 1 }), milestone('old', 'goal-a', { status: 'superseded', xpSettled: false, completedAt: undefined })];
   const ledger = [settlement('one')];
-  const select = (goals = [completedGoal], milestones = current, xp = ledger) => selectGrowthBadges({ goals, milestones, branches: [branch()], ledger: xp });
+  const select = (goals = [completedGoal], milestones = current, xp = ledger) => selectGrowthBadges({ goals, milestones, ledger: xp });
   const chapter = select().find((badge) => badge.id === 'goal:goal-a');
   assert.deepEqual({
     id: chapter?.id, sourceType: chapter?.sourceType, theme: chapter?.theme, earnedOn: chapter?.earnedOn,
     evidence: chapter?.evidence, related: chapter?.related, sourceAction: chapter?.sourceAction,
   }, {
-    id: 'goal:goal-a', sourceType: 'goal', theme: 'knowledge', earnedOn: '2026-08-15', evidence: '完成证据',
+    id: 'goal:goal-a', sourceType: 'goal', theme: 'progress', earnedOn: '2026-08-15', evidence: '完成证据',
     related: { type: 'goal', id: 'goal-a', name: '目标 goal-a' }, sourceAction: '由你确认目标完成',
   });
   assert.equal(select([goal('goal-a')]).some((badge) => badge.sourceType === 'goal'), false, 'undoing goal completion hides only the chapter achievement');
   assert.equal(select(undefined, [current[0], { ...current[1], status: 'pending' }, current[2]]).some((badge) => badge.sourceType === 'goal'), false);
-  assert.equal(select(undefined, undefined, [settlement('one', 'branch-a', { reversedAt: createdAt })]).some((badge) => badge.sourceType === 'goal'), false);
+  assert.equal(select(undefined, undefined, [settlement('one', 'progress', { reversedAt: createdAt })]).some((badge) => badge.sourceType === 'goal'), false);
   const moved = selectGrowthBadges({
-    goals: [{ ...completedGoal, branchId: 'branch-b' }], milestones: current,
-    branches: [branch(), branch('branch-b')], ledger,
+    goals: [{ ...completedGoal, dimension: 'energy' }], milestones: current, ledger,
   }).find((badge) => badge.sourceType === 'goal');
-  assert.equal(moved?.branchId, 'branch-a', 'a completed chapter keeps the settled growth branch after later edits');
+  assert.equal(moved?.dimension, 'progress', 'a completed chapter keeps the settled five-dimension ledger value after later edits');
 });
 
 test('habit achievements derive across nine non-consecutive evidence thresholds and survive lifecycle changes', () => {
@@ -119,19 +115,18 @@ test('habit achievements derive across nine non-consecutive evidence thresholds 
   assert.equal(selectGrowthBadges(emptyInput({ habits: [habit()], habitLogs: firstSeven, feedbacks: [lateSeventh] }))[0]?.earnedOn, '2026-08-20', 'habit achievements use the real completion date');
 });
 
-test('habit achievements keep the growth branch of their threshold action', () => {
+test('habit achievements keep the five-dimension value of their threshold action', () => {
   const logs = Array.from({ length: 7 }, (_, index) => habitLog('habit-a', index));
   const quests = logs.map((item, index) => quest(item.questId, {
-    sourceType: 'habit', sourceId: 'habit-a', branchId: index < 3 ? 'health' : 'knowledge', title: `第 ${index + 1} 次行动`,
+    sourceType: 'habit', sourceId: 'habit-a', dimension: index < 3 ? 'energy' : 'progress', title: `第 ${index + 1} 次行动`,
   }));
   const badges = selectGrowthBadges(emptyInput({
-    branches: [branch('health'), branch('knowledge')], habits: [habit('habit-a', 'active', { branchId: 'knowledge' })],
-    habitLogs: logs, quests,
+    habits: [habit('habit-a')], habitLogs: logs, quests,
   })).filter((badge) => badge.sourceType === 'habit');
-  assert.deepEqual(badges.map((badge) => [badge.id, badge.branchId, badge.sourceAction]), [
-    ['habit:habit-a:7', 'knowledge', '第 7 次行动'],
-    ['habit:habit-a:3', 'health', '第 3 次行动'],
-    ['habit:habit-a:1', 'health', '第 1 次行动'],
+  assert.deepEqual(badges.map((badge) => [badge.id, badge.dimension, badge.sourceAction]), [
+    ['habit:habit-a:7', 'progress', '第 7 次行动'],
+    ['habit:habit-a:3', 'energy', '第 3 次行动'],
+    ['habit:habit-a:1', 'energy', '第 1 次行动'],
   ]);
 });
 
@@ -175,7 +170,7 @@ test('a weekly experiment requires a confirmed review and its exact completed ac
 });
 
 test('mixed achievements deduplicate, sort stably, and never mutate or duplicate XP', () => {
-  const completedGoal = goal('goal-a', 'branch-a', 'completed', { completedAt: '2026-08-16T10:00:00.000Z', completedDate: '2026-08-16', updatedAt: '2026-08-18T10:00:00.000Z' });
+  const completedGoal = goal('goal-a', 'completed', { completedAt: '2026-08-16T10:00:00.000Z', completedDate: '2026-08-16', updatedAt: '2026-08-18T10:00:00.000Z' });
   const settledMilestone = milestone();
   const xp = settlement();
   const weekly = review('review-a');
@@ -183,7 +178,7 @@ test('mixed achievements deduplicate, sort stably, and never mutate or duplicate
   const recoveryQuests = Array.from({ length: 3 }, (_, index) => quest(`r-${index}`, { localDate: `2026-08-${String(10 + index).padStart(2, '0')}` }));
   const recoveryFeedback = recoveryQuests.map((item) => feedback(item.id, { completedDate: item.localDate }));
   const input = {
-    milestones: [settledMilestone, { ...settledMilestone }], goals: [completedGoal, { ...completedGoal }], branches: [branch(), branch()],
+    milestones: [settledMilestone, { ...settledMilestone }], goals: [completedGoal, { ...completedGoal }],
     ledger: [xp, { ...xp }], habits: [habit(), habit()], habitLogs: Array.from({ length: 7 }, (_, index) => habitLog('habit-a', index)),
     reviews: [weekly, { ...weekly }], quests: [experiment, ...recoveryQuests, experiment],
     feedbacks: [feedback('experiment', { completedDate: '2026-08-15' }), ...recoveryFeedback],

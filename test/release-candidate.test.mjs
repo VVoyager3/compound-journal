@@ -114,16 +114,16 @@ test('room movement uses sprite frames instead of stretching the whole character
 test('record editor uses the same three record types when creating and editing', async () => {
   const app = await read('src/app.ts');
   const styles = await read('src/styles.css');
-  assert.match(app, /'日常记录'/);
-  assert.match(app, /'成功记录'/);
-  assert.match(app, /'趣事记录'/);
-  assert.doesNotMatch(app, /成功小记|珍藏小记|趣事小记|普通记录/);
+  assert.match(app, /'记住的事'/);
+  assert.match(app, /'成功小记'/);
+  assert.match(app, /'有趣的事'/);
+  assert.doesNotMatch(app, /'日常记录'|'成功记录'|'趣事记录'|'普通记录'/);
   assert.match(app, /'今日一句'/);
   assert.match(app, /'历年今天'/);
   assert.match(app, /saveDayCaption\(saved\.localDate, summaryInput\.value\)/);
   assert.match(app, /snapshotVariantFor/);
   assert.match(styles, /\.room-stage\.is-snapshot-(?:rest|focus|play|connection|bright)/);
-  assert.match(styles, /\.record-prompt-actions\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s);
+  assert.match(styles, /\.record-prompt-actions\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
   assert.doesNotMatch(styles, /\.record-prompt-actions\s*\{[^}]*overflow-x:\s*auto/s);
 });
 
@@ -292,11 +292,16 @@ test('fresh production output contains no secret, source map, or oversized initi
 });
 
 test('user-facing product vocabulary has one name per concept', async () => {
+  const uiSource = await read('src/app.ts');
   const source = (await Promise.all(['src/app.ts', 'src/db.ts', 'src/rules.ts', 'src/badges.ts', 'src/analysis-contract.ts'].map(read))).join('\n');
   for (const legacy of ['关注领域', '人生领域', '成长方向', '根资产', '父分支', '阶段模式', '目标位置', '小目标', 'MAIN', 'BONUS', '支线', '校准']) {
     assert.equal(source.includes(legacy), false, `replace legacy label: ${legacy}`);
   }
-  for (const current of ['生活分类', '想提升什么', '当前投入', '阶段目标', '今日重点', '可选任务', '状态自评']) assert(source.includes(current), `missing current label: ${current}`);
+  for (const legacy of ['分类与提升方向', '生活分类', '提升方向', '主要提升', '想提升', '成长分支']) {
+    assert.equal(uiSource.includes(legacy), false, `remove retired user-facing classification: ${legacy}`);
+  }
+  assert.doesNotMatch(uiSource, /labelledControl\(['"]分类['"]/, 'user-facing forms must name the shared field 五维状态');
+  for (const current of ['五维状态', '成长值', '阶段目标', '状态自评']) assert(source.includes(current), `missing current label: ${current}`);
 });
 
 test('production backend container is minimal, non-root, and never copies local secrets', async () => {
@@ -401,15 +406,26 @@ test('Android device checks preserve installed data and separate emulator mode',
   assert.match(script, /\[switch\]\$Emulator/);
   assert.match(script, /\$candidates\.Count -ne 1/);
   assert.match(script, /ro\.kernel\.qemu/);
+  assert.match(script, /\$androidSdk = Split-Path -Parent \(Split-Path -Parent \$adb\)/, 'PATH adb fallback must also supply its SDK root');
   assert.match(script, /install -r \$apk/);
   assert.match(script, /:app:assembleDebugAndroidTest/);
   assert.match(script, /am instrument -w/);
   assert.match(script, /am instrument -w[\s\S]*am force-stop \$packageName[\s\S]*am start -W/, 'instrumentation must leave the app running');
   assert(script.includes('D:\\tmp\\qiguang-device-check'));
+  assert.doesNotMatch(script, /\$env:JAVA_HOME\s*=\s*'D:\\dev\\jdk21/, 'the device check must not depend on one machine-specific JDK path');
+  assert.match(script, /\$jdkCandidates/);
+  assert.match(script, /\$jdkCandidates = @\(@\(/, 'JDK candidates must remain an array when only one default path exists');
+  assert.match(script, /java\.exe.*-version/s);
   assert(script.includes('D:\\tmp\\qiguang-emulator-check'));
   assert.match(script, /svc wifi disable/);
   assert.match(script, /svc wifi enable/);
-  assert.match(script, /ANDROID_USER_HOME.*\.android-user/);
+  assert.match(script, /\$defaultAndroidUserHome = Join-Path \$env:USERPROFILE '\.android'/);
+  assert.match(script, /\$projectAndroidUserHome = Join-Path \$workspace '\.android-user'/);
+  assert.match(script, /Test-Path -LiteralPath \(Join-Path \$defaultAndroidUserHome 'debug\.keystore'\)/, 'reuse an existing debug identity before creating a project-local one');
+  assert.match(script, /apksigner\.bat/);
+  assert.match(script, /verify --print-certs/);
+  assert.match(script, /\$installedSigner -ne \$candidateSigner/);
+  assert.match(script, /\$installedSigner -ne \$candidateSigner[\s\S]*install -r \$apk/, 'signature compatibility must be verified before installing');
   assert.match(gitignore, /^\.android-user\/$/m);
   assert.doesNotMatch(script, /connectedDebugAndroidTest/);
   assert.doesNotMatch(script, /adb.*uninstall/i);

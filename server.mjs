@@ -152,17 +152,17 @@ function fixtureAnalysis(request) {
   const secondLength = Math.min(7, characters.length);
   const secondStart = characters.length - secondLength;
   return {
-    contractVersion: '1.0', requestId: request.requestId, operation: 'daily_analysis',
+    contractVersion: '2.0', requestId: request.requestId, operation: 'daily_analysis',
     result: {
       title: '测试整理结果', summary: characters.slice(0, 60).join(''), explicitMoods: [],
       events: [
         {
           candidateId: 'fixture-fact', title: '记录中的明确事件', description: '这条事件直接来自原文。',
-          sourceType: 'explicit', confirmation: 'confirmed_by_default', confidence: 'high',
+          sourceType: 'explicit', confirmation: 'pending', confidence: 'high',
           evidence: [{ entryId: entry.entryId, quote: characters.slice(0, firstLength).join(''), start: 0, end: firstLength }],
           stateImpactCandidates: [{ dimension: 'energy', direction: 'negative', strength: 'small', suggestedDelta: -2, reason: '仅用于桌面测试确定性重算。', confidence: 'medium' }],
           growthEvidenceCandidate: {
-            branchId: null, suggestedBranchName: null, evidenceType: 'practice', description: '用原始记录留下了一条可核对的行动证据。',
+            dimension: 'progress', suggestedXp: 2, matchedQuestId: null, evidenceType: 'practice', description: '用原始记录留下了一条可核对的行动证据。',
             isMilestoneCandidate: false, reason: '明确事件有原文位置证据。',
           },
         },
@@ -170,9 +170,9 @@ function fixtureAnalysis(request) {
           candidateId: 'fixture-inference', title: '等待用户决定的推断', description: '这条推断确认前不会生效。',
           sourceType: 'inferred', confirmation: 'pending', confidence: 'low',
           evidence: [{ entryId: entry.entryId, quote: characters.slice(secondStart).join(''), start: secondStart, end: characters.length }],
-          stateImpactCandidates: [{ dimension: 'mental', direction: 'positive', strength: 'small', suggestedDelta: 3, reason: '仅用于桌面测试确认流程。', confidence: 'low' }],
+          stateImpactCandidates: [{ dimension: 'mind', direction: 'positive', strength: 'small', suggestedDelta: 3, reason: '仅用于桌面测试确认流程。', confidence: 'low' }],
           growthEvidenceCandidate: {
-            branchId: null, suggestedBranchName: null, evidenceType: 'practice', description: '用户确认后才成为一条可核对的行动证据。',
+            dimension: 'mind', suggestedXp: 1, matchedQuestId: null, evidenceType: 'practice', description: '用户确认后才成为一条可核对的行动证据。',
             isMilestoneCandidate: false, reason: '推断必须先由用户核对。',
           },
         },
@@ -183,8 +183,8 @@ function fixtureAnalysis(request) {
         nextSmallStep: '明天安排十分钟低压力过渡。',
       },
       questSuggestions: [{
-        type: 'main', title: '留十分钟过渡', why: '先观察低压力恢复是否有帮助。', minimumVersion: '十分钟不打开新工作。',
-        estimatedMinutes: 10, difficulty: 'light', primaryState: 'mental', growthBranchId: null, sourceGoalId: null, isRecovery: true,
+        title: '留十分钟过渡', why: '先观察低压力恢复是否有帮助。', minimumVersion: '十分钟不打开新工作。',
+        estimatedMinutes: 10, difficulty: 'light', dimension: 'mind', sourceGoalId: null, isRecovery: true,
       }],
       memoryCandidates: [{
         type: 'constraint', statement: '高负荷之后可能需要过渡时间。', confidence: 'low',
@@ -201,7 +201,7 @@ function fixtureTaskFeedback(request) {
   const skipped = /没做|没有做|跳过|今天不做/u.test(text);
   const completionCandidate = skipped ? 'skipped' : partial ? 'partial' : 'complete';
   return {
-    contractVersion: '1.0', requestId: request.requestId, operation: 'task_feedback',
+    contractVersion: '2.0', requestId: request.requestId, operation: 'task_feedback',
     result: {
       completionCandidate,
       actualResult: text.slice(0, 500),
@@ -221,14 +221,14 @@ function fixtureWeeklyReview(request) {
   const end = new Date(`${request.period.end}T00:00:00Z`);
   end.setUTCDate(end.getUTCDate() + 7);
   return {
-    contractVersion: '1.0', requestId: request.requestId, operation: 'weekly_review',
+    contractVersion: '2.0', requestId: request.requestId, operation: 'weekly_review',
     result: {
       stateTrends: [{
         dimension: 'energy', direction: 'unknown', summary: '尚不足以判断趋势；继续观察不同日期的独立证据。',
         evidenceEventIds: firstEvent ? [firstEvent.eventId] : [], evidenceDates: firstEvent ? [firstEvent.localDate] : [], relationship: 'unknown',
       }],
       recurringBenefits: [], recurringCosts: [],
-      growthDeposits: firstGrowth ? [{ branchId: firstGrowth.branchId, branchName: firstGrowth.name, summary: `本周记录了 ${firstGrowth.xp} XP 的现实行动。`, evidenceEventIds: [] }] : [],
+      growthDeposits: firstGrowth ? [{ dimension: firstGrowth.dimension, summary: `本周记录了 ${firstGrowth.xp} 点成长值。`, evidenceEventIds: [] }] : [],
       habitDecisions: firstHabit ? [{ habitId: firstHabit.habitId, action: 'keep', reason: '先维持当前最小动作，再观察一周。' }] : [],
       nextWeekTheme: { title: '保留可持续节奏', reason: '先用一周验证一个小变化。' },
       nextExperiment: { hypothesis: '更小的开始成本有助于持续行动。', minimumAction: '每天留出十分钟只做最小版本。', metric: '记录实际开始的天数。', endDate: end.toISOString().slice(0, 10), stopCondition: '连续三天明显增加负担时停止。' },
@@ -254,7 +254,7 @@ function fixtureSystemCandidateReview(request) {
     else groups.push({ candidateMemoryIds: [values[0].memoryId], action: 'keep_separate', mergedStatement: null, reason: '没有同类型候选。', confidence: 'high' });
   }
   return {
-    contractVersion: '1.0', requestId: request.requestId, operation: 'system_candidate_review',
+    contractVersion: '2.0', requestId: request.requestId, operation: 'system_candidate_review',
     result: { groups }, warnings: ['桌面测试夹具，不代表真实模型质量。'],
   };
 }
@@ -262,7 +262,7 @@ function fixtureSystemCandidateReview(request) {
 function fixtureGoalDecomposition(request) {
   const replanning = request.context.executionEvidence.length > 0;
   return {
-    contractVersion: '1.0', requestId: request.requestId, operation: 'goal_decomposition',
+    contractVersion: '2.0', requestId: request.requestId, operation: 'goal_decomposition',
     result: {
       refinedResult: request.userInput.result,
       completionEvidence: request.userInput.completionEvidence || `留下一份可检查的“${request.userInput.result}”成果。`,
@@ -271,15 +271,15 @@ function fixtureGoalDecomposition(request) {
       estimatedInvestment: '先投入 20 分钟完成第一步，再根据真实反馈调整后续投入。',
       risks: [replanning ? '继续照搬原计划会忽略已经出现的执行阻力。' : '一次把范围铺得过大，导致迟迟无法开始。'],
       milestones: replanning ? [
-        { title: '完成缩小后的可检查成果', evidence: '留下一份范围更小但可以查看的成果。' },
-        { title: '根据新路径完成一次修订', evidence: '保存新路径的反馈和修订结果。' },
+        { title: '完成缩小后的可检查成果', evidence: '留下一份范围更小但可以查看的成果。', dimension: 'progress', difficulty: 'standard' },
+        { title: '根据新路径完成一次修订', evidence: '保存新路径的反馈和修订结果。', dimension: 'progress', difficulty: 'standard' },
       ] : [
-        { title: '完成第一段可检查成果', evidence: '留下一份可以查看或使用的初版成果。' },
-        { title: '根据一次真实反馈完成修订', evidence: '保存反馈内容和对应的修订结果。' },
+        { title: '完成第一段可检查成果', evidence: '留下一份可以查看或使用的初版成果。', dimension: 'progress', difficulty: 'standard' },
+        { title: '根据一次真实反馈完成修订', evidence: '保存反馈内容和对应的修订结果。', dimension: 'progress', difficulty: 'standard' },
       ],
       nextStep: replanning
-        ? { title: '把原行动缩小一半', why: '执行反馈说明原路径需要降低开始成本。', minimumAction: '只保留最关键的一个要点。', estimatedMinutes: 10, difficulty: 'light' }
-        : { title: '写下第一版结构', why: request.userInput.why || '先降低开始成本。', minimumAction: '只列出三个要点。', estimatedMinutes: 20, difficulty: 'light' },
+        ? { title: '把原行动缩小一半', why: '执行反馈说明原路径需要降低开始成本。', minimumAction: '只保留最关键的一个要点。', estimatedMinutes: 10, difficulty: 'light', dimension: 'progress' }
+        : { title: '写下第一版结构', why: request.userInput.why || '先降低开始成本。', minimumAction: '只列出三个要点。', estimatedMinutes: 20, difficulty: 'light', dimension: 'progress' },
       assumptions: ['当前尚未提供明确截止日期。'],
     },
     warnings: ['桌面测试夹具，不代表真实模型质量。'],

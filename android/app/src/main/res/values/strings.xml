@@ -14,9 +14,9 @@
     <string name="widget_sync">打开栖光同步今日任务</string>
     <string name="widget_more">还有 %1$d 项 · 查看全部</string>
     <string name="widget_untitled">未命名任务</string>
-    <string name="widget_type_main">主线</string>
+    <string name="widget_type_main">任务</string>
     <string name="widget_type_bonus">习惯</string>
-    <string name="widget_type_side">支线</string>
+    <string name="widget_type_side">任务</string>
     <string name="widget_complete_named">完成任务：%1$s</string>
     <string name="widget_check_in_named">记录一次：%1$s，当前%2$s</string>
     <string name="widget_count_unit">次</string>

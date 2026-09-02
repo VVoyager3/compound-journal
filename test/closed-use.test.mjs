@@ -6,7 +6,7 @@ import 'fake-indexeddb/auto';
 import { QiguangDb } from '../src/db.ts';
 import { shiftDate } from '../src/model.ts';
 import { buildWidgetSnapshot } from '../src/widget.ts';
-import { chooseDailyDirection, monthlyAreaSignal, totalXp } from '../src/rules.ts';
+import { chooseDailyDirection, totalXp } from '../src/rules.ts';
 
 const start = '2026-09-01';
 const dates = Array.from({ length: 30 }, (_, index) => shiftDate(start, index));
@@ -24,13 +24,13 @@ function deleteDatabase(name) {
 
 function analysisRequest(entry, requestId) {
   return {
-    contractVersion: '1.0', operation: 'daily_analysis', requestId, locale: 'zh-CN',
+    contractVersion: '2.0', operation: 'daily_analysis', requestId, locale: 'zh-CN',
     timeZone: 'Asia/Shanghai', localDate: entry.localDate,
     userInput: { entries: [{ entryId: entry.id, revision: entry.version, text: entry.body }] },
-    context: { confirmedEvents: [], recentStates: [], goals: [], bonusHabits: [], memories: [], constraints: [] },
+    context: { confirmedEvents: [], recentStates: [], goals: [], bonusHabits: [], recentTaskResults: [], memories: [], constraints: [] },
     permissions: {
       entryIds: [entry.id], includeConfirmedEvents: false, includeRecentStates: false,
-      includeGoals: false, includeBonusHabits: false, memoryIds: [],
+      includeGoals: false, includeBonusHabits: false, taskResultQuestIds: [], memoryIds: [],
     },
   };
 }
@@ -42,13 +42,13 @@ function analysisResponse(request, suggestRecovery = false) {
   const factStart = Array.from(body.slice(0, body.indexOf(factQuote))).length;
   const inferenceStart = Array.from(body.slice(0, body.indexOf(inferenceQuote))).length;
   return {
-    contractVersion: '1.0', requestId: request.requestId, operation: 'daily_analysis', warnings: [],
+    contractVersion: '2.0', requestId: request.requestId, operation: 'daily_analysis', warnings: [],
     result: {
       title: '行动与恢复', summary: '会议较多，散步后有所缓解。', explicitMoods: ['平静'],
       events: [
         {
           candidateId: 'fact-1', title: '完成当天记录', description: '记录明确提到会议较多。',
-          sourceType: 'explicit', confirmation: 'confirmed_by_default', confidence: 'high',
+          sourceType: 'explicit', confirmation: 'pending', confidence: 'high',
           evidence: [{ entryId: request.userInput.entries[0].entryId, quote: factQuote, start: factStart, end: factStart + Array.from(factQuote).length }],
           stateImpactCandidates: [], growthEvidenceCandidate: null,
         },
@@ -65,8 +65,8 @@ function analysisResponse(request, suggestRecovery = false) {
         nextSmallStep: '明天先做十分钟最小版本。',
       },
       questSuggestions: suggestRecovery ? [{
-        type: 'side', title: '留十分钟低压力过渡', why: '继续观察恢复方法是否有效。', minimumVersion: '十分钟不打开新工作。',
-        estimatedMinutes: 10, difficulty: 'light', primaryState: 'mental', growthBranchId: null, sourceGoalId: null, isRecovery: true,
+        title: '留十分钟低压力过渡', why: '继续观察恢复方法是否有效。', minimumVersion: '十分钟不打开新工作。',
+        estimatedMinutes: 10, difficulty: 'light', dimension: 'mind', sourceGoalId: null, isRecovery: true,
       }] : [],
       memoryCandidates: [{
         type: 'constraint', statement: '会议密集的晚上注意力可能较低。', confidence: 'low',
@@ -78,12 +78,12 @@ function analysisResponse(request, suggestRecovery = false) {
 
 function weeklyRequest(events, startDate, endDate, requestId) {
   return {
-    contractVersion: '1.0', operation: 'weekly_review', requestId, locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    contractVersion: '2.0', operation: 'weekly_review', requestId, locale: 'zh-CN', timeZone: 'Asia/Shanghai',
     period: { start: startDate, end: endDate }, userInput: { note: '' },
     context: {
       events: events.map((event) => ({ eventId: event.id, version: event.version, localDate: event.localDate, title: event.title, description: event.description })),
       sourceVersions: {
-        quests: [], questFeedback: [], habits: [], habitLogs: [], branches: [], xpLedger: [], goals: [], reviews: [], memories: [], stateObservations: [],
+        quests: [], questFeedback: [], habits: [], habitLogs: [], xpLedger: [], goals: [], reviews: [], memories: [], stateObservations: [],
       },
       stateSnapshots: [], taskResults: [], habits: [], growth: [], goals: [], experiments: [], memories: [],
     },
@@ -97,7 +97,7 @@ function weeklyRequest(events, startDate, endDate, requestId) {
 function weeklyResponse(request) {
   const [first, second] = request.context.events;
   return {
-    contractVersion: '1.0', requestId: request.requestId, operation: 'weekly_review', warnings: [],
+    contractVersion: '2.0', requestId: request.requestId, operation: 'weekly_review', warnings: [],
     result: {
       stateTrends: [{
         dimension: 'energy', direction: 'stable', summary: '两天都留下了行动与恢复证据。',
@@ -131,29 +131,26 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
   await db.ensureI2Defaults();
   await db.saveProfile({ userName: '30 天模拟用户', companionName: '栖栖' });
 
-  const area = (await db.listAreas())[0];
-  const branch = (await db.listBranches())[0];
   const draftGoal = await db.addGoal({
     result: '完成一份可以交给别人阅读的生活系统说明', why: '', evidence: '', nextStep: '先列出结构',
-    areaId: area.id, branchId: branch.id, startDate: dates[0], role: 'main',
+    startDate: dates[0], targetDate: dates[29],
   });
-  const planned = await db.replaceGoalPlan(draftGoal.id, {
-    result: draftGoal.result, evidence: '有一份完整且可分享的说明', nextStep: '列出三个清晰章节',
-  }, [
-    { description: '列出结构', evidence: '有三个清晰章节' },
-    { description: '写出第一版', evidence: '三个章节都有正文' },
-    { description: '请一人试读', evidence: '收到一条真实反馈' },
-    { description: '完成修订', evidence: '存在可分享的最终版本' },
-  ], draftGoal.version);
-  const goal = planned.goal;
-  const milestones = planned.milestones;
+  const goal = await db.saveGoal(draftGoal.id, {
+    evidence: '有一份完整且可分享的说明',
+    nextStep: '列出三个清晰章节',
+  }, draftGoal.version);
+  const milestones = [];
+  milestones.push(await db.addMilestone(goal.id, '列出结构', '有三个清晰章节'));
+  milestones.push(await db.addMilestone(goal.id, '写出第一版', '三个章节都有正文'));
+  milestones.push(await db.addMilestone(goal.id, '请一人试读', '收到一条真实反馈'));
+  milestones.push(await db.addMilestone(goal.id, '完成修订', '存在可分享的最终版本'));
   const walking = await db.addHabit({
     name: '散步两分钟', minimumAction: '离开座位走两分钟', scheduleDays: [1, 2, 3, 4, 5, 6, 7],
-    dimension: 'energy', branchId: branch.id, difficulty: 'light', bonusEnabled: true,
+    dimension: 'energy', difficulty: 'light', bonusEnabled: true,
   }, dates[0]);
   const gratitude = await db.addHabit({
     name: '写一句感谢', minimumAction: '写下一句具体感谢', scheduleDays: [1, 2, 3, 4, 5, 6, 7],
-    dimension: 'mind', branchId: branch.id, difficulty: 'light', bonusEnabled: false,
+    dimension: 'mind', difficulty: 'light', bonusEnabled: false,
   }, dates[0]);
 
   const organizeEntry = async (entry, index) => {
@@ -162,8 +159,12 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
     const job = await db.createDailyAnalysisJob(request);
     await db.markAnalysisJobProcessing(job.id);
     const analysis = await db.saveDailyAnalysis(job.id, analysisResponse(request, index === 17));
-    const inference = (await db.listJournalEvents(entry.localDate)).find((event) => event.sourceType === 'inferred');
+    const dayEvents = await db.listJournalEvents(entry.localDate);
+    const explicit = dayEvents.find((event) => event.sourceType === 'explicit');
+    const inference = dayEvents.find((event) => event.sourceType === 'inferred');
+    assert(explicit, `${entry.localDate} should preserve the source-backed event as a candidate`);
     assert(inference, `${entry.localDate} should preserve the AI inference as a candidate`);
+    await db.decideEvent(explicit.id, 'confirmed');
     await db.decideEvent(inference.id, index % 2 === 0 ? 'confirmed' : 'rejected');
     if (index === 5) {
       const memory = (await db.listMemories('candidate')).find((item) => item.analysisId === analysis.id);
@@ -192,19 +193,19 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
     await organizeEntry(entry, index);
     return entry;
   };
-  const settleBonuses = async (index, result = 'completed') => {
+  const settleHabitCheckins = async (index, result = 'completed') => {
     const date = dates[index];
     await db.ensureTodayBonusQuests(date);
-    const bonuses = (await db.listQuests(date)).filter((quest) => quest.type === 'bonus' && quest.status === 'pending');
-    for (const bonus of bonuses) {
-      await db.feedbackQuest(bonus.id, result, result === 'skipped' ? '今天主动放下，不补课' : '已留下真实习惯反馈', result === 'completed' ? '完成最低版本' : '', undefined, result === 'completed' ? 1 : 0, date);
+    const checkins = (await db.listQuests(date)).filter((quest) => quest.sourceType === 'habit' && quest.status === 'pending');
+    for (const checkin of checkins) {
+      await db.feedbackQuest(checkin.id, result, result === 'skipped' ? '今天主动放下，不补课' : '已留下真实习惯反馈', result === 'completed' ? '完成最低版本' : '', undefined, result === 'completed' ? 1 : 0, date);
     }
-    return bonuses;
+    return checkins;
   };
   const addGoalMain = (index, milestone, title = milestone.description) => db.addQuest({
-    localDate: dates[index], type: 'main', sourceType: 'goal', sourceId: goal.id, milestoneId: milestone.id,
+    localDate: dates[index], sourceType: 'goal', sourceId: goal.id, milestoneId: milestone.id,
     title, reason: `推进目标“${goal.result}”`, minimumAction: `先用五分钟完成：${title}`,
-    completionCriteria: milestone.evidence, estimatedMinutes: 10, difficulty: 'light', branchId: branch.id,
+    completionCriteria: milestone.evidence, estimatedMinutes: 10, difficulty: 'light', dimension: 'progress',
   });
   const runWeeklyReview = async (endIndex, decision) => {
     const startDate = dates[endIndex - 6];
@@ -226,39 +227,39 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
   await db.feedbackQuest(first.id, 'completed', '完成结构', '列出三个章节', undefined, 2, dates[0]);
   const dayTwo = await db.createGoalFollowUpQuest(first.id, dates[1]);
   assert.equal(dayTwo.followUp?.milestoneId, milestones[1].id);
-  await settleBonuses(0);
+  await settleHabitCheckins(0);
 
   await recordDay(1);
-  assert.match(chooseDailyDirection({ mainQuest: { status: 'pending', carriedFromPreviousDay: true }, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false }).reason, /昨天反馈后生成的下一步/);
+  assert.match(chooseDailyDirection({ mainQuest: { status: 'pending', carriedFromPreviousDay: true }, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false }).reason, /昨天留下的下一步/);
   await db.feedbackQuest(dayTwo.followUp.id, 'partial', '只写完第一章', '第一章已有正文', undefined, 1, dates[1]);
   const dayThree = await db.createGoalFollowUpQuest(dayTwo.followUp.id, dates[2], 'partial');
   assert.match(dayThree.followUp?.title ?? '', /^缩小继续：/);
-  await settleBonuses(1, 'partial');
+  await settleHabitCheckins(1, 'partial');
 
   await recordDay(2);
   await db.feedbackQuest(dayThree.followUp.id, 'skipped', '建议不适合我，需要换一种写法', '', undefined, 0, dates[2]);
   assert.equal((await db.listQuests(dates[3])).filter((quest) => quest.sourceType === 'goal').length, 0, 'rejected advice must not copy itself');
-  await settleBonuses(2, 'skipped');
+  await settleHabitCheckins(2, 'skipped');
 
   await recordDay(3);
   await db.saveAssessment({ energy: 30 }, dates[3]);
   const dayFour = await addGoalMain(3, milestones[1], '只补一段最容易写的正文');
   assert.equal(chooseDailyDirection({ mainQuest: dayFour, recoveryAvailable: true, activeGoalAvailable: true, previousStepAvailable: false }).kind, 'recovery');
   await db.feedbackQuest(dayFour.id, 'exempt', '今天状态不足，先恢复且不扣分', '', undefined, 0, dates[3]);
-  await settleBonuses(3, 'skipped');
+  await settleHabitCheckins(3, 'skipped');
 
   await recordDay(4);
   const dayFive = await addGoalMain(4, milestones[1], '用最低版本完成剩余正文');
   await db.feedbackQuest(dayFive.id, 'completed', '最低版本完成', '三个章节都有正文', undefined, 2, dates[4]);
   const daySix = await db.createGoalFollowUpQuest(dayFive.id, dates[5]);
-  await settleBonuses(4);
+  await settleHabitCheckins(4);
 
   await recordDay(5);
   await db.feedbackQuest(daySix.followUp.id, 'completed', '已经试读', '收到一条具体反馈', undefined, 2, dates[5]);
   const daySeven = await db.createGoalFollowUpQuest(daySix.followUp.id, dates[6]);
-  await settleBonuses(5);
+  await settleHabitCheckins(5);
   await recordDay(6);
-  await settleBonuses(6);
+  await settleHabitCheckins(6);
   await runWeeklyReview(6, 'reject');
 
   assert.equal((await db.listQuests(dates[7])).length, 0, 'a day not opened must not create BONUS debt');
@@ -275,12 +276,12 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
     quests: await db.listQuests(dates[9]), localDate: dates[9], generatedAt: `${dates[9]}T08:00:00.000Z`,
   });
   assert.equal(widgetBeforeCompletion.tasks[0]?.id, dayTen.id);
-  assert.equal(widgetBeforeCompletion.tasks.filter((item) => item.type === 'bonus').length, 1);
+  assert.equal(widgetBeforeCompletion.tasks.filter((item) => item.sourceType === 'habit').length, 1);
   await db.feedbackQuest(dayTen.id, 'completed', '完成修订', '生成可分享最终版', undefined, 3, dates[9]);
   const finished = await db.createGoalFollowUpQuest(dayTen.id, dates[10]);
   assert.equal(finished.goalReady, true);
   await db.saveGoal(goal.id, { status: 'completed' });
-  await settleBonuses(9);
+  await settleHabitCheckins(9);
 
   let finalWidget;
   for (let index = 10; index < dates.length; index += 1) {
@@ -292,45 +293,45 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
     await recordDay(index);
     if (index === 10) await db.saveAssessment({ energy: 62, mind: 68, connection: 61, progress: 66, play: 58 }, date);
 
-    let main = [...await db.listPendingBefore(date), ...await db.listQuests(date)].find((quest) => quest.type === 'main' && quest.status === 'pending');
-    if (!main) main = await db.addQuest({
-      localDate: date, type: 'main', sourceType: 'manual', actionId: `reflection-${index}`,
+    let action = [...await db.listPendingBefore(date), ...await db.listQuests(date)].find((quest) => quest.sourceType !== 'habit' && quest.status === 'pending');
+    if (!action) action = await db.addQuest({
+      localDate: date, sourceType: 'manual', actionId: `reflection-${index}`,
       title: `第 ${index + 1} 天的最小复盘`, reason: index === 10 ? '目标完成后沉淀成功证据' : '根据最近的真实反馈继续一个更小动作',
       minimumAction: '只写一句具体事实', completionCriteria: '留下一句可回看的事实',
-      estimatedMinutes: 5, difficulty: index % 6 === 0 ? 'hard' : 'light', branchId: branch.id,
+      estimatedMinutes: 5, difficulty: index % 6 === 0 ? 'hard' : 'light', dimension: 'mind',
       deadlineAt: index === 15 ? `${date}T20:00:00.000Z` : undefined,
     });
 
     if (index === 15) {
-      await settleBonuses(index);
+      await settleHabitCheckins(index);
       continue;
     }
     if (index === 18) {
-      await db.feedbackQuest(main.id, 'completed', '先误记为完成', '完成一句', undefined, 0, date);
-      await db.undoQuestFeedback(main.id);
-      await db.feedbackQuest(main.id, 'partial', '撤销后按事实改为部分完成', '只写了半句', undefined, 0, date);
+      await db.feedbackQuest(action.id, 'completed', '先误记为完成', '完成一句', undefined, 0, date);
+      await db.undoQuestFeedback(action.id);
+      await db.feedbackQuest(action.id, 'partial', '撤销后按事实改为部分完成', '只写了半句', undefined, 0, date);
     } else if (index === 22) {
-      await db.feedbackQuest(main.id, 'skipped', '今天主动放下', '', undefined, 0, date);
+      await db.feedbackQuest(action.id, 'skipped', '今天主动放下', '', undefined, 0, date);
     } else if (index === 23) {
-      await db.feedbackQuest(main.id, 'exempt', '外部原因，不归咎执行力', '', undefined, 0, date);
+      await db.feedbackQuest(action.id, 'exempt', '外部原因，不归咎执行力', '', undefined, 0, date);
     } else {
-      await db.feedbackQuest(main.id, 'completed', main.localDate < date ? '晚于计划完成，仍按事实结算' : '完成今天的最小行动', '写下一句具体收获', undefined, 0, date);
+      await db.feedbackQuest(action.id, 'completed', action.localDate < date ? '晚于计划完成，仍按事实结算' : '完成今天的最小行动', '写下一句具体收获', undefined, 0, date);
     }
 
-    for (const side of (await db.listQuests(date)).filter((quest) => quest.type === 'side' && quest.status === 'pending')) {
-      await db.feedbackQuest(side.id, index % 2 ? 'partial' : 'completed', '支线只保留真实进展', '完成最低版本', undefined, 0, date);
+    for (const other of (await db.listQuests(date)).filter((quest) => quest.sourceType !== 'habit' && quest.id !== action.id && quest.status === 'pending')) {
+      await db.feedbackQuest(other.id, index % 2 ? 'partial' : 'completed', '其他任务只保留真实进展', '完成最低版本', undefined, 0, date);
     }
 
     if (index === 11) {
-      await settleBonuses(index);
+      await settleHabitCheckins(index);
       await db.saveHabit(walking.id, { status: 'paused' }, date);
       await db.saveHabit(gratitude.id, { bonusEnabled: true }, date);
     } else if (index === 14) {
       await db.saveHabit(gratitude.id, { status: 'paused' }, date);
       await db.saveHabit(walking.id, { status: 'active' }, date);
-      await settleBonuses(index);
+      await settleHabitCheckins(index);
     } else {
-      await settleBonuses(index, index === 24 ? 'skipped' : 'completed');
+      await settleHabitCheckins(index, index === 24 ? 'skipped' : 'completed');
     }
 
     if ([13, 20, 27].includes(index)) await runWeeklyReview(index, 'confirm');
@@ -364,9 +365,9 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
   assert.deepEqual(new Set((await db.listReviews('weekly')).map((item) => item.status)), new Set(['confirmed', 'rejected']));
   assert.equal((await db.listDailyAnalyses()).length, analysisIndexes.size);
   assert.ok((await db.listMemories('confirmed')).length >= 1);
-  assert.ok(totalXp(ledger) > 300, 'thirty days of real actions and milestones should leave visible growth without login XP');
+  assert.ok(totalXp(ledger) > 80, 'thirty days of real actions and milestones should leave visible five-dimension growth without login XP');
   assert((await db.habitMomentum(walking.id, dates[29])) > 0, 'missed and paused days lower momentum without resetting it');
-  assert.equal(monthlyAreaSignal(area.mode, ledger.length, 0, dates[29], dates[29]), 'progress');
+  assert.ok((await db.dimensionProgress('progress')).totalXp > 0, 'work and study actions should accumulate in the shared five-dimension ledger');
   assert.equal(finalWidget?.tasks.length, 0, 'completed work and an ended habit must not remain in the final widget');
   const lateQuest = (await db.listQuests()).find((quest) => quest.deadlineAt);
   assert(lateQuest);
@@ -376,19 +377,12 @@ test('thirty-day closed-use simulation exercises the implemented daily loop and 
   assert(lateXp);
   assert.equal(lateFeedback.completedDate, dates[17]);
   assert.equal(lateXp.localDate, dates[17], 'late completion XP belongs to the real completion date');
-  for (const date of dates) {
-    const pending = (await db.listQuests(date)).filter((quest) => quest.status === 'pending');
-    assert.ok(pending.filter((quest) => quest.type === 'main').length <= 1);
-    assert.ok(pending.filter((quest) => quest.type === 'bonus').length <= 3);
-    assert.ok(pending.filter((quest) => quest.type === 'side').length <= 2);
-  }
-
   t.diagnostic(JSON.stringify({
     simulationKind: 'deterministic-closed-use', calendarDays: 30, activeDays: entries.length, interruptionDays: interruptionIndexes.size,
     journalEntries: entries.length, dailyAnalyses: analysisIndexes.size, weeklyReviews: 4,
     taskFeedback: Object.fromEntries(['completed', 'partial', 'skipped', 'exempt'].map((result) => [result, feedback.filter((item) => item.result === result).length])),
     milestonesCompleted: 4, totalXp: totalXp(ledger), pendingDebt: 0,
-    testedFlows: ['journal-edit-search-undo', 'confirmed-goal-plan', 'MAIN-and-side-feedback', 'BONUS-pause-resume-end', 'late-completion', 'feedback-undo', 'daily-analysis', 'weekly-review', 'memory-confirmation', 'widget'],
+    testedFlows: ['journal-edit-search-undo', 'confirmed-goal-plan', 'task-feedback', 'habit-pause-resume-end', 'late-completion', 'feedback-undo', 'daily-analysis', 'weekly-review', 'memory-confirmation', 'widget'],
     knownProductGaps: ['real retention and trust need human longitudinal use'],
   }));
 });
@@ -398,10 +392,9 @@ test('pausing a habit retires an already generated pending BONUS', async (t) => 
   const db = await QiguangDb.open(name);
   t.after(async () => { db.close(); await deleteDatabase(name); });
   await db.ensureI2Defaults();
-  const branch = (await db.listBranches())[0];
   const habit = await db.addHabit({
     name: '暂停测试', minimumAction: '做一分钟', scheduleDays: [1, 2, 3, 4, 5, 6, 7],
-    dimension: 'energy', branchId: branch.id, difficulty: 'light', bonusEnabled: true,
+    dimension: 'energy', difficulty: 'light', bonusEnabled: true,
   }, dates[0]);
   await db.ensureTodayBonusQuests(dates[0]);
   await db.saveHabit(habit.id, { status: 'paused' }, dates[0]);
@@ -414,18 +407,16 @@ test('redoing an undone milestone restores its XP on the real completion date', 
   const db = await QiguangDb.open(name);
   t.after(async () => { db.close(); await deleteDatabase(name); });
   await db.ensureI2Defaults();
-  const area = (await db.listAreas())[0];
-  const branch = (await db.listBranches())[0];
   const goal = await db.addGoal({
     result: '完成可检查成果', why: '', evidence: '存在成果', nextStep: '先做一步',
-    areaId: area.id, branchId: branch.id, role: 'main',
+    targetDate: dates[2],
   });
   const milestone = await db.addMilestone(goal.id, '形成第一版', '存在第一版');
   await db.completeMilestone(milestone.id, dates[0]);
   await db.undoMilestone(milestone.id);
   await db.completeMilestone(milestone.id, dates[1]);
-  const ledger = (await db.listXpLedger(branch.id)).filter((item) => item.sourceType === 'milestone' && item.sourceId === milestone.id && !item.reversedAt);
+  const ledger = (await db.listXpLedger()).filter((item) => item.sourceType === 'milestone' && item.sourceId === milestone.id && !item.reversedAt);
   assert.equal(ledger.length, 1);
   assert.equal(ledger[0].localDate, dates[1]);
-  assert.equal((await db.branchProgress(branch.id)).totalXp, 50);
+  assert.equal((await db.dimensionProgress('progress')).totalXp, 5);
 });

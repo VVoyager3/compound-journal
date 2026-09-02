@@ -116,7 +116,7 @@ public class QiguangWidgetProvider extends AppWidgetProvider {
                 int progressCount = task.optInt("progressCount", 0);
                 String countUnit = task.optString("countUnit", context.getString(R.string.widget_count_unit));
                 String progress = targetCount > 1 ? progressCount + "/" + targetCount + countUnit : "";
-                String taskType = taskType(context, task.optString("type", "side"));
+                String taskType = taskType(context, task.optString("sourceType", ""), task.optString("type", "side"));
                 views.setTextViewText(TASK_TYPES[index], progress.isEmpty() ? taskType : taskType + " · " + progress);
                 views.setViewVisibility(TASK_TYPES[index], compact ? View.GONE : View.VISIBLE);
                 views.setTextViewText(TASK_TITLES[index], title);
@@ -140,9 +140,12 @@ public class QiguangWidgetProvider extends AppWidgetProvider {
         manager.updateAppWidget(id, views);
     }
 
-    private static String taskType(Context context, String type) {
-        if ("main".equals(type)) return context.getString(R.string.widget_type_main);
-        if ("bonus".equals(type)) return context.getString(R.string.widget_type_bonus);
+    private static String taskType(Context context, String sourceType, String legacyType) {
+        if ("habit".equals(sourceType) || (sourceType.isEmpty() && "bonus".equals(legacyType))) {
+            return context.getString(R.string.widget_type_bonus);
+        }
+        if (!sourceType.isEmpty()) return context.getString(R.string.widget_type_main);
+        if ("main".equals(legacyType)) return context.getString(R.string.widget_type_main);
         return context.getString(R.string.widget_type_side);
     }
 

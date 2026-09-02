@@ -15,6 +15,7 @@ if (-not (Test-Path -LiteralPath $adb)) {
     $adbCommand = Get-Command adb -ErrorAction SilentlyContinue
     if (-not $adbCommand) { throw '找不到 adb。请设置 ANDROID_SDK_ROOT，或安装 Android platform-tools。' }
     $adb = $adbCommand.Source
+    $androidSdk = Split-Path -Parent (Split-Path -Parent $adb)
 }
 
 $devices = & $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\S' } | ForEach-Object {
@@ -40,13 +41,42 @@ $env:TEMP = Join-Path $tempRoot 'temp'
 $env:TMP = $env:TEMP
 $env:GRADLE_USER_HOME = Join-Path $tempRoot 'gradle'
 $env:KOTLIN_DAEMON_RUN_FILES_PATH = Join-Path $tempRoot 'kotlin-daemon'
-$env:JAVA_HOME = 'D:\dev\jdk21\jdk-21.0.12+8'
-if (-not (Test-Path -LiteralPath (Join-Path $env:JAVA_HOME 'bin\java.exe'))) {
-    throw "Android 构建需要 JDK 21；未找到：$env:JAVA_HOME"
+$jdkCandidates = @(@(
+    $env:JAVA_HOME
+    (Join-Path $env:ProgramFiles 'Android\Android Studio\jbr')
+    (Join-Path $env:ProgramFiles 'Eclipse Adoptium')
+) | Where-Object { $_ -and (Test-Path -LiteralPath $_) })
+$portableJdkRoot = Join-Path $env:USERPROFILE '.codex\tools\jdk-21'
+if (Test-Path -LiteralPath $portableJdkRoot) {
+    $jdkCandidates += @(Get-ChildItem -LiteralPath $portableJdkRoot -Directory -Recurse -Depth 3 -ErrorAction SilentlyContinue |
+        Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'bin\java.exe') } |
+        Select-Object -ExpandProperty FullName)
 }
+$pathJava = Get-Command java -ErrorAction SilentlyContinue
+if ($pathJava) { $jdkCandidates += Split-Path -Parent (Split-Path -Parent $pathJava.Source) }
+$jdkHome = $jdkCandidates | ForEach-Object {
+    $candidate = $_
+    if (Test-Path -LiteralPath (Join-Path $candidate 'bin\java.exe')) {
+        $versionOutput = (& (Join-Path $candidate 'bin\java.exe') -version 2>&1) -join "`n"
+        if ($versionOutput -match 'version "(?<major>\d+)' -and [int]$Matches.major -ge 21) { $candidate }
+    } elseif (Test-Path -LiteralPath $candidate) {
+        Get-ChildItem -LiteralPath $candidate -Directory -Filter 'jdk-21*' -ErrorAction SilentlyContinue | ForEach-Object {
+            $nested = $_.FullName
+            if (Test-Path -LiteralPath (Join-Path $nested 'bin\java.exe')) { $nested }
+        }
+    }
+} | Select-Object -First 1
+if (-not $jdkHome) { throw 'Android 构建需要 JDK 21。请设置 JAVA_HOME，或安装 Android Studio / Temurin 21。' }
+$env:JAVA_HOME = $jdkHome
 $env:ANDROID_HOME = $androidSdk
 $env:ANDROID_SDK_ROOT = $androidSdk
-$env:ANDROID_USER_HOME = Join-Path $workspace '.android-user'
+$defaultAndroidUserHome = Join-Path $env:USERPROFILE '.android'
+$projectAndroidUserHome = Join-Path $workspace '.android-user'
+$env:ANDROID_USER_HOME = if (Test-Path -LiteralPath (Join-Path $defaultAndroidUserHome 'debug.keystore')) {
+    $defaultAndroidUserHome
+} else {
+    $projectAndroidUserHome
+}
 $env:ANDROID_SERIAL = $serial
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 New-Item -ItemType Directory -Force -Path $env:TEMP, $env:GRADLE_USER_HOME, $env:KOTLIN_DAEMON_RUN_FILES_PATH, $env:ANDROID_USER_HOME | Out-Null
@@ -58,6 +88,34 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Android Debug APK 构建失败。' }
     }
     if (-not (Test-Path -LiteralPath $apk)) { throw "找不到 APK：$apk" }
+
+    $installedPackage = & $adb -s $serial shell pm path $packageName 2>$null |
+        Where-Object { $_ -like 'package:*' } |
+        Select-Object -First 1
+    if ($installedPackage) {
+        $apksigner = Get-ChildItem -LiteralPath (Join-Path $androidSdk 'build-tools') -Filter 'apksigner.bat' -File -Recurse -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1 -ExpandProperty FullName
+        if (-not $apksigner) { throw '无法验证 APK 签名：Android SDK 中缺少 apksigner。' }
+
+        $installedApk = Join-Path $tempRoot 'installed-qiguang.apk'
+        & $adb -s $serial pull ($installedPackage -replace '^package:', '') $installedApk | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw '无法读取已安装版本，已停止覆盖安装。' }
+
+        $readSigner = {
+            param([string]$apkPath)
+            $certificateOutput = (& $apksigner verify --print-certs $apkPath 2>&1) -join "`n"
+            if ($LASTEXITCODE -ne 0 -or $certificateOutput -notmatch 'Signer #1 certificate SHA-256 digest:\s*(?<digest>[0-9a-fA-F]+)') {
+                throw "无法验证 APK 签名：$apkPath"
+            }
+            $Matches.digest.ToLowerInvariant()
+        }
+        $installedSigner = & $readSigner $installedApk
+        $candidateSigner = & $readSigner $apk
+        if ($installedSigner -ne $candidateSigner) {
+            throw 'APK 签名与已安装版本不一致，已停止安装；不会卸载应用或清除数据。'
+        }
+    }
 
     & $adb -s $serial install -r $apk
     if ($LASTEXITCODE -ne 0) {
@@ -100,11 +158,11 @@ try {
     Write-Host @'
 
 仍需人工观察：
-1. 完成首次记录、目标拆解、MAIN 反馈和经验撤销。
+1. 完成首次记录、目标拆解、今日任务反馈和成长值撤销。
 2. 添加小/中/大今日任务组件，检查任务数量、隐私、逐项完成和任务定位。
 3. 断网重启后完成本地记录与任务，再联网验证 MiniMax。
 4. 检查 200% 字体、深色模式、减少动画、后台回收和系统分享备份。
-5. 备份项目内 .android-user/debug.keystore；丢失后将无法覆盖升级已安装版本。
+5. 备份当前 Android debug.keystore；丢失后将无法覆盖升级已安装版本。
 '@
 } finally {
     if ($Emulator) {

@@ -5,28 +5,27 @@ import { analyzeDirectWithBridge } from '../src/direct-ai.ts';
 
 function goalRequest(result = '发布一篇文章') {
   return {
-    contractVersion: '1.0', operation: 'goal_decomposition', requestId: 'direct-goal-1', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
-    userInput: { result, why: '沉淀经验', completionEvidence: '文章有可访问链接' },
+    contractVersion: '2.0', operation: 'goal_decomposition', requestId: 'direct-goal-1', locale: 'zh-CN', timeZone: 'Asia/Shanghai',
+    userInput: { result, why: '沉淀经验', completionEvidence: '文章有可访问链接', targetDate: null },
     context: {
-      area: { areaId: 'area-1', name: '创造与作品', mode: 'build' },
-      branch: { branchId: 'branch-1', name: '写作实践' }, currentGoals: [], executionEvidence: [], memories: [],
+      currentGoals: [], executionEvidence: [], memories: [],
     }, permissions: { memoryIds: [], questIds: [], goalIds: [] },
   };
 }
 
 function validGoalResponse(request) {
   return {
-    contractVersion: '1.0', requestId: request.requestId, operation: request.operation,
+    contractVersion: '2.0', requestId: request.requestId, operation: request.operation,
     result: {
       refinedResult: request.userInput.result,
       completionEvidence: request.userInput.completionEvidence,
       rationale: request.userInput.why,
       currentStage: '尚未开始', estimatedInvestment: '约两周，每周两小时', risks: [{ description: '模型多返回的对象' }, '', '启动成本可能过高'],
       milestones: [
-        { title: '完成初稿', evidence: '保存一份可阅读初稿' },
-        { title: '完成发布', evidence: '得到一个可访问链接' },
+        { title: '完成初稿', evidence: '保存一份可阅读初稿', dimension: 'progress', difficulty: 'standard' },
+        { title: '完成发布', evidence: '得到一个可访问链接', dimension: 'progress', difficulty: 'light' },
       ],
-      nextStep: { title: '列出文章结构', why: '降低开始成本', minimumAction: '写三个标题', estimatedMinutes: 15, difficulty: 'light' },
+      nextStep: { title: '列出文章结构', why: '降低开始成本', minimumAction: '写三个标题', estimatedMinutes: 15, difficulty: 'light', dimension: 'progress' },
       assumptions: [],
     }, warnings: [],
   };
@@ -63,25 +62,25 @@ test('personal direct AI blocks immediate danger before invoking the model bridg
 
 test('model ingress repairs only provable evidence coordinates and optional metadata', async () => {
   const request = {
-    contractVersion: '1.0', operation: 'daily_analysis', requestId: 'direct-daily-1', locale: 'zh-CN', timeZone: 'Asia/Shanghai', localDate: '2026-08-20',
+    contractVersion: '2.0', operation: 'daily_analysis', requestId: 'direct-daily-1', locale: 'zh-CN', timeZone: 'Asia/Shanghai', localDate: '2026-08-20',
     userInput: { entries: [{ entryId: 'entry-1', revision: 1, text: '😀今天早晨写作很顺利。' }] },
     context: {
-      confirmedEvents: [], recentStates: [], goals: [], bonusHabits: [], constraints: [],
+      confirmedEvents: [], recentStates: [], goals: [], bonusHabits: [], recentTaskResults: [], constraints: [],
       memories: [{ memoryId: 'memory-1', type: 'pattern', statement: '早晨通常不适合写作' }],
     },
-    permissions: { entryIds: ['entry-1'], includeConfirmedEvents: false, includeRecentStates: false, includeGoals: false, includeBonusHabits: false, memoryIds: ['memory-1'] },
+    permissions: { entryIds: ['entry-1'], includeConfirmedEvents: false, includeRecentStates: false, includeGoals: false, includeBonusHabits: false, taskResultQuestIds: [], memoryIds: ['memory-1'] },
   };
   const response = {
-    contractVersion: '1.0', requestId: request.requestId, operation: request.operation,
+    contractVersion: '2.0', requestId: request.requestId, operation: request.operation,
     result: {
       title: '早晨写作顺利', summary: '今天早晨写作顺利。', explicitMoods: [],
       events: [{
-        candidateId: 'event-1', title: '早晨写作', description: '早晨写作顺利。', sourceType: 'explicit', confirmation: 'confirmed_by_default', confidence: 'high',
+        candidateId: 'event-1', title: '早晨写作', description: '早晨写作顺利。', sourceType: 'explicit', confirmation: 'pending', confidence: 'high',
         evidence: [{ entryId: 'entry-1', quote: '今天早晨写作很顺利。', start: 99, end: 100 }],
         stateImpactCandidates: [{ dimension: 'progress', direction: 'positive', strength: 'small', suggestedDelta: -9, reason: '方向和强度与数值冲突。', confidence: 'low' }], growthEvidenceCandidate: null,
       }],
       reflection: { whatHappened: '早晨写作顺利。', specificCredit: '完成了写作。', patternCandidate: null },
-      questSuggestions: [{ type: 'side', title: '继续写', why: '保持推进', minimumVersion: '', estimatedMinutes: 10, difficulty: 'light', primaryState: 'progress', growthBranchId: null, sourceGoalId: null, isRecovery: false }],
+      questSuggestions: [{ title: '继续写', why: '保持推进', minimumVersion: '', estimatedMinutes: 10, difficulty: 'light', dimension: 'progress', sourceGoalId: null, isRecovery: false }],
       memoryCandidates: [{ type: 'pattern', statement: '早晨写作效果可能取决于条件。', confidence: 'low', supportingEventIds: ['event-1'], counterEvidence: [{ memoryId: 'memory-1' }], recommendedAction: 'review', description: '模型多给的字段' }],
     }, warnings: [],
   };

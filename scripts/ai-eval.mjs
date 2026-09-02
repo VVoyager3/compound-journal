@@ -22,18 +22,17 @@ const runs = suite.cases.flatMap((category) => category.runs.map((run, index) =>
   category: category.category,
 })));
 
-const DIMENSIONS = new Set(['energy', 'mental', 'connection', 'progress', 'play']);
-const DAILY_CONTEXT = new Set(['confirmedEvents', 'recentStates', 'goals', 'bonusHabits', 'memories', 'constraints']);
+const DIMENSIONS = new Set(['energy', 'mind', 'connection', 'progress', 'play']);
+const DAILY_CONTEXT = new Set(['confirmedEvents', 'recentStates', 'goals', 'bonusHabits', 'recentTaskResults', 'memories', 'constraints']);
 const WEEKLY_CONTEXT = new Set(['events', 'stateSnapshots', 'taskResults', 'habits', 'growth', 'goals', 'experiments', 'memories']);
 
 function expandRequest(source) {
   const request = structuredClone(source);
   if (request.operation === 'daily_analysis') {
     const compact = request.context ?? {};
-    const goals = compact.goals ?? [compact.primaryGoal, ...(compact.secondaryGoals ?? [])].filter(Boolean).map((item, index) => ({
+    const goals = compact.goals ?? [compact.primaryGoal, ...(compact.secondaryGoals ?? [])].filter(Boolean).map((item) => ({
       goalId: item.goalId ?? item.id,
       result: item.result ?? item.title,
-      role: item.role ?? (index === 0 ? 'main' : 'secondary'),
     }));
     const memories = (compact.memories ?? compact.relevantMemories ?? []).map((item) => ({
       memoryId: item.memoryId ?? item.id,
@@ -45,6 +44,7 @@ function expandRequest(source) {
       recentStates: compact.recentStates ?? [],
       goals,
       bonusHabits: compact.bonusHabits ?? [],
+      recentTaskResults: compact.recentTaskResults ?? [],
       memories,
       constraints: compact.constraints ?? compact.tomorrowConstraints ?? [],
     };
@@ -54,6 +54,7 @@ function expandRequest(source) {
       includeRecentStates: request.context.recentStates.length > 0,
       includeGoals: request.context.goals.length > 0,
       includeBonusHabits: request.context.bonusHabits.length > 0,
+      taskResultQuestIds: request.context.recentTaskResults.map((item) => item.questId),
       memoryIds: memories.map((item) => item.memoryId),
     };
   } else if (request.operation === 'task_feedback') {
@@ -99,6 +100,13 @@ function expandRequest(source) {
       memoryIds: request.context.memories.map((item) => item.memoryId),
     };
     delete request.localDate;
+  } else if (request.operation === 'goal_decomposition') {
+    request.userInput.targetDate ??= null;
+    request.context = {
+      currentGoals: (request.context?.currentGoals ?? []).map(({ goalId, result }) => ({ goalId, result })),
+      executionEvidence: request.context?.executionEvidence ?? [],
+      memories: request.context?.memories ?? [],
+    };
   }
   return request;
 }
@@ -167,7 +175,7 @@ function validateRequest(request) {
     'contractVersion', 'operation', 'requestId', 'locale', 'timeZone', 'localDate',
     'period', 'userInput', 'context', 'permissions',
   ]), 'request');
-  assert.equal(request.contractVersion, '1.0');
+  assert.equal(request.contractVersion, '2.0');
   assert(['daily_analysis', 'goal_decomposition', 'task_feedback', 'weekly_review', 'system_candidate_review'].includes(request.operation));
   assert.equal(typeof request.requestId, 'string');
   assert.equal(typeof request.timeZone, 'string');
@@ -184,17 +192,17 @@ function validateRequest(request) {
     }, 0);
     assert(total <= 20_000, 'daily input exceeds 20,000 Unicode characters');
     exactKeys(request.context, DAILY_CONTEXT, 'daily context');
-    assert(request.context.goals.filter((item) => item.role === 'secondary').length <= 2, 'too many secondary goals');
     assert((request.context.bonusHabits?.length ?? 0) <= 3, 'too many BONUS habits');
     exactKeys(request.permissions, new Set([
       'entryIds', 'includeConfirmedEvents', 'includeRecentStates', 'includeGoals',
-      'includeBonusHabits', 'memoryIds',
+      'includeBonusHabits', 'taskResultQuestIds', 'memoryIds',
     ]), 'daily permissions');
     assert.deepEqual(new Set(request.permissions.entryIds), new Set(request.userInput.entries.map((item) => item.entryId)));
+    assert.deepEqual(new Set(request.permissions.taskResultQuestIds), new Set(request.context.recentTaskResults.map((item) => item.questId)));
     assert.deepEqual(new Set(request.permissions.memoryIds), new Set(request.context.memories.map((item) => item.memoryId)));
   } else if (request.operation === 'goal_decomposition') {
-    exactKeys(request.userInput, new Set(['result', 'why', 'completionEvidence']), 'goal userInput');
-    exactKeys(request.context, new Set(['area', 'branch', 'currentGoals', 'executionEvidence', 'memories']), 'goal context');
+    exactKeys(request.userInput, new Set(['result', 'why', 'completionEvidence', 'targetDate']), 'goal userInput');
+    exactKeys(request.context, new Set(['currentGoals', 'executionEvidence', 'memories']), 'goal context');
     exactKeys(request.permissions, new Set(['memoryIds', 'questIds', 'goalIds']), 'goal permissions');
     assert.deepEqual(new Set(request.permissions.memoryIds), new Set(request.context.memories.map((item) => item.memoryId)));
     assert.deepEqual(new Set(request.permissions.questIds), new Set(request.context.executionEvidence.map((item) => item.questId)));
@@ -257,22 +265,26 @@ function validateDaily(request, result) {
     eventIds.add(event.candidateId);
     assert(['explicit', 'inferred'].includes(event.sourceType));
     assert(['low', 'medium', 'high'].includes(event.confidence));
-    assert.equal(event.confirmation, event.sourceType === 'explicit' ? 'confirmed_by_default' : 'pending');
+    assert.equal(event.confirmation, 'pending');
     assert(Array.isArray(event.evidence) && event.evidence.length > 0, 'event has no evidence');
     event.evidence.forEach((item) => validateEvidence(item, entries));
     event.stateImpactCandidates.forEach(validateImpact);
     if (event.growthEvidenceCandidate) {
       exactKeys(event.growthEvidenceCandidate, new Set([
-        'branchId', 'suggestedBranchName', 'evidenceType', 'description', 'isMilestoneCandidate', 'reason',
+        'dimension', 'suggestedXp', 'matchedQuestId', 'evidenceType', 'description', 'isMilestoneCandidate', 'reason',
       ]), 'growth evidence');
+      assert(DIMENSIONS.has(event.growthEvidenceCandidate.dimension));
+      assert([1, 2, 3].includes(event.growthEvidenceCandidate.suggestedXp));
+      if (event.growthEvidenceCandidate.matchedQuestId) {
+        assert(request.permissions.taskResultQuestIds.includes(event.growthEvidenceCandidate.matchedQuestId));
+      }
     }
   }
   assert(Array.isArray(result.questSuggestions));
-  assert(result.questSuggestions.filter((item) => item.type === 'main').length <= 1, 'more than one main quest');
-  assert(result.questSuggestions.filter((item) => item.type === 'side').length <= 2, 'more than two side quests');
-  assert(!result.questSuggestions.some((item) => item.type === 'bonus'), 'AI created a BONUS quest');
+  assert(result.questSuggestions.length <= 3, 'more than three task suggestions');
   for (const quest of result.questSuggestions) {
-    for (const key of ['why', 'minimumVersion', 'estimatedMinutes', 'difficulty', 'primaryState']) assert(key in quest, `quest lacks ${key}`);
+    assert(!('type' in quest), 'AI task suggestion contains a legacy type');
+    for (const key of ['why', 'minimumVersion', 'estimatedMinutes', 'difficulty', 'dimension']) assert(key in quest, `quest lacks ${key}`);
   }
   assert(Array.isArray(result.memoryCandidates));
   assert(result.memoryCandidates.every((item) => item.recommendedAction !== 'confirm'), 'AI directly confirmed long-term memory');
@@ -397,7 +409,7 @@ function evaluatorSelfCheck() {
     mutate(response);
     assert.throws(() => validateRun(run, response));
   };
-  expectReject(daily, (response) => { response.result.events[1].confirmation = 'confirmed_by_default'; });
+  expectReject(daily, (response) => { response.result.events[0].confirmation = 'confirmed_by_default'; });
   expectReject(evidence, (response) => { response.result.events[0].evidence[0].quote = '伪造证据'; });
   expectReject(article, (response) => { response.result.events[0].growthEvidenceCandidate = { evidenceType: 'practice' }; });
   expectReject(weekly, (response) => { response.result.stateTrends[0].summary = '已经形成稳定趋势'; });

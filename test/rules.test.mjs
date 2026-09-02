@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  canAddQuest,
   clampDailyStateDelta,
   chooseDailyDirection,
   habitMomentum,
   levelFromXp,
   levelRequirement,
-  monthlyAreaSignal,
+  MILESTONE_XP,
+  normalizeDifficulty,
   questXp,
   resolvedStateValue,
   resolveStateTimeline,
@@ -19,33 +19,25 @@ import { buildWidgetSnapshot, consumeWidgetAction } from '../src/widget.ts';
 test('daily direction chooses one explainable starting point by priority', () => {
   assert.equal(chooseDailyDirection({ mainQuest: null, recoveryAvailable: true, activeGoalAvailable: true, previousStepAvailable: true }).kind, 'recovery');
   assert.equal(chooseDailyDirection({ mainQuest: { status: 'pending' }, recoveryAvailable: true, activeGoalAvailable: true, previousStepAvailable: true }).kind, 'recovery');
-  assert.match(chooseDailyDirection({ mainQuest: { status: 'pending', deadlineRisk: true }, recoveryAvailable: false, activeGoalAvailable: false, previousStepAvailable: false }).reason, /截止/);
-  assert.match(chooseDailyDirection({ mainQuest: { status: 'pending', carriedFromPreviousDay: true }, recoveryAvailable: false, activeGoalAvailable: false, previousStepAvailable: false }).reason, /昨天反馈/);
+  assert.match(chooseDailyDirection({ mainQuest: { status: 'pending', deadlineRisk: true }, recoveryAvailable: false, activeGoalAvailable: false, previousStepAvailable: false }).reason, /完成日期/);
+  assert.match(chooseDailyDirection({ mainQuest: { status: 'pending', carriedFromPreviousDay: true }, recoveryAvailable: false, activeGoalAvailable: false, previousStepAvailable: false }).reason, /昨天留下/);
   assert.equal(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: true }).kind, 'goal');
   assert.equal(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: false, previousStepAvailable: false }).kind, 'explore');
-  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, milestoneDue: true }).reason, /下一阶段/);
+  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, milestoneDue: true }).reason, /下一项任务/);
   assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, stagnantGoal: true }).reason, /7 天/);
-  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, areaBalanceNeeded: true }).reason, /推进记录较少/);
-  assert.match(chooseDailyDirection({ mainQuest: null, recoveryAvailable: false, activeGoalAvailable: true, previousStepAvailable: false, goalMode: 'maintain' }).reason, /保持现状/);
 });
 
-test('monthly area signal compares real evidence without scoring a whole life', () => {
-  assert.equal(monthlyAreaSignal('build', 2, 1, '2026-07-31', '2026-08-20'), 'progress');
-  assert.equal(monthlyAreaSignal('maintain', 3, 1, '2026-07-31', '2026-08-20'), 'maintain');
-  assert.equal(monthlyAreaSignal('build', 0, 2, '2026-07-31', '2026-08-20'), 'decline');
-  assert.equal(monthlyAreaSignal('build', 0, 2, '2026-08-31', '2026-08-20'), 'missing');
-  assert.equal(monthlyAreaSignal('pause', 0, 2, '2026-07-31', '2026-08-20'), 'paused');
-});
-
-test('difficulty, partial completion, and no-penalty results use the fixed XP table', () => {
-  assert.equal(questXp('light', 'completed'), 5);
-  assert.equal(questXp('standard', 'completed'), 10);
-  assert.equal(questXp('hard', 'completed'), 20);
-  assert.equal(questXp('challenge', 'completed'), 40);
-  assert.equal(questXp('light', 'partial'), 3);
-  assert.equal(questXp('hard', 'partial'), 10);
-  assert.equal(questXp('challenge', 'skipped'), 0);
-  assert.equal(questXp('challenge', 'exempt'), 0);
+test('three task difficulties award 2/4/7, partial completion rounds up, and legacy challenge normalizes to hard', () => {
+  assert.equal(questXp('light', 'completed'), 2);
+  assert.equal(questXp('standard', 'completed'), 4);
+  assert.equal(questXp('hard', 'completed'), 7);
+  assert.equal(questXp('light', 'partial'), 1);
+  assert.equal(questXp('standard', 'partial'), 2);
+  assert.equal(questXp('hard', 'partial'), 4);
+  assert.equal(questXp('hard', 'skipped'), 0);
+  assert.equal(questXp('hard', 'exempt'), 0);
+  assert.equal(normalizeDifficulty('challenge'), 'hard');
+  assert.equal(MILESTONE_XP, 5);
 });
 
 test('levels cross multiple thresholds and stay fixed at 100 XP after level 30', () => {
@@ -103,28 +95,20 @@ test('state timeline is re-computable, clamps a day, and lets same-day calibrati
   }]);
 });
 
-test('daily quest limits stay at one main, three BONUS, and two side quests', () => {
-  assert.equal(canAddQuest('main', []), true);
-  assert.equal(canAddQuest('main', ['main']), false);
-  assert.equal(canAddQuest('bonus', ['bonus', 'bonus']), true);
-  assert.equal(canAddQuest('bonus', ['bonus', 'bonus', 'bonus']), false);
-  assert.equal(canAddQuest('side', ['side', 'side']), false);
-});
-
 test('widget snapshot exposes only pending tasks in board order', () => {
   const snapshot = buildWidgetSnapshot({
     localDate: '2026-08-19', generatedAt: '2026-08-19T08:00:00.000Z',
     quests: [
-      { id: 'main', type: 'main', status: 'pending', title: '推进主线', minimumAction: '先做五分钟' },
-      { id: 'bonus-1', type: 'bonus', status: 'pending', title: '散步', minimumAction: '走两分钟' },
-      { id: 'side-1', type: 'side', status: 'pending', title: '整理桌面', minimumAction: '收起一件物品' },
+      { id: 'later-main', type: 'main', sourceType: 'goal', status: 'pending', title: '后建立的目标任务', createdAt: '2026-08-19T09:00:00.000Z' },
+      { id: 'older-side', type: 'side', sourceType: 'manual', status: 'pending', title: '先建立的手动任务', createdAt: '2026-08-19T08:00:00.000Z' },
+      { id: 'ordered-bonus', type: 'bonus', sourceType: 'habit', status: 'pending', title: '用户置顶的习惯', sortOrder: 0, createdAt: '2026-08-19T10:00:00.000Z' },
       { id: 'done', type: 'main', status: 'completed', title: '已经完成', minimumAction: '无需展示' },
     ],
   });
   assert.deepEqual(snapshot.tasks, [
-    { id: 'main', type: 'main', title: '推进主线' },
-    { id: 'bonus-1', type: 'bonus', title: '散步' },
-    { id: 'side-1', type: 'side', title: '整理桌面' },
+    { id: 'ordered-bonus', sourceType: 'habit', title: '用户置顶的习惯' },
+    { id: 'older-side', sourceType: 'manual', title: '先建立的手动任务' },
+    { id: 'later-main', sourceType: 'goal', title: '后建立的目标任务' },
   ]);
   assert.equal(snapshot.version, 1);
 });
