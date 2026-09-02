@@ -5361,11 +5361,18 @@ async function openBranchDialog(): Promise<void> {
 }
 
 function growthBadgeIcon(badge: GrowthBadge): PixelIcon {
-  if (badge.sourceType === 'goal') return 'trophy';
-  if (badge.sourceType === 'habit') return 'growth';
+  if (badge.sourceType === 'milestone' || badge.sourceType === 'goal') return 'trophy';
+  if (badge.sourceType === 'habit') return 'book';
   if (badge.sourceType === 'recovery') return 'heart';
-  if (badge.sourceType === 'experiment') return 'quill';
-  return 'book';
+  return 'quill';
+}
+
+function growthBadgeDisplayName(badge: GrowthBadge): string {
+  if (badge.sourceType === 'milestone') return '阶段完成';
+  if (badge.sourceType === 'goal') return '目标完成';
+  if (badge.sourceType === 'habit') return `完成${badge.threshold ?? 1}次`;
+  if (badge.sourceType === 'recovery') return '状态回升';
+  return '小尝试完成';
 }
 
 const BRANCH_PIXEL_ICONS: Record<GrowthBranch['rootAsset'], PixelIcon> = {
@@ -5394,6 +5401,7 @@ function growthBadgeButton(badge: GrowthBadge): HTMLButtonElement {
   const button = node('button', 'growth-badge');
   button.type = 'button';
   button.dataset.asset = badge.theme;
+  button.dataset.badgeSource = badge.sourceType;
   button.dataset.badgeId = badge.id;
   button.setAttribute('aria-label', `查看徽章详情：${badge.name}`);
   const description = node('span', 'sr-only', `获得说明：${badge.evidence}`);
@@ -5402,7 +5410,7 @@ function growthBadgeButton(badge: GrowthBadge): HTMLButtonElement {
   const mark = node('span', 'badge-mark');
   mark.setAttribute('aria-hidden', 'true');
   mark.append(pixelIcon(growthBadgeIcon(badge)));
-  button.append(mark, node('strong', 'badge-name', badge.name), node('time', 'caption', formatDate(badge.earnedOn)), description);
+  button.append(mark, node('strong', 'badge-name', growthBadgeDisplayName(badge)), node('time', 'caption', formatDate(badge.earnedOn)), description);
   button.addEventListener('click', () => openBadgeEvidenceDialog(badge));
   return button;
 }

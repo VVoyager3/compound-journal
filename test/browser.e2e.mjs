@@ -1253,7 +1253,10 @@ test('manual milestone badges explain their source, stay reversible, and survive
     const recentBadges = badgeSection.locator('.badge-grid').first().locator('.growth-badge');
     const allBadges = badgeSection.locator('.badge-all .growth-badge');
     await assert.doesNotReject(() => badgeSection.getByText('全部 4 ›', { exact: true }).waitFor());
-    assert.deepEqual(await recentBadges.locator('.badge-name').allTextContents(), milestones.slice(-4).reverse().map(([name]) => name));
+    assert.deepEqual(await recentBadges.locator('.badge-name').allTextContents(), milestones.slice(-4).map(() => '阶段完成'));
+    assert.equal(await recentBadges.locator('.icon-trophy').count(), 4, 'completed stages use the recognizable trophy emblem');
+    assert.deepEqual(await recentBadges.evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label'))),
+      milestones.slice(-4).reverse().map(([name]) => `查看徽章详情：${name}`), 'concise labels must preserve full accessible names');
     assert.equal(await badgeSection.locator('.badge-all').getAttribute('open'), null, 'the full badge history starts collapsed');
     await badgeSection.getByText('全部 4 ›', { exact: true }).click();
     assert.equal(await allBadges.count(), 4, 'expanding the history exposes every earned badge');
@@ -1474,6 +1477,15 @@ test('growth page connects milestone, goal, habit, recovery, and experiment achi
       assert.ok(facts['获得说明'], `${name} must explain how it was earned`);
       await dialog.getByRole('button', { name: '关闭' }).click();
     }
+    const visualTypes = await all.locator('.growth-badge').evaluateAll((buttons) => buttons.map((button) => ({
+      label: button.querySelector('.badge-name')?.textContent?.trim(),
+      icon: [...(button.querySelector('.pixel-icon')?.classList ?? [])].find((name) => name.startsWith('icon-')),
+    })));
+    assert.ok(visualTypes.some((badge) => badge.label === '阶段完成' && badge.icon === 'icon-trophy'));
+    assert.ok(visualTypes.some((badge) => badge.label === '目标完成' && badge.icon === 'icon-trophy'));
+    assert.ok(visualTypes.some((badge) => badge.label === '完成7次' && badge.icon === 'icon-book'));
+    assert.ok(visualTypes.some((badge) => badge.label === '状态回升' && badge.icon === 'icon-heart'));
+    assert.ok(visualTypes.some((badge) => badge.label === '小尝试完成' && badge.icon === 'icon-quill'));
 
     const storedRecovery = await page.evaluate(async (id) => {
       const database = await new Promise((resolve, reject) => {

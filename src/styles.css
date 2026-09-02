@@ -7999,7 +7999,7 @@ h3 { font-size: .96875rem; }
 .page-growth .badge-mark { width: 68px; height: 68px; }
 .page-growth .badge-mark .pixel-icon,
 .page-growth .growth-badge[data-asset="knowledge"] .badge-mark .pixel-icon { transform: scale(2.5); }
-.page-growth .badge-name { min-height: 1.4em; font-size: .78rem; line-height: 1.35; -webkit-line-clamp: 1; }
+.page-growth .badge-name { min-height: 2.7em; font-size: .78rem; line-height: 1.35; -webkit-line-clamp: 2; }
 .growth-direction-heading { padding: 20px 0 12px; }
 .page-growth .branch-card,
 .page-growth .branch-card.is-featured {
@@ -8237,6 +8237,48 @@ h3 { font-size: .96875rem; }
 
 .page-growth .badge-mark .pixel-icon,
 .page-growth .growth-badge[data-asset="knowledge"] .badge-mark .pixel-icon { transform: scale(2.85); }
+.page-growth .growth-badge[data-badge-source="milestone"],
+.page-growth .growth-badge[data-badge-source="goal"] { --badge-color: #78955d; }
+.page-growth .growth-badge[data-badge-source="habit"] { --badge-color: #5e8fa7; }
+.page-growth .growth-badge[data-badge-source="experiment"] { --badge-color: #8c78ae; }
+.page-growth .growth-badge[data-badge-source="recovery"] { --badge-color: #c57c76; }
+.page-growth .icon-trophy::before {
+  top: 1px;
+  left: 3px;
+  width: 10px;
+  height: 8px;
+  border-width: 1px;
+  box-shadow: -3px 1px 0 -1px var(--yellow), -3px 1px 0 0 var(--ink), 3px 1px 0 -1px var(--yellow), 3px 1px 0 0 var(--ink);
+}
+.page-growth .icon-trophy::after { left: 3px; width: 10px; height: 2px; box-shadow: 3px -4px 0 -1px var(--ink); }
+.page-growth .icon-book::before {
+  inset: 2px 0 1px;
+  border-width: 1px;
+  background: linear-gradient(90deg, #fff7df 0 46%, var(--ink) 46% 54%, #fff7df 54%);
+  box-shadow: none;
+  clip-path: polygon(0 0, 42% 5%, 50% 15%, 58% 5%, 100% 0, 100% 100%, 58% 94%, 50% 84%, 42% 94%, 0 100%);
+}
+.page-growth .icon-book::after {
+  inset: 0;
+  width: auto;
+  height: auto;
+  background:
+    linear-gradient(var(--coral) 0 0) 11px 2px / 2px 6px no-repeat,
+    linear-gradient(#a78347 0 0) 2px 6px / 4px 1px no-repeat,
+    linear-gradient(#a78347 0 0) 2px 9px / 4px 1px no-repeat,
+    linear-gradient(#a78347 0 0) 10px 9px / 3px 1px no-repeat;
+  box-shadow: none;
+}
+.page-growth .icon-quill::before { border-width: 1px; }
+.page-growth .icon-heart::before { background: #a84642; }
+.page-growth .icon-heart::after {
+  top: 6px;
+  left: 6px;
+  width: 5px;
+  height: 5px;
+  background: var(--yellow);
+  clip-path: polygon(50% 0, 62% 34%, 100% 38%, 70% 60%, 79% 100%, 50% 77%, 21% 100%, 30% 60%, 0 38%, 38% 34%);
+}
 .settings-overview-icon {
   width: 36px;
   height: 36px;
