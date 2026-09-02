@@ -58,13 +58,24 @@ import femaleAvatarImage from '../design-assets/pre-development/avatar-female-ca
 import roomBackgroundImage from '../design-assets/pre-development/room-background.png';
 import maleMotionAtlas from '../design-assets/pre-development/character-motion-male-runtime.png';
 import femaleMotionAtlas from '../design-assets/pre-development/character-motion-female-runtime.png';
+import badgeMilestoneImage from '../design-assets/generated/growth-icons/badge-milestone.png';
+import badgeGoalImage from '../design-assets/generated/growth-icons/badge-goal.png';
+import badgeHabitImage from '../design-assets/generated/growth-icons/badge-habit.png';
+import badgeRecoveryImage from '../design-assets/generated/growth-icons/badge-recovery.png';
+import badgeExperimentImage from '../design-assets/generated/growth-icons/badge-experiment.png';
+import branchHealthImage from '../design-assets/generated/growth-icons/branch-health.png';
+import branchJudgmentImage from '../design-assets/generated/growth-icons/branch-judgment.png';
+import branchKnowledgeImage from '../design-assets/generated/growth-icons/branch-knowledge.png';
+import branchTrustImage from '../design-assets/generated/growth-icons/branch-trust.png';
+import branchLeverageImage from '../design-assets/generated/growth-icons/branch-leverage.png';
+import branchAutonomyImage from '../design-assets/generated/growth-icons/branch-autonomy.png';
 
 const motionAtlases = { male: maleMotionAtlas, female: femaleMotionAtlas } as const;
 const motionFramePreloads = new Map<Exclude<Profile['avatar'], null>, Promise<void>>();
 
 type RouteName = 'today' | 'calendar' | 'record' | 'tasks' | 'growth' | 'system' | 'day' | 'review' | 'task-analysis' | 'habit-analysis';
 type PixelIcon = 'today' | 'calendar' | 'record' | 'growth' | 'system' | 'desk' | 'board' | 'books' | 'window' | 'character'
-  | 'ai' | 'bell' | 'storage' | 'transfer' | 'lock' | 'folder' | 'rules' | 'trash' | 'trophy' | 'book' | 'target' | 'coin' | 'wifi' | 'heart' | 'quill';
+  | 'ai' | 'bell' | 'storage' | 'transfer' | 'lock' | 'folder' | 'rules' | 'trash' | 'trophy' | 'book' | 'target' | 'coin' | 'wifi';
 interface Route { name: RouteName; date?: string; entityId?: string }
 type RoomCue = 'rest' | 'focus' | 'play';
 type SnapshotVariant = 'steady' | 'rest' | 'focus' | 'play' | 'connection' | 'bright';
@@ -5360,12 +5371,13 @@ async function openBranchDialog(): Promise<void> {
   name.focus();
 }
 
-function growthBadgeIcon(badge: GrowthBadge): PixelIcon {
-  if (badge.sourceType === 'milestone' || badge.sourceType === 'goal') return 'trophy';
-  if (badge.sourceType === 'habit') return 'book';
-  if (badge.sourceType === 'recovery') return 'heart';
-  return 'quill';
-}
+const GROWTH_BADGE_ASSETS: Record<GrowthBadge['sourceType'], string> = {
+  milestone: badgeMilestoneImage,
+  goal: badgeGoalImage,
+  habit: badgeHabitImage,
+  recovery: badgeRecoveryImage,
+  experiment: badgeExperimentImage,
+};
 
 function growthBadgeDisplayName(badge: GrowthBadge): string {
   if (badge.sourceType === 'milestone') return '阶段完成';
@@ -5375,8 +5387,13 @@ function growthBadgeDisplayName(badge: GrowthBadge): string {
   return '小尝试完成';
 }
 
-const BRANCH_PIXEL_ICONS: Record<GrowthBranch['rootAsset'], PixelIcon> = {
-  health: 'growth', judgment: 'board', knowledge: 'board', trust: 'character', leverage: 'desk', autonomy: 'window',
+const BRANCH_ICON_ASSETS: Record<GrowthBranch['rootAsset'], string> = {
+  health: branchHealthImage,
+  judgment: branchJudgmentImage,
+  knowledge: branchKnowledgeImage,
+  trust: branchTrustImage,
+  leverage: branchLeverageImage,
+  autonomy: branchAutonomyImage,
 };
 
 function openBadgeEvidenceDialog(badge: GrowthBadge): void {
@@ -5409,7 +5426,10 @@ function growthBadgeButton(badge: GrowthBadge): HTMLButtonElement {
   button.setAttribute('aria-describedby', description.id);
   const mark = node('span', 'badge-mark');
   mark.setAttribute('aria-hidden', 'true');
-  mark.append(pixelIcon(growthBadgeIcon(badge)));
+  const icon = node('img', 'badge-icon-asset');
+  icon.src = GROWTH_BADGE_ASSETS[badge.sourceType];
+  icon.alt = '';
+  mark.append(icon);
   button.append(mark, node('strong', 'badge-name', growthBadgeDisplayName(badge)), node('time', 'caption', formatDate(badge.earnedOn)), description);
   button.addEventListener('click', () => openBadgeEvidenceDialog(badge));
   return button;
@@ -5489,7 +5509,10 @@ async function growthPage(): Promise<HTMLElement> {
     const mark = node('span', 'branch-pixel-mark');
     mark.dataset.asset = branch.rootAsset;
     mark.setAttribute('aria-hidden', 'true');
-    mark.append(pixelIcon(BRANCH_PIXEL_ICONS[branch.rootAsset]));
+    const icon = node('img', 'branch-icon-asset');
+    icon.src = BRANCH_ICON_ASSETS[branch.rootAsset];
+    icon.alt = '';
+    mark.append(icon);
     const copy = node('div', 'branch-copy');
     copy.append(node('h2', '', branchDisplayName(branch)), node('span', 'branch-level', `等级 ${value.level}`));
     const progressPercent = Math.round(100 * value.currentXp / value.nextLevelXp);
