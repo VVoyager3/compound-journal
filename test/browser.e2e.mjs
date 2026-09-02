@@ -600,6 +600,7 @@ test('the bottom quick-add keeps task creation in context', async () => {
     await assert.doesNotReject(() => page.getByText('任务顺序已保存。', { exact: true }).waitFor());
     assert.deepEqual(await page.locator('.task-today-list h3').allTextContents(), ['直接添加', '已有任务']);
     await page.reload();
+    await page.getByRole('heading', { name: '直接添加' }).waitFor();
     assert.deepEqual(await page.locator('.task-today-list h3').allTextContents(), ['直接添加', '已有任务']);
     await page.getByRole('button', { name: '完成：直接添加' }).click();
     const completedRow = page.locator('.task-list-item.is-completed').filter({ hasText: '直接添加' });
@@ -2280,7 +2281,8 @@ test('installed shell keeps both companion atlases available offline', async () 
       const source = await Promise.all(bundles.map((bundle) => fetch(bundle).then((response) => response.text())));
       return [...new Set(source.flatMap((text) => [...text.matchAll(/["'`](\/assets\/[^"'`]+\.(?:png|jpe?g))["'`]/g)].map((match) => match[1])))].sort();
     });
-    assert.equal(assets.length, 5, 'two portraits, two motion atlases, and the room background must be built into the shell');
+    const coreArt = assets.filter((asset) => /\/assets\/(?:avatar-(?:female|male)-cartoon|character-motion-(?:female|male)-runtime|room-background)-[^/]+\.png$/.test(asset));
+    assert.equal(coreArt.length, 5, 'two portraits, two motion atlases, and the room background must be built into the shell');
     await context.setOffline(true);
     const dialog = page.getByRole('dialog', { name: '选一个陪伴角色' });
     await dialog.getByRole('button', { name: '选择鱼鱼' }).click();

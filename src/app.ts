@@ -69,13 +69,43 @@ import branchKnowledgeImage from '../design-assets/generated/growth-icons/branch
 import branchTrustImage from '../design-assets/generated/growth-icons/branch-trust.png';
 import branchLeverageImage from '../design-assets/generated/growth-icons/branch-leverage.png';
 import branchAutonomyImage from '../design-assets/generated/growth-icons/branch-autonomy.png';
+import navTodayIcon from '../design-assets/generated/ui-icons/nav-today.png';
+import navTasksIcon from '../design-assets/generated/ui-icons/nav-tasks.png';
+import navRecordIcon from '../design-assets/generated/ui-icons/nav-record.png';
+import navGrowthIcon from '../design-assets/generated/ui-icons/nav-growth.png';
+import navSettingsIcon from '../design-assets/generated/ui-icons/nav-settings.png';
+import calendarIcon from '../design-assets/generated/ui-icons/calendar.png';
+import successRecordIcon from '../design-assets/generated/ui-icons/success-record.png';
+import habitIcon from '../design-assets/generated/ui-icons/habit.png';
+import weeklyReviewIcon from '../design-assets/generated/ui-icons/weekly-review.png';
+import goalIcon from '../design-assets/generated/ui-icons/goal.png';
+import rulesIcon from '../design-assets/generated/ui-icons/rules.png';
+import aiIcon from '../design-assets/generated/ui-icons/ai.png';
+import costIcon from '../design-assets/generated/ui-icons/cost.png';
+import connectionIcon from '../design-assets/generated/ui-icons/connection.png';
+import notificationIcon from '../design-assets/generated/ui-icons/notification.png';
+import storageIcon from '../design-assets/generated/ui-icons/storage.png';
+import transferIcon from '../design-assets/generated/ui-icons/transfer.png';
+import privacyIcon from '../design-assets/generated/ui-icons/privacy.png';
+import categoriesIcon from '../design-assets/generated/ui-icons/categories.png';
+import deleteIcon from '../design-assets/generated/ui-icons/delete.png';
+import assessmentIcon from '../design-assets/generated/ui-icons/assessment.png';
+import displayToneIcon from '../design-assets/generated/ui-icons/display-tone.png';
+import widgetIcon from '../design-assets/generated/ui-icons/widget.png';
+import searchIcon from '../design-assets/generated/ui-icons/search.png';
+import taskFocusIcon from '../design-assets/generated/ui-icons/task-focus.png';
+import experienceIcon from '../design-assets/generated/ui-icons/experience.png';
+import providerIcon from '../design-assets/generated/ui-icons/provider.png';
+import organizeIcon from '../design-assets/generated/ui-icons/organize.png';
 
 const motionAtlases = { male: maleMotionAtlas, female: femaleMotionAtlas } as const;
 const motionFramePreloads = new Map<Exclude<Profile['avatar'], null>, Promise<void>>();
 
 type RouteName = 'today' | 'calendar' | 'record' | 'tasks' | 'growth' | 'system' | 'day' | 'review' | 'task-analysis' | 'habit-analysis';
-type PixelIcon = 'today' | 'calendar' | 'record' | 'growth' | 'system' | 'desk' | 'board' | 'books' | 'window' | 'character'
-  | 'ai' | 'bell' | 'storage' | 'transfer' | 'lock' | 'folder' | 'rules' | 'trash' | 'trophy' | 'book' | 'target' | 'coin' | 'wifi';
+type SemanticIcon = 'nav-today' | 'nav-tasks' | 'nav-record' | 'nav-growth' | 'nav-settings' | 'calendar'
+  | 'success-record' | 'habit' | 'weekly-review' | 'goal' | 'rules' | 'ai' | 'cost' | 'connection'
+  | 'notification' | 'storage' | 'transfer' | 'privacy' | 'categories' | 'delete' | 'assessment'
+  | 'display-tone' | 'widget' | 'search' | 'task-focus' | 'experience' | 'provider' | 'organize';
 interface Route { name: RouteName; date?: string; entityId?: string }
 type RoomCue = 'rest' | 'focus' | 'play';
 type SnapshotVariant = 'steady' | 'rest' | 'focus' | 'play' | 'connection' | 'bright';
@@ -296,17 +326,51 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', tex
   return result;
 }
 
-function pixelIcon(icon: PixelIcon): HTMLSpanElement {
-  const mark = node('span', `pixel-icon icon-${icon}`);
+const SEMANTIC_ICON_ASSETS: Record<SemanticIcon, string> = {
+  'nav-today': navTodayIcon,
+  'nav-tasks': navTasksIcon,
+  'nav-record': navRecordIcon,
+  'nav-growth': navGrowthIcon,
+  'nav-settings': navSettingsIcon,
+  calendar: calendarIcon,
+  'success-record': successRecordIcon,
+  habit: habitIcon,
+  'weekly-review': weeklyReviewIcon,
+  goal: goalIcon,
+  rules: rulesIcon,
+  ai: aiIcon,
+  cost: costIcon,
+  connection: connectionIcon,
+  notification: notificationIcon,
+  storage: storageIcon,
+  transfer: transferIcon,
+  privacy: privacyIcon,
+  categories: categoriesIcon,
+  delete: deleteIcon,
+  assessment: assessmentIcon,
+  'display-tone': displayToneIcon,
+  widget: widgetIcon,
+  search: searchIcon,
+  'task-focus': taskFocusIcon,
+  experience: experienceIcon,
+  provider: providerIcon,
+  organize: organizeIcon,
+};
+
+function semanticIcon(icon: SemanticIcon, className = ''): HTMLImageElement {
+  const mark = node('img', `semantic-icon${className ? ` ${className}` : ''}`);
+  mark.src = SEMANTIC_ICON_ASSETS[icon];
+  mark.alt = '';
+  mark.draggable = false;
   mark.setAttribute('aria-hidden', 'true');
   return mark;
 }
 
-function iconButton(label: string, icon: PixelIcon | null, onClick: () => void, className = 'button button-secondary'): HTMLButtonElement {
+function iconButton(label: string, icon: SemanticIcon | null, onClick: () => void, className = 'button button-secondary'): HTMLButtonElement {
   const button = node('button', className);
   button.type = 'button';
   button.setAttribute('aria-label', label);
-  if (icon) button.append(pixelIcon(icon));
+  if (icon) button.append(semanticIcon(icon));
   button.append(node('span', '', label));
   button.addEventListener('click', onClick);
   return button;
@@ -610,19 +674,19 @@ function networkBadge(): HTMLElement {
 function bottomNavigation(route: Route): HTMLElement {
   const nav = node('nav', 'bottom-nav');
   nav.setAttribute('aria-label', '主要导航');
-  const items: Array<[RouteName, string, PixelIcon]> = [
-    ['today', '今日', 'today'],
-    ['tasks', '任务', 'board'],
-    ['record', '记录', 'record'],
-    ['growth', '成长', 'growth'],
-    ['system', '设置', 'system'],
+  const items: Array<[RouteName, string, SemanticIcon]> = [
+    ['today', '今日', 'nav-today'],
+    ['tasks', '任务', 'nav-tasks'],
+    ['record', '记录', 'nav-record'],
+    ['growth', '成长', 'nav-growth'],
+    ['system', '设置', 'nav-settings'],
   ];
   for (const [name, label, icon] of items) {
     const active = route.name === name || (name === 'growth' && ['calendar', 'day', 'review'].includes(route.name));
     const link = node('a', `nav-item${active ? ' is-active' : ''}`);
     link.href = `#/${name}`;
     if (active) link.setAttribute('aria-current', 'page');
-    link.append(pixelIcon(icon), node('span', '', label));
+    link.append(semanticIcon(icon), node('span', '', label));
     nav.append(link);
   }
   return nav;
@@ -1384,7 +1448,7 @@ async function openQuestFeedbackDialog(quest: Quest, initialResult?: FeedbackRes
   if (quest.estimatedMinutes) taskContextHeading.append(node('span', 'caption', `· ${quest.estimatedMinutes} 分钟`));
   taskContextCopy.append(taskContextHeading);
   if (quest.minimumAction && quest.minimumAction !== quest.title) taskContextCopy.append(node('span', 'caption', `完成标准：${quest.minimumAction}`));
-  taskContext.append(node('span', 'feedback-task-icon', '★'), taskContextCopy);
+  taskContext.append(semanticIcon('task-focus', 'feedback-task-icon'), taskContextCopy);
   content.append(closeDialog, taskContext);
 
   const resultLabel = node('label', 'field-label', '结果');
@@ -1423,7 +1487,7 @@ async function openQuestFeedbackDialog(quest: Quest, initialResult?: FeedbackRes
   updateCompletedDateValue();
   const completedDatePicker = node('span', 'feedback-date-picker');
   completedDatePicker.append(completedDateValue, node('span', 'settings-overview-chevron', '›'), completedDate);
-  completedDateControl.append(pixelIcon('calendar'), node('span', '', '完成日期'), completedDatePicker);
+  completedDateControl.append(semanticIcon('calendar'), node('span', '', '完成日期'), completedDatePicker);
   const updateCompletedDateVisibility = () => {
     completedDateControl.hidden = result.value !== 'completed' && result.value !== 'partial';
     completedDate.required = !completedDateControl.hidden;
@@ -1569,7 +1633,7 @@ async function openQuestFeedbackDialog(quest: Quest, initialResult?: FeedbackRes
   const coreFields = node('div', 'feedback-core-fields');
   coreFields.append(completedDateControl);
   const experience = node('div', 'feedback-experience');
-  experience.append(node('span', 'feedback-experience-icon', '★'), node('div', '', `经验说明\n保存后增加 ${quest.branchId ? DIFFICULTY_XP[quest.difficulty] : 0} 经验，可撤销。`));
+  experience.append(semanticIcon('experience', 'feedback-experience-icon'), node('div', '', `经验说明\n保存后增加 ${quest.branchId ? DIFFICULTY_XP[quest.difficulty] : 0} 经验，可撤销。`));
   const extra = node('details', 'feedback-extra');
   const extraFields = node('div', 'feedback-extra-fields');
   extraFields.append(resultLabel, difficultyLabel, noteLabel, aiPanel, ...(stateControl ? [stateControl] : []), ...(applyHabitDifficultyControl ? [applyHabitDifficultyControl] : []));
@@ -2305,7 +2369,7 @@ async function todayPage(): Promise<HTMLElement> {
     const preview = node('button', 'today-record-row');
     preview.type = 'button';
     const previewIcon = node('span', `today-record-icon is-${entry.kind}`);
-    previewIcon.append(pixelIcon(entry.kind === 'success' ? 'trophy' : 'record'));
+    previewIcon.append(semanticIcon(entry.kind === 'success' ? 'success-record' : 'nav-record'));
     preview.append(
       previewIcon,
       node('span', 'today-record-copy', entry.body),
@@ -2333,7 +2397,7 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   dateInput.value = targetDate;
   const dateControl = node('label', 'record-date-control');
   const dateText = node('span', '', formatDate(targetDate, { weekday: undefined }));
-  dateControl.append(pixelIcon('calendar'), dateText, dateInput);
+  dateControl.append(semanticIcon('calendar'), dateText, dateInput);
   main.append(secondaryPageHeader(route.date && route.date !== today ? '补记' : '写记录', dateControl));
 
   const textarea = node('textarea', 'journal-input');
@@ -2615,9 +2679,10 @@ async function calendarPage(): Promise<HTMLElement> {
   const habitsById = new Map(habits.map((habit) => [habit.id, habit]));
   const main = node('main', 'page page-calendar');
   let searchPanel: HTMLElement;
-  const searchAction = node('button', 'header-icon-button', '⌕');
+  const searchAction = node('button', 'header-icon-button');
   searchAction.type = 'button';
   searchAction.setAttribute('aria-label', '查找记录');
+  searchAction.append(semanticIcon('search'));
   searchAction.addEventListener('click', () => {
     searchPanel.hidden = false;
     searchPanel.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
@@ -2697,9 +2762,9 @@ async function calendarPage(): Promise<HTMLElement> {
   const selectedHabit = habitsById.get(selectedHabitLogs.at(-1)?.habitId ?? '');
   const previewLead = node('div', 'calendar-preview-lead');
   const previewIcon = node('span', `calendar-preview-icon${selectedEntry?.kind === 'success' ? ' is-success' : ''}`);
-  if (selectedEntry) previewIcon.append(pixelIcon(selectedEntry.kind === 'success' ? 'trophy' : 'record'));
-  else if (selectedQuests.length) previewIcon.append(pixelIcon('board'));
-  else if (selectedHabit) previewIcon.append(pixelIcon('growth'));
+  if (selectedEntry) previewIcon.append(semanticIcon(selectedEntry.kind === 'success' ? 'success-record' : 'nav-record'));
+  else if (selectedQuests.length) previewIcon.append(semanticIcon('nav-tasks'));
+  else if (selectedHabit) previewIcon.append(semanticIcon('habit'));
   previewLead.append(
     previewIcon,
     node('p', selectedEntry ? 'line-clamp' : 'empty-copy', selectedEntry?.body ?? selectedQuests[0]?.title ?? selectedHabit?.name ?? '这一天还没有记录或完成事项'),
@@ -3518,7 +3583,7 @@ async function dayPage(date: string): Promise<HTMLElement> {
     );
     copy.append(meta, node('p', 'day-record-body', entry.body));
     const recordIcon = node('span', 'day-record-icon');
-    recordIcon.append(pixelIcon(entry.kind === 'success' ? 'trophy' : 'record'));
+    recordIcon.append(semanticIcon(entry.kind === 'success' ? 'success-record' : 'nav-record'));
     item.append(recordIcon, copy);
     item.addEventListener('click', () => { void openEntryDetailDialog(entry); });
     journal.append(item);
@@ -3906,7 +3971,7 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
 
   const focus = node('section', 'review-focus-card');
   const focusIcon = node('span', 'review-section-icon is-target');
-  focusIcon.append(pixelIcon('target'));
+  focusIcon.append(semanticIcon('goal'));
   focus.append(
     focusIcon,
     node('h2', '', '下周重点'),
@@ -3917,7 +3982,7 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
 
   const proposedExperiment = node('section', 'review-proposed-experiment');
   const experimentIcon = node('span', 'review-section-icon is-idea');
-  experimentIcon.append(pixelIcon('book'));
+  experimentIcon.append(semanticIcon('weekly-review'));
   proposedExperiment.append(
     experimentIcon,
     node('h2', '', '一个小尝试'),
@@ -3928,7 +3993,7 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
 
   const adjustments = node('section', 'review-adjustments');
   const adjustmentIcon = node('span', 'review-section-icon is-adjust');
-  adjustmentIcon.append(pixelIcon('rules'));
+  adjustmentIcon.append(semanticIcon('rules'));
   adjustments.append(adjustmentIcon, node('h2', '', '会调整什么'));
   const adjustmentList = node('ul', 'review-adjustment-list');
   const decisions = review.habitDecisions.slice(0, 2).map((item) => {
@@ -4210,7 +4275,7 @@ async function openGoalDialog(): Promise<void> {
   decompose.disabled = !navigator.onLine || !NATIVE_AI_READY;
   const assistantCopy = node('div', 'goal-assistant-copy');
   assistantCopy.append(node('strong', '', '需要帮忙拆成阶段？'), node('span', 'caption', '不会直接创建或修改任务'));
-  assistant.append(node('span', 'goal-assistant-icon', '✦'), assistantCopy, decompose);
+  assistant.append(semanticIcon('ai', 'goal-assistant-icon'), assistantCopy, decompose);
   const plan = node('section', 'goal-plan-editor');
   plan.hidden = true;
   let milestoneEditors: Array<{ enabled: HTMLInputElement; title: HTMLInputElement; evidence: HTMLTextAreaElement }> = [];
@@ -4791,7 +4856,7 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
   const progress = milestones.length ? Math.round(completed / milestones.length * 100) : 0;
   const hero = node('section', 'entity-detail-hero');
   const goalIcon = node('span', 'entity-detail-icon is-goal-icon');
-  goalIcon.append(pixelIcon('trophy'));
+  goalIcon.append(semanticIcon('goal'));
   hero.append(goalIcon, node('h3', '', goal.result), node('p', 'success-copy', goal.status === 'active' ? '● 进行中' : goal.status === 'completed' ? '● 已完成' : '● 已暂停'));
   if (goal.why) hero.append(node('p', 'muted', goal.why));
   const meter = node('progress', 'xp-progress');
@@ -4889,7 +4954,7 @@ async function openHabitDetailDialog(habit: Habit): Promise<void> {
   addDialogBack(dialog, content);
   const hero = node('section', 'entity-detail-hero');
   const habitIcon = node('span', 'entity-detail-icon is-habit-icon');
-  habitIcon.append(pixelIcon('book'));
+  habitIcon.append(semanticIcon('habit'));
   hero.append(habitIcon, node('h3', '', habit.name), node('p', 'success-copy', habit.status === 'active' && habit.bonusEnabled ? '● 进行中' : '● 已暂停'));
   const habitMeta = node('section', 'habit-detail-meta');
   const metaRow = (label: string, value: string): HTMLElement => {
@@ -5581,7 +5646,7 @@ async function growthPage(): Promise<HTMLElement> {
 
   const maintenance = node('details', 'growth-maintenance');
   const maintenanceSummary = node('summary');
-  maintenanceSummary.append(pixelIcon('system'), node('span', '', '管理提升方向'));
+  maintenanceSummary.append(semanticIcon('categories'), node('span', '', '管理提升方向'));
   maintenance.append(maintenanceSummary);
   if (dormantBranches.length) {
     maintenance.append(node('p', 'growth-dormant-heading', `暂未开始的方向 · ${dormantBranches.length}`));
@@ -5628,7 +5693,7 @@ function openSettingsDetail(title: string, section: HTMLElement): void {
   if (heading) { heading.tabIndex = -1; heading.focus(); }
 }
 
-function settingsOverviewRow(icon: PixelIcon, label: string, status: string, section: HTMLElement, avatar?: Profile['avatar']): HTMLButtonElement {
+function settingsOverviewRow(icon: SemanticIcon, label: string, status: string, section: HTMLElement, avatar?: Profile['avatar']): HTMLButtonElement {
   const row = node('button', 'settings-overview-row');
   row.type = 'button';
   if (label === '本地存储') row.classList.add('is-storage-status');
@@ -5643,7 +5708,7 @@ function settingsOverviewRow(icon: PixelIcon, label: string, status: string, sec
     iconCell.append(portrait);
     statusCell.append(thumbnail, node('span', '', status));
   } else {
-    iconCell.append(pixelIcon(icon));
+    iconCell.append(semanticIcon(icon));
     statusCell.textContent = status;
   }
   row.append(iconCell, node('strong', '', label), statusCell, node('span', 'settings-overview-chevron', '›'));
@@ -6447,30 +6512,30 @@ function aiPermissionSettings(): HTMLElement {
     weeklyScope.append(row);
   }
 
-  const aiInfoRow = (icon: PixelIcon, label: string, value: string | HTMLElement): HTMLElement => {
+  const aiInfoRow = (icon: SemanticIcon, label: string, value: string | HTMLElement): HTMLElement => {
     const row = node('div', 'setting-row-text ai-info-row');
     const iconCell = node('span', 'ai-info-icon');
-    iconCell.append(pixelIcon(icon));
+    iconCell.append(semanticIcon(icon));
     row.append(iconCell, node('strong', '', label), typeof value === 'string' ? node('span', 'ai-info-value', value) : value, node('span', 'settings-overview-chevron', '›'));
     return row;
   };
   const serviceInfo = node('div', 'ai-service-info');
   serviceInfo.append(
-    aiInfoRow('character', '服务方', 'MiniMax'),
+    aiInfoRow('provider', '服务方', 'MiniMax'),
     aiInfoRow('ai', '模型', savedModel),
-    aiInfoRow('coin', '费用', '随应用提供'),
-    aiInfoRow('wifi', '连接状态', health),
+    aiInfoRow('cost', '费用', '随应用提供'),
+    aiInfoRow('connection', '连接状态', health),
     check,
   );
   const scopeSummary = node('div', 'ai-scope-summary');
   scopeSummary.append(
-    aiInfoRow('board', '每日整理', '每次确认'),
-    aiInfoRow('target', '目标拆分', '仅当前目标'),
-    aiInfoRow('book', '周回顾', '摘要，不含日记原文'),
+    aiInfoRow('organize', '每日整理', '每次确认'),
+    aiInfoRow('goal', '目标拆分', '仅当前目标'),
+    aiInfoRow('weekly-review', '周回顾', '摘要，不含日记原文'),
   );
   const advanced = node('details', 'optional-details ai-advanced-settings');
   const advancedSummary = node('summary');
-  advancedSummary.append(node('span', 'ai-advanced-icon', '⚙'), node('span', '', '使用安装包提供的服务'));
+  advancedSummary.append(semanticIcon('nav-settings', 'ai-advanced-icon'), node('span', '', '使用安装包提供的服务'));
   advanced.append(advancedSummary);
   if (NATIVE_PLATFORM) advanced.append(modelRow, keyRow, keyActions, keyStatus);
   advanced.append(weeklyScope);
@@ -6691,29 +6756,29 @@ async function systemPage(): Promise<HTMLElement> {
   const personal = overviewGroup('个人');
   const assessedToday = Object.values(observations).some((item) => item?.localDate === localDate());
   personal.append(
-    settingsOverviewRow('character', '人物与陪伴', resolvedCompanionName(profile), profileSettings, profile.avatar),
-    settingsOverviewRow('board', '状态自评', assessedToday ? '今天已评估' : '今天未评估', assessmentSettings),
-    settingsOverviewRow('system', '显示与语气', settings.guidanceTone === 'gentle' ? '温和' : '直接', preferences),
+    settingsOverviewRow('provider', '人物与陪伴', resolvedCompanionName(profile), profileSettings, profile.avatar),
+    settingsOverviewRow('assessment', '状态自评', assessedToday ? '今天已评估' : '今天未评估', assessmentSettings),
+    settingsOverviewRow('display-tone', '显示与语气', settings.guidanceTone === 'gentle' ? '温和' : '直接', preferences),
   );
   const features = overviewGroup('功能');
   features.append(settingsOverviewRow('ai', 'AI 整理', settings.aiAllowed && NATIVE_AI_READY ? '已开启 · MiniMax' : '已关闭', aiSettings));
-  if (widgetSettings) features.append(settingsOverviewRow('board', '今日任务小组件', pinState === 'pinned' ? '已添加' : '未添加', widgetSettings));
-  features.append(settingsOverviewRow('bell', '通知与提醒', notificationStatus, notificationSettings));
+  if (widgetSettings) features.append(settingsOverviewRow('widget', '今日任务小组件', pinState === 'pinned' ? '已添加' : '未添加', widgetSettings));
+  features.append(settingsOverviewRow('notification', '通知与提醒', notificationStatus, notificationSettings));
   const privacy = overviewGroup('数据与隐私');
   privacy.append(
     settingsOverviewRow('storage', '本地存储', NATIVE_PLATFORM ? '正常' : '查看状态', storageSettings),
     settingsOverviewRow('transfer', '导入与导出', lastBackup ? `上次备份 ${formatDate(lastBackup.slice(0, 10))}` : '尚未备份', data),
-    settingsOverviewRow('lock', 'AI 发送范围', settings.previewBeforeSend ? '每次确认' : '按设置发送', aiSettings),
+    settingsOverviewRow('privacy', 'AI 发送范围', settings.previewBeforeSend ? '每次确认' : '按设置发送', aiSettings),
   );
   const advanced = overviewGroup('高级');
   advanced.append(
-    settingsOverviewRow('folder', '分类与提升方向', '', categorySettings),
+    settingsOverviewRow('categories', '分类与提升方向', '', categorySettings),
     settingsOverviewRow('rules', '行动规则', '', actionRuleSettings),
   );
   const danger = node('button', 'settings-overview-row is-danger');
   danger.type = 'button';
   const dangerIcon = node('span', 'settings-overview-icon');
-  dangerIcon.append(pixelIcon('trash'));
+  dangerIcon.append(semanticIcon('delete'));
   danger.append(dangerIcon, node('strong', '', '删除全部数据'), node('span', 'settings-overview-chevron', '›'));
   danger.addEventListener('click', () => { void deleteAllDialog(); });
   main.append(personal, features, privacy, advanced, danger);
@@ -6974,7 +7039,7 @@ async function habitAnalysisPage(habitId: string): Promise<HTMLElement> {
   const select = analysisRangeSelect(weeks, (value) => { weeks = value; select.value = String(value); renderBody(); });
   main.append(secondaryPageHeader('习惯分析', select, { name: 'tasks' }));
   const hero = node('section', 'habit-analysis-hero');
-  hero.append(pixelIcon('books'));
+  hero.append(semanticIcon('habit'));
   const heroCopy = node('div');
   heroCopy.append(node('h2', '', habit.name), node('p', '', habitScheduleLabel(habit.scheduleDays)));
   hero.append(heroCopy);
