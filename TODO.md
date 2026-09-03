@@ -58,6 +58,7 @@
 - [x] 从备份替换数据使用单次 IndexedDB 事务；写入失败时保留原数据。
 - [x] 本机自定义 API Key 不进入 Web 产物、日志、备份或版本库。
 - [x] 应用、Service Worker、Android 版本统一为 0.7.0（versionCode 700）。
+- [x] 项目开发规则明确 Android 统一签名、密钥不得入库、证书核验和既有 Debug 安装迁移边界。
 
 ## 自动验证
 
