@@ -4786,8 +4786,10 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
   const stages = node('section', 'entity-detail-section');
   stages.append(node('h3', '', '子任务'));
   if (!currentMilestones.length) stages.append(node('p', 'empty-copy', '还没有子任务'));
+  const nextMilestoneId = currentMilestones.find((item) => item.status === 'pending')?.id;
   currentMilestones.forEach((milestone, index) => {
     const row = node('article', `goal-detail-stage is-${milestone.status}`);
+    if (milestone.id === nextMilestoneId) row.classList.add('is-next');
     row.append(node('span', 'stage-number', String(index + 1)), node('div', 'stage-copy'));
     const copy = row.querySelector<HTMLElement>('.stage-copy')!;
     const linkedQuest = allQuests.filter((item) => item.milestoneId === milestone.id)
@@ -4801,7 +4803,7 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
     copy.append(node('strong', '', milestone.description), node('span', 'caption', stageMeta));
     if (milestone.status !== 'superseded' && linkedQuest) {
       const controls = node('div', 'goal-stage-actions');
-      const marker = node('span', `stage-toggle ${milestone.status === 'completed' ? 'is-complete' : ''}`, milestone.status === 'completed' ? '✓' : '○');
+      const marker = node('span', `stage-toggle ${milestone.status === 'completed' ? 'is-complete' : ''}`, milestone.status === 'completed' ? '✓' : '');
       marker.setAttribute('aria-label', milestone.status === 'completed' ? `已完成：${milestone.description}` : `待完成：${milestone.description}`);
       controls.append(marker);
       if (linkedQuest?.status === 'pending') {
@@ -4851,9 +4853,8 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
 }
 
 async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<void> {
-  const [logs, quests, feedbacks, momentum] = await Promise.all([db.listHabitLogs(), db.listQuests(), db.listQuestFeedback(), db.habitMomentum(habit.id)]);
+  const [logs, quests, momentum] = await Promise.all([db.listHabitLogs(), db.listQuests(), db.habitMomentum(habit.id)]);
   const habitLogs = logs.filter((item) => item.habitId === habit.id).sort((left, right) => right.localDate.localeCompare(left.localDate));
-  const feedbackByQuest = activeFeedbackByQuest(feedbacks);
   const { dialog, content, actions } = dialogShell('习惯详情');
   dialog.classList.add('full-screen-editor', 'habit-detail-dialog');
   addDialogBack(dialog, content);
@@ -4934,12 +4935,18 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
   const allRecords = node('button', 'section-text-action', '全部记录 ›');
   allRecords.type = 'button'; allRecords.addEventListener('click', () => { dialog.close(); go({ name: 'habit-analysis', entityId: habit.id }); });
   recentHeading.append(node('h3', '', '最近记录'), allRecords); recent.append(recentHeading);
-  habitLogs.slice(0, 3).forEach((log) => {
-    const row = node('p', 'habit-log-row');
-    const feedback = feedbackByQuest.get(log.questId);
-    row.append(node('span', '', `${formatDate(log.localDate)}（${new Intl.DateTimeFormat('zh-CN', { weekday: 'short' }).format(parseLocalDate(log.localDate))}）`), node('span', `habit-result-tag is-${log.result}`, log.result === 'completed' ? '完成' : log.result === 'partial' ? '有进展' : '跳过'), node('span', 'muted', feedback?.actual || ''));
-    recent.append(row);
-  });
+  const recentGrid = node('div', 'habit-recent-grid');
+  for (let offset = 27; offset >= 0; offset -= 1) {
+    const date = shiftDate(localDate(), -offset);
+    const log = habitLogs.find((item) => item.localDate === date);
+    const result = log?.result ?? 'empty';
+    const cell = node('span', `habit-recent-cell is-${result}`);
+    cell.setAttribute('role', 'img');
+    cell.setAttribute('aria-label', `${formatDate(date)}：${result === 'completed' ? '完成' : result === 'partial' ? '有进展' : result === 'skipped' || result === 'exempt' ? '跳过' : '无记录'}`);
+    cell.title = cell.getAttribute('aria-label') ?? '';
+    recentGrid.append(cell);
+  }
+  if (habitLogs.length) recent.append(recentGrid);
   if (!habitLogs.length) recent.append(node('p', 'empty-copy', '暂无打卡记录'));
   content.append(recent);
   const edit = node('button', 'button button-secondary', '编辑计划');
@@ -5596,7 +5603,14 @@ function assessmentForm(observations: Partial<Record<Dimension, StateObservation
   full.type = 'button';
   full.addEventListener('click', () => openAssessmentQuestionnaire(60));
   actions.append(quick, full);
-  section.append(actions);
+  const dimensions = node('div', 'assessment-dimension-actions');
+  DIMENSIONS.forEach((dimension) => {
+    const button = node('button', 'button button-quiet button-compact', dimension.label);
+    button.type = 'button';
+    button.addEventListener('click', () => openAssessmentQuestionnaire(30, dimension.key));
+    dimensions.append(button);
+  });
+  section.append(node('h3', 'assessment-subheading', '全部评估'), actions, node('h3', 'assessment-subheading', '单项评估'), dimensions);
   return section;
 }
 
@@ -6759,16 +6773,13 @@ async function habitAnalysisPage(habitId: string): Promise<HTMLElement> {
       const done = dates.filter((date) => logByDate.get(date)?.result === 'completed').length;
       return { day, rate: analysisPercent(done, dates.length) };
     });
-    const sorted = [...weekdayStats].sort((left, right) => right.rate - left.rate);
     const names = '一二三四五六日';
     const weekdaySection = node('section', 'analysis-section habit-weekday-section');
     weekdaySection.append(node('h2', '', '按星期看'));
     const weekdayChart = node('div', 'habit-weekday-chart');
     weekdayStats.forEach(({ day, rate: weekdayRate }) => {
-      const column = node('div', `habit-weekday-column${weekdayRate === sorted[0]?.rate ? ' is-strongest' : ''}`);
-      const meter = node('span', 'habit-weekday-meter');
-      meter.style.height = `${Math.max(8, Math.round(weekdayRate * 1.45))}px`;
-      column.append(node('strong', '', `${weekdayRate}%`), meter, node('span', '', `周${names[day - 1]}`));
+      const column = node('div', `habit-weekday-column is-day-${day}`);
+      column.append(node('span', '', `周${names[day - 1]}`), node('strong', '', `${weekdayRate}%`));
       weekdayChart.append(column);
     });
     weekdaySection.append(weekdayChart);
