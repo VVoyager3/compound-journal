@@ -2457,15 +2457,22 @@ test('edit creates a revision and undo restores the previous body as a new versi
   await assert.rejects(() => db.undoLastEdit(original.id));
 });
 
-test('one editable day caption is stored per date and included in backups', async (t) => {
+test('day captions and personal reviews share one backed-up date record', async (t) => {
   const db = await withDatabase(t, 'day-caption');
+  const dailyReview = { progress: '完成基线实验', takeaway: '确认了数据泄漏风险', problem: '新闻浏览过多', tomorrowFocus: '完成对照实验' };
+  const weeklyReview = { progress: '实验设计向前推进', assets: '新增检查清单', biggestProgress: '识别关键风险', biggestWaste: '无目的浏览', stopOrReduce: '减少信息流', nextFocus: '完成基线实验' };
   assert.equal(await db.getDayCaption('2026-08-14'), undefined);
   assert.equal((await db.saveDayCaption('2026-08-14', '今天开始把复杂的事做简单。')).text, '今天开始把复杂的事做简单。');
   assert.equal((await db.saveDayCaption('2026-08-14', '今天完成了第一步。')).text, '今天完成了第一步。');
-  assert.deepEqual((await db.exportBundle()).data.dayCaptions.map(({ localDate, text }) => ({ localDate, text })), [
-    { localDate: '2026-08-14', text: '今天完成了第一步。' },
-  ]);
+  assert.deepEqual((await db.saveReview('2026-08-14', 'daily', dailyReview)).dailyReview, dailyReview);
+  assert.deepEqual((await db.saveReview('2026-08-14', 'weekly', weeklyReview)).weeklyReview, weeklyReview);
+  const exported = await db.exportBundle();
+  assert.deepEqual(exported.data.dayCaptions[0].dailyReview, dailyReview);
+  assert.deepEqual(parseBackup(JSON.stringify(exported)).data.dayCaptions[0].weeklyReview, weeklyReview);
   assert.equal(await db.saveDayCaption('2026-08-14', '  '), undefined);
+  assert.deepEqual((await db.getDayCaption('2026-08-14')).dailyReview, dailyReview, 'clearing the caption must not delete reflections');
+  assert.equal(await db.saveReview('2026-08-14', 'daily', { progress: '', takeaway: '', problem: '', tomorrowFocus: '' }), undefined);
+  assert.equal(await db.saveReview('2026-08-14', 'weekly', { progress: '', assets: '', biggestProgress: '', biggestWaste: '', stopOrReduce: '', nextFocus: '' }), undefined);
   assert.equal(await db.getDayCaption('2026-08-14'), undefined);
 });
 

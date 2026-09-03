@@ -5,6 +5,7 @@ import {
   type AnalysisJob,
   type AppSettings,
   type DailyAnalysis,
+  type DailyReviewNote,
   type Dimension,
   type Goal,
   type Habit,
@@ -19,6 +20,7 @@ import {
   type ResolvedDimensionState,
   type StateObservation,
   type SystemMemory,
+  type WeeklyReviewNote,
   dimensionLabel,
   formatDate,
   isLocalDate,
@@ -3591,9 +3593,94 @@ async function dailyAnalysisSection(date: string, entries: JournalEntry[], quest
   return section;
 }
 
+type ReviewFieldKey = keyof DailyReviewNote | keyof WeeklyReviewNote;
+const DAILY_REVIEW_FIELDS: Array<[ReviewFieldKey, string]> = [
+  ['progress', '今天推进了什么'],
+  ['takeaway', '今天留下了什么'],
+  ['problem', '最大问题'],
+  ['tomorrowFocus', '明天最重要的一件事'],
+];
+const WEEKLY_REVIEW_FIELDS: Array<[ReviewFieldKey, string]> = [
+  ['progress', '本周进展'],
+  ['assets', '本周形成的资产'],
+  ['biggestProgress', '最大进步'],
+  ['biggestWaste', '最大浪费'],
+  ['stopOrReduce', '停止或减少'],
+  ['nextFocus', '下周最重要的一件事'],
+];
+
+function reviewFieldValue(review: DailyReviewNote | WeeklyReviewNote | undefined, key: ReviewFieldKey): string {
+  return review && key in review ? String(Reflect.get(review, key) ?? '') : '';
+}
+
+function openPersonalReviewEditor(
+  title: string,
+  current: DailyReviewNote | WeeklyReviewNote | undefined,
+  fields: Array<[ReviewFieldKey, string]>,
+  save: (values: Partial<Record<ReviewFieldKey, string>>) => Promise<void>,
+): void {
+  const { dialog, content, actions } = dialogShell(title);
+  dialog.classList.add('full-screen-editor', 'personal-review-editor');
+  addDialogBack(dialog, content);
+  const inputs = new Map<ReviewFieldKey, HTMLTextAreaElement>();
+  const form = node('div', 'personal-review-fields');
+  fields.forEach(([key, label]) => {
+    const input = node('textarea', 'input compact-textarea');
+    input.maxLength = 1_000;
+    input.value = reviewFieldValue(current, key);
+    input.setAttribute('aria-label', label);
+    inputs.set(key, input);
+    form.append(labelledControl(label, input));
+  });
+  const status = node('p', 'save-state');
+  content.append(form, status);
+  const submit = node('button', 'button button-primary', '保存复盘');
+  submit.type = 'button';
+  submit.addEventListener('click', async () => {
+    submit.disabled = true;
+    try {
+      await save(Object.fromEntries([...inputs].map(([key, input]) => [key, input.value])));
+      dialog.close();
+      showToast('复盘已保存。');
+      await render();
+    } catch (error) {
+      submit.disabled = false;
+      status.textContent = errorMessage(error);
+      status.classList.add('is-error');
+    }
+  });
+  actions.append(submit);
+  dialog.showModal();
+  inputs.values().next().value?.focus();
+}
+
+function personalReviewSection(
+  title: string,
+  current: DailyReviewNote | WeeklyReviewNote | undefined,
+  fields: Array<[ReviewFieldKey, string]>,
+  edit: () => void,
+): HTMLElement {
+  const section = node('section', 'personal-review-card');
+  const header = node('header', 'personal-review-header');
+  header.append(node('h2', '', title));
+  const button = node('button', 'section-text-action', current ? '修改' : '填写');
+  button.type = 'button';
+  button.addEventListener('click', edit);
+  header.append(button);
+  const list = node('div', 'personal-review-list');
+  fields.forEach(([key, label]) => {
+    const row = node('div', 'personal-review-row');
+    const value = reviewFieldValue(current, key);
+    row.append(node('strong', '', label), node('p', value ? '' : 'is-empty', value || '—'));
+    list.append(row);
+  });
+  section.append(header, list);
+  return section;
+}
+
 async function dayPage(date: string): Promise<HTMLElement> {
-  const [entries, observations, allQuests, allFeedback, profile, analyses] = await Promise.all([
-    db.listEntries(date), db.resolvedStateAtOrBefore(date), db.listQuests(), db.listQuestFeedback(), db.getProfile(), db.listDailyAnalyses(date),
+  const [entries, observations, allQuests, allFeedback, profile, analyses, caption] = await Promise.all([
+    db.listEntries(date), db.resolvedStateAtOrBefore(date), db.listQuests(), db.listQuestFeedback(), db.getProfile(), db.listDailyAnalyses(date), db.getDayCaption(date),
   ]);
   const activeFeedback = activeFeedbackByQuest(allFeedback);
   const quests = allQuests.filter((quest) => {
@@ -3671,11 +3758,18 @@ async function dayPage(date: string): Promise<HTMLElement> {
   recordFact.type = actionFact.type = 'button';
   overviewFacts.append(recordFact, actionFact);
   overview.append(roomPreview, statusSummary(observations, date), overviewFacts);
+  const dailyReview = personalReviewSection('每日复盘', caption?.dailyReview, DAILY_REVIEW_FIELDS, () => {
+    openPersonalReviewEditor('每日复盘', caption?.dailyReview, DAILY_REVIEW_FIELDS, async (values) => {
+      await db.saveReview(date, 'daily', {
+        progress: values.progress ?? '', takeaway: values.takeaway ?? '', problem: values.problem ?? '', tomorrowFocus: values.tomorrowFocus ?? '',
+      });
+    });
+  });
   const dayTabs = node('nav', 'day-section-tabs');
   dayTabs.setAttribute('aria-label', '日期回顾分段');
   const requestedView = sessionStorage.getItem('qiguang.day-view');
-  const initialView = requestedView === 'records' ? 'records' : requestedView === 'actions' ? 'actions' : 'overview';
-  const sectionTargets: Array<[string, string, HTMLElement]> = [['总览', 'overview', overview], ['记录', 'records', journal], ['行动', 'actions', actionResults]];
+  const initialView = requestedView === 'records' ? 'records' : requestedView === 'actions' ? 'actions' : requestedView === 'review' ? 'review' : 'overview';
+  const sectionTargets: Array<[string, string, HTMLElement]> = [['总览', 'overview', overview], ['记录', 'records', journal], ['行动', 'actions', actionResults], ['复盘', 'review', dailyReview]];
   const selectDayView = (view: string): void => {
     sectionTargets.forEach(([, key, target]) => { target.hidden = key !== view; });
     dayTabs.querySelectorAll<HTMLButtonElement>('.day-section-tab').forEach((item) => {
@@ -3694,7 +3788,7 @@ async function dayPage(date: string): Promise<HTMLElement> {
     button.addEventListener('click', () => { sessionStorage.setItem('qiguang.day-view', view); selectDayView(view); });
     dayTabs.append(button);
   });
-  main.append(dayTabs, overview, journal, actionResults);
+  main.append(dayTabs, overview, journal, actionResults, dailyReview);
   selectDayView(initialView);
 
   if (entries.length || quests.length) {
@@ -3967,8 +4061,8 @@ function evidenceSummary(item: { summary: string; evidenceEventIds: string[]; ev
 
 async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   const period = weekRange(anchor);
-  const [reviews, jobs, events, habits, memories, goals, allQuests, feedbacks, entries] = await Promise.all([
-    db.listReviews('weekly'), db.listAnalysisJobs(period.end), db.listJournalEvents(), db.listHabits(), db.listMemories(), db.listGoals(), db.listQuests(), db.listQuestFeedback(), db.listEntries(),
+  const [reviews, jobs, events, habits, memories, goals, allQuests, feedbacks, entries, caption] = await Promise.all([
+    db.listReviews('weekly'), db.listAnalysisJobs(period.end), db.listJournalEvents(), db.listHabits(), db.listMemories(), db.listGoals(), db.listQuests(), db.listQuestFeedback(), db.listEntries(), db.getDayCaption(period.start),
   ]);
   const feedbackByQuest = activeFeedbackByQuest(feedbacks);
   const periodQuests = allQuests.filter((quest) => {
@@ -3990,7 +4084,6 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   const completedTasks = periodQuests.filter((quest) => quest.status === 'completed' || quest.status === 'partial').length;
   const habitChecks = periodQuests.filter((quest) => quest.sourceType === 'habit' && (quest.status === 'completed' || quest.status === 'partial')).length;
   const summary = node('section', 'review-summary-card');
-  summary.append(node('h2', '', completedTasks || habitChecks || weekEntries.length ? '这周做得不错' : '这一周还在开始'));
   const summaryStats = node('div', 'review-summary-stats');
   summaryStats.append(
     node('span', '', `完成\n${completedTasks} 项任务`),
@@ -3999,6 +4092,14 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   );
   summary.append(summaryStats);
   main.append(summary);
+  main.append(personalReviewSection('我的周复盘', caption?.weeklyReview, WEEKLY_REVIEW_FIELDS, () => {
+    openPersonalReviewEditor('周复盘', caption?.weeklyReview, WEEKLY_REVIEW_FIELDS, async (values) => {
+      await db.saveReview(period.start, 'weekly', {
+        progress: values.progress ?? '', assets: values.assets ?? '', biggestProgress: values.biggestProgress ?? '', biggestWaste: values.biggestWaste ?? '',
+        stopOrReduce: values.stopOrReduce ?? '', nextFocus: values.nextFocus ?? '',
+      });
+    });
+  }));
   if (!review) {
     const intro = node('section', 'surface review-intro');
     intro.append(node('h2', '', '生成本周复盘'));

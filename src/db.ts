@@ -9,6 +9,7 @@ import {
   type BackupBundle,
   type BackupData,
   type DailyAnalysis,
+  type DailyReviewNote,
   type DayCaption,
   type Dimension,
   type Goal,
@@ -29,6 +30,7 @@ import {
   type StateObservation,
   type SystemMemory,
   type XpLedger,
+  type WeeklyReviewNote,
   isLocalDate,
   localDate,
   nowIso,
@@ -719,6 +721,22 @@ function assertText(value: unknown, field: string, max = 12_000, allowEmpty = fa
   if (typeof value !== 'string' || value.length > max || (!allowEmpty && !value.trim())) throw new Error(`${field} 无效。`);
 }
 
+const DAILY_REVIEW_KEYS = ['progress', 'takeaway', 'problem', 'tomorrowFocus'] as const;
+const WEEKLY_REVIEW_KEYS = ['progress', 'assets', 'biggestProgress', 'biggestWaste', 'stopOrReduce', 'nextFocus'] as const;
+
+function normalizedReview<T extends DailyReviewNote | WeeklyReviewNote>(value: T, keys: readonly (keyof T)[], label: string): T | undefined {
+  const normalized = Object.fromEntries(keys.map((key) => [key, String(value[key] ?? '').trim()])) as unknown as T;
+  keys.forEach((key) => assertText(normalized[key], label, 1_000, true));
+  return keys.some((key) => normalized[key]) ? normalized : undefined;
+}
+
+function validateReview(value: unknown, keys: readonly string[], label: string): void {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} 无效。`);
+  const record = value as Record<string, unknown>;
+  if (Object.keys(record).some((key) => !keys.includes(key)) || keys.some((key) => !(key in record))) throw new Error(`${label} 无效。`);
+  keys.forEach((key) => assertText(record[key], label, 1_000, true));
+}
+
 function assertOneOf<T extends string>(value: unknown, allowed: readonly T[], field: string): asserts value is T {
   if (typeof value !== 'string' || !allowed.includes(value as T)) throw new Error(`${field} 无效。`);
 }
@@ -1379,7 +1397,10 @@ export function parseBackup(text: string): BackupBundle {
   dayCaptions.forEach((item) => {
     assertCommonRecord(item, '当日一句话');
     if (!isLocalDate(item.localDate) || item.id !== `day-caption:${item.localDate}`) throw new Error('当日一句话日期无效。');
-    assertText(item.text, '当日一句话', 120);
+    assertText(item.text, '当日一句话', 120, true);
+    if (item.dailyReview !== undefined) validateReview(item.dailyReview, DAILY_REVIEW_KEYS, '每日复盘');
+    if (item.weeklyReview !== undefined) validateReview(item.weeklyReview, WEEKLY_REVIEW_KEYS, '周复盘');
+    if (!item.text && !item.dailyReview && !item.weeklyReview) throw new Error('空的日期内容无效。');
   });
   uniqueIds(dayCaptions, '当日一句话');
   if (new Set(dayCaptions.map((item) => item.localDate)).size !== dayCaptions.length) throw new Error('同一日期存在重复的当日一句话。');
@@ -1923,7 +1944,8 @@ export class QiguangDb {
     const store = transaction.objectStore('dayCaptions');
     const current = await requestResult(store.index('byLocalDate').get(date)) as DayCaption | undefined;
     if (!text) {
-      if (current) store.delete(current.id);
+      if (current && !current.dailyReview && !current.weeklyReview) store.delete(current.id);
+      else if (current) store.put({ ...current, text: '', updatedAt: nowIso(), version: current.version + 1 });
       await transactionDone(transaction);
       return undefined;
     }
@@ -1944,6 +1966,31 @@ export class QiguangDb {
     store.put(caption);
     await transactionDone(transaction);
     return caption;
+  }
+
+  async saveReview(date: string, kind: 'daily', value: DailyReviewNote): Promise<DayCaption | undefined>;
+  async saveReview(date: string, kind: 'weekly', value: WeeklyReviewNote): Promise<DayCaption | undefined>;
+  async saveReview(date: string, kind: 'daily' | 'weekly', value: DailyReviewNote | WeeklyReviewNote): Promise<DayCaption | undefined> {
+    if (!isLocalDate(date)) throw new Error('复盘日期无效。');
+    const review = kind === 'daily'
+      ? normalizedReview(value as DailyReviewNote, DAILY_REVIEW_KEYS, '每日复盘')
+      : normalizedReview(value as WeeklyReviewNote, WEEKLY_REVIEW_KEYS, '周复盘');
+    const key = kind === 'daily' ? 'dailyReview' : 'weeklyReview';
+    const transaction = this.database.transaction('dayCaptions', 'readwrite');
+    const store = transaction.objectStore('dayCaptions');
+    const current = await requestResult(store.index('byLocalDate').get(date)) as DayCaption | undefined;
+    if (!current && !review) { await transactionDone(transaction); return undefined; }
+    const timestamp = nowIso();
+    const caption = {
+      ...(current ?? { id: `day-caption:${date}`, localDate: date, text: '', createdAt: timestamp, version: 0 }),
+      [key]: review,
+      updatedAt: timestamp,
+      version: (current?.version ?? 0) + 1,
+    } as DayCaption;
+    if (!caption.text && !caption.dailyReview && !caption.weeklyReview) store.delete(caption.id);
+    else store.put(caption);
+    await transactionDone(transaction);
+    return review ? caption : undefined;
   }
 
   async getEntry(id: string): Promise<JournalEntry | undefined> {

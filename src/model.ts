@@ -89,9 +89,27 @@ export interface JournalRevision extends ImportableEntity {
   undoneAt?: string;
 }
 
+export interface DailyReviewNote {
+  progress: string;
+  takeaway: string;
+  problem: string;
+  tomorrowFocus: string;
+}
+
+export interface WeeklyReviewNote {
+  progress: string;
+  assets: string;
+  biggestProgress: string;
+  biggestWaste: string;
+  stopOrReduce: string;
+  nextFocus: string;
+}
+
 export interface DayCaption extends ImportableEntity {
   localDate: string;
   text: string;
+  dailyReview?: DailyReviewNote;
+  weeklyReview?: WeeklyReviewNote;
 }
 
 export interface StateObservation extends BaseEntity {

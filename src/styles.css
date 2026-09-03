@@ -5460,6 +5460,7 @@ h3 { font-weight: 560; }
 .badge-name { font-weight: 480; }
 .review-summary-card h2, .review-hero > h2 { font-weight: 560; }
 .page-review { gap: 12px; }
+.page-review { padding-bottom: calc(var(--bottom-nav-height) + 44px + env(safe-area-inset-bottom)); }
 .page-review .review-period-nav { min-height: 46px; }
 .review-summary-card {
   grid-template-columns: 58px minmax(0, 1fr);
@@ -8742,3 +8743,41 @@ select.input { min-height: 44px; }
   gap: 12px;
 }
 .habit-weekday-column { width: 68px; min-height: 0; aspect-ratio: 1; }
+
+/* Daily and weekly reflection keep one quiet sheet instead of a stack of cards. */
+.day-section-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.personal-review-card {
+  margin: 0 var(--page-pad);
+  padding: 18px 20px;
+  border: 1px solid rgb(151 119 72 / 25%);
+  border-radius: 9px;
+  background: rgb(255 250 240 / 48%);
+}
+.page-review .personal-review-card { margin-inline: 0; }
+.personal-review-header {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.personal-review-header h2 { margin: 0; font-size: 1rem; }
+.personal-review-header .section-text-action { min-width: 44px; min-height: 44px; }
+.personal-review-list { display: grid; }
+.personal-review-row {
+  display: grid;
+  gap: 6px;
+  padding: 14px 0;
+  border-top: 1px solid rgb(151 119 72 / 18%);
+}
+.personal-review-row strong { font-size: .76rem; font-weight: 560; }
+.personal-review-row p { margin: 0; font-size: .9rem; line-height: 1.55; white-space: pre-wrap; }
+.personal-review-row p.is-empty { color: var(--muted); }
+.personal-review-fields { display: grid; gap: 18px; }
+.personal-review-fields .field-label { gap: 8px; font-size: .84rem; }
+.personal-review-fields .compact-textarea { min-height: 94px; resize: vertical; line-height: 1.55; }
+.personal-review-editor .dialog-actions { grid-template-columns: minmax(0, 1fr); }
+
+@media (max-width: 360px) {
+  .personal-review-card { padding-inline: 16px; }
+}

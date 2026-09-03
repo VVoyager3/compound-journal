@@ -1361,6 +1361,46 @@ test('AI can draft the day caption while the user keeps final edit control', asy
   }
 });
 
+test('daily and weekly personal reviews stay editable and local', async () => {
+  const { context, page } = await freshPage();
+  try {
+    await finishOnboarding(page);
+    const date = await page.evaluate(() => {
+      const value = new Date();
+      return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    });
+    await page.goto(`${baseUrl}/#/day/${date}`);
+    await page.getByRole('button', { name: '复盘', exact: true }).click();
+    await page.locator('.personal-review-card').getByRole('button', { name: '填写' }).click();
+    let dialog = page.getByRole('dialog', { name: '每日复盘' });
+    await dialog.getByRole('textbox', { name: '今天推进了什么' }).fill('完成基线实验');
+    await dialog.getByRole('textbox', { name: '今天留下了什么' }).fill('新增检查清单');
+    await dialog.getByRole('textbox', { name: '最大问题' }).fill('信息流浏览过多');
+    await dialog.getByRole('textbox', { name: '明天最重要的一件事' }).fill('完成对照实验');
+    await dialog.getByRole('button', { name: '保存复盘' }).click();
+    await assert.doesNotReject(() => page.locator('.personal-review-card').getByText('完成对照实验', { exact: true }).waitFor());
+
+    await page.goto(`${baseUrl}/#/review/${date}`);
+    await page.locator('.personal-review-card').getByRole('button', { name: '填写' }).click();
+    dialog = page.getByRole('dialog', { name: '周复盘' });
+    await dialog.getByRole('textbox', { name: '本周进展' }).fill('实验设计向前推进');
+    await dialog.getByRole('textbox', { name: '本周形成的资产' }).fill('形成实验检查清单');
+    await dialog.getByRole('textbox', { name: '最大进步' }).fill('识别关键风险');
+    await dialog.getByRole('textbox', { name: '最大浪费' }).fill('无目的浏览');
+    await dialog.getByRole('textbox', { name: '停止或减少' }).fill('减少信息流');
+    await dialog.getByRole('textbox', { name: '下周最重要的一件事' }).fill('完成基线实验');
+    await dialog.getByRole('button', { name: '保存复盘' }).click();
+    await page.reload();
+    const lastReviewValue = page.locator('.personal-review-card').getByText('完成基线实验', { exact: true });
+    await assert.doesNotReject(() => page.locator('.personal-review-card').getByText('形成实验检查清单', { exact: true }).waitFor());
+    await lastReviewValue.scrollIntoViewIfNeeded();
+    const [lastBox, navBox] = await Promise.all([lastReviewValue.boundingBox(), page.locator('.bottom-nav').boundingBox()]);
+    assert.ok(lastBox && navBox && lastBox.y + lastBox.height <= navBox.y, 'the final review field must scroll above the fixed navigation');
+  } finally {
+    await context.close();
+  }
+});
+
 test('record category buttons create multiple entries and remain editable', async () => {
   const { context, page } = await freshPage();
   try {
