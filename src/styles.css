@@ -5949,7 +5949,10 @@ h3 { font-weight: 560; }
 
 .page-record .journal-editor { gap: 18px; padding-bottom: calc(72px + var(--bottom-nav-height) + env(safe-area-inset-bottom)); }
 .page-record .record-prompts { border-top: 1px solid rgb(159 120 54 / 38%); border-bottom: 1px solid rgb(159 120 54 / 38%); }
-.page-record .record-prompt-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.page-record .record-prompt-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.page-record .record-summary-field { display: grid; gap: 8px; }
+.page-record .record-summary-field > strong { font-size: .94rem; font-weight: 600; }
+.page-record .record-summary-input { min-height: 50px; font-size: .92rem; }
 .page-record .record-type-option {
   min-height: 50px;
   padding: 8px 4px;
@@ -5990,6 +5993,16 @@ h3 { font-weight: 560; }
   line-height: 1.75;
 }
 .page-record .character-count { color: var(--muted); font-size: .72rem; }
+.page-day .day-record-summary {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 16px;
+  border: 1px solid rgb(159 120 54 / 28%);
+  background: rgb(255 250 240 / 48%);
+}
+.page-day .day-record-summary strong { color: var(--muted); font-size: .78rem; font-weight: 560; }
+.page-day .day-record-summary p { font-size: 1rem; font-weight: 560; line-height: 1.55; }
 .page-record .save-state { min-height: 20px; margin: -8px 2px 0; color: var(--muted); font-size: .75rem; text-align: right; }
 .record-day-summary {
   display: flex;
@@ -6231,9 +6244,7 @@ h3 { font-weight: 560; }
 .page-growth .growth-badge time { align-self: start; }
 
 @media (max-width: 360px) {
-  .page-record .record-prompt-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .page-record .record-type-option:nth-child(2) { border-right: 0; }
-  .page-record .record-type-option:nth-child(-n + 2) { border-bottom: 1px solid rgb(159 120 54 / 30%); }
+  .page-record .record-prompt-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .habit-comparison-heading > span { display: none; }
   .habit-comparison-row { min-height: 102px; }
   .habit-weekday-chart { min-height: 160px; gap: 5px; }

@@ -220,8 +220,8 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     assert.deepEqual(await page.locator('.record-submit-bar .button').allTextContents(), ['保存记录']);
     assert.equal(await page.getByText('模板', { exact: true }).count(), 0, 'recording should not expose template selection');
     assert.equal(await page.locator('.record-kind-hint').count(), 0, 'record types must not repeat their prompt below the selector');
-    assert.equal(await page.getByRole('textbox', { name: '今日一句' }).count(), 0, 'today sentence must reuse the single record editor');
-    assert.deepEqual(await page.locator('.record-type-option').allTextContents(), ['今日一句', '记住的事', '成功小记', '有趣的事']);
+    assert.equal(await page.getByRole('textbox', { name: '今日一句' }).count(), 1, 'today sentence must stay above the record categories as the day title');
+    assert.deepEqual(await page.locator('.record-type-option').allTextContents(), ['难忘的事', '成功小记', '每日复盘']);
     const dateControl = page.locator('.record-date-control');
     await assert.doesNotReject(() => dateControl.waitFor());
     assert.ok((await dateControl.boundingBox())?.height >= 44, 'the direct date control must remain touch-safe');
@@ -1410,7 +1410,7 @@ test('record category buttons create multiple entries and remain editable', asyn
     await finishOnboarding(page);
     const date = await page.locator('.record-date-control input[type="date"]').inputValue();
     assert.equal(await page.getByRole('checkbox', { name: '记为成功记录' }).count(), 0);
-    await assert.doesNotReject(() => page.getByRole('button', { name: '记住的事', pressed: true }).waitFor());
+    await assert.doesNotReject(() => page.getByRole('button', { name: '难忘的事', pressed: true }).waitFor());
 
     const addEntry = async (kind, body) => {
       await page.getByRole('button', { name: kind }).click();
@@ -1418,13 +1418,15 @@ test('record category buttons create multiple entries and remain editable', asyn
       await page.getByRole('button', { name: '保存记录' }).click();
       await page.waitForURL(new RegExp(`#\\/day\\/${date}$`));
     };
-    await addEntry('记住的事', '先保存一条普通记录');
+    await page.getByRole('textbox', { name: '今日一句' }).fill('今天完成了记录结构调整');
+    await addEntry('难忘的事', '先保存一条普通记录');
+    await assert.doesNotReject(() => page.getByText('今天完成了记录结构调整', { exact: true }).waitFor());
     await page.goto(`${baseUrl}/#/record/${date}`);
     await addEntry('成功小记', '我把失败的构建修复了');
 
     const quotedPrompt = '普通日记偶然引用：今天做成或推进了什么？哪怕很小：';
     await page.goto(`${baseUrl}/#/record/${date}`);
-    await addEntry('记住的事', quotedPrompt);
+    await addEntry('难忘的事', quotedPrompt);
 
     const entries = page.locator('.day-record-row');
     await assert.doesNotReject(() => entries.filter({ hasText: '先保存一条普通记录' }).waitFor());
@@ -1438,7 +1440,7 @@ test('record category buttons create multiple entries and remain editable', asyn
     await successEntry.click();
     const edit = page.getByRole('dialog', { name: '记录详情' });
     assert.equal(await edit.getByRole('checkbox', { name: '记为成功记录' }).count(), 0);
-    await edit.getByRole('button', { name: '记住的事' }).click();
+    await edit.getByRole('button', { name: '难忘的事' }).click();
     await edit.getByRole('button', { name: '保存修改' }).click();
     await assert.doesNotReject(() => page.getByText('修改已保存，可撤销一次。', { exact: true }).waitFor());
     const formerSuccess = page.locator('.success-evidence').getByText('我把失败的构建修复了', { exact: true });

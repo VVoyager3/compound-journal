@@ -102,7 +102,7 @@ async function recordDay(page, day, success = false) {
   const body = `第 ${String(day).padStart(2, '0')} 天：留下当天真实进展。`;
   await page.goto(`${baseUrl}/#/record`);
   if (success) await page.getByRole('button', { name: '成功小记' }).click();
-  else await page.getByRole('button', { name: '记住的事' }).click();
+  else await page.getByRole('button', { name: '难忘的事' }).click();
   assert.equal(await page.getByRole('checkbox', { name: '记为成功记录' }).count(), 0);
   await page.getByRole('textbox', { name: '发生了什么' }).fill(body);
   await page.getByRole('button', { name: '保存记录' }).click();

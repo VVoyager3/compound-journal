@@ -2409,41 +2409,44 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   const savedCaption = await db.getDayCaption(targetDate);
   let draftBody = initialDraft.body;
   let draftSummary = initialDraft.summary || savedCaption?.text || '';
-  type RecordMode = 'summary' | NonNullable<JournalEntry['kind']>;
-  let selectedMode: RecordMode = draftBody ? initialDraft.kind : draftSummary ? 'summary' : 'journal';
+  let selectedKind: NonNullable<JournalEntry['kind']> = initialDraft.kind;
   textarea.placeholder = '写点什么…';
-  textarea.value = selectedMode === 'summary' ? draftSummary : draftBody;
+  textarea.value = draftBody;
   const counter = node('span', 'character-count', `${textarea.value.length}/12000`);
 
-  let selectedKind: NonNullable<JournalEntry['kind']> = initialDraft.kind;
-  const bodyTitle = node('strong', '', selectedMode === 'summary' ? '今日一句' : selectedKind === 'success' ? '成功小记' : selectedKind === 'fun' ? '有趣的事' : '记住的事');
+  const summaryLabel = node('label', 'record-summary-field');
+  summaryLabel.append(node('strong', '', '今日一句'));
+  const summaryInput = node('input', 'input record-summary-input');
+  summaryInput.maxLength = 120;
+  summaryInput.placeholder = '用一句话概括今天';
+  summaryInput.value = draftSummary;
+  summaryInput.setAttribute('aria-label', '今日一句');
+  summaryLabel.append(summaryInput);
+
+  const bodyTitle = node('strong', '', selectedKind === 'success' ? '成功小记' : selectedKind === 'fun' ? '每日复盘' : '难忘的事');
 
   const prompts = node('section', 'record-prompts');
   prompts.setAttribute('aria-label', '快速开头');
   const promptActions = node('div', 'record-prompt-actions');
   const kindButtons: HTMLButtonElement[] = [];
-  const selectMode = (mode: RecordMode, label: string, prompt: string): void => {
-    if (selectedMode === 'summary') draftSummary = textarea.value;
-    else draftBody = textarea.value;
-    selectedMode = mode;
-    if (mode !== 'summary') selectedKind = mode;
+  const selectMode = (mode: NonNullable<JournalEntry['kind']>, label: string, prompt: string): void => {
+    draftBody = textarea.value;
+    selectedKind = mode;
     bodyTitle.textContent = label;
     textarea.placeholder = prompt;
-    textarea.maxLength = mode === 'summary' ? 120 : 12_000;
-    textarea.value = mode === 'summary' ? draftSummary : draftBody;
+    textarea.value = draftBody;
     kindButtons.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.mode === mode)));
     updateDraftState();
   };
   for (const [label, prompt, mode] of [
-    ['今日一句', '写点什么…', 'summary'],
-    ['记住的事', '写点什么…', 'journal'],
+    ['难忘的事', '写下今天想记住的事…', 'journal'],
     ['成功小记', '写点什么…', 'success'],
-    ['有趣的事', '写点什么…', 'fun'],
+    ['每日复盘', '写下今天的复盘…', 'fun'],
   ] as const) {
     const button = node('button', 'record-type-option', label);
     button.type = 'button';
     button.dataset.mode = mode;
-    button.setAttribute('aria-pressed', String(mode === selectedMode));
+    button.setAttribute('aria-pressed', String(mode === selectedKind));
     button.addEventListener('click', () => {
       selectMode(mode, label, prompt);
       textarea.focus();
@@ -2471,21 +2474,22 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   viewToday.type = 'button';
   viewToday.addEventListener('click', () => { sessionStorage.setItem('qiguang.day-view', 'records'); go({ name: 'day', date: activeDraftDate }); });
   todaySummary.append(todayCount, viewToday);
-  form.append(prompts, bodySection, saveState, todaySummary, submitBar);
+  form.append(summaryLabel, prompts, bodySection, saveState, todaySummary, submitBar);
   main.append(form);
 
   let activeDraftDate = targetDate;
   const updateDraftState = (): void => {
-    if (selectedMode === 'summary') draftSummary = textarea.value;
-    else draftBody = textarea.value;
-    counter.textContent = `${textarea.value.length}/${selectedMode === 'summary' ? 120 : 12000}`;
+    draftSummary = summaryInput.value;
+    draftBody = textarea.value;
+    counter.textContent = `${textarea.value.length}/12000`;
     saveDraft(activeDraftDate, draftBody, selectedKind, draftSummary);
-    submit.disabled = !textarea.value.trim();
-    saveState.textContent = draftNeedsUnloadWarning ? '应用未能保存草稿，请先不要关闭页面' : textarea.value ? '草稿已保存' : '';
+    submit.disabled = !textarea.value.trim() && !summaryInput.value.trim();
+    saveState.textContent = draftNeedsUnloadWarning ? '应用未能保存草稿，请先不要关闭页面' : textarea.value || summaryInput.value ? '草稿已保存' : '';
     saveState.hidden = !saveState.textContent;
     saveState.classList.toggle('is-error', draftNeedsUnloadWarning);
   };
   textarea.addEventListener('input', updateDraftState);
+  summaryInput.addEventListener('input', updateDraftState);
   dateInput.addEventListener('change', async () => {
     if (!isLocalDate(dateInput.value)) {
       saveState.textContent = '请选择有效日期；当前草稿已保留。';
@@ -2500,14 +2504,12 @@ async function recordPage(route: Route): Promise<HTMLElement> {
     const caption = await db.getDayCaption(activeDraftDate);
     draftBody = draft.body;
     draftSummary = draft.summary || caption?.text || '';
-    const nextMode: RecordMode = draftBody ? draft.kind : draftSummary ? 'summary' : 'journal';
-    selectedMode = nextMode;
     selectedKind = draft.kind;
-    bodyTitle.textContent = nextMode === 'summary' ? '今日一句' : nextMode === 'success' ? '成功小记' : nextMode === 'fun' ? '有趣的事' : '记住的事';
+    bodyTitle.textContent = selectedKind === 'success' ? '成功小记' : selectedKind === 'fun' ? '每日复盘' : '难忘的事';
     textarea.placeholder = '写点什么…';
-    textarea.maxLength = nextMode === 'summary' ? 120 : 12_000;
-    textarea.value = nextMode === 'summary' ? draftSummary : draftBody;
-    kindButtons.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.mode === nextMode)));
+    summaryInput.value = draftSummary;
+    textarea.value = draftBody;
+    kindButtons.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.mode === selectedKind)));
     updateDraftState();
   });
   form.addEventListener('submit', async (event) => {
@@ -2516,8 +2518,8 @@ async function recordPage(route: Route): Promise<HTMLElement> {
     submit.textContent = '正在保存…';
     saveState.hidden = true;
     try {
-      if (selectedMode === 'summary') await db.saveDayCaption(dateInput.value, textarea.value.trim());
-      else await db.addEntry(textarea.value, dateInput.value, 'text', selectedKind);
+      await db.saveDayCaption(dateInput.value, summaryInput.value.trim());
+      if (textarea.value.trim()) await db.addEntry(textarea.value, dateInput.value, 'text', selectedKind);
       clearDraft(dateInput.value);
       showToast('记录已保存。');
       sessionStorage.setItem('qiguang.day-view', 'records');
@@ -3235,7 +3237,7 @@ async function openEditDialog(entry: JournalEntry): Promise<void> {
   let kind: NonNullable<JournalEntry['kind']> = entry.kind ?? 'journal';
   const typeControl = node('div', 'record-prompt-actions');
   typeControl.setAttribute('aria-label', '记录类型');
-  for (const [value, label] of [['journal', '记住的事'], ['success', '成功小记'], ['fun', '有趣的事']] as const) {
+  for (const [value, label] of [['journal', '难忘的事'], ['success', '成功小记'], ['fun', '每日复盘']] as const) {
     const button = node('button', 'button button-quiet', label);
     button.type = 'button';
     button.setAttribute('aria-pressed', String(kind === value));
@@ -3703,7 +3705,12 @@ async function dayPage(date: string): Promise<HTMLElement> {
 
   const journal = node('section', 'journal-sheet');
   journal.append(node('h2', '', '今天留下的'));
-  if (!entries.length) journal.append(node('p', 'journal-empty', '暂无记录'));
+  if (caption?.text) {
+    const summary = node('article', 'day-record-summary');
+    summary.append(node('strong', '', '今日一句'), node('p', '', caption.text));
+    journal.append(summary);
+  }
+  if (!entries.length && !caption?.text) journal.append(node('p', 'journal-empty', '暂无记录'));
   for (const entry of entries) {
     const item = node('button', `day-record-row is-${entry.kind ?? 'journal'}`);
     item.type = 'button';
@@ -3712,7 +3719,7 @@ async function dayPage(date: string): Promise<HTMLElement> {
     const meta = node('div', 'day-record-meta');
     meta.append(
       node('time', '', new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })),
-      node('span', 'day-record-kind', entry.kind === 'success' ? '成功小记' : entry.kind === 'fun' ? '有趣的事' : '记住的事'),
+      node('span', 'day-record-kind', entry.kind === 'success' ? '成功小记' : entry.kind === 'fun' ? '每日复盘' : '难忘的事'),
     );
     copy.append(meta, node('p', 'day-record-body', entry.body));
     const recordIcon = node('span', 'day-record-icon');
