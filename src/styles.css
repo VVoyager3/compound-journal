@@ -8754,6 +8754,39 @@ select.input { min-height: 44px; }
   background: rgb(255 250 240 / 48%);
 }
 .page-review .personal-review-card { margin-inline: 0; }
+.page-day .personal-review-card { margin-inline: 0; }
+
+/* Unified audit fixes: keep shared navigation and secondary-page chrome stable. */
+.bottom-nav { background: #faf5e7; }
+
+.task-fab {
+  position: static;
+  margin: 16px 0 4px auto;
+}
+
+.full-screen-editor .dialog-content > h2:first-of-type,
+.goal-detail-dialog .dialog-content > h2:first-of-type,
+.habit-detail-dialog .dialog-content > h2:first-of-type,
+.is-ai-settings .dialog-content > h2:first-of-type {
+  min-height: 40px;
+  margin: 0;
+  padding: 0 48px;
+  line-height: 40px;
+  text-align: center;
+}
+
+.is-ai-settings .ai-availability {
+  top: max(18px, env(safe-area-inset-top));
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.goal-decomposition-assistant > .button {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
 .personal-review-header {
   display: flex;
   min-height: 44px;
