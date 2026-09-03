@@ -409,12 +409,12 @@ function go(route: Route): void {
 
 function showToast(
   message: string,
-  tone: 'normal' | 'error' = 'normal',
+  tone: 'normal' | 'error' | 'completion' = 'normal',
   action?: { label: string; run: () => void },
 ): void {
   document.querySelector('.toast-layer, .toast')?.remove();
   window.clearTimeout(toastTimer);
-  const toast = node('div', `toast${tone === 'error' ? ' is-error' : ''}`);
+  const toast = node('div', `toast${tone === 'error' ? ' is-error' : tone === 'completion' ? ' is-completion' : ''}`);
   toast.append(node('span', 'toast-copy', message));
   const removeToast = () => (toast.closest('.toast-layer') ?? toast).remove();
   if (action) {
@@ -430,13 +430,23 @@ function showToast(
     toast.append(button);
   }
   toast.setAttribute('role', tone === 'error' ? 'alert' : 'status');
-  if (action) {
+  if (action && tone !== 'completion') {
     const layer = node('div', 'toast-layer');
     layer.addEventListener('click', (event) => { if (event.target === layer) removeToast(); });
     layer.append(toast);
     document.body.append(layer);
   } else document.body.append(toast);
-  toastTimer = window.setTimeout(removeToast, action ? 8_000 : 3_600);
+  toastTimer = window.setTimeout(removeToast, action ? 8_000 : tone === 'completion' ? 2_800 : 3_600);
+}
+
+function showCompletionToast(message: string, action?: { label: string; run: () => void }): void {
+  const experience = message.match(/([\p{Script=Han}/]+)成长 ([+-]\d+)/u);
+  const badge = message.match(/已解锁“([^”]+)”徽章/u);
+  const title = message.includes('目标已完成') ? '目标已完成'
+    : message.includes('子任务已完成') || message.includes('最后一个子任务') ? '子任务已完成'
+      : '任务已完成';
+  const detail = experience ? `${experience[1]} ${experience[2]} 成长值` : badge ? `新徽章 · ${badge[1]}` : '';
+  showToast(`${title}${detail ? `\n${detail}` : ''}`, 'completion', action);
 }
 
 function errorMessage(error: unknown): string {
@@ -1312,20 +1322,18 @@ async function growthBadgeIds(): Promise<Set<string>> {
   return new Set((await loadGrowthBadges()).map((badge) => badge.id));
 }
 
-async function announceNewGrowthBadge(before: Set<string>, fallback: string): Promise<void> {
+async function announceNewGrowthBadge(before: Set<string>, fallback: string, completion = false): Promise<void> {
   const badges = await loadGrowthBadges();
   const seen = seenGrowthBadgeIds();
   const unlocked = badges.filter((badge) => !before.has(badge.id) && !seen.has(badge.id));
-  if (!unlocked.length) { showToast(fallback); return; }
+  if (!unlocked.length) { completion ? showCompletionToast(fallback) : showToast(fallback); return; }
   unlocked.forEach((badge) => seen.add(badge.id));
   saveSeenGrowthBadgeIds(seen);
   const badge = unlocked[0]!;
   sessionStorage.setItem('qiguang.character-celebration', badge.id);
-  showToast(
-    `已解锁“${badge.name}”徽章。${unlocked.length > 1 ? `另有 ${unlocked.length - 1} 枚。` : ''}${fallback}`,
-    'normal',
-    { label: '查看', run: () => go({ name: 'growth' }) },
-  );
+  const action = { label: '查看', run: () => go({ name: 'growth' }) };
+  if (completion) showCompletionToast(`${fallback} 已解锁“${badge.name}”徽章。`, action);
+  else showToast(`已解锁“${badge.name}”徽章。${unlocked.length > 1 ? `另有 ${unlocked.length - 1} 枚。` : ''}${fallback}`, 'normal', action);
 }
 
 type QuestProgress = Awaited<ReturnType<QiguangDb['dimensionProgress']>>;
@@ -1362,7 +1370,7 @@ async function completeQuestFromRow(quest: Quest, item: HTMLElement): Promise<vo
     focusAfterRenderSelector = `[data-quest-id="${CSS.escape(quest.id)}"]`;
     const message = await feedbackSettlementMessage(quest, 'completed', '', progression, '已完成；可在任务列表中撤销。', before);
     await render();
-    await announceNewGrowthBadge(achievementsBefore, message);
+    await announceNewGrowthBadge(achievementsBefore, message, true);
   } catch (error) {
     item.querySelectorAll<HTMLButtonElement>('button').forEach((button) => { button.disabled = false; });
     showToast(errorMessage(error), 'error');
@@ -1796,7 +1804,7 @@ async function openQuestFeedbackDialog(quest: Quest, initialResult?: FeedbackRes
       focusAfterRenderSelector = questFeedbackFocusSelector(quest);
       const message = await feedbackSettlementMessage(quest, result.value as FeedbackResult, actual.value, progression, '反馈已保存；可以在任务卡上撤销。', before);
       await render();
-      await announceNewGrowthBadge(achievementsBefore, message);
+      await announceNewGrowthBadge(achievementsBefore, message, result.value === 'completed');
       if (pathDecisionReason) void openGoalPathDecision(quest.sourceId!, pathDecisionReason);
     } catch (error) {
       if (committed) {
@@ -4507,7 +4515,7 @@ async function openGoalSettingsDialog(goal: Goal): Promise<void> {
       });
       dialog.close();
       await render();
-      await announceNewGrowthBadge(achievementsBefore, '目标已更新。');
+      await announceNewGrowthBadge(achievementsBefore, nextStatus === 'completed' ? '目标已完成。' : '目标已更新。', nextStatus === 'completed');
     } catch (error) {
       save.disabled = false;
       status.textContent = errorMessage(error);
@@ -4931,7 +4939,7 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
         await db.saveGoal(goal.id, { status: 'completed' });
         dialog.close();
         await render();
-        await announceNewGrowthBadge(achievementsBefore, '目标已完成。');
+        await announceNewGrowthBadge(achievementsBefore, '目标已完成。', true);
       } catch (error) {
         completeGoal.disabled = false;
         showToast(errorMessage(error), 'error');
@@ -7002,7 +7010,7 @@ async function refreshFromWidgetAction(): Promise<void> {
     previousRouteKey = routeKey(currentRoute);
     await render();
     if (notice.message) {
-      if (notice.achievementsBefore) await announceNewGrowthBadge(notice.achievementsBefore, notice.message);
+      if (notice.achievementsBefore) await announceNewGrowthBadge(notice.achievementsBefore, notice.message, true);
       else showToast(notice.message);
     }
   } catch (error) {
@@ -7023,7 +7031,7 @@ async function start(): Promise<void> {
     previousRouteKey = routeKey(currentRoute);
     await render();
     if (widgetNotice?.message) {
-      if (widgetNotice.achievementsBefore) await announceNewGrowthBadge(widgetNotice.achievementsBefore, widgetNotice.message);
+      if (widgetNotice.achievementsBefore) await announceNewGrowthBadge(widgetNotice.achievementsBefore, widgetNotice.message, true);
       else showToast(widgetNotice.message);
     }
     if (!settings.onboardingSeen) showOnboarding();

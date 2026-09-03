@@ -701,6 +701,9 @@ test('the bottom quick-add keeps task creation in context', async () => {
     await page.getByRole('heading', { name: '直接添加' }).waitFor();
     assert.deepEqual(await page.locator('.task-today-list h3').allTextContents(), ['直接添加', '已有任务']);
     await page.getByRole('button', { name: '完成：直接添加' }).click();
+    const completionToast = page.locator('.toast.is-completion');
+    await completionToast.waitFor({ state: 'visible' });
+    assert.match(await completionToast.innerText(), /^任务已完成\n工作\/学习 \+4 成长值$/);
     const completedRow = page.locator('.task-list-item.is-completed').filter({ hasText: '直接添加' });
     assert.equal(await completedRow.locator('.task-check').textContent(), '✓');
     assert.equal(await completedRow.getByRole('heading', { name: '直接添加' }).evaluate((element) => getComputedStyle(element).textDecorationLine), 'line-through');

@@ -2358,6 +2358,28 @@ input[type="range"] {
   background: var(--danger);
 }
 
+.toast.is-completion {
+  right: 50%;
+  bottom: calc(var(--bottom-nav-height) + 34px + env(safe-area-inset-bottom));
+  width: fit-content;
+  min-width: 164px;
+  max-width: calc(100% - 40px);
+  padding: 13px 18px;
+  transform: translateX(50%);
+  justify-content: center;
+  border: 1px solid rgb(24 57 43 / 32%);
+  border-radius: 10px;
+  background: #f4edcf;
+  box-shadow: 0 8px 24px rgb(57 43 25 / 14%);
+  font-weight: 560;
+  text-align: center;
+}
+
+.toast.is-completion .toast-copy {
+  flex: 0 1 auto;
+  white-space: pre-line;
+}
+
 .semantic-icon {
   display: block;
   flex: 0 0 auto;
@@ -4227,6 +4249,10 @@ noscript {
     animation: toast-in 160ms ease-out;
   }
 
+  html:not(.reduce-motion) .toast.is-completion {
+    animation: completion-toast 2.8s ease both;
+  }
+
   .room-character.is-celebrating {
     animation: character-cheer 560ms steps(1, end);
   }
@@ -4310,6 +4336,12 @@ noscript {
 
   @keyframes toast-in {
     from { opacity: 0; transform: translateY(8px); }
+  }
+
+  @keyframes completion-toast {
+    0% { opacity: 0; transform: translate(50%, 14px); }
+    12%, 78% { opacity: 1; transform: translate(50%, 0); }
+    100% { opacity: 0; transform: translate(50%, -12px); }
   }
 
   @keyframes character-cheer {
