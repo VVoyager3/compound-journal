@@ -59,7 +59,10 @@ async function offlineShellPage() {
 }
 
 async function finishOnboarding(page, companion = '鱼鱼') {
-  await page.goto(`${baseUrl}/#/today`);
+  await page.goto(`${baseUrl}/#/today`).catch(async (error) => {
+    if (!String(error).includes('ERR_ABORTED')) throw error;
+    await page.goto(`${baseUrl}/#/today`);
+  });
   const dialog = page.getByRole('dialog', { name: '选一个陪伴角色' });
   await dialog.getByRole('button', { name: `选择${companion}` }).click();
   await dialog.getByRole('button', { name: '写下第一件事' }).click();
@@ -212,16 +215,18 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     ], 'only the chosen character should use the selected state');
     await dialog.getByRole('button', { name: '写下第一件事' }).click();
     await page.waitForURL(/#\/record$/);
+    await page.locator('.record-submit-bar .button').waitFor();
     assert.equal(await page.locator('.bottom-nav').count(), 1, 'recording should retain the primary page navigation');
     assert.deepEqual(await page.locator('.record-submit-bar .button').allTextContents(), ['保存记录']);
     assert.equal(await page.getByText('模板', { exact: true }).count(), 0, 'recording should not expose template selection');
     assert.equal(await page.locator('.record-kind-hint').count(), 0, 'record types must not repeat their prompt below the selector');
-    assert.equal(await page.getByRole('textbox', { name: '今日一句' }).getAttribute('placeholder'), null, 'only the record body keeps a writing prompt');
+    assert.equal(await page.getByRole('textbox', { name: '今日一句' }).count(), 0, 'today sentence must reuse the single record editor');
+    assert.deepEqual(await page.locator('.record-type-option').allTextContents(), ['今日一句', '记住的事', '成功小记', '有趣的事']);
     const dateControl = page.locator('.record-date-control');
     await assert.doesNotReject(() => dateControl.waitFor());
     assert.ok((await dateControl.boundingBox())?.height >= 44, 'the direct date control must remain touch-safe');
     const input = page.getByRole('textbox', { name: '发生了什么' });
-    assert.equal(await input.getAttribute('placeholder'), '写下你想留住的细节');
+    assert.equal(await input.getAttribute('placeholder'), '写点什么…');
     const editorLayout = await input.evaluate((element) => ({ height: element.getBoundingClientRect().height, overflowY: getComputedStyle(element).overflowY }));
     assert.ok(editorLayout.height <= 280 && editorLayout.overflowY === 'auto', 'the record body should scroll inside a shorter editor');
     const recordDate = await dateControl.locator('input[type="date"]').inputValue();
@@ -342,7 +347,7 @@ test('all core pages survive 200 percent text at 320px with touch-safe actions',
       const box = button.getBoundingClientRect();
       return { width: box.width, height: box.height };
     }));
-    assert(promptSizes.length === 3 && promptSizes.every((box) => box.width >= 44 && box.height >= 44), 'record types must remain touch-safe');
+    assert(promptSizes.length === 4 && promptSizes.every((box) => box.width >= 44 && box.height >= 44), 'record quick starts must remain touch-safe');
     assert.equal(await page.locator('.record-number-button, .record-attachment-button').count(), 0, 'recording keeps only the writing controls in use');
     await page.goto(`${baseUrl}/#/calendar`);
     await page.getByRole('button', { name: '查找记录' }).click();
@@ -408,7 +413,7 @@ test('expanded settings avoid permanent explanatory paragraphs', async () => {
     let dialog = page.getByRole('dialog', { name: '状态自评' });
     assert.equal(await dialog.getByText('不知道怎么打分时，用问卷判断过去 7 天的身体、心理、关系、工作和玩乐状态。', { exact: true }).count(), 0);
     await dialog.getByRole('button', { name: '返回' }).click();
-    await page.getByText('AI 整理', { exact: true }).click();
+    await page.getByRole('button', { name: /AI 整理/ }).click();
     dialog = page.getByRole('dialog', { name: 'AI 整理' });
     await dialog.getByText('使用安装包提供的服务', { exact: true }).click();
     await dialog.getByText('调整发送范围', { exact: true }).click();
@@ -1136,7 +1141,7 @@ test('success diary prompts stay optional and AI goal decomposition requires con
     const today = await page.locator('.record-date-control input[type="date"]').inputValue();
     await page.getByRole('button', { name: '成功小记' }).click();
     assert.equal(await input.inputValue(), '', 'a success prompt must not become journal body');
-    assert.match(await input.getAttribute('placeholder') ?? '', /今天做成、推进、坚持或照顾好了什么/);
+    assert.equal(await input.getAttribute('placeholder'), '写点什么…', 'quick starts must not add descriptive prompt copy');
     assert.equal(await page.getByRole('checkbox', { name: '记为成功记录' }).count(), 0);
     await assert.doesNotReject(() => page.getByRole('button', { name: '成功小记', pressed: true }).waitFor());
     await input.fill('完成并核对了一次本地回归');
@@ -1273,7 +1278,6 @@ test('calendar opens an in-place day snapshot before the full review', async () 
   try {
     await finishOnboarding(page);
     const date = await page.locator('.record-date-control input[type="date"]').inputValue();
-    await page.getByRole('textbox', { name: '今日一句' }).fill('今天留下了一条可以回看的证据。');
     await page.getByRole('textbox', { name: '发生了什么' }).fill('日历快照里的真实记录');
     await page.getByRole('button', { name: '保存记录' }).click();
     await assert.doesNotReject(() => page.waitForURL(new RegExp(`#\\/day\\/${date}$`)));
@@ -1298,7 +1302,7 @@ test('calendar opens an in-place day snapshot before the full review', async () 
   }
 });
 
-test('five-year diary history links the same date across years and restores a page-switch draft', async () => {
+test('dated records save across years and restore a page-switch draft', async () => {
   const { context, page } = await freshPage();
   try {
     await finishOnboarding(page);
@@ -1306,13 +1310,11 @@ test('five-year diary history links the same date across years and restores a pa
     const previous = `${Number(today.slice(0, 4)) - 1}${today.slice(4)}`;
 
     await page.goto(`${baseUrl}/#/record/${previous}`);
-    await page.getByRole('textbox', { name: '今日一句' }).fill('去年今天开始认真记录。');
     await page.getByRole('textbox', { name: '发生了什么' }).fill('给未来留下一页。');
     await page.getByRole('button', { name: '保存记录' }).click();
     await page.waitForURL(new RegExp(`#\\/day\\/${previous}$`));
 
     await page.goto(`${baseUrl}/#/record/${today}`);
-    await page.getByRole('textbox', { name: '今日一句' }).fill('今年今天仍在继续。');
     await page.getByRole('textbox', { name: '发生了什么' }).fill('完成了记录页的整理。');
     await page.getByRole('link', { name: '任务', exact: true }).click();
     await page.getByRole('link', { name: '记录', exact: true }).click();
@@ -1322,12 +1324,8 @@ test('five-year diary history links the same date across years and restores a pa
     await page.waitForURL(new RegExp(`#\\/day\\/${today}$`));
 
     await assert.doesNotReject(() => page.locator('.day-record-row').getByText('完成了记录页的整理。', { exact: true }).waitFor());
-    await page.goto(`${baseUrl}/#/record/${today}`);
-    await page.getByRole('button', { name: '历年今天' }).click();
-    const history = page.getByRole('dialog', { name: new RegExp(`${Number(today.slice(5, 7))} 月 ${Number(today.slice(8))} 日`) });
-    await assert.doesNotReject(() => history.getByText('去年今天开始认真记录。', { exact: true }).waitFor());
-    await history.getByRole('button', { name: new RegExp(`^${previous.slice(0, 4)} 年`) }).click();
-    await page.waitForURL(new RegExp(`#\\/day\\/${previous}$`));
+    await page.goto(`${baseUrl}/#/day/${previous}`);
+    await assert.doesNotReject(() => page.locator('.day-record-row').getByText('给未来留下一页。', { exact: true }).waitFor());
   } finally {
     await context.close();
   }
@@ -1458,7 +1456,8 @@ test('a goal child task completes from Today before the goal can be confirmed', 
     await assert.doesNotReject(() => goalCard.getByText('已完成', { exact: true }).waitFor());
 
     await page.goto(`${baseUrl}/#/growth`);
-    assert.equal(await page.getByRole('button', { name: `查看徽章详情：${childTask}` }).count(), 1);
+    const badgeLabels = await page.locator('.growth-badge').evaluateAll((items) => items.map((item) => item.getAttribute('aria-label')));
+    assert.equal(await page.getByRole('button', { name: `查看徽章详情：${childTask}` }).count(), 1, badgeLabels.join(' | '));
     assert.equal(await page.getByRole('button', { name: `查看徽章详情：完成目标：${goalName}` }).count(), 1);
   } finally {
     await context.close();
@@ -2252,6 +2251,7 @@ test('late completion evidence belongs to the real feedback day, not the planned
     await page.goto(`${baseUrl}/#/day/2026-08-21`);
     const successes = page.locator('.success-evidence');
     await assert.doesNotReject(() => successes.getByText('完成：跨日完成证据', { exact: true }).waitFor({ state: 'attached' }));
+    await page.getByRole('button', { name: '行动', exact: true }).click();
     const feedback = page.locator('.day-action-results');
     const feedbackAction = feedback.getByRole('article', { name: '“跨日完成证据”的任务结果：已完成' });
     await assert.doesNotReject(() => feedbackAction.waitFor());

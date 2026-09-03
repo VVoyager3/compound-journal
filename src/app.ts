@@ -8,6 +8,7 @@ import {
   type Dimension,
   type Goal,
   type Habit,
+  type HabitLog,
   type JournalEvent,
   type JournalEntry,
   type Milestone,
@@ -61,10 +62,13 @@ import badgeHabitImage from '../design-assets/generated/growth-icons/badge-habit
 import badgeRecoveryImage from '../design-assets/generated/growth-icons/badge-recovery.png';
 import badgeExperimentImage from '../design-assets/generated/growth-icons/badge-experiment.png';
 import branchHealthImage from '../design-assets/generated/growth-icons/branch-health.png';
-import branchJudgmentImage from '../design-assets/generated/growth-icons/branch-judgment.png';
-import branchKnowledgeImage from '../design-assets/generated/growth-icons/branch-knowledge.png';
 import branchTrustImage from '../design-assets/generated/growth-icons/branch-trust.png';
 import branchAutonomyImage from '../design-assets/generated/growth-icons/branch-autonomy.png';
+import habitWalkingImage from '../design-assets/generated/habit-icons/walking.png';
+import habitStudyImage from '../design-assets/generated/habit-icons/study.png';
+import habitPhoneImage from '../design-assets/generated/habit-icons/phone.png';
+import habitBedtimeImage from '../design-assets/generated/habit-icons/bedtime.png';
+import habitChecklistImage from '../design-assets/generated/habit-icons/checklist.png';
 import navTodayIcon from '../design-assets/generated/ui-icons/nav-today.png';
 import navTasksIcon from '../design-assets/generated/ui-icons/nav-tasks.png';
 import navRecordIcon from '../design-assets/generated/ui-icons/nav-record.png';
@@ -393,7 +397,7 @@ function parseRoute(): Route {
   const legacyRoutes: Record<string, RouteName> = { diary: 'record', quests: 'tasks', history: 'calendar', status: 'system', settings: 'system' };
   const rawName = value.replace(/^\//, '');
   const name = legacyRoutes[rawName] ?? rawName as RouteName;
-  if (['today', 'calendar', 'record', 'tasks', 'growth', 'system', 'review', 'task-analysis'].includes(name)) return { name };
+  if (['today', 'calendar', 'record', 'tasks', 'growth', 'system', 'review', 'task-analysis', 'habit-analysis'].includes(name)) return { name };
   return { name: 'today' };
 }
 
@@ -2383,7 +2387,9 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   const dateControl = node('label', 'record-date-control');
   const dateText = node('span', '', formatDate(targetDate, { weekday: undefined }));
   dateControl.append(semanticIcon('calendar'), dateText, dateInput);
-  main.append(secondaryPageHeader(route.date && route.date !== today ? '补记' : '记录', dateControl));
+  main.append(route.date && route.date !== today
+    ? secondaryPageHeader('补记', dateControl)
+    : pageHeader('', '记录', dateControl));
 
   const textarea = node('textarea', 'journal-input');
   textarea.name = 'body';
@@ -2391,49 +2397,45 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   textarea.maxLength = 12_000;
   const initialDraft = readDraft(targetDate);
   const savedCaption = await db.getDayCaption(targetDate);
-  const summaryBlock = node('section', 'record-summary-block');
-  const summaryHeading = node('div', 'record-summary-heading');
-  const summaryLabel = node('label', 'field-label record-summary-label');
-  const summaryInput = node('input', 'input record-summary-input');
-  summaryInput.setAttribute('aria-label', '今日一句');
-  summaryInput.maxLength = 120;
-  summaryInput.value = initialDraft.summary || savedCaption?.text || '';
-  summaryLabel.append(summaryInput);
-  const sameDay = node('button', 'button button-quiet button-compact', '历年今天');
-  sameDay.type = 'button';
-  sameDay.addEventListener('click', () => { void openSameDayHistory(activeDraftDate); });
-  summaryHeading.append(node('strong', '', '今日一句'), sameDay);
-  summaryBlock.append(summaryHeading, summaryLabel);
-  textarea.placeholder = initialDraft.kind === 'success' ? SUCCESS_PROMPT : initialDraft.kind === 'fun' ? '今天有什么有趣、意外或值得笑一下的事？' : '写下你想留住的细节';
-  textarea.value = initialDraft.body;
+  let draftBody = initialDraft.body;
+  let draftSummary = initialDraft.summary || savedCaption?.text || '';
+  type RecordMode = 'summary' | NonNullable<JournalEntry['kind']>;
+  let selectedMode: RecordMode = draftBody ? initialDraft.kind : draftSummary ? 'summary' : 'journal';
+  textarea.placeholder = '写点什么…';
+  textarea.value = selectedMode === 'summary' ? draftSummary : draftBody;
   const counter = node('span', 'character-count', `${textarea.value.length}/12000`);
 
   let selectedKind: NonNullable<JournalEntry['kind']> = initialDraft.kind;
-  let selectedHeading = selectedKind === 'success' ? '成功小记' : selectedKind === 'fun' ? '有趣的事' : '记住的事';
-  const bodyTitle = node('strong', '', selectedHeading);
+  const bodyTitle = node('strong', '', selectedMode === 'summary' ? '今日一句' : selectedKind === 'success' ? '成功小记' : selectedKind === 'fun' ? '有趣的事' : '记住的事');
 
   const prompts = node('section', 'record-prompts');
   prompts.setAttribute('aria-label', '快速开头');
   const promptActions = node('div', 'record-prompt-actions');
   const kindButtons: HTMLButtonElement[] = [];
-  const selectKind = (kind: NonNullable<JournalEntry['kind']>, label: string, prompt: string): void => {
-    selectedKind = kind;
-    selectedHeading = label;
+  const selectMode = (mode: RecordMode, label: string, prompt: string): void => {
+    if (selectedMode === 'summary') draftSummary = textarea.value;
+    else draftBody = textarea.value;
+    selectedMode = mode;
+    if (mode !== 'summary') selectedKind = mode;
     bodyTitle.textContent = label;
     textarea.placeholder = prompt;
-    kindButtons.forEach((item) => item.setAttribute('aria-pressed', String(item.textContent === label)));
+    textarea.maxLength = mode === 'summary' ? 120 : 12_000;
+    textarea.value = mode === 'summary' ? draftSummary : draftBody;
+    kindButtons.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.mode === mode)));
     updateDraftState();
   };
-  for (const [label, prompt, kind] of [
-    ['记住的事', '写下你想留住的细节', 'journal'],
-    ['成功小记', SUCCESS_PROMPT, 'success'],
-    ['有趣的事', '今天有什么有趣、意外或值得笑一下的事？', 'fun'],
+  for (const [label, prompt, mode] of [
+    ['今日一句', '写点什么…', 'summary'],
+    ['记住的事', '写点什么…', 'journal'],
+    ['成功小记', '写点什么…', 'success'],
+    ['有趣的事', '写点什么…', 'fun'],
   ] as const) {
     const button = node('button', 'record-type-option', label);
     button.type = 'button';
-    button.setAttribute('aria-pressed', String(label === selectedHeading));
+    button.dataset.mode = mode;
+    button.setAttribute('aria-pressed', String(mode === selectedMode));
     button.addEventListener('click', () => {
-      selectKind(kind, label, prompt);
+      selectMode(mode, label, prompt);
       textarea.focus();
     });
     kindButtons.push(button);
@@ -2448,24 +2450,32 @@ async function recordPage(route: Route): Promise<HTMLElement> {
 
   const saveState = node('p', 'save-state');
   saveState.setAttribute('role', 'status');
-  saveState.hidden = true;
   const submit = node('button', 'button button-primary button-wide', '保存记录');
   submit.type = 'submit';
   const submitBar = node('div', 'record-submit-bar');
   submitBar.append(submit);
-  form.append(prompts, summaryBlock, bodySection, saveState, submitBar);
+  const savedEntries = await db.listEntries(targetDate);
+  const todaySummary = node('div', 'record-day-summary');
+  const todayCount = node('span', '', `今天已保存 ${savedEntries.length} 条记录`);
+  const viewToday = node('button', 'section-text-action', '查看今天');
+  viewToday.type = 'button';
+  viewToday.addEventListener('click', () => { sessionStorage.setItem('qiguang.day-view', 'records'); go({ name: 'day', date: activeDraftDate }); });
+  todaySummary.append(todayCount, viewToday);
+  form.append(prompts, bodySection, saveState, todaySummary, submitBar);
   main.append(form);
 
   let activeDraftDate = targetDate;
   const updateDraftState = (): void => {
-    counter.textContent = `${textarea.value.length}/12000`;
-    saveDraft(activeDraftDate, textarea.value, selectedKind, summaryInput.value);
-    saveState.textContent = draftNeedsUnloadWarning ? '浏览器未能保存草稿，请先不要关闭页面' : '';
-    saveState.hidden = !draftNeedsUnloadWarning;
+    if (selectedMode === 'summary') draftSummary = textarea.value;
+    else draftBody = textarea.value;
+    counter.textContent = `${textarea.value.length}/${selectedMode === 'summary' ? 120 : 12000}`;
+    saveDraft(activeDraftDate, draftBody, selectedKind, draftSummary);
+    submit.disabled = !textarea.value.trim();
+    saveState.textContent = draftNeedsUnloadWarning ? '应用未能保存草稿，请先不要关闭页面' : textarea.value ? '草稿已保存' : '';
+    saveState.hidden = !saveState.textContent;
     saveState.classList.toggle('is-error', draftNeedsUnloadWarning);
   };
   textarea.addEventListener('input', updateDraftState);
-  summaryInput.addEventListener('input', updateDraftState);
   dateInput.addEventListener('change', async () => {
     if (!isLocalDate(dateInput.value)) {
       saveState.textContent = '请选择有效日期；当前草稿已保留。';
@@ -2473,22 +2483,22 @@ async function recordPage(route: Route): Promise<HTMLElement> {
       saveState.classList.add('is-error');
       return;
     }
-    saveDraft(activeDraftDate, textarea.value, selectedKind, summaryInput.value);
+    updateDraftState();
     activeDraftDate = dateInput.value;
     dateText.textContent = formatDate(activeDraftDate, { weekday: undefined });
     const draft = readDraft(activeDraftDate);
     const caption = await db.getDayCaption(activeDraftDate);
-    textarea.value = draft.body;
-    summaryInput.value = draft.summary || caption?.text || '';
-    selectKind(
-      draft.kind,
-      draft.kind === 'success' ? '成功小记' : draft.kind === 'fun' ? '有趣的事' : '记住的事',
-      draft.kind === 'success' ? SUCCESS_PROMPT : draft.kind === 'fun' ? '今天有什么有趣、意外或值得笑一下的事？' : '写下你想留住的细节',
-    );
-    counter.textContent = `${textarea.value.length}/12000`;
-    saveState.textContent = '';
-    saveState.hidden = true;
-    saveState.classList.remove('is-error');
+    draftBody = draft.body;
+    draftSummary = draft.summary || caption?.text || '';
+    const nextMode: RecordMode = draftBody ? draft.kind : draftSummary ? 'summary' : 'journal';
+    selectedMode = nextMode;
+    selectedKind = draft.kind;
+    bodyTitle.textContent = nextMode === 'summary' ? '今日一句' : nextMode === 'success' ? '成功小记' : nextMode === 'fun' ? '有趣的事' : '记住的事';
+    textarea.placeholder = '写点什么…';
+    textarea.maxLength = nextMode === 'summary' ? 120 : 12_000;
+    textarea.value = nextMode === 'summary' ? draftSummary : draftBody;
+    kindButtons.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.mode === nextMode)));
+    updateDraftState();
   });
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -2496,11 +2506,12 @@ async function recordPage(route: Route): Promise<HTMLElement> {
     submit.textContent = '正在保存…';
     saveState.hidden = true;
     try {
-      const saved = await db.addEntry(textarea.value, dateInput.value, 'text', selectedKind);
-      await db.saveDayCaption(saved.localDate, summaryInput.value);
-      clearDraft(saved.localDate);
+      if (selectedMode === 'summary') await db.saveDayCaption(dateInput.value, textarea.value.trim());
+      else await db.addEntry(textarea.value, dateInput.value, 'text', selectedKind);
+      clearDraft(dateInput.value);
       showToast('记录已保存。');
-      go({ name: 'day', date: saved.localDate });
+      sessionStorage.setItem('qiguang.day-view', 'records');
+      go({ name: 'day', date: dateInput.value });
     } catch (error) {
       submit.disabled = false;
       submit.textContent = '重试保存';
@@ -2510,6 +2521,7 @@ async function recordPage(route: Route): Promise<HTMLElement> {
       showToast(errorMessage(error), 'error');
     }
   });
+  updateDraftState();
   return main;
 }
 
@@ -3597,7 +3609,10 @@ async function dayPage(date: string): Promise<HTMLElement> {
     return feedback && questResultDate(quest, activeFeedback) === date;
   });
   const main = node('main', 'page page-day');
-  main.append(secondaryPageHeader(formatDate(date).replace('日周', '日 周')));
+  const addRecord = node('button', 'page-header-text-action', '新增');
+  addRecord.type = 'button';
+  addRecord.addEventListener('click', () => go({ name: 'record', date }));
+  main.append(secondaryPageHeader(formatDate(date).replace('日周', '日 周'), addRecord));
 
   const journal = node('section', 'journal-sheet');
   journal.append(node('h2', '', '今天留下的'));
@@ -3657,23 +3672,31 @@ async function dayPage(date: string): Promise<HTMLElement> {
     roomLink.textContent = expanded ? '收起房间 ↑' : '查看完整房间 ›';
   });
   roomPreview.append(snapshot, roomLink);
+  const overview = node('section', 'day-tab-panel day-overview-panel');
+  overview.append(roomPreview, statusSummary(observations, date));
   const dayTabs = node('nav', 'day-section-tabs');
   dayTabs.setAttribute('aria-label', '日期回顾分段');
-  const sectionTargets: Array<[string, HTMLElement]> = [['总览', roomPreview], ['记录', journal], ['行动', actionResults]];
-  sectionTargets.forEach(([label, target], index) => {
-    const button = node('button', `day-section-tab${index === 0 ? ' is-active' : ''}`, label);
-    button.type = 'button';
-    button.setAttribute('aria-pressed', String(index === 0));
-    button.addEventListener('click', () => {
-      dayTabs.querySelectorAll<HTMLButtonElement>('.day-section-tab').forEach((item) => {
-        item.classList.toggle('is-active', item === button);
-        item.setAttribute('aria-pressed', String(item === button));
-      });
-      target.scrollIntoView({ behavior: settings.reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  const requestedView = sessionStorage.getItem('qiguang.day-view');
+  const initialView = requestedView === 'records' ? 'records' : requestedView === 'actions' ? 'actions' : 'overview';
+  const sectionTargets: Array<[string, string, HTMLElement]> = [['总览', 'overview', overview], ['记录', 'records', journal], ['行动', 'actions', actionResults]];
+  const selectDayView = (view: string): void => {
+    sectionTargets.forEach(([, key, target]) => { target.hidden = key !== view; });
+    dayTabs.querySelectorAll<HTMLButtonElement>('.day-section-tab').forEach((item) => {
+      const active = item.dataset.view === view;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-pressed', String(active));
     });
+  };
+  sectionTargets.forEach(([label, view]) => {
+    const button = node('button', `day-section-tab${view === initialView ? ' is-active' : ''}`, label);
+    button.type = 'button';
+    button.dataset.view = view;
+    button.setAttribute('aria-pressed', String(view === initialView));
+    button.addEventListener('click', () => { sessionStorage.setItem('qiguang.day-view', view); selectDayView(view); });
     dayTabs.append(button);
   });
-  main.append(roomPreview, dayTabs, statusSummary(observations, date), journal, actionResults);
+  main.append(dayTabs, overview, journal, actionResults);
+  selectDayView(initialView);
 
   if (entries.length || quests.length) {
     const analysis = node('details', 'day-evidence-details day-analysis-details optional-details');
@@ -5118,9 +5141,14 @@ async function tasksPage(): Promise<HTMLElement> {
   });
   const habitSection = node('section', 'task-habits');
   const habitHeading = node('div', 'section-heading');
+  const habitHeadingActions = node('div', 'section-heading-actions');
+  const analyseHabits = node('button', 'section-text-action', '分析');
+  analyseHabits.type = 'button';
+  analyseHabits.addEventListener('click', () => go({ name: 'habit-analysis' }));
+  habitHeadingActions.append(analyseHabits, iconButton('新建', null, () => { void openHabitDialog(); }, 'button button-primary button-compact'));
   habitHeading.append(
     node('h2', '', '习惯'),
-    iconButton('新建', null, () => { void openHabitDialog(); }, 'button button-primary button-compact'),
+    habitHeadingActions,
   );
   habitSection.append(habitHeading);
   if (!habits.length) habitSection.append(node('p', 'empty-copy', '暂无习惯'));
@@ -5213,11 +5241,20 @@ function growthBadgeDisplayName(badge: GrowthBadge): string {
 
 const DIMENSION_ICON_ASSETS: Record<Dimension, string> = {
   energy: branchHealthImage,
-  mind: branchJudgmentImage,
+  mind: habitBedtimeImage,
   connection: branchTrustImage,
-  progress: branchKnowledgeImage,
+  progress: habitChecklistImage,
   play: branchAutonomyImage,
 };
+
+function habitImage(habit: Habit): string {
+  const name = habit.name.toLowerCase();
+  if (/散步|走路|步行|跑步|运动|walk|run/.test(name)) return habitWalkingImage;
+  if (/睡|晚安|冥想|夜|sleep|bed/.test(name)) return habitBedtimeImage;
+  if (/数学|错题|学习|读书|阅读|作业|study|read|math/.test(name)) return habitStudyImage;
+  if (/电话|联系|家人|朋友|call|phone/.test(name)) return habitPhoneImage;
+  return habitChecklistImage;
+}
 
 function openBadgeEvidenceDialog(badge: GrowthBadge): void {
   const { dialog, content, actions } = dialogShell('徽章详情');
@@ -5271,7 +5308,6 @@ async function growthPage(): Promise<HTMLElement> {
   const activeLedger = ledger.filter((item) => !item.reversedAt);
   const totalXp = activeLedger.reduce((sum, item) => sum + item.finalXp, 0);
   const growthToday = localDate();
-  const recentSevenStart = shiftDate(growthToday, -6);
   const recentThirtyStart = shiftDate(growthToday, -29);
   const recentThirtyXp = activeLedger
     .filter((item) => item.localDate >= recentThirtyStart && item.localDate <= growthToday)
@@ -5324,9 +5360,6 @@ async function growthPage(): Promise<HTMLElement> {
     const dimensionLedger = activeLedger
       .filter((item) => item.dimension === dimension.key)
       .sort((left, right) => right.localDate.localeCompare(left.localDate) || right.updatedAt.localeCompare(left.updatedAt));
-    const recentSevenXp = dimensionLedger
-      .filter((item) => item.localDate >= recentSevenStart && item.localDate <= growthToday)
-      .reduce((sum, item) => sum + item.finalXp, 0);
     const dimensionThirtyXp = dimensionLedger
       .filter((item) => item.localDate >= recentThirtyStart && item.localDate <= growthToday)
       .reduce((sum, item) => sum + item.finalXp, 0);
@@ -5337,13 +5370,11 @@ async function growthPage(): Promise<HTMLElement> {
     const icon = node('img', 'growth-dimension-icon') as HTMLImageElement;
     icon.src = DIMENSION_ICON_ASSETS[dimension.key];
     icon.alt = '';
-    heading.append(icon, node('h3', '', dimension.label), node('span', 'caption', `等级 ${value.level}`));
+    const headingCopy = node('span', 'growth-dimension-copy');
+    headingCopy.append(node('h3', '', dimension.label), node('span', 'caption', `累计 ${value.totalXp} · 近30天 +${dimensionThirtyXp}`));
+    heading.append(icon, headingCopy);
     const stats = node('div', 'growth-dimension-stats');
-    stats.append(
-      node('span', '', `累计\n${value.totalXp}`),
-      node('span', '', `近7天\n+${recentSevenXp}`),
-      node('span', '', `近30天\n+${dimensionThirtyXp}`),
-    );
+    stats.append(node('span', '', `等级 ${value.level}`));
     const meter = node('progress', 'growth-dimension-meter');
     meter.max = value.nextLevelXp;
     meter.value = value.currentXp;
@@ -5367,7 +5398,7 @@ async function growthPage(): Promise<HTMLElement> {
       );
       evidence.append(row);
     });
-    card.append(evidence);
+    if (dimensionLedger.length) card.append(evidence);
     grid.append(card);
   });
   main.append(grid, badgeSection);
@@ -6488,7 +6519,6 @@ async function taskAnalysisPage(): Promise<HTMLElement> {
     const categoryRows = rows.filter(({ quest }) => category === 'all' || quest.dimension === category);
     const period = analysisRange(weeks);
     const current = categoryRows.filter(({ date }) => date >= period.start && date <= period.end);
-    const previous = categoryRows.filter(({ date }) => date >= period.previousStart && date <= period.previousEnd);
     const completed = current.filter(({ result }) => result === 'completed').length;
     const partial = current.filter(({ result }) => result === 'partial').length;
     const skipped = current.filter(({ result }) => result === 'skipped' || result === 'exempt').length;
@@ -6531,25 +6561,6 @@ async function taskAnalysisPage(): Promise<HTMLElement> {
     });
     heat.querySelector('h2')?.after(analysisRangeTabs(weeks, (value) => { weeks = value; renderBody(); }));
     body.append(heat);
-
-    const weekdayCounts = Array.from({ length: 7 }, () => 0);
-    current.filter(({ result }) => result === 'completed').forEach(({ date }) => {
-      const index = (parseLocalDate(date).getDay() + 6) % 7;
-      weekdayCounts[index] = (weekdayCounts[index] ?? 0) + 1;
-    });
-    const ranked = weekdayCounts.map((count, index) => ({ count, index })).sort((left, right) => right.count - left.count);
-    const weekdayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-    const strongest = ranked.filter((item) => item.count > 0).slice(0, 2).map((item) => weekdayNames[item.index]).join('、');
-    const weekend = (weekdayCounts[5] ?? 0) + (weekdayCounts[6] ?? 0);
-    const weekday = weekdayCounts.slice(0, 5).reduce((sum, value) => sum + value, 0);
-    const insight = node('section', 'analysis-insight');
-    insight.append(node('span', 'analysis-flag-icon'), node('div'));
-    const insightCopy = insight.lastElementChild as HTMLElement;
-    insightCopy.append(node('strong', '', strongest ? `${strongest}推进最稳定${weekend * 5 < weekday * 2 ? '，周末任务明显偏少。' : '，本周节奏较均匀。'}` : '完成记录还不够，继续留下几次任务结果。'));
-    const previousCompleted = previous.filter(({ result }) => result === 'completed').length;
-    const delta = completed - previousCompleted;
-    insightCopy.append(node('span', '', `近${weeks === 12 ? '12周' : weeks === 26 ? '半年' : '全年'}共完成${completed}项，${delta === 0 ? '与上一周期持平' : `比上一周期${delta > 0 ? '多' : '少'}${Math.abs(delta)}项`}`));
-    body.append(insight);
 
     const distribution = node('section', 'analysis-section analysis-result-section');
     distribution.append(node('h2', '', '结果分布'));
@@ -6605,24 +6616,95 @@ function habitScheduleLabel(days: number[]): string {
   return sorted.map((day) => `周${'一二三四五六日'[day - 1]}`).join('、');
 }
 
+function habitPeriodStats(habit: Habit, logs: HabitLog[], start: string, end: string): { planned: number; completed: number; rate: number } {
+  let planned = 0;
+  let completed = 0;
+  for (let date = start; date <= end; date = shiftDate(date, 1)) {
+    const schedule = habitAnalysisSchedule(habit, date);
+    if (!schedule?.trackingEnabled || !schedule.scheduleDays.includes(parseLocalDate(date).getDay() || 7)) continue;
+    planned += 1;
+    if (logs.some((log) => log.habitId === habit.id && log.localDate === date && log.result === 'completed')) completed += 1;
+  }
+  return { planned, completed, rate: analysisPercent(completed, planned) };
+}
+
+async function habitAnalysisOverviewPage(habits: Habit[], logs: HabitLog[]): Promise<HTMLElement> {
+  const main = node('main', 'page page-analysis page-habit-analysis page-habit-analysis-overview');
+  main.append(secondaryPageHeader('习惯分析', undefined, { name: 'tasks' }));
+  const active = habits.filter((habit) => habit.status !== 'ended');
+  const end = localDate();
+  const start = shiftDate(end, -27);
+  const previousStart = shiftDate(start, -28);
+  const previousEnd = shiftDate(start, -1);
+  const totals = active.map((habit) => habitPeriodStats(habit, logs, start, end));
+  const totalPlanned = totals.reduce((sum, item) => sum + item.planned, 0);
+  const totalCompleted = totals.reduce((sum, item) => sum + item.completed, 0);
+  const previous = active.map((habit) => habitPeriodStats(habit, logs, previousStart, previousEnd));
+  const previousRate = analysisPercent(previous.reduce((sum, item) => sum + item.completed, 0), previous.reduce((sum, item) => sum + item.planned, 0));
+  const totalRate = analysisPercent(totalCompleted, totalPlanned);
+  const delta = totalRate - previousRate;
+
+  const summary = node('section', 'habit-overview-summary');
+  summary.append(
+    node('span', '', `${active.length} 个习惯`),
+    node('strong', '', `${totalCompleted}/${totalPlanned}`),
+    node('span', '', `总体完成率 ${totalRate}%`),
+    node('small', delta === 0 ? '' : delta > 0 ? 'is-positive' : 'is-negative', delta === 0 ? '与上个周期持平' : `比上个周期${delta > 0 ? '提高' : '下降'} ${Math.abs(delta)}%`),
+  );
+  main.append(summary);
+
+  const list = node('section', 'habit-comparison-list');
+  const heading = node('div', 'habit-comparison-heading');
+  heading.append(node('h2', '', '近四周'), node('span', '', '第1周　 第2周　 第3周　 本周'));
+  list.append(heading);
+  if (!active.length) list.append(node('p', 'empty-copy', '暂无习惯'));
+  active.forEach((habit) => {
+    const row = node('button', 'habit-comparison-row');
+    row.type = 'button';
+    row.setAttribute('aria-label', `查看${habit.name}的习惯分析`);
+    const copy = node('span', 'habit-comparison-copy');
+    const icon = node('img', 'habit-comparison-icon') as HTMLImageElement;
+    icon.src = habitImage(habit);
+    icon.alt = '';
+    copy.append(icon, node('span', '', habit.name), node('small', '', habitScheduleLabel(habit.scheduleDays)));
+    const total = habitPeriodStats(habit, logs, start, end);
+    const weeksRow = node('span', 'habit-comparison-weeks');
+    for (let week = 0; week < 4; week += 1) {
+      const weekStart = shiftDate(start, week * 7);
+      const value = habitPeriodStats(habit, logs, weekStart, shiftDate(weekStart, 6));
+      weeksRow.append(node('span', '', `${value.completed}/${value.planned}`));
+    }
+    const score = node('span', 'habit-comparison-score');
+    score.append(node('strong', '', `${total.rate}%`), node('small', '', `${total.completed}/${total.planned}`));
+    row.append(copy, score, weeksRow);
+    row.addEventListener('click', () => go({ name: 'habit-analysis', entityId: habit.id }));
+    list.append(row);
+  });
+  main.append(list);
+  return main;
+}
+
 async function habitAnalysisPage(habitId: string): Promise<HTMLElement> {
   await db.ensureTodayBonusQuests(localDate());
-  const [habits, logs, quests] = await Promise.all([db.listHabits(), db.listHabitLogs(habitId), db.listQuests()]);
+  const [habits, logs] = await Promise.all([db.listHabits(), db.listHabitLogs(habitId || undefined)]);
+  if (!habitId) return habitAnalysisOverviewPage(habits, logs);
   const habit = habits.find((item) => item.id === habitId);
   const main = node('main', 'page page-analysis page-habit-analysis');
   if (!habit) {
-    main.append(secondaryPageHeader('习惯分析', undefined, { name: 'tasks' }), node('p', 'empty-copy', '这个习惯已经不存在。'));
+    main.append(secondaryPageHeader('习惯分析', undefined, { name: 'tasks' }), node('p', 'empty-copy', '习惯不存在'));
     return main;
   }
   const momentum = await db.habitMomentum(habit.id);
   const logByDate = new Map(logs.map((log) => [log.localDate, log]));
-  const questById = new Map(quests.map((quest) => [quest.id, quest]));
   let weeks: AnalysisWeeks = 12;
   const body = node('div', 'analysis-page-body');
   const select = analysisRangeSelect(weeks, (value) => { weeks = value; select.value = String(value); renderBody(); });
   main.append(secondaryPageHeader('习惯分析', select, { name: 'tasks' }));
   const hero = node('section', 'habit-analysis-hero');
-  hero.append(semanticIcon('habit'));
+  const heroIcon = node('img', 'habit-specific-icon') as HTMLImageElement;
+  heroIcon.src = habitImage(habit);
+  heroIcon.alt = '';
+  hero.append(heroIcon);
   const heroCopy = node('div');
   heroCopy.append(node('h2', '', habit.name), node('p', '', habitScheduleLabel(habit.scheduleDays)));
   hero.append(heroCopy);
@@ -6637,13 +6719,22 @@ async function habitAnalysisPage(habitId: string): Promise<HTMLElement> {
     }
     const completed = plannedDates.filter((date) => logByDate.get(date)?.result === 'completed').length;
     const rate = analysisPercent(completed, plannedDates.length);
-    body.replaceChildren();
-    const summary = node('section', 'analysis-summary-grid');
-    for (const [label, value] of [['计划日', String(plannedDates.length)], ['完成', String(completed)], ['达成率', `${rate}%`], ['近 7 计划日动量', `${momentum}/5`]]) {
-      const stat = node('span');
-      stat.append(node('small', '', label), node('strong', '', value));
-      summary.append(stat);
+    const previousDates: string[] = [];
+    for (let date = period.previousStart; date <= period.previousEnd; date = shiftDate(date, 1)) {
+      const schedule = habitAnalysisSchedule(habit, date);
+      if (schedule?.trackingEnabled && schedule.scheduleDays.includes(parseLocalDate(date).getDay() || 7)) previousDates.push(date);
     }
+    const previousRate = analysisPercent(previousDates.filter((date) => logByDate.get(date)?.result === 'completed').length, previousDates.length);
+    const delta = rate - previousRate;
+    body.replaceChildren();
+    const summary = node('section', 'habit-focus-summary');
+    const rateBlock = node('div', 'habit-focus-rate');
+    rateBlock.append(node('small', '', '近周期完成率'), node('strong', '', `${rate}%`), node('span', '', `${completed}/${plannedDates.length} 个计划日`));
+    const momentumBlock = node('div', 'habit-focus-momentum');
+    const momentumMeter = node('span', 'habit-momentum-meter');
+    momentumMeter.style.setProperty('--value', `${momentum * 20}%`);
+    momentumBlock.append(node('small', '', '近 7 个计划日动量'), node('strong', '', `${momentum}/5`), momentumMeter, node('span', delta === 0 ? '' : delta > 0 ? 'is-positive' : 'is-negative', delta === 0 ? '与上一周期持平' : `比上一周期${delta > 0 ? '提高' : '下降'} ${Math.abs(delta)}%`));
+    summary.append(rateBlock, momentumBlock);
     body.append(summary);
     const heat = analysisHeatmap('完成热力图', weeks, (date) => {
       const schedule = habitAnalysisSchedule(habit, date);
@@ -6651,12 +6742,10 @@ async function habitAnalysisPage(habitId: string): Promise<HTMLElement> {
       if (!planned) return { tone: 'empty', label: `${formatDate(date)}：未计划` };
       const log = logByDate.get(date);
       if (!log || log.result === 'skipped' || log.result === 'exempt') return { tone: 'missed', label: `${formatDate(date)}：未完成` };
-      const quest = questById.get(log.questId);
-      const ratio = quest?.targetCount ? Math.min(1, (quest.progressCount ?? (log.result === 'completed' ? quest.targetCount : 1)) / quest.targetCount) : log.result === 'completed' ? 1 : .4;
-      const level = Math.max(1, Math.min(5, Math.ceil(ratio * 5)));
-      return { tone: `level-${level}` as AnalysisHeatTone, label: `${formatDate(date)}：${log.result === 'completed' ? '已完成' : '有进展'}` };
-    }, true);
+      return { tone: 'level-5', label: `${formatDate(date)}：已完成` };
+    });
     heat.querySelector('h2')?.after(analysisRangeTabs(weeks, (value) => { weeks = value; select.value = String(value); renderBody(); }));
+    heat.append(node('p', 'habit-heat-summary', `${completed} 个计划日已完成 · ${plannedDates.length - completed} 个未完成`));
     body.append(heat);
 
     const weekdayStats = habit.scheduleDays.slice().sort((left, right) => left - right).map((day) => {
@@ -6665,40 +6754,19 @@ async function habitAnalysisPage(habitId: string): Promise<HTMLElement> {
       return { day, rate: analysisPercent(done, dates.length) };
     });
     const sorted = [...weekdayStats].sort((left, right) => right.rate - left.rate);
-    const insight = node('section', 'analysis-insight');
-    insight.append(node('span', 'analysis-star-icon', '★'), node('div'));
-    const insightCopy = insight.lastElementChild as HTMLElement;
     const names = '一二三四五六日';
-    const best = sorted[0];
-    const weakest = sorted[sorted.length - 1];
-    insightCopy.append(node('strong', '', best && weakest ? `周${names.charAt(best.day - 1)}最稳定，周${names.charAt(weakest.day - 1)}最容易漏掉。` : '计划日还不够，继续完成几次后再看规律。'));
-    const previousDates: string[] = [];
-    for (let date = period.previousStart; date <= period.previousEnd; date = shiftDate(date, 1)) {
-      const schedule = habitAnalysisSchedule(habit, date);
-      if (schedule?.trackingEnabled && schedule.scheduleDays.includes(parseLocalDate(date).getDay() || 7)) previousDates.push(date);
-    }
-    const previousRate = analysisPercent(previousDates.filter((date) => logByDate.get(date)?.result === 'completed').length, previousDates.length);
-    const delta = rate - previousRate;
-    insightCopy.append(node('span', '', `最近${weeks === 12 ? '12周' : weeks === 26 ? '半年' : '全年'}比上一周期${delta === 0 ? '持平' : `${delta > 0 ? '提高' : '下降'} ${Math.abs(delta)}%`}`));
-    body.append(insight);
-
     const weekdaySection = node('section', 'analysis-section habit-weekday-section');
     weekdaySection.append(node('h2', '', '按星期看'));
+    const weekdayChart = node('div', 'habit-weekday-chart');
     weekdayStats.forEach(({ day, rate: weekdayRate }) => {
-      const row = node('div', 'habit-weekday-row');
-      row.append(node('strong', '', `周${names[day - 1]}`));
-      const meter = node('span', `analysis-meter${weekdayRate < 65 ? ' is-warning' : ''}`);
-      meter.style.setProperty('--value', `${weekdayRate}%`);
-      row.append(meter, node('span', weekdayRate < 65 ? 'is-warning' : '', `${weekdayRate}%`));
-      weekdaySection.append(row);
+      const column = node('div', `habit-weekday-column${weekdayRate === sorted[0]?.rate ? ' is-strongest' : ''}`);
+      const meter = node('span', 'habit-weekday-meter');
+      meter.style.height = `${Math.max(8, Math.round(weekdayRate * 1.45))}px`;
+      column.append(node('strong', '', `${weekdayRate}%`), meter, node('span', '', `周${names[day - 1]}`));
+      weekdayChart.append(column);
     });
+    weekdaySection.append(weekdayChart);
     body.append(weekdaySection);
-    const actions = node('footer', 'analysis-bottom-actions');
-    const back = node('button', 'button button-secondary', '←  返回习惯');
-    back.type = 'button';
-    back.addEventListener('click', () => { sessionStorage.setItem('qiguang.task-view', 'plan'); go({ name: 'tasks' }); });
-    actions.append(back);
-    body.append(actions);
   };
   renderBody();
   return main;

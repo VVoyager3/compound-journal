@@ -111,7 +111,7 @@ test('room movement uses sprite frames instead of stretching the whole character
   assert.match(app, /room-background\.png/);
 });
 
-test('record editor uses the same three record types when creating and editing', async () => {
+test('record editor uses four equal quick starts and one editor', async () => {
   const app = await read('src/app.ts');
   const styles = await read('src/styles.css');
   assert.match(app, /'记住的事'/);
@@ -119,11 +119,11 @@ test('record editor uses the same three record types when creating and editing',
   assert.match(app, /'有趣的事'/);
   assert.doesNotMatch(app, /'日常记录'|'成功记录'|'趣事记录'|'普通记录'/);
   assert.match(app, /'今日一句'/);
-  assert.match(app, /'历年今天'/);
-  assert.match(app, /saveDayCaption\(saved\.localDate, summaryInput\.value\)/);
+  assert.match(app, /selectedMode === 'summary'/);
+  assert.match(app, /saveDayCaption\(dateInput\.value, textarea\.value\.trim\(\)\)/);
   assert.match(app, /snapshotVariantFor/);
   assert.match(styles, /\.room-stage\.is-snapshot-(?:rest|focus|play|connection|bright)/);
-  assert.match(styles, /\.record-prompt-actions\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(styles, /\.page-record \.record-prompt-actions\s*\{[^}]*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/s);
   assert.doesNotMatch(styles, /\.record-prompt-actions\s*\{[^}]*overflow-x:\s*auto/s);
 });
 
