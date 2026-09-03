@@ -8674,3 +8674,71 @@ select.input { min-height: 44px; }
   .page-growth .growth-dimension-card { grid-template-columns: 44px minmax(0, 1fr) 54px; gap: 8px 10px; }
   .page-growth img.growth-dimension-icon { width: 44px; height: 44px; }
 }
+
+/* Follow-up audit: keep only user-facing facts and open records directly for editing. */
+.quest-heading.is-manual { justify-content: flex-end; }
+.habit-plan-summary {
+  overflow: hidden;
+  margin: 0;
+  color: var(--muted);
+  font-size: .78rem;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.habit-recent-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px 8px; }
+.habit-recent-day { display: grid; min-width: 0; justify-items: center; gap: 5px; }
+.habit-recent-day time { color: var(--muted); font-size: .64rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.habit-recent-cell {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: var(--muted);
+  font-size: .84rem;
+}
+.habit-recent-cell.is-completed,
+.habit-recent-cell.is-partial { color: #fff; }
+
+.page-day .status-item { padding-bottom: 6px; }
+.page-day .status-item::after { content: none; }
+
+.record-detail-editor .dialog-content { position: relative; }
+.record-detail-editor .journal-input {
+  min-height: clamp(280px, 48vh, 520px);
+  resize: none;
+}
+.record-detail-editor .dialog-actions { grid-template-columns: minmax(0, 1fr); }
+.record-detail-more { position: absolute; z-index: 4; top: 10px; right: 16px; }
+.record-detail-more > summary {
+  display: grid;
+  width: 44px;
+  min-height: 44px;
+  place-items: center;
+  color: var(--forest);
+  cursor: pointer;
+  font-size: 1.5rem;
+  list-style: none;
+}
+.record-detail-more > summary::-webkit-details-marker { display: none; }
+.record-detail-more-actions {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  display: grid;
+  width: 150px;
+  padding: 6px;
+  border: 1px solid rgb(151 119 72 / 28%);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 10px 24px rgb(55 43 28 / 16%);
+}
+.record-detail-more-actions .button { justify-content: flex-start; min-height: 42px; border: 0; }
+
+.habit-weekday-chart {
+  grid-template-columns: repeat(auto-fit, 68px);
+  justify-content: start;
+  gap: 12px;
+}
+.habit-weekday-column { width: 68px; min-height: 0; aspect-ratio: 1; }

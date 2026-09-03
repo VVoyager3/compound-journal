@@ -2018,11 +2018,11 @@ function questCard(quest: Quest, compact = false, milestone?: { description: str
   card.dataset.questId = quest.id;
   card.tabIndex = -1;
   const heading = node('div', 'quest-heading');
-  const sourceLabel = ({ goal: '目标', habit: '习惯', recovery: '恢复', manual: '手动' } as const)[quest.sourceType];
-  heading.append(
-    node('span', `quest-source-label is-${quest.sourceType}`, sourceLabel),
-    node('span', 'caption', questDifficultyLabel(quest)),
-  );
+  if (quest.sourceType !== 'manual') {
+    const sourceLabel = ({ goal: '目标', habit: '习惯', recovery: '恢复' } as const)[quest.sourceType];
+    heading.append(node('span', `quest-source-label is-${quest.sourceType}`, sourceLabel));
+  } else heading.classList.add('is-manual');
+  heading.append(node('span', 'caption', questDifficultyLabel(quest)));
   card.append(heading, node('h3', '', quest.title));
   if (quest.localDate !== localDate()) card.append(node('p', 'caption', `计划日期：${formatDate(quest.localDate)}`));
   const planning = [quest.minimumAction && quest.minimumAction !== quest.title ? `先做这一步：${quest.minimumAction}` : '', quest.estimatedMinutes ? `约 ${quest.estimatedMinutes} 分钟` : ''].filter(Boolean);
@@ -3210,28 +3210,13 @@ async function deleteEntry(entry: JournalEntry, dialog?: HTMLDialogElement): Pro
 }
 
 async function openEntryDetailDialog(entry: JournalEntry): Promise<void> {
-  const { dialog, content, actions } = dialogShell('记录详情');
-  const kind = entry.kind === 'success' ? '成功小记' : entry.kind === 'fun' ? '有趣的事' : '记住的事';
-  content.append(
-    node('p', 'caption', `${formatDate(entry.localDate)} · ${new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })} · ${kind}`),
-    node('p', 'entry-detail-body', entry.body),
-  );
-  const remove = node('button', 'button button-quiet danger-button', '删除');
-  remove.type = 'button';
-  remove.addEventListener('click', () => { void deleteEntry(entry, dialog); });
-  const history = node('button', 'button button-secondary', '修改历史');
-  history.type = 'button';
-  history.addEventListener('click', () => { dialog.close(); void openHistoryDialog(entry); });
-  const edit = node('button', 'button button-primary', '编辑');
-  edit.type = 'button';
-  edit.addEventListener('click', () => { dialog.close(); void openEditDialog(entry); });
-  actions.append(remove, history, edit);
-  dialog.showModal();
-  edit.focus();
+  return openEditDialog(entry);
 }
 
 async function openEditDialog(entry: JournalEntry): Promise<void> {
-  const { dialog, content, actions } = dialogShell('修改记录');
+  const { dialog, content, actions } = dialogShell('记录详情');
+  dialog.classList.add('full-screen-editor', 'record-detail-editor');
+  addDialogBack(dialog, content);
   const bodyLabel = node('label', 'field-label', '正文');
   const textarea = node('textarea', 'journal-input compact');
   textarea.maxLength = 12_000;
@@ -3250,11 +3235,18 @@ async function openEditDialog(entry: JournalEntry): Promise<void> {
     });
     typeControl.append(button);
   }
-  const status = node('p', 'save-state', `当前版本 v${entry.version}`);
-  content.append(bodyLabel, typeControl, status);
-  const cancel = node('button', 'button button-secondary', '取消');
-  cancel.type = 'button';
-  cancel.addEventListener('click', () => dialog.close());
+  const status = node('p', 'save-state', `${formatDate(entry.localDate)} · v${entry.version}`);
+  const more = node('details', 'record-detail-more');
+  const moreActions = node('div', 'record-detail-more-actions');
+  const history = node('button', 'button button-quiet', '修改历史');
+  history.type = 'button';
+  history.addEventListener('click', () => { dialog.close(); void openHistoryDialog(entry); });
+  const remove = node('button', 'button button-quiet danger-button', '删除记录');
+  remove.type = 'button';
+  remove.addEventListener('click', () => { void deleteEntry(entry, dialog); });
+  moreActions.append(history, remove);
+  more.append(node('summary', '', '⋮'), moreActions);
+  content.append(more, typeControl, bodyLabel, status);
   const save = node('button', 'button button-primary', '保存修改');
   save.type = 'button';
   save.addEventListener('click', async () => {
@@ -3271,7 +3263,7 @@ async function openEditDialog(entry: JournalEntry): Promise<void> {
       status.classList.add('is-error');
     }
   });
-  actions.append(cancel, save);
+  actions.append(save);
   dialog.showModal();
   textarea.focus();
 }
@@ -4936,15 +4928,17 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
   allRecords.type = 'button'; allRecords.addEventListener('click', () => { dialog.close(); go({ name: 'habit-analysis', entityId: habit.id }); });
   recentHeading.append(node('h3', '', '最近记录'), allRecords); recent.append(recentHeading);
   const recentGrid = node('div', 'habit-recent-grid');
-  for (let offset = 27; offset >= 0; offset -= 1) {
+  for (let offset = 13; offset >= 0; offset -= 1) {
     const date = shiftDate(localDate(), -offset);
     const log = habitLogs.find((item) => item.localDate === date);
     const result = log?.result ?? 'empty';
-    const cell = node('span', `habit-recent-cell is-${result}`);
+    const day = node('span', 'habit-recent-day');
+    const cell = node('span', `habit-recent-cell is-${result}`, result === 'completed' ? '✓' : result === 'partial' ? '·' : result === 'skipped' || result === 'exempt' ? '–' : '');
     cell.setAttribute('role', 'img');
     cell.setAttribute('aria-label', `${formatDate(date)}：${result === 'completed' ? '完成' : result === 'partial' ? '有进展' : result === 'skipped' || result === 'exempt' ? '跳过' : '无记录'}`);
     cell.title = cell.getAttribute('aria-label') ?? '';
-    recentGrid.append(cell);
+    day.append(cell, node('time', '', `${parseLocalDate(date).getMonth() + 1}/${parseLocalDate(date).getDate()}`));
+    recentGrid.append(day);
   }
   if (habitLogs.length) recent.append(recentGrid);
   if (!habitLogs.length) recent.append(node('p', 'empty-copy', '暂无打卡记录'));
@@ -4971,10 +4965,7 @@ async function tasksPage(): Promise<HTMLElement> {
   ]);
   const goals = storedGoals.filter((goal) => goal.status !== 'abandoned');
   const habits = storedHabits.filter((habit) => habit.status !== 'ended');
-  const [milestonesByGoal, momentums] = await Promise.all([
-    Promise.all(goals.map((goal) => db.listMilestones(goal.id))),
-    Promise.all(habits.map((habit) => db.habitMomentum(habit.id, today))),
-  ]);
+  const milestonesByGoal = await Promise.all(goals.map((goal) => db.listMilestones(goal.id)));
   const futureQuests = allQuests
     .filter((quest) => quest.status === 'pending' && !quest.systemRetiredAt && quest.localDate > today)
     .sort((left, right) => left.localDate.localeCompare(right.localDate) || left.createdAt.localeCompare(right.createdAt));
@@ -5168,24 +5159,13 @@ async function tasksPage(): Promise<HTMLElement> {
   const activeHabits = habits.filter((habit) => habit.status === 'active' && habit.bonusEnabled);
   const pausedHabits = habits.filter((habit) => habit.status !== 'active' || !habit.bonusEnabled);
   activeHabits.forEach((habit) => {
-    const habitIndex = habits.findIndex((item) => item.id === habit.id);
     const period = weekRange(today);
     const weekCompleted = allHabitLogs.filter((item) => item.habitId === habit.id
       && item.localDate >= period.start && item.localDate <= period.end && item.result === 'completed').length;
     const row = node('article', 'habit-row');
     const copy = node('div');
     copy.append(node('h3', '', habit.name));
-    const stats = node('div', 'habit-plan-stats');
-    for (const [label, value, className = ''] of [
-      ['本周', `${weekCompleted}/${habit.scheduleDays.length} 次`],
-      ['近7计划日', `${momentums[habitIndex] ?? 0}/5`],
-      ['每周', `${habit.scheduleDays.length} 天`],
-    ]) {
-      const stat = node('span', className);
-      stat.append(node('small', '', label), node('strong', '', value));
-      stats.append(stat);
-    }
-    copy.append(stats);
+    copy.append(node('p', 'habit-plan-summary', `本周完成 ${weekCompleted}/${habit.scheduleDays.length} 次 · 每周 ${habit.scheduleDays.length} 天`));
     const more = node('details', 'quest-more-actions');
     const moreButtons = node('div', 'quest-more-buttons');
     const edit = iconButton('修改习惯', null, () => { void openHabitDialog(habit); }, 'button button-secondary button-compact');

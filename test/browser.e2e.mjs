@@ -238,12 +238,14 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     await assert.doesNotReject(() => page.locator('.day-record-body').getByText('电脑自动回归：记录一件真实发生的事。', { exact: true }).waitFor());
 
     await page.locator('.day-record-row').click();
-    await page.getByRole('dialog', { name: '记录详情' }).getByRole('button', { name: '编辑' }).click();
-    await page.getByRole('textbox', { name: '正文' }).fill('电脑自动回归：修改后的正文。');
-    await page.getByRole('button', { name: '保存修改' }).click();
+    let detail = page.getByRole('dialog', { name: '记录详情' });
+    await detail.getByRole('textbox', { name: '正文' }).fill('电脑自动回归：修改后的正文。');
+    await detail.getByRole('button', { name: '保存修改' }).click();
     await assert.doesNotReject(() => page.locator('.day-record-body').getByText('电脑自动回归：修改后的正文。', { exact: true }).waitFor());
     await page.locator('.day-record-row').click();
-    await page.getByRole('dialog', { name: '记录详情' }).getByRole('button', { name: '修改历史' }).click();
+    detail = page.getByRole('dialog', { name: '记录详情' });
+    await detail.locator('.record-detail-more > summary').click();
+    await detail.getByRole('button', { name: '修改历史' }).click();
     await page.getByRole('button', { name: '撤销最近修改' }).click();
     await assert.doesNotReject(() => page.locator('.day-record-body').getByText('电脑自动回归：记录一件真实发生的事。', { exact: true }).waitFor());
     await page.goto(`${baseUrl}/#/today`);
@@ -1391,8 +1393,7 @@ test('record category buttons create multiple entries and remain editable', asyn
 
     let successEntry = entries.filter({ hasText: '我把失败的构建修复了' });
     await successEntry.click();
-    await page.getByRole('dialog', { name: '记录详情' }).getByRole('button', { name: '编辑' }).click();
-    const edit = page.getByRole('dialog', { name: '修改记录' });
+    const edit = page.getByRole('dialog', { name: '记录详情' });
     assert.equal(await edit.getByRole('checkbox', { name: '记为成功记录' }).count(), 0);
     await edit.getByRole('button', { name: '记住的事' }).click();
     await edit.getByRole('button', { name: '保存修改' }).click();
@@ -1403,7 +1404,9 @@ test('record category buttons create multiple entries and remain editable', asyn
 
     successEntry = page.locator('.day-record-row').filter({ hasText: '我把失败的构建修复了' });
     await successEntry.click();
-    await page.getByRole('dialog', { name: '记录详情' }).getByRole('button', { name: '修改历史' }).click();
+    const detail = page.getByRole('dialog', { name: '记录详情' });
+    await detail.locator('.record-detail-more > summary').click();
+    await detail.getByRole('button', { name: '修改历史' }).click();
     await page.getByRole('button', { name: '撤销最近修改' }).click();
     await assert.doesNotReject(() => page.locator('.success-evidence').getByText('我把失败的构建修复了', { exact: true }).waitFor({ state: 'attached' }));
   } finally {
@@ -2806,10 +2809,7 @@ test('a newly created habit has no historic debt and remains usable in weekly re
     await assert.doesNotReject(() => page.locator('.today-habit-row').filter({ hasText: '晚饭后散步' }).getByText('已完成', { exact: true }).waitFor());
     await openTaskView(page, '计划');
     const planHabit = page.locator('.habit-row').filter({ hasText: '晚饭后散步' });
-    const habitStats = planHabit.locator('.habit-plan-stats');
-    await assert.doesNotReject(() => habitStats.getByText('5/5', { exact: true }).waitFor());
-    await assert.doesNotReject(() => habitStats.getByText('每周', { exact: true }).waitFor());
-    await assert.doesNotReject(() => habitStats.getByText('5 天', { exact: true }).waitFor());
+    await assert.doesNotReject(() => planHabit.getByText(/本周完成 \d+\/5 次 · 每周 5 天/, { exact: true }).waitFor());
     assert.equal(await planHabit.getByRole('button', { name: /记录今天的习惯/ }).count(), 0, 'plan must not expose habit check-in');
     await planHabit.getByText('编辑', { exact: true }).click();
     await planHabit.getByRole('button', { name: '查看详情' }).click();
