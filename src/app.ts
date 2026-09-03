@@ -3007,7 +3007,7 @@ function showOnboarding(): void {
     });
     choices.append(button);
   });
-  content.append(node('p', 'privacy-boundary', '这是帮你整理记录和计划的 AI 伙伴；它不会替你做决定。'), choices, selected);
+  content.append(choices, selected);
   actions.append(begin);
   dialog.showModal();
   const heading = content.querySelector<HTMLHeadingElement>('h2');
@@ -3673,7 +3673,12 @@ async function dayPage(date: string): Promise<HTMLElement> {
   });
   roomPreview.append(snapshot, roomLink);
   const overview = node('section', 'day-tab-panel day-overview-panel');
-  overview.append(roomPreview, statusSummary(observations, date));
+  const overviewFacts = node('section', 'day-overview-facts');
+  const recordFact = node('button', '', `记录 ${entries.length}`);
+  const actionFact = node('button', '', `行动 ${quests.length}`);
+  recordFact.type = actionFact.type = 'button';
+  overviewFacts.append(recordFact, actionFact);
+  overview.append(roomPreview, statusSummary(observations, date), overviewFacts);
   const dayTabs = node('nav', 'day-section-tabs');
   dayTabs.setAttribute('aria-label', '日期回顾分段');
   const requestedView = sessionStorage.getItem('qiguang.day-view');
@@ -3687,6 +3692,8 @@ async function dayPage(date: string): Promise<HTMLElement> {
       item.setAttribute('aria-pressed', String(active));
     });
   };
+  recordFact.addEventListener('click', () => { sessionStorage.setItem('qiguang.day-view', 'records'); selectDayView('records'); });
+  actionFact.addEventListener('click', () => { sessionStorage.setItem('qiguang.day-view', 'actions'); selectDayView('actions'); });
   sectionTargets.forEach(([label, view]) => {
     const button = node('button', `day-section-tab${view === initialView ? ' is-active' : ''}`, label);
     button.type = 'button';
@@ -4025,7 +4032,6 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
     focusIcon,
     node('h2', '', '下周重点'),
     node('strong', '', review.nextTheme),
-    node('p', 'muted', review.nextThemeReason || '这是本周记录里最值得继续的一步。'),
   );
   main.append(focus);
 
@@ -6565,16 +6571,16 @@ async function taskAnalysisPage(): Promise<HTMLElement> {
     const distribution = node('section', 'analysis-section analysis-result-section');
     distribution.append(node('h2', '', '结果分布'));
     const total = completed + partial + skipped;
-    const bar = node('div', 'analysis-result-bar');
-    for (const [value, className] of [[completed, 'is-completed'], [partial, 'is-partial'], [skipped, 'is-skipped']] as const) {
-      const segment = node('span', className, value ? `${analysisPercent(value, total)}%` : '');
-      segment.style.width = `${analysisPercent(value, total)}%`;
-      bar.append(segment);
+    const resultList = node('div', 'analysis-result-list');
+    for (const [label, value] of [['已完成', completed], ['有进展', partial], ['跳过', skipped]] as const) {
+      const percent = analysisPercent(value, total);
+      const row = node('div', 'analysis-result-row');
+      const meter = node('span', 'analysis-meter');
+      meter.style.setProperty('--value', `${percent}%`);
+      row.append(node('strong', '', label), meter, node('span', '', `${percent}%`));
+      resultList.append(row);
     }
-    distribution.append(bar);
-    const resultLegend = node('div', 'analysis-result-legend');
-    for (const [label, value, className] of [['已完成', completed, 'is-completed'], ['有进展', partial, 'is-partial'], ['跳过', skipped, 'is-skipped']] as const) resultLegend.append(node('span', className, `${label} ${analysisPercent(value, total)}%`));
-    distribution.append(resultLegend);
+    distribution.append(resultList);
     body.append(distribution);
 
     const categorySection = node('section', 'analysis-section analysis-category-section');
