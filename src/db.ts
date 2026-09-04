@@ -721,6 +721,20 @@ function assertText(value: unknown, field: string, max = 12_000, allowEmpty = fa
   if (typeof value !== 'string' || value.length > max || (!allowEmpty && !value.trim())) throw new Error(`${field} 无效。`);
 }
 
+function normalizedEntryBody(value: string, imageDataUrl?: string): string {
+  const body = value.trim() ? validateBody(value) : '';
+  if (!body && !imageDataUrl) throw new Error('先写下一点真实发生的事。');
+  return body;
+}
+
+function validateEntryImage(value: unknown): string | undefined {
+  if (value === undefined || value === '') return undefined;
+  if (typeof value !== 'string' || value.length > 2_200_000 || !/^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(value)) {
+    throw new Error('记录图片无效。');
+  }
+  return value;
+}
+
 const DAILY_REVIEW_KEYS = ['progress', 'takeaway', 'problem', 'tomorrowFocus'] as const;
 const WEEKLY_REVIEW_KEYS = ['progress', 'assets', 'biggestProgress', 'biggestWaste', 'stopOrReduce', 'nextFocus'] as const;
 
@@ -1384,7 +1398,7 @@ export function parseBackup(text: string): BackupBundle {
   entries.forEach((entry) => {
     assertCommonRecord(entry, '记录');
     if (!isLocalDate(entry.localDate)) throw new Error('记录日期无效。');
-    validateBody(entry.body);
+    normalizedEntryBody(entry.body, validateEntryImage(entry.imageDataUrl));
     if (!['text', 'import'].includes(entry.inputMethod)) throw new Error('记录输入方式无效。');
     if (entry.kind !== undefined) assertOneOf(entry.kind, ['journal', 'success', 'fun'], '记录类型');
     assertOneOf(entry.analysisStatus, ['not-submitted', 'queued', 'processing', 'succeeded', 'failed'], '记录整理状态');
@@ -1411,7 +1425,7 @@ export function parseBackup(text: string): BackupBundle {
     if (typeof revision.entryId !== 'string' || !entryIds.has(revision.entryId)) throw new Error('备份存在孤立的修改版本。');
     assertInteger(revision.fromVersion, 1, Number.MAX_SAFE_INTEGER, '修改版本号');
     if (revision.fromVersion >= (entryVersions.get(revision.entryId) ?? 0)) throw new Error('修改版本号超出记录版本。');
-    validateBody(revision.previousBody);
+    normalizedEntryBody(revision.previousBody, validateEntryImage(revision.previousImageDataUrl));
     if (revision.previousKind !== undefined) assertOneOf(revision.previousKind, ['journal', 'success', 'fun'], '修改前记录类型');
     if (!['user-edit', 'undo', 'import'].includes(revision.reason)) throw new Error('修改原因无效。');
     if (revision.undoneAt !== undefined) {
@@ -1895,15 +1909,18 @@ export class QiguangDb {
     date = localDate(),
     inputMethod: JournalEntry['inputMethod'] = 'text',
     kind: NonNullable<JournalEntry['kind']> = 'journal',
+    imageDataUrl?: string,
   ): Promise<JournalEntry> {
     if (!isLocalDate(date)) throw new Error('记录日期无效。');
     assertOneOf(inputMethod, ['text', 'import'], '记录输入方式');
     assertOneOf(kind, ['journal', 'success', 'fun'], '记录类型');
+    const image = validateEntryImage(imageDataUrl);
     const timestamp = nowIso();
     const entry: JournalEntry = {
       id: crypto.randomUUID(),
       localDate: date,
-      body: validateBody(bodyValue),
+      body: normalizedEntryBody(bodyValue, image),
+      ...(image ? { imageDataUrl: image } : {}),
       inputMethod,
       kind,
       analysisStatus: 'not-submitted',
@@ -2011,6 +2028,7 @@ export class QiguangDb {
     expectedVersion: number,
     bodyValue: string,
     kind?: NonNullable<JournalEntry['kind']>,
+    imageDataUrl?: string,
   ): Promise<JournalEntry> {
     const transaction = this.database.transaction(['entries', 'revisions', 'analyses', 'events', 'observations', 'snapshots', 'memories', 'analysisJobs', 'xpLedger'], 'readwrite');
     const entries = transaction.objectStore('entries');
@@ -2023,11 +2041,12 @@ export class QiguangDb {
       transaction.abort();
       throw new Error('记录已在其他页面修改，请刷新后重试。');
     }
-    const body = validateBody(bodyValue);
+    const image = validateEntryImage(imageDataUrl);
+    const body = normalizedEntryBody(bodyValue, image);
     if (kind !== undefined) assertOneOf(kind, ['journal', 'success', 'fun'], '记录类型');
     const currentKind = current.kind ?? 'journal';
     const updatedKind = kind ?? currentKind;
-    if (body === current.body && updatedKind === currentKind) {
+    if (body === current.body && updatedKind === currentKind && image === current.imageDataUrl) {
       transaction.abort();
       throw new Error('记录没有变化。');
     }
@@ -2037,13 +2056,14 @@ export class QiguangDb {
       entryId: id,
       fromVersion: current.version,
       previousBody: current.body,
+      previousImageDataUrl: current.imageDataUrl,
       previousKind: currentKind,
       reason: 'user-edit',
       createdAt: timestamp,
       updatedAt: timestamp,
       version: 1,
     };
-    const updated = { ...current, body, kind: updatedKind, analysisStatus: 'not-submitted' as const, version: current.version + 1, updatedAt: timestamp };
+    const updated = { ...current, body, kind: updatedKind, imageDataUrl: image, analysisStatus: 'not-submitted' as const, version: current.version + 1, updatedAt: timestamp };
     transaction.objectStore('revisions').add(revision);
     entries.put(updated);
     const done = transactionDone(transaction);
@@ -2080,6 +2100,7 @@ export class QiguangDb {
       entryId: id,
       fromVersion: current.version,
       previousBody: current.body,
+      previousImageDataUrl: current.imageDataUrl,
       previousKind: current.kind ?? 'journal',
       reason: 'undo',
       createdAt: timestamp,
@@ -2089,6 +2110,7 @@ export class QiguangDb {
     const updated = {
       ...current,
       body: latest.previousBody,
+      imageDataUrl: latest.previousImageDataUrl,
       kind: latest.previousKind ?? 'journal',
       analysisStatus: 'not-submitted' as const,
       version: current.version + 1,

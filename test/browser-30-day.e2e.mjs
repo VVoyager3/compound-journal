@@ -75,7 +75,7 @@ async function finishOnboarding(page) {
   const dialog = page.getByRole('dialog', { name: '选一个陪伴角色' });
   await dialog.getByRole('button', { name: '选择鱼鱼' }).click();
   await dialog.getByRole('button', { name: '写下第一件事' }).click();
-  await page.getByRole('textbox', { name: '发生了什么' }).waitFor();
+  await page.getByRole('textbox', { name: '现在的想法' }).waitFor();
   await page.evaluate(() => localStorage.setItem('qiguang.room-guide-seen.v1', '1'));
 }
 
@@ -100,13 +100,18 @@ async function directionTitle(page, allowRecordOnly = false) {
 
 async function recordDay(page, day, success = false) {
   const body = `第 ${String(day).padStart(2, '0')} 天：留下当天真实进展。`;
-  await page.goto(`${baseUrl}/#/record`);
-  if (success) await page.getByRole('button', { name: '成功小记' }).click();
-  else await page.getByRole('button', { name: '难忘的事' }).click();
+  await page.goto(`${baseUrl}/#/record/${dayDate(day)}`);
+  await page.getByRole('button', { name: '生活日记' }).waitFor();
   assert.equal(await page.getByRole('checkbox', { name: '记为成功记录' }).count(), 0);
-  await page.getByRole('textbox', { name: '发生了什么' }).fill(body);
-  await page.getByRole('button', { name: '保存记录' }).click();
+  await page.getByRole('textbox', { name: '现在的想法' }).fill(body);
+  await page.getByRole('button', { name: '发送' }).click();
   await page.waitForURL(new RegExp(`#\\/day\\/${dayDate(day)}$`));
+  if (success) {
+    await page.locator('.day-record-row').filter({ hasText: body }).click();
+    const detail = page.getByRole('dialog', { name: '记录详情' });
+    await detail.getByRole('button', { name: '成功小记' }).click();
+    await detail.getByRole('button', { name: '保存修改' }).click();
+  }
   await assert.doesNotReject(() => page.locator('.day-record-body').getByText(body, { exact: true }).waitFor());
 }
 

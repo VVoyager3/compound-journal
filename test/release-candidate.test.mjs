@@ -111,19 +111,22 @@ test('room movement uses sprite frames instead of stretching the whole character
   assert.match(app, /room-background\.png/);
 });
 
-test('record editor keeps the day title above three equal record categories', async () => {
+test('record editor keeps life diary and daily review as two simple subpages', async () => {
   const app = await read('src/app.ts');
   const styles = await read('src/styles.css');
-  assert.match(app, /'难忘的事'/);
+  assert.match(app, /'生活日记'/);
   assert.match(app, /'成功小记'/);
   assert.match(app, /'每日复盘'/);
-  assert.doesNotMatch(app, /'日常记录'|'成功记录'|'趣事记录'|'普通记录'/);
-  assert.match(app, /'今日一句'/);
-  assert.match(app, /record-summary-input/);
-  assert.match(app, /saveDayCaption\(dateInput\.value, summaryInput\.value\.trim\(\)\)/);
+  assert.doesNotMatch(app, /'难忘的事'|'日常记录'|'成功记录'|'趣事记录'|'普通记录'/);
+  assert.doesNotMatch(app, /record-summary-input/);
+  assert.match(app, /life-diary-composer/);
+  assert.match(app, /readRecordImage/);
+  assert.match(app, /openAnalysisPreview\(activeDraftDate, analysableEntries\)/);
+  assert.match(app, /db\.saveReview\(activeDraftDate, 'daily'/);
   assert.match(app, /snapshotVariantFor/);
   assert.match(styles, /\.room-stage\.is-snapshot-(?:rest|focus|play|connection|bright)/);
-  assert.match(styles, /\.page-record \.record-prompt-actions\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(styles, /\.record-subtabs\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s);
+  assert.match(styles, /\.life-diary-bubble\s*\{[^}]*justify-self:\s*end/s);
   assert.doesNotMatch(styles, /\.record-prompt-actions\s*\{[^}]*overflow-x:\s*auto/s);
 });
 

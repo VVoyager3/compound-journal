@@ -8857,3 +8857,217 @@ select.input { min-height: 44px; }
 @media (max-width: 360px) {
   .personal-review-card { padding-inline: 16px; }
 }
+
+/* Life diary: the main record surface is a quiet message stream, not a form. */
+.page-record {
+  gap: 14px;
+  padding-bottom: calc(18px + var(--bottom-nav-height) + env(safe-area-inset-bottom));
+}
+
+.record-subtabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.record-subtab {
+  min-height: 44px;
+  border: 1px solid rgb(24 57 43 / 22%);
+  border-radius: 8px;
+  color: var(--forest);
+  background: rgb(255 250 240 / 54%);
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 560;
+}
+
+.record-subtab.is-active {
+  color: var(--paper);
+  border-color: var(--forest);
+  background: var(--forest);
+}
+
+.life-diary-panel {
+  display: grid;
+  min-height: min(620px, calc(100vh - 220px));
+  gap: 14px;
+}
+
+.life-diary-header {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.life-diary-header h2,
+.daily-review-form h2 {
+  margin: 0;
+  font-size: 1.22rem;
+  line-height: 1.25;
+}
+
+.life-diary-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.life-diary-feed {
+  display: grid;
+  align-content: end;
+  gap: 12px;
+  min-height: 340px;
+  padding: 6px 0 130px;
+}
+
+.life-diary-bubble {
+  display: grid;
+  justify-self: end;
+  max-width: min(82%, 360px);
+  gap: 7px;
+  min-height: 44px;
+  padding: 11px 14px 8px;
+  border: 0;
+  border-radius: 18px 18px 6px 18px;
+  color: var(--ink);
+  background: rgb(242 239 232 / 96%);
+  box-shadow: 0 4px 12px rgb(43 38 28 / 7%);
+  text-align: left;
+}
+
+.life-diary-bubble.is-success {
+  background: rgb(223 237 210 / 95%);
+}
+
+.life-diary-copy {
+  overflow: hidden;
+  font-size: .98rem;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life-diary-time {
+  justify-self: end;
+  color: var(--muted);
+  font-size: .68rem;
+  line-height: 1;
+}
+
+.life-diary-image,
+.day-record-image,
+.record-detail-image-box img {
+  width: 100%;
+  max-height: 220px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.life-diary-composer {
+  position: sticky;
+  z-index: 3;
+  bottom: calc(var(--bottom-nav-height) + 10px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  padding: 10px 0 8px;
+  background: linear-gradient(to top, var(--paper) 76%, rgb(250 245 231 / 0));
+}
+
+.life-diary-composer-row {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 50px;
+  gap: 10px;
+  align-items: end;
+}
+
+.life-diary-file {
+  display: none;
+}
+
+.life-diary-image-button,
+.life-diary-send {
+  min-height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 600;
+}
+
+.life-diary-image-button {
+  color: var(--ink);
+  background: rgb(242 239 232 / 96%);
+}
+
+.life-diary-send {
+  color: var(--paper);
+  background: var(--forest);
+}
+
+.life-diary-send:disabled {
+  opacity: .42;
+}
+
+.life-diary-input {
+  min-height: 48px;
+  max-height: 128px;
+  padding: 13px 16px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgb(242 239 232 / 96%);
+  font: inherit;
+  font-size: .95rem;
+  line-height: 1.35;
+  resize: none;
+}
+
+.life-diary-image-preview {
+  display: grid;
+  width: min(68%, 260px);
+  gap: 6px;
+  justify-self: end;
+  padding: 8px;
+  border: 1px solid rgb(24 57 43 / 18%);
+  border-radius: 10px;
+  background: rgb(255 250 240 / 72%);
+}
+
+.life-diary-image-preview[hidden],
+.record-tab-panel[hidden] {
+  display: none;
+}
+
+.daily-review-panel {
+  padding-bottom: calc(36px + var(--bottom-nav-height) + env(safe-area-inset-bottom));
+}
+
+.daily-review-form {
+  gap: 16px;
+}
+
+.daily-review-form .compact-textarea {
+  min-height: 84px;
+}
+
+.record-detail-image-box {
+  display: grid;
+  gap: 8px;
+}
+
+.record-detail-image-box .button {
+  width: 100%;
+}
+
+.page-day .day-record-row {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 12px 14px;
+}
+
+.page-day .day-record-image {
+  margin-bottom: 8px;
+}

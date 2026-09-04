@@ -73,6 +73,7 @@ export interface ImportableEntity extends BaseEntity {
 export interface JournalEntry extends ImportableEntity {
   localDate: string;
   body: string;
+  imageDataUrl?: string;
   inputMethod: 'text' | 'import';
   /** Explicit user intent; absent on legacy records and defaults to a regular journal entry. */
   kind?: 'journal' | 'success' | 'fun';
@@ -83,6 +84,7 @@ export interface JournalRevision extends ImportableEntity {
   entryId: string;
   fromVersion: number;
   previousBody: string;
+  previousImageDataUrl?: string;
   /** The kind before this revision; absent on legacy revisions and defaults to journal. */
   previousKind?: NonNullable<JournalEntry['kind']>;
   reason: 'user-edit' | 'undo' | 'import';
