@@ -80,35 +80,14 @@ test('every companion action has its own tightly cropped transparent PNG', async
   }
 });
 
-test('room movement uses sprite frames instead of stretching the whole character', async () => {
-  const styles = await read('src/styles.css');
+test('the companion-only baseline uses complete figures and no scene navigation', async () => {
   const app = await read('src/app.ts');
-  assert.match(styles, /--turn-6:/);
-  assert.match(styles, /--return-turn-6:/);
-  assert.match(styles, /@keyframes room-walk-cycle/);
-  assert.match(styles, /@keyframes room-shadow-step/);
-  assert.match(styles, /@keyframes room-return-shadow-step/);
-  assert.match(styles, /@keyframes hotspot-sigil/);
-  assert.match(styles, /--scene-light:/);
-  assert.match(styles, /background-size:\s*504px 504px/);
-  assert.match(styles, /background-position:\s*var\(--walk-1\)/);
-  assert.match(styles, /--face-left-frame:\s*-84px 0/);
-  assert.match(styles, /--face-right-frame:\s*-252px 0/);
-  assert.match(styles, /--walk-left-1:\s*0px -168px/);
-  assert.match(styles, /--walk-right-1:\s*0px -252px/);
-  assert.match(styles, /\.room-character\.has-motion\.is-female\s*\{[^}]*--rest-frame:\s*var\(--face-front-frame\)/s);
-  assert.match(styles, /\.room-character\.has-motion\.is-male\s*\{[^}]*--face-left-frame:\s*-252px 0;[^}]*--face-right-frame:\s*-84px 0;[^}]*--walk-left-1:\s*0px -252px;[^}]*--walk-left-6:\s*-420px -252px;[^}]*--walk-right-1:\s*0px -168px;[^}]*--walk-right-6:\s*-420px -168px;/s);
-  assert.match(styles, /room-action 960ms steps\(6, jump-none\)/);
-  assert.match(styles, /room-ambient-stroll 6200ms steps\(1, end\)/);
-  assert.doesNotMatch(styles, /inset\(0 8px 22px 4px\)/);
-  assert.doesNotMatch(styles, /room-step-weight|room-footfall|room-ambient-footfall|filter:\s*drop-shadow|scale:\s*1\.27|rotate:\s*-?1deg/);
-  assert.doesNotMatch(`${app}\n${styles}`, /room-plant|plant-celebration/, 'the room must not ship unexplained habit color blocks');
-  assert.match(app, /character-motion-(?:female|male)-runtime\.png/);
-  assert.match(app, /preloadMotionFrames/);
-  assert.match(app, /scheduleIdleGesture\(700 \+ Math\.random\(\) \* 800\)/);
-  assert.doesNotMatch(app, /avatar && ambientAction !== 'rest'/);
-  assert.doesNotMatch(app, /character-motion-(?:female|male)-transparent\.png/);
-  assert.match(app, /room-background\.png/);
+  const styles = await read('src/styles.css');
+  assert.match(app, /character-frames\/female\/01-idle-front\.png/);
+  assert.match(app, /character-frames\/male\/01-idle-front\.png/);
+  assert.match(app, /companion-trigger/);
+  assert.match(styles, /\.companion-figure\s*\{[^}]*object-fit:\s*contain/s);
+  assert.doesNotMatch(app, /roomBackgroundImage|scheduleIdleGesture|room-hotspot/);
 });
 
 test('record editor keeps life diary and daily review as two simple subpages', async () => {
@@ -422,9 +401,10 @@ test('Android device checks preserve installed data and separate emulator mode',
   assert(script.includes('D:\\tmp\\qiguang-emulator-check'));
   assert.match(script, /svc wifi disable/);
   assert.match(script, /svc wifi enable/);
-  assert.match(script, /\$defaultAndroidUserHome = Join-Path \$env:USERPROFILE '\.android'/);
+  assert.doesNotMatch(script, /\$defaultAndroidUserHome = Join-Path \$env:USERPROFILE '\.android'/, 'Android signing and caches must not fall back to C:');
   assert.match(script, /\$projectAndroidUserHome = Join-Path \$workspace '\.android-user'/);
-  assert.match(script, /Test-Path -LiteralPath \(Join-Path \$defaultAndroidUserHome 'debug\.keystore'\)/, 'reuse an existing debug identity before creating a project-local one');
+  assert.match(script, /Test-Path -LiteralPath \(Join-Path \$env:ANDROID_USER_HOME 'debug\.keystore'\)/, 'require an existing identity instead of generating a replacement');
+  assert.match(script, /项目更新签名缺失，停止构建/);
   assert.match(script, /apksigner\.bat/);
   assert.match(script, /verify --print-certs/);
   assert.match(script, /\$installedSigner -ne \$candidateSigner/);

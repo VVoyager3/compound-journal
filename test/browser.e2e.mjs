@@ -131,6 +131,46 @@ async function xpLedgerCount(page) {
   }));
 }
 
+test('both complete companion figures and equal navigation remain available offline', async () => {
+  for (const companion of ['鱼鱼', '包包']) {
+    const { context, page } = await offlineShellPage();
+    try {
+      await finishOnboarding(page, companion);
+      await page.goto(`${baseUrl}/#/today`);
+      await page.waitForFunction(() => {
+        const image = document.querySelector('.companion-figure');
+        return image?.complete && image.naturalWidth > 0;
+      });
+      await context.setOffline(true);
+      await page.reload();
+      await page.locator('.companion-figure').waitFor();
+      const figure = await page.locator('.companion-figure').evaluate(image => ({
+        loaded: image.complete && image.naturalWidth > 0, fit: getComputedStyle(image).objectFit,
+        alt: image.alt, source: image.src,
+      }));
+      assert.equal(figure.loaded, true);
+      assert.equal(figure.fit, 'contain');
+      assert.equal(figure.alt, companion);
+      assert.equal(await page.locator('.room-scene,.room-hotspot').count(), 0);
+      await page.getByRole('button', { name: '生活分身', exact: true }).click();
+      assert.equal(await page.locator('.character-panel').isVisible(), true);
+      await page.locator('.page-header h1').click();
+      assert.equal(await page.locator('.character-panel').isVisible(), false);
+      for (const name of ['任务', '记录', '轨迹', '设置', '今日']) {
+        await page.locator('.bottom-nav').getByRole('link', { name, exact: true }).click();
+        await page.locator('.bottom-nav .is-active').filter({ hasText: name }).waitFor();
+        const boxes = await page.locator('.bottom-nav .nav-item').evaluateAll(items => items.map(item => {
+          const box = item.getBoundingClientRect();
+          return { width: box.width, height: box.height };
+        }));
+        assert.equal(boxes.length, 5);
+        assert.ok(boxes.every(box => box.width >= 44 && box.height >= 44));
+        boxes.forEach(box => assert.deepEqual(box, boxes[0]));
+      }
+    } finally { await context.close(); }
+  }
+});
+
 test('analysis heatmaps keep square cells and contain horizontal overflow', async () => {
   const { context, page } = await freshPage({ now: new Date(2026, 9, 5, 10, 0, 0).getTime() });
   try {
@@ -147,9 +187,10 @@ test('analysis heatmaps keep square cells and contain horizontal overflow', asyn
       await page.setViewportSize({ width, height: 800 });
       const titleOffset = await page.getByRole('heading', { name: '任务分析', exact: true }).evaluate((heading) => {
         const box = heading.getBoundingClientRect();
-        return Math.abs(box.left + box.width / 2 - document.documentElement.clientWidth / 2);
+        const back = heading.parentElement.querySelector('button').getBoundingClientRect();
+        return box.left - back.right;
       });
-      assert.ok(titleOffset < 1, `task analysis title must stay centered at ${width}px`);
+      assert.ok(titleOffset >= 0 && titleOffset <= 20, `task analysis title must align after its back action at ${width}px`);
       for (const [tabName, weeks] of [['12周', 12], ['半年', 26], ['全年', 52]]) {
         await page.getByRole('tab', { name: tabName, exact: true }).click();
         const geometry = await page.locator('.analysis-heat-scroll').evaluate((viewport) => {
@@ -231,7 +272,7 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     const input = page.getByRole('textbox', { name: '现在的想法' });
     assert.equal(await input.getAttribute('placeholder'), '现在的想法');
     const editorLayout = await input.evaluate((element) => ({ height: element.getBoundingClientRect().height, radius: getComputedStyle(element).borderRadius }));
-    assert.ok(editorLayout.height <= 56 && editorLayout.radius !== '0px', 'the record composer should look like a compact message input');
+    assert.ok(editorLayout.height >= 60 && editorLayout.height <= 150 && editorLayout.radius === '0px', 'life diary uses a multiline writing area inside one shared composer frame');
     const recordDate = await dateControl.locator('input[type="date"]').inputValue();
     await input.fill('电脑自动回归：记录一件真实发生的事。');
     assert.equal(await input.evaluate((element) => element === document.activeElement), true);
@@ -252,56 +293,22 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     await page.getByRole('button', { name: '撤销最近修改' }).click();
     await assert.doesNotReject(() => page.locator('.day-record-body').getByText('电脑自动回归：记录一件真实发生的事。', { exact: true }).waitFor());
     await page.goto(`${baseUrl}/#/today`);
-    const roomSprite = await page.locator('.room-character').getAttribute('style');
-    assert.match(roomSprite ?? '', /--motion-atlas:\s*url\([^)]*character-motion-female-runtime/);
-    const status = page.locator('.status-summary');
-    await assert.doesNotReject(() => status.waitFor());
-    assert.equal(await status.locator('.status-item').count(), 5, 'the five current state scores should be visible directly below the room');
-    assert.equal(await status.locator('.status-meter, .caption').count(), 0, 'the today state bar should show scores without meters or explanatory labels');
-    assert.ok((await page.locator('.home-hero').evaluate((element) => element.getBoundingClientRect().bottom)) <= (await status.evaluate((element) => element.getBoundingClientRect().top)), 'current state scores should follow the room before daily actions');
-    assert.equal(await status.locator('details').count(), 0, 'the primary life-state view should not hide behind explanatory disclosure');
-    const visibleRoomLabels = await page.locator('.room-hotspot .hotspot-label').evaluateAll((labels) => labels
-      .filter((label) => getComputedStyle(label).clip === 'auto')
-      .map((label) => label.textContent));
-    assert.deepEqual(visibleRoomLabels, [], 'room hotspots should stay invisible until hover or keyboard focus');
-    const roomChrome = await page.locator('.room-stage').evaluate((element) => ({
-      border: getComputedStyle(element).borderTopWidth,
-      overlay: getComputedStyle(element.querySelector('.room-scene'), '::before').content,
-      light: getComputedStyle(element.querySelector('.room-scene'), '::before').backgroundImage,
+    const portrait = page.locator('.companion-figure');
+    await portrait.waitFor();
+    assert.equal(await portrait.evaluate((image) => image.complete && image.naturalWidth > 0), true);
+    assert.equal(await page.locator('.room-scene, .room-hotspot').count(), 0);
+    assert.equal(await page.locator('.status-item').count(), 5);
+    const navSizes = await page.locator('.bottom-nav .nav-item').evaluateAll((items) => items.map((item) => {
+      const bounds = item.getBoundingClientRect();
+      return { width: bounds.width, height: bounds.height };
     }));
-    assert.equal(roomChrome.border, '1px', 'the room should keep the approved thin paper-frame edge');
-    assert.equal(roomChrome.overlay, '""');
-    assert.match(roomChrome.light, /gradient/, 'the room should share the warm wilderness lighting language without a permanent UI frame');
-    const recordHotspot = page.getByRole('button', { name: '打开记录' });
-    await recordHotspot.focus();
-    const hotspotFocus = await recordHotspot.evaluate((element) => ({
-      outlineStyle: getComputedStyle(element).outlineStyle,
-      boxShadow: getComputedStyle(element).boxShadow,
-    }));
-    assert.deepEqual(hotspotFocus, { outlineStyle: 'none', boxShadow: 'none' }, 'scene hotspots should not gain a thick browser frame when focused or tapped');
-    assert.equal(await recordHotspot.evaluate((element) => getComputedStyle(element, '::before').opacity), '1', 'focused furniture should receive an in-world interaction ring');
-    assert.equal(await page.locator('.character-state.is-present').count(), 0, 'the neutral companion pose should not need a floating text label');
-    assert.deepEqual(await page.locator('.bottom-nav .nav-item').allTextContents(), ['今日', '任务', '记录', '轨迹', '设置']);
-    const navigationBounds = await page.locator('.bottom-nav').evaluate((navigation) => {
-      const lastItem = navigation.lastElementChild;
-      return {
-        viewportWidth: window.innerWidth,
-        left: Math.round(navigation.getBoundingClientRect().left),
-        right: Math.round(navigation.getBoundingClientRect().right),
-        lastRight: lastItem instanceof HTMLElement ? Math.round(lastItem.getBoundingClientRect().right) : -1,
-      };
-    });
-    assert.deepEqual(
-      navigationBounds,
-      { viewportWidth: navigationBounds.viewportWidth, left: 0, right: navigationBounds.viewportWidth, lastRight: navigationBounds.viewportWidth },
-      'five-item navigation must fill the viewport without an empty column',
-    );
-    await recordHotspot.click();
-    const roomGuide = page.getByRole('dialog', { name: '这个房间可以互动' });
-    await assert.doesNotReject(() => roomGuide.waitFor());
-    await assert.doesNotReject(() => roomGuide.getByText('点小人看建议；点家具去页面。', { exact: true }).waitFor());
-    await roomGuide.getByRole('button', { name: '知道了，继续' }).click();
-    await page.waitForURL(/#\/record$/);
+    assert.equal(navSizes.length, 5);
+    for (const size of navSizes) assert.deepEqual(size, navSizes[0], 'every selected navigation area has the same geometry');
+    await page.getByRole('button', { name: '生活分身', exact: true }).click();
+    const panel = page.locator('.character-panel');
+    assert.equal(await panel.isVisible(), true);
+    await panel.getByRole('button', { name: '再记一件事' }).click();
+    await page.waitForURL(/#[/]record$/);
     assert.deepEqual(apiRequests, []);
   } finally {
     await context.close();
@@ -341,6 +348,7 @@ test('all core pages survive 200 percent text at 320px with touch-safe actions',
       assert.deepEqual(accessibility, { missingNames: [], imagesWithoutAlt: 0, duplicateIds: [] }, `${route} must expose stable screen-reader semantics`);
     }
     await page.goto(`${baseUrl}/#/tasks`);
+    await page.locator('.page-tasks .page-header-text-action').waitFor();
     const headerActionLines = await page.locator('.page-header-text-action').evaluate((button) => {
       const range = document.createRange();
       range.selectNodeContents(button);
@@ -348,11 +356,11 @@ test('all core pages survive 200 percent text at 320px with touch-safe actions',
     });
     assert.equal(headerActionLines, 1, 'short page-header actions must not wrap one Chinese character per line');
     await page.goto(`${baseUrl}/#/record`);
-    const promptSizes = await page.locator('.record-prompt-actions button').evaluateAll((buttons) => buttons.map((button) => {
+    const promptSizes = await page.locator('.record-subtab, .life-diary-send, .life-diary-image-button').evaluateAll((buttons) => buttons.map((button) => {
       const box = button.getBoundingClientRect();
       return { width: box.width, height: box.height };
     }));
-    assert(promptSizes.length === 4 && promptSizes.every((box) => box.width >= 44 && box.height >= 44), 'record quick starts must remain touch-safe');
+    assert(promptSizes.length === 4 && promptSizes.every((box) => box.width >= 44 && box.height >= 44), 'record tabs and composer actions must remain touch-safe');
     assert.equal(await page.locator('.record-number-button, .record-attachment-button').count(), 0, 'recording keeps only the writing controls in use');
     await page.goto(`${baseUrl}/#/calendar`);
     await page.getByRole('button', { name: '查找记录' }).click();
@@ -363,7 +371,7 @@ test('all core pages survive 200 percent text at 320px with touch-safe actions',
       pagePadding: Number.parseFloat(getComputedStyle(main).paddingBottom),
       navigationHeight: document.querySelector('.bottom-nav')?.getBoundingClientRect().height ?? 0,
     }));
-    assert.ok(safeBottom.pagePadding >= safeBottom.navigationHeight + 24, 'scrolling pages must reserve the navigation height plus a 24px breathing zone');
+    assert.ok(safeBottom.pagePadding >= safeBottom.navigationHeight + 24, `scrolling pages must reserve navigation plus 24px: ${JSON.stringify(safeBottom)}`);
     await page.goto(`${baseUrl}/#/system`);
     const advanced = page.getByText('行动规则', { exact: true });
     assert.ok((await advanced.boundingBox())?.height >= 44);
@@ -606,7 +614,7 @@ test('long task dialogs stay inside a short mobile viewport', async () => {
         bottom: Math.round(box.bottom),
         viewportHeight: Math.round(window.visualViewport?.height ?? window.innerHeight),
         cssViewportHeight: getComputedStyle(element).getPropertyValue('--dialog-viewport-height').trim(),
-        scrollable: element.scrollHeight > element.clientHeight,
+        scrollable: element.querySelector('.dialog-content').scrollHeight > element.querySelector('.dialog-content').clientHeight,
       };
     });
     assert.ok(layout.top >= 0 && layout.bottom <= layout.viewportHeight, 'the dialog must remain inside the visible viewport');
@@ -943,6 +951,7 @@ test('secondary pages stay concise before the user has evidence', async () => {
     assert.equal(await page.getByText('WEEKLY REVIEW', { exact: true }).count(), 0);
 
     await page.goto(`${baseUrl}/#/calendar`);
+    await page.locator('.calendar-monthly-details > summary').click();
     await assert.doesNotReject(() => page.getByRole('heading', { name: '本月变化' }).waitFor());
     assert.equal(await page.getByText('记录不足', { exact: true }).isVisible(), false, 'empty category details should stay collapsed');
     assert.equal(await page.locator('.monthly-area-row').count(), 0);
@@ -1295,7 +1304,11 @@ test('calendar opens an in-place day snapshot before the full review', async () 
       const gridStyle = getComputedStyle(cell.parentElement);
       return { borderRadius: style.borderRadius, borderWidth: style.borderTopWidth, rowGap: gridStyle.rowGap, marginBottom: gridStyle.marginBottom };
     });
-    assert.deepEqual(calendarLayout, { borderRadius: '2px', borderWidth: '2px', rowGap: '6px', marginBottom: '12px' });
+    assert.equal(calendarLayout.borderRadius, '2px');
+    assert.equal(calendarLayout.borderWidth, '1px');
+    assert.equal(calendarLayout.rowGap, '12px');
+    const square = await todayCell.boundingBox();
+    assert.ok(Math.abs(square.width - square.height) < 1, 'today marker must be a square');
     await todayCell.click();
     const preview = page.locator('.calendar-day-preview');
     await assert.doesNotReject(() => preview.getByText('日历快照里的真实记录', { exact: true }).waitFor());
@@ -1349,7 +1362,7 @@ test('AI can draft the day caption while the user keeps final edit control', asy
     await page.locator('.calendar-day-preview').getByRole('button', { name: '编辑当日一句' }).click();
     const captionDialog = page.getByRole('dialog', { name: '编辑当日一句' });
     await captionDialog.getByRole('button', { name: '让 AI 概括' }).click();
-    const preview = page.getByRole('dialog', { name: '检查本次发送范围' });
+    const preview = page.getByRole('dialog', { name: '发送内容' });
     await preview.getByRole('checkbox', { name: /我允许将本次选中的内容发送/ }).check();
     await preview.getByRole('button', { name: '确认并整理' }).click();
 
@@ -1395,10 +1408,13 @@ test('daily and weekly personal reviews stay editable and local', async () => {
     await dialog.getByRole('textbox', { name: '下周最重要的一件事' }).fill('完成基线实验');
     await dialog.getByRole('button', { name: '保存复盘' }).click();
     await page.reload();
-    const lastReviewValue = page.locator('.personal-review-card').getByText('完成基线实验', { exact: true });
     await assert.doesNotReject(() => page.locator('.personal-review-card').getByText('形成实验检查清单', { exact: true }).waitFor());
+    await page.locator('.personal-review-card').getByRole('button', { name: '修改' }).click();
+    dialog = page.getByRole('dialog', { name: '周复盘' });
+    const lastReviewValue = dialog.getByRole('textbox', { name: '下周最重要的一件事' });
+    assert.equal(await lastReviewValue.inputValue(), '完成基线实验');
     await lastReviewValue.scrollIntoViewIfNeeded();
-    const [lastBox, navBox] = await Promise.all([lastReviewValue.boundingBox(), page.locator('.bottom-nav').boundingBox()]);
+    const [lastBox, navBox] = await Promise.all([lastReviewValue.boundingBox(), dialog.locator('.dialog-actions').boundingBox()]);
     assert.ok(lastBox && navBox && lastBox.y + lastBox.height <= navBox.y, 'the final review field must scroll above the fixed navigation');
   } finally {
     await context.close();
@@ -1626,15 +1642,16 @@ test('growth page connects milestone, goal, habit, recovery, and experiment achi
 
     await page.goto(`${baseUrl}/#/tasks`);
     await page.getByRole('button', { name: '完成：恢复行动第3次' }).click();
-    await assert.doesNotReject(() => page.getByText(/已解锁“恢复行动 · 懂得停靠”徽章。/).waitFor(), 'a first unlock uses the generic achievement announcement');
+    await assert.doesNotReject(() => page.locator('.toast.is-completion').getByText(/新徽章 · 恢复行动 · 懂得停靠/).waitFor(), 'a first unlock uses the concise achievement announcement');
 
     await page.goto(`${baseUrl}/#/growth`);
     const badges = page.locator('.growth-badges');
-    await assert.doesNotReject(() => badges.getByText('全部 8 ›', { exact: true }).waitFor());
+    await assert.doesNotReject(() => badges.getByText('查看全部 ›', { exact: true }).waitFor());
     assert.equal(await badges.locator('.badge-category-summary').count(), 0, 'badge category descriptions stay hidden');
 
-    await badges.getByText('全部 8 ›', { exact: true }).click();
-    const all = badges.locator('.badge-all');
+    await badges.getByText('查看全部 ›', { exact: true }).click();
+    const all = page.getByRole('dialog', { name: '成就册' });
+    assert.equal(await all.locator('.growth-badge').count(), 8);
     const expectedBadges = ['完成第一章', '完成目标：五类成就目标', '晨间伸展 · 留下节奏', '恢复行动 · 懂得停靠', '实践：小步试验'];
     for (const name of expectedBadges) {
       await all.getByRole('button', { name: `查看徽章详情：${name}`, exact: true }).click();
@@ -1736,261 +1753,10 @@ test('Android without a MiniMax key keeps the local success and action loop usab
   }
 });
 
-test('the companion wanders naturally and walks to furniture before direct navigation', async () => {
-  const { context, page, apiRequests } = await freshPage();
-  try {
-    await finishOnboarding(page);
-    await page.goto(`${baseUrl}/#/today`);
-    const character = page.locator('.room-character');
-    await assert.doesNotReject(() => page.locator('.room-character.is-motion-ready').waitFor());
-    assert.equal(await page.locator('.room-plant').count(), 0, 'the room should not render unexplained habit color blocks');
-    const before = await character.boundingBox();
-    await assert.doesNotReject(() => page.locator('.room-character[class*="is-ambient-"]').waitFor());
-    const ambientAction = await character.evaluate((element) => [...element.classList].find((name) => name.startsWith('is-ambient-')) ?? '');
-    assert.match(ambientAction, /^is-ambient-(walk|read|focus|rest)$/);
-    assert.equal(await page.locator('.character-state.is-present').count(), 0);
-    assert.notEqual(await character.evaluate((element) => getComputedStyle(element).animationName), 'none');
-    assert.doesNotMatch(await character.evaluate((element) => getComputedStyle(element).animationIterationCount), /infinite/);
-    await page.waitForTimeout(850);
-    const wandering = await character.boundingBox();
-    if (ambientAction === 'is-ambient-walk') assert.ok(before && wandering && Math.abs(wandering.x - before.x) > 2, 'companion should visibly wander around the room');
-    await page.getByRole('button', { name: '打开记录' }).click();
-    const observation = await page.locator('.room-character.is-action-desk.is-walking').evaluate((element) => new Promise((resolve) => {
-      const style = getComputedStyle(element);
-      const shadow = getComputedStyle(element, '::after');
-      const hotspot = document.querySelector('.room-hotspot.is-desk');
-      const values = [];
-      const startedAt = performance.now();
-      const sample = () => {
-        values.push({ atlas: getComputedStyle(element).backgroundImage, frame: getComputedStyle(element).backgroundPosition, x: Math.round(element.getBoundingClientRect().x * 10) / 10 });
-        if (performance.now() - startedAt >= 420) resolve({
-          values,
-          animationName: style.animationName,
-          animationTimingFunction: style.animationTimingFunction,
-          shadowAnimationName: shadow.animationName,
-          hotspotAnimationName: hotspot ? getComputedStyle(hotspot, '::before').animationName : '',
-        });
-        else requestAnimationFrame(sample);
-      };
-      sample();
-    }));
-    const actionAnimations = observation.animationName;
-    const actionTiming = observation.animationTimingFunction;
-    assert.match(actionAnimations, /room-action/);
-    assert.match(actionAnimations, /room-walk-cycle/);
-    assert.doesNotMatch(actionAnimations, /room-footfall/);
-    assert.match(actionTiming, /steps\(6, jump-none\)/, 'the route should move on the same discrete beat as its six walking frames');
-    assert.doesNotMatch(actionAnimations, /step-weight/);
-    assert.match(observation.shadowAnimationName, /room-shadow-step/, 'the ground shadow should respond to each footfall');
-    assert.match(observation.hotspotAnimationName, /hotspot-sigil/, 'the active furniture should use a short in-world focus cue');
-    const samples = observation.values;
-    const sampledAtlases = new Set(samples.map((item) => item.atlas));
-    const sampledFrames = new Set(samples.map((item) => item.frame));
-    const sampledPositions = new Set(samples.map((item) => item.x));
-    assert.equal(sampledAtlases.size, 1, 'walking must keep one decoded texture instead of swapping PNGs');
-    assert.ok(sampledFrames.size >= 3 && samples.every((item) => item.atlas !== 'none'), 'atlas positions must advance without flashing blank');
-    assert.ok(sampledPositions.size >= 3 && sampledPositions.size < samples.length / 2, 'movement must land on repeated discrete positions instead of drifting every render frame');
-    assert.ok(samples.at(-1).x < samples[0].x - 5, 'companion should visibly walk toward the desk');
-    assert.equal(await character.evaluate((element) => getComputedStyle(element).clipPath), 'none', 'independent frames should not be clipped again while walking');
-    const interaction = page.locator('.room-character.is-action-desk.is-interacting');
-    await assert.doesNotReject(() => page.getByText('坐到椅子上，写下一件真实发生的事。', { exact: true }).waitFor());
-    await assert.doesNotReject(() => interaction.waitFor());
-    assert.equal(await interaction.evaluate((element) => getComputedStyle(element).backgroundPosition), '-84px 0px');
-    await page.waitForURL(/#\/record$/);
-    assert.deepEqual(apiRequests, []);
-  } finally {
-    await context.close();
-  }
-});
 
-test('ambient rightward steps face right, keep one atlas, and settle into an idle gesture', async () => {
-  const { context, page, apiRequests } = await freshPage({ now: new Date(2026, 7, 26, 15, 0, 0).getTime() });
-  try {
-    await finishOnboarding(page);
-    await page.goto(`${baseUrl}/#/today`);
-    const character = page.locator('.room-character.is-ambient-walk.is-motion-ready');
-    await assert.doesNotReject(() => character.waitFor());
-    const rightward = await character.evaluate((element) => {
-      const animation = element.getAnimations().find((item) => item.animationName === 'room-ambient-stroll');
-      if (!animation) return null;
-      animation.pause();
-      const sample = (time) => {
-        animation.currentTime = time;
-        const style = getComputedStyle(element);
-        return { x: element.getBoundingClientRect().x, frame: style.backgroundPosition, atlas: style.backgroundImage };
-      };
-      const start = sample(2_600);
-      const end = sample(3_760);
-      const style = getComputedStyle(element);
-      return { start, end, expectedStart: style.getPropertyValue('--walk-right-1').trim(), expectedEnd: style.getPropertyValue('--walk-right-6').trim() };
-    });
-    assert.ok(rightward);
-    assert.ok(rightward.end.x > rightward.start.x + 20, 'the sampled segment must move right');
-    assert.equal(rightward.start.frame, rightward.expectedStart, 'the first rightward step must use the right-facing row');
-    assert.equal(rightward.end.frame, rightward.expectedEnd, 'the last rightward step must still face right');
-    assert.equal(rightward.start.atlas, rightward.end.atlas, 'walking must not swap textures between frames');
-    await character.evaluate((element) => new Promise((resolve) => {
-      const check = () => element.dataset.idleGesture ? resolve() : setTimeout(check, 80);
-      check();
-    }));
-    const gesture = await page.locator('.room-character.is-idle-gesture').evaluate((element) => new Promise((resolve) => {
-      const check = () => {
-        const style = getComputedStyle(element);
-        const frame = style.backgroundPosition;
-        const expected = style.getPropertyValue('--idle-gesture-frame').trim();
-        if (frame === expected) resolve({ name: element.dataset.idleGesture, frame, expected });
-        else requestAnimationFrame(check);
-      };
-      check();
-    }));
-    assert.match(gesture.name ?? '', /^(wave|calm|think|read)$/);
-    assert.equal(gesture.frame, gesture.expected);
-    await page.locator('.room-character').evaluate((element) => new Promise((resolve) => {
-      const check = () => !element.dataset.idleGesture ? resolve() : requestAnimationFrame(check);
-      check();
-    }));
-    assert.deepEqual(apiRequests, []);
-  } finally {
-    await context.close();
-  }
-});
 
-test('the male companion maps horizontal movement to the direction shown in his atlas', async () => {
-  const { context, page } = await freshPage();
-  try {
-    await finishOnboarding(page, '包包');
-    await page.goto(`${baseUrl}/#/today`);
-    const character = page.locator('.room-character.is-male.is-motion-ready');
-    await assert.doesNotReject(() => character.waitFor());
-    const frames = await character.evaluate((element) => {
-      const style = getComputedStyle(element);
-      return Object.fromEntries(['face-left-frame', 'face-right-frame', 'walk-left-1', 'walk-left-6', 'walk-right-1', 'walk-right-6']
-        .map((name) => [name, style.getPropertyValue(`--${name}`).trim()]));
-    });
-    assert.deepEqual(frames, {
-      'face-left-frame': '-252px 0',
-      'face-right-frame': '-84px 0',
-      'walk-left-1': '0px -252px',
-      'walk-left-6': '-420px -252px',
-      'walk-right-1': '0px -168px',
-      'walk-right-6': '-420px -168px',
-    });
-  } finally {
-    await context.close();
-  }
-});
 
-test('each clicked furniture route faces the direction of both grid segments', async () => {
-  const { context, page, apiRequests } = await freshPage();
-  const routes = [
-    ['打开记录', 'desk', 'left', 'back'],
-    ['打开任务', 'board', 'back', 'back'],
-    ['打开日历', 'calendar', 'back', 'right'],
-    ['打开成长', 'workbench', 'right', 'back'],
-    ['打开状态', 'window', 'back', 'left'],
-    ['在床边休息', 'bed', 'front', 'left'],
-  ];
-  const directionBetween = (from, to) => {
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
-    return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'front' : 'back');
-  };
-  try {
-    await finishOnboarding(page);
-    for (const [buttonName, action, firstDirection, secondDirection] of routes) {
-      await page.goto(`${baseUrl}/#/today`);
-      await page.reload();
-      await assert.doesNotReject(() => page.locator('.room-character.is-motion-ready').waitFor());
-      await page.getByRole('button', { name: buttonName, exact: true }).click();
-      const character = page.locator(`.room-character.is-action-${action}.is-walking`);
-      await assert.doesNotReject(() => character.waitFor());
-      const motion = await character.evaluate((element, directions) => {
-        const animations = element.getAnimations();
-        const route = animations.find((animation) => animation.animationName === 'room-action');
-        const sprite = animations.find((animation) => animation.animationName === 'room-walk-cycle');
-        if (!route || !sprite) return null;
-        route.pause();
-        sprite.pause();
-        const sample = (time) => {
-          route.currentTime = time;
-          sprite.currentTime = time;
-          const box = element.getBoundingClientRect();
-          return { x: box.left + box.width / 2, y: box.bottom, frame: getComputedStyle(element).backgroundPosition };
-        };
-        const style = getComputedStyle(element);
-        return {
-          start: sample(0),
-          firstFrame: sample(300),
-          waypoint: sample(480),
-          secondFrame: sample(700),
-          end: sample(900),
-          expectedFirstFrame: style.getPropertyValue(`--walk-${directions.first}-4`).trim(),
-          expectedSecondFrame: style.getPropertyValue(`--walk-${directions.second}-4`).trim(),
-        };
-      }, { first: firstDirection, second: secondDirection });
-      assert.ok(motion, `${action} must expose route and sprite animations`);
-      assert.equal(directionBetween(motion.start, motion.waypoint), firstDirection, `${action} first segment must move ${firstDirection}`);
-      assert.equal(directionBetween(motion.waypoint, motion.end), secondDirection, `${action} second segment must move ${secondDirection}`);
-      assert.equal(motion.firstFrame.frame, motion.expectedFirstFrame, `${action} must face ${firstDirection} during its first segment`);
-      assert.equal(motion.secondFrame.frame, motion.expectedSecondFrame, `${action} must turn toward ${secondDirection} only for its second segment`);
-    }
-    assert.deepEqual(apiRequests, []);
-  } finally {
-    await context.close();
-  }
-});
 
-test('the companion explains the current direction before offering adjustments', async () => {
-  const { context, page } = await freshPage();
-  try {
-    await finishOnboarding(page);
-    await page.goto(`${baseUrl}/#/today`);
-    const settings = page.getByRole('link', { name: '设置', exact: true });
-    await assert.doesNotReject(() => settings.waitFor());
-    const settingsBox = await settings.boundingBox();
-    assert.ok(settingsBox && settingsBox.width >= 44 && settingsBox.height >= 44, 'the page settings action should remain touch-safe');
-    const companionButton = page.getByRole('button', { name: '生活分身' });
-    await companionButton.click();
-    const panel = page.locator('.character-panel');
-    await assert.doesNotReject(() => panel.waitFor());
-    assert.equal(await panel.getByRole('button', { name: '关闭生活分身' }).count(), 1, 'the companion panel needs an explicit close action');
-    await assert.doesNotReject(() => panel.getByText('我在。今天想从哪里开始？', { exact: true }).waitFor());
-    await panel.getByText('我在。今天想从哪里开始？', { exact: true }).click();
-    assert.equal(await panel.isVisible(), true, 'clicking inside the companion panel must keep it open');
-    await page.getByRole('heading', { name: '今天', exact: true }).click();
-    await assert.doesNotReject(() => panel.waitFor({ state: 'hidden' }));
-    assert.equal(await companionButton.getAttribute('aria-expanded'), 'false');
-    await companionButton.click();
-    await assert.doesNotReject(() => panel.waitFor());
-    await assert.doesNotReject(() => panel.getByRole('button', { name: '记录一件事' }).waitFor());
-    assert.equal(await panel.getByRole('button', { name: '查看今天的行动' }).count(), 1);
-    assert.equal(await panel.getByRole('button', { name: '设置与数据' }).count(), 0);
-    assert.equal(await panel.locator('.button-primary').getAttribute('aria-label') ?? await panel.locator('.button-primary').textContent(), '查看今天的行动');
-    const panelBox = await panel.boundingBox();
-    const actionBoxes = await panel.locator('.character-actions button').evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().toJSON()));
-    assert.ok(panelBox && actionBoxes.every((box) => box.left >= panelBox.x && box.right <= panelBox.x + panelBox.width), 'all companion actions should stay inside the panel');
-    assert.ok(actionBoxes.every((box) => box.width >= panelBox.width * .25), 'all companion actions should remain visibly usable');
-    assert.equal(await panel.getByRole('button', { name: '为什么给我这个主线？' }).count(), 0);
-    assert.equal(await panel.getByRole('button', { name: '更换外观' }).count(), 0);
-    assert.equal(await panel.getByRole('button', { name: '看本周' }).count(), 0);
-    await panel.getByRole('button', { name: '记录一件事' }).click();
-    await page.waitForURL(/#\/record$/);
-    await page.goto(`${baseUrl}/#/tasks`);
-    await page.getByRole('button', { name: '添加任务' }).click();
-    await page.getByRole('textbox', { name: '任务名称' }).fill('验证今日行动');
-    await page.getByRole('dialog', { name: '安排每日任务' }).getByRole('button', { name: '安排任务' }).click();
-    await page.goto(`${baseUrl}/#/today`);
-    await page.getByRole('button', { name: '生活分身' }).click();
-    await assert.doesNotReject(() => panel.getByText('今天最值得做的一步已经在等你了。', { exact: true }).waitFor());
-    assert.equal(await panel.getByText('验证今日行动', { exact: true }).count(), 0, '轻量面板不重复铺开任务卡内容');
-    assert.equal(await panel.locator('.button-primary').textContent(), '查看今天的行动');
-    await panel.getByRole('button', { name: '查看今天的行动' }).click();
-    assert.equal(await companionButton.getAttribute('aria-expanded'), 'false');
-    await assert.doesNotReject(() => page.locator('.today-focus-list').getByRole('heading', { name: '验证今日行动' }).waitFor());
-  } finally {
-    await context.close();
-  }
-});
 
 test('keyboard users can skip the room and open a direct route', async () => {
   const { context, page } = await freshPage();
@@ -2013,22 +1779,6 @@ test('keyboard users can skip the room and open a direct route', async () => {
   }
 });
 
-test('room uses one of the documented time palettes', async () => {
-  const { context, page } = await freshPage();
-  try {
-    await finishOnboarding(page);
-    await page.goto(`${baseUrl}/#/today`);
-    const phase = await page.locator('.room-scene').getAttribute('class');
-    assert.match(phase ?? '', /is-(night|morning|day|evening)/);
-    const background = await page.locator('.room-scene').evaluate((element) => getComputedStyle(element).backgroundImage);
-    assert.match(background, /linear-gradient/);
-    assert.match(background, /room-background/);
-    const lampOpacity = Number(await page.locator('.room-lamp').evaluate((element) => getComputedStyle(element).opacity));
-    assert.equal(lampOpacity > 0, /is-(night|evening)/.test(phase ?? ''));
-  } finally {
-    await context.close();
-  }
-});
 
 test('returning after a long recording gap can record, revisit, or dismiss', async () => {
   const { context, page } = await freshPage();
@@ -2051,7 +1801,7 @@ test('returning after a long recording gap can record, revisit, or dismiss', asy
     await page.goto(`${baseUrl}/#/today`);
     await assert.doesNotReject(() => page.getByText('欢迎回来', { exact: true }).waitFor());
     assert.equal(await page.getByText('要从最近发生的一件事开始吗？', { exact: true }).count(), 0);
-    await assert.doesNotReject(() => page.locator('.room-character.is-welcoming').waitFor());
+    await assert.doesNotReject(() => page.locator('.companion-figure').waitFor());
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
     await page.getByRole('button', { name: '先看看以前' }).click();
     await page.waitForURL(/#\/calendar$/);
@@ -2093,67 +1843,8 @@ test('a backdated record created today does not trigger the return prompt', asyn
   }
 });
 
-test('system reduced motion skips room furniture action', async () => {
-  const { context, page, apiRequests } = await freshPage();
-  try {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await finishOnboarding(page);
-    await page.goto(`${baseUrl}/#/today`);
-    await page.getByRole('button', { name: '在床边休息' }).click();
-    assert.equal(await page.locator('.room-character.is-action-bed').count(), 0);
-    await assert.doesNotReject(() => page.getByText('歇一会儿。准备好再继续，也算照顾今天。', { exact: true }).waitFor());
-    await page.getByRole('button', { name: '打开记录' }).click();
-    assert.equal(await page.locator('.room-character.is-action-desk').count(), 0);
-    await page.waitForURL(/#\/record$/);
-    assert.deepEqual(apiRequests, []);
-  } finally {
-    await context.close();
-  }
-});
 
-test('installed shell keeps both companion atlases available offline', async () => {
-  const { context, page } = await offlineShellPage();
-  try {
-    const assets = await page.evaluate(async () => {
-      const bundles = [...document.scripts].map((script) => script.src).filter(Boolean);
-      const source = await Promise.all(bundles.map((bundle) => fetch(bundle).then((response) => response.text())));
-      return [...new Set(source.flatMap((text) => [...text.matchAll(/["'`](\/assets\/[^"'`]+\.(?:png|jpe?g))["'`]/g)].map((match) => match[1])))].sort();
-    });
-    const coreArt = assets.filter((asset) => /\/assets\/(?:avatar-(?:female|male)-cartoon|character-motion-(?:female|male)-runtime|room-background)-[^/]+\.png$/.test(asset));
-    assert.equal(coreArt.length, 5, 'two portraits, two motion atlases, and the room background must be built into the shell');
-    await context.setOffline(true);
-    const dialog = page.getByRole('dialog', { name: '选一个陪伴角色' });
-    await dialog.getByRole('button', { name: '选择鱼鱼' }).click();
-    await dialog.getByRole('button', { name: '写下第一件事' }).click();
-    await page.waitForURL(/#\/record$/);
-    await page.goto(`${baseUrl}/#/today`);
-    const imageUrl = await page.locator('.room-character').evaluate((element) => getComputedStyle(element).backgroundImage.match(/url\("?([^"\)]+)"?\)/)?.[1]);
-    const motionAtlases = assets.filter((asset) => /\/assets\/character-motion-(?:female|male)-runtime-[^/]+\.png$/.test(asset));
-    assert.equal(motionAtlases.length, 2, 'both companion atlases must be built into the shell');
-    assert.equal(motionAtlases.some((asset) => imageUrl?.endsWith(asset)), true, 'the current pose must use its decoded companion atlas');
-    const cached = await page.evaluate((urls) => Promise.all(urls.map((url) => fetch(url).then((response) => response.ok).catch(() => false))), assets);
-    assert.equal(cached.every(Boolean), true);
-  } finally {
-    await context.close();
-  }
-});
 
-test('reduced motion keeps room furniture navigation immediate', async () => {
-  const { context, page, apiRequests } = await freshPage();
-  try {
-    await finishOnboarding(page);
-    await page.goto(`${baseUrl}/#/system`);
-    await page.getByText('显示与语气', { exact: true }).click();
-    await page.getByRole('checkbox', { name: '减少动态效果' }).check();
-    await page.goto(`${baseUrl}/#/today`);
-    await page.getByRole('button', { name: '打开记录' }).click();
-    assert.equal(await page.locator('.room-character.is-action-desk').count(), 0);
-    await page.waitForURL(/#\/record$/);
-    assert.deepEqual(apiRequests, []);
-  } finally {
-    await context.close();
-  }
-});
 
 test('low state proposes replaceable recovery and one-click no-penalty feedback', async () => {
   const { context, page, apiRequests } = await freshPage();
@@ -2178,12 +1869,9 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     await assert.doesNotReject(() => page.getByText('状态照顾', { exact: true }).waitFor());
     assert.equal(await page.getByText(/RECOVERY/).count(), 0, 'recovery guidance must not expose an internal category label');
     await assert.doesNotReject(() => page.getByRole('heading', { name: '先补足身体' }).waitFor());
-    assert.equal(await page.locator('.room-scene.is-cue-rest').count(), 1);
-    assert.equal(await page.locator('.room-character.is-resting').count(), 1);
-    assert.equal(await page.locator('.room-character.is-resting').evaluate((element) => getComputedStyle(element).backgroundPosition), '0px 0px');
-    assert.equal(await page.locator('.room-cue').count(), 1);
-    await page.getByRole('button', { name: '打开任务', exact: true }).click();
-    assert.equal(await page.locator('.room-character.is-action-board').count(), 1);
+    assert.equal(await page.locator('.companion-figure').count(), 1);
+    assert.equal(await page.locator('.room-scene, .room-cue').count(), 0);
+    await page.getByRole('link', { name: '任务', exact: true }).click();
     await page.waitForURL(/#\/tasks$/);
     const today = await page.evaluate(() => {
       const value = new Date();
@@ -2192,8 +1880,7 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     await page.goto(`${baseUrl}/#/day/${today}`);
     await page.locator(`.room-stage[data-snapshot-date="${today}"]`).waitFor();
     assert.equal(await page.locator(`.room-stage[data-snapshot-date="${today}"]`).count(), 1);
-    assert.equal(await page.locator('.room-scene.is-day.is-cue-rest').count(), 1);
-    assert.equal(await page.locator('.room-character.is-resting').count(), 1);
+    assert.equal(await page.locator('.companion-figure').count(), 1);
     await page.goto(`${baseUrl}/#/today`);
     await page.getByRole('button', { name: '换一个' }).click();
     await assert.doesNotReject(() => page.getByText('做一次很短的舒展').waitFor());
@@ -2272,7 +1959,7 @@ test('a day review keeps its own state freshness and excludes future habits', as
     await energyStatus.click();
     const detail = page.getByRole('dialog', { name: '身体当前状态' });
     await assert.doesNotReject(() => detail.waitFor());
-    await assert.doesNotReject(() => detail.getByText('当前分数 25', { exact: true }).waitFor());
+    await assert.doesNotReject(() => detail.locator('.state-current-score[aria-label="当前分数 25"]').waitFor());
     assert.equal(await detail.getByText('需要更新', { exact: true }).count(), 0);
   } finally {
     await context.close();
@@ -2309,7 +1996,7 @@ test('late completion evidence belongs to the real feedback day, not the planned
     assert.equal(await actualDate.inputValue(), '2026-08-21', 'an overdue completion defaults to the real feedback day');
     await actualDate.fill('2026-08-21');
     await firstFeedback.getByRole('button', { name: '保存结果' }).click();
-    await assert.doesNotReject(() => page.getByText(/反馈已保存；可以在任务卡上撤销。 完成记录：跨日完成证据。工作\/学习成长 \+4/).waitFor());
+    await assert.doesNotReject(() => page.locator('.toast.is-completion').getByText(/工作\/学习 \+4 成长值/).waitFor());
 
     await page.goto(`${baseUrl}/#/day/2026-08-20`);
     assert.equal(await page.locator('.success-evidence').count(), 0, 'planned day must not claim a later success');
@@ -2369,9 +2056,10 @@ test('completed action is traceable from its five-dimensional growth ledger at 3
     assert.equal(await page.getByText('来自你的“小小成功”记录和已确认行动反馈，不做额外推断。').count(), 0);
     await page.goto(`${baseUrl}/#/growth`);
     const dimensionCard = page.locator('.growth-dimension-card[data-dimension="progress"]');
-    await dimensionCard.locator('.growth-evidence-list > summary').click();
-    await assert.doesNotReject(() => dimensionCard.locator('.growth-evidence-row strong').filter({ hasText: '证据测试行动' }).waitFor());
-    await assert.doesNotReject(() => dimensionCard.locator('.growth-evidence-row .caption').filter({ hasText: '+4' }).waitFor());
+    await dimensionCard.click();
+    const ledger = page.getByRole('dialog', { name: '工作/学习成长记录' });
+    await assert.doesNotReject(() => ledger.locator('.growth-evidence-row strong').filter({ hasText: '证据测试行动' }).waitFor());
+    await assert.doesNotReject(() => ledger.locator('.growth-evidence-row .caption').filter({ hasText: '+4' }).waitFor());
     const geometry = await page.evaluate(() => ({
       width: innerWidth,
       scrollWidth: document.documentElement.scrollWidth,
@@ -2385,119 +2073,20 @@ test('completed action is traceable from its five-dimensional growth ledger at 3
     assert.ok(geometry.scrollWidth <= geometry.width);
     assert.deepEqual(geometry.tooSmall, []);
     assert.deepEqual(apiRequests, []);
+    await page.getByRole('dialog', { name: '工作/学习成长记录' }).getByRole('button', { name: '返回' }).click();
+    await page.goto(`${baseUrl}/#/task-analysis`);
+    await page.locator('.analysis-summary-grid').waitFor();
+    assert.deepEqual(await page.locator('.analysis-summary-grid strong').allTextContents(), ['1 项', '+4']);
+    await page.locator('.analysis-category-tabs').getByRole('button', { name: '玩乐', exact: true }).click();
+    assert.deepEqual(await page.locator('.analysis-summary-grid strong').allTextContents(), ['0 项', '+0']);
+    assert.deepEqual(apiRequests, [], 'local analysis must not send diary or task data');
   } finally {
     await context.close();
   }
 });
 
-test('selected companion uses the supplied portrait and matching room sprite', async () => {
-  const { context, page, apiRequests } = await freshPage();
-  try {
-    await finishOnboarding(page);
-    await page.goto(`${baseUrl}/#/system`);
-    await page.getByRole('button', { name: /人物与陪伴/ }).click();
-    const avatarSelect = page.getByLabel('人物形象');
-    const preview = page.locator('.avatar-preview');
-    await avatarSelect.selectOption('male');
-    assert.match(await preview.getAttribute('src') ?? '', /avatar-male-cartoon/);
-    await avatarSelect.selectOption('female');
-    await assert.doesNotReject(() => preview.waitFor({ state: 'visible' }));
-    assert.match(await preview.getAttribute('src') ?? '', /avatar-female-cartoon/);
-    await page.getByRole('button', { name: '保存人物设置' }).click();
-    await page.goto(`${baseUrl}/#/today`);
-    const roomSprite = page.locator('.room-character.has-motion');
-    await assert.doesNotReject(() => roomSprite.waitFor({ state: 'visible' }));
-    assert.match(await roomSprite.evaluate((element) => getComputedStyle(element).backgroundImage), /character-motion-female-runtime/);
-    assert.equal(await roomSprite.evaluate((element) => element.classList.contains('is-happy')), true);
-    const spriteLayout = await roomSprite.evaluate((element) => {
-      const style = getComputedStyle(element);
-      return { backgroundPosition: style.backgroundPosition, backgroundSize: style.backgroundSize, idleFrame: style.getPropertyValue('--idle-frame').trim(), walkFrame: style.getPropertyValue('--walk-front-1').trim(), mixBlendMode: style.mixBlendMode };
-    });
-    assert.equal(spriteLayout.backgroundSize, '504px 504px');
-    assert.equal(spriteLayout.idleFrame, '0px 0px');
-    assert.equal(spriteLayout.walkFrame, '0px -336px');
-    assert.equal(spriteLayout.mixBlendMode, 'normal');
-    const geometry = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
-    const spriteBounds = await roomSprite.boundingBox();
-    assert.ok(spriteBounds && spriteBounds.width >= 68, 'selected companion should remain recognizable at phone width');
-    assert.ok(geometry.scrollWidth <= geometry.width);
-    assert.deepEqual(apiRequests, []);
-  } finally {
-    await context.close();
-  }
-});
 
-test('room furniture walks end at the matching interaction anchors', async () => {
-  const { context, page, apiRequests } = await freshPage();
-  const destinations = [
-    ['打开记录', 'desk', /#\/record$/, [0.28, 0.44, 0.68, 0.84], '--face-left-frame'],
-    ['打开任务', 'board', /#\/tasks$/, [0.42, 0.58, 0.68, 0.84], '--face-back-frame'],
-    ['打开日历', 'calendar', /#\/calendar$/, [0.58, 0.75, 0.68, 0.84], '--face-back-frame'],
-    ['打开成长', 'workbench', /#\/growth$/, [0.60, 0.73, 0.68, 0.84], '--face-right-frame'],
-    ['打开状态', 'window', /#\/system$/, [0.31, 0.44, 0.68, 0.84], '--face-back-frame'],
-  ];
-  try {
-    await finishOnboarding(page);
-    for (const [buttonName, action, route, [minX, maxX, minY, maxY], interactionVariable] of destinations) {
-      await page.goto(`${baseUrl}/#/today`);
-      await page.getByRole('button', { name: buttonName }).click();
-      const interacting = page.locator(`.room-character.is-action-${action}.is-interacting`);
-      await interacting.waitFor();
-      const interaction = await interacting.evaluate((element, variable) => {
-        const room = element.closest('.room-scene').getBoundingClientRect();
-        const box = element.getBoundingClientRect();
-        return {
-          x: (box.left + box.width / 2 - room.left) / room.width,
-          y: (box.bottom - room.top) / room.height,
-          backgroundPosition: getComputedStyle(element).backgroundPosition,
-          expectedPosition: getComputedStyle(element).getPropertyValue(variable).trim().replace(/(^|\s)0(?=\s|$)/g, (_, lead) => `${lead}0px`),
-        };
-      }, interactionVariable);
-      assert.ok(interaction.x >= minX && interaction.x <= maxX && interaction.y >= minY && interaction.y <= maxY,
-        `${action} must align with its furniture, got ${JSON.stringify(interaction)}`);
-      assert.equal(interaction.backgroundPosition, interaction.expectedPosition, `${action} must use the matching interaction pose`);
-      await page.waitForURL(route);
-    }
-    assert.deepEqual(apiRequests, []);
-  } finally {
-    await context.close();
-  }
-});
 
-test('the bed gives a short recovery interaction and returns the companion to the room', async () => {
-  const { context, page, apiRequests } = await freshPage();
-  try {
-    await finishOnboarding(page);
-    await page.goto(`${baseUrl}/#/today`);
-    const character = page.locator('.room-character');
-    await page.getByRole('button', { name: '在床边休息' }).click();
-    await assert.doesNotReject(() => page.locator('.room-character.is-action-bed.is-walking').waitFor());
-    await assert.doesNotReject(() => page.locator('.room-character.is-action-bed.is-interacting').waitFor());
-    await assert.doesNotReject(() => page.getByText('歇一会儿。准备好再继续，也算照顾今天。', { exact: true }).waitFor());
-    await page.waitForTimeout(120);
-    assert.equal(await character.evaluate((element) => getComputedStyle(element).backgroundPosition), '0px 0px');
-    const resting = await character.evaluate((element) => {
-      const room = element.closest('.room-scene').getBoundingClientRect();
-      const box = element.getBoundingClientRect();
-      return { x: (box.left + box.width / 2 - room.left) / room.width, y: (box.bottom - room.top) / room.height };
-    });
-    assert.ok(resting.x >= .40 && resting.x <= .55 && resting.y >= .78 && resting.y <= .94,
-      `rest must stay beside the bed instead of crossing it, got ${JSON.stringify(resting)}`);
-    assert.match(page.url(), /#\/today$/);
-    await assert.doesNotReject(() => page.locator('.room-character.is-action-bed.is-returning').waitFor());
-    await assert.doesNotReject(() => page.locator('.room-character.is-action-bed').waitFor({ state: 'detached' }));
-    const after = await character.evaluate((element) => {
-      const room = element.closest('.room-scene').getBoundingClientRect();
-      const box = element.getBoundingClientRect();
-      return { x: (box.left + box.width / 2 - room.left) / room.width, y: (box.bottom - room.top) / room.height };
-    });
-    assert.ok(after.x >= .44 && after.x <= .54 && after.y >= .78 && after.y <= .9, `rest should return the companion to the room center, got ${JSON.stringify(after)}`);
-    assert.match(page.url(), /#\/today$/);
-    assert.deepEqual(apiRequests, []);
-  } finally {
-    await context.close();
-  }
-});
 
 test('an active Android WebView handles widget completion without reloading the page', async () => {
   const { context, page, apiRequests } = await freshPage();
@@ -2522,7 +2111,7 @@ test('an active Android WebView handles widget completion without reloading the 
       window.dispatchEvent(new Event('qiguang-widget-action'));
     }, { id: questId, value: marker });
 
-    await assert.doesNotReject(() => page.getByText(`已从今日任务小组件完成；成长值已结算，可在任务板撤销。 完成记录：${title}。工作/学习成长 +4 · 累计 4 · 等级 0。`, { exact: true }).waitFor());
+    await assert.doesNotReject(() => page.locator('.toast.is-completion').getByText(/任务已完成\s+工作\/学习 \+4 成长值/).waitFor());
     assert.equal(await page.evaluate(() => window.__qiguangWidgetPageMarker), marker, 'widget action reloaded the active page');
     assert.equal(await xpLedgerCount(page), 1);
     assert.match(page.url(), /#\/tasks$/);
@@ -2685,7 +2274,7 @@ test('daily analysis sends only after range confirmation and keeps inference use
     await page.goto(`${baseUrl}/#/day/${today}`);
     await page.locator('.day-evidence-details > summary').click();
     await page.getByRole('button', { name: '检查范围并整理' }).click();
-    const dialog = page.getByRole('dialog', { name: '检查本次发送范围' });
+    const dialog = page.getByRole('dialog', { name: '发送内容' });
     await assert.doesNotReject(() => dialog.waitFor());
     const send = dialog.getByRole('button', { name: '确认并整理' });
     assert.equal(await send.isEnabled(), false);

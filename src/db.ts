@@ -2056,7 +2056,7 @@ export class QiguangDb {
       entryId: id,
       fromVersion: current.version,
       previousBody: current.body,
-      previousImageDataUrl: current.imageDataUrl,
+      ...(current.imageDataUrl ? { previousImageDataUrl: current.imageDataUrl } : {}),
       previousKind: currentKind,
       reason: 'user-edit',
       createdAt: timestamp,
@@ -2064,6 +2064,7 @@ export class QiguangDb {
       version: 1,
     };
     const updated = { ...current, body, kind: updatedKind, imageDataUrl: image, analysisStatus: 'not-submitted' as const, version: current.version + 1, updatedAt: timestamp };
+    if (!image) delete updated.imageDataUrl;
     transaction.objectStore('revisions').add(revision);
     entries.put(updated);
     const done = transactionDone(transaction);
@@ -2100,7 +2101,7 @@ export class QiguangDb {
       entryId: id,
       fromVersion: current.version,
       previousBody: current.body,
-      previousImageDataUrl: current.imageDataUrl,
+      ...(current.imageDataUrl ? { previousImageDataUrl: current.imageDataUrl } : {}),
       previousKind: current.kind ?? 'journal',
       reason: 'undo',
       createdAt: timestamp,
@@ -2116,6 +2117,7 @@ export class QiguangDb {
       version: current.version + 1,
       updatedAt: timestamp,
     };
+    if (!latest.previousImageDataUrl) delete updated.imageDataUrl;
     revisions.put({ ...latest, undoneAt: timestamp, updatedAt: timestamp, version: latest.version + 1 });
     revisions.add(undoRevision);
     entries.put(updated);

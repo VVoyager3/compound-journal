@@ -1,7 +1,7 @@
 {
   "date": "2026-09-04",
   "project": "diary-maker / 栖光",
-  "status": "reference-draft-awaiting-user-audit",
+  "status": "implementation-visual-review-blocked",
   "generator": "built-in image_gen",
   "referenceScreen": {
     "width": 1280,
@@ -10,14 +10,15 @@
     "userSpecification": "2772×1280"
   },
   "nativePixelsExact": false,
-  "appCodeChanged": false,
+  "appCodeChanged": true,
   "notes": [
-    "56张独立页面/关键状态参考图，非运行截图。",
+    "56张独立页面/关键状态参考图，非运行截图。55张运行实拍另存design/screenshots/20260904；独立视觉审计第三轮未通过，不能声明1:1完成。",
     "生成稿保留原图，不裁切、不拉伸；原生尺寸不同于参考屏幕。",
     "统一暖米白、森林绿、低饱和金与鼠尾草绿的设计方向；个别生成字形、组件间距、状态栏和图标仍存在细微差异，未标记为像素级验收通过。",
     "热力图方格、具体日期及统计数是设计示意，不可作为真实业务数据或几何测量基线；开发时须使用真实数据和等宽高网格。",
     "长页为当前视口，不代表全部滚动内容；图内按钮不具备真实交互。",
-    "功能、隐私与结算规则以PRODUCT.md和已确认实现为准，不以生成图意外添加的细节改变业务。"
+    "功能、隐私与结算规则以PRODUCT.md和已确认实现为准，不以生成图意外添加的细节改变业务。",
+    "2026-09-04用户修订：方格等宽高、五项底栏同尺寸、去重复范围标题，今日和日期回顾改为完整居中人物。已重新生成10张受影响参考图；代码与运行截图仍需逐页验收。"
   ],
   "screens": [
     {
@@ -26,7 +27,7 @@
       "file": "01-today-v2.png",
       "width": 853,
       "height": 1844,
-      "bytes": 1691795
+      "bytes": 1328194
     },
     {
       "id": "02-state-detail",
@@ -138,7 +139,7 @@
       "file": "15-habit-detail.png",
       "width": 852,
       "height": 1846,
-      "bytes": 1010999
+      "bytes": 991806
     },
     {
       "id": "16-habit-edit",
@@ -170,7 +171,7 @@
       "file": "19-ai-send.png",
       "width": 852,
       "height": 1846,
-      "bytes": 1331724
+      "bytes": 1312112
     },
     {
       "id": "20-ai-candidates",
@@ -186,23 +187,23 @@
       "file": "21-calendar.png",
       "width": 852,
       "height": 1846,
-      "bytes": 1299815
+      "bytes": 1024863
     },
     {
       "id": "22-date-preview",
       "title": "日期预览",
       "file": "22-date-preview.png",
-      "width": 852,
-      "height": 1846,
-      "bytes": 1086854
+      "width": 853,
+      "height": 1844,
+      "bytes": 996844
     },
     {
       "id": "23-day-overview",
       "title": "日期总览",
       "file": "23-day-overview.png",
-      "width": 853,
-      "height": 1844,
-      "bytes": 1085648
+      "width": 852,
+      "height": 1846,
+      "bytes": 1101792
     },
     {
       "id": "24-day-records",
@@ -314,7 +315,7 @@
       "file": "37-task-analysis.png",
       "width": 853,
       "height": 1844,
-      "bytes": 1022899
+      "bytes": 1010088
     },
     {
       "id": "38-habit-overview",
@@ -330,7 +331,7 @@
       "file": "39-habit-analysis.png",
       "width": 853,
       "height": 1844,
-      "bytes": 1010264
+      "bytes": 968712
     },
     {
       "id": "40-settings",
@@ -338,15 +339,15 @@
       "file": "40-settings.png",
       "width": 853,
       "height": 1844,
-      "bytes": 992684
+      "bytes": 1068428
     },
     {
       "id": "41-companion",
       "title": "人物与陪伴",
       "file": "41-companion.png",
       "width": 852,
-      "height": 1846,
-      "bytes": 1387746
+      "height": 1847,
+      "bytes": 1125758
     },
     {
       "id": "42-assessment-modes",

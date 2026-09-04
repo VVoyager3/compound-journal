@@ -1,0 +1,2263 @@
+[
+  {
+    "name": "today",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "state-detail",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "state-self-assessment",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "tasks-today",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "tasks-plan",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "task-create",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "task-edit",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "goal-create",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "goal-detail",
+    "tiles": [
+      {
+        "component": "stage-toggle is-complete",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "stage-toggle ",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "stage-toggle ",
+        "width": 22,
+        "height": 22
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "habit-create",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "habit-detail",
+    "tiles": [
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.421875,
+        "height": 43.421875
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.421875,
+        "height": 43.421875
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.4375,
+        "height": 43.4375
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.421875,
+        "height": 43.421875
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.4375,
+        "height": 43.4375
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.421875,
+        "height": 43.421875
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.421875,
+        "height": 43.421875
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.421875,
+        "height": 43.421875
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.421875,
+        "height": 43.421875
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.4375,
+        "height": 43.4375
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.421875,
+        "height": 43.421875
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.4375,
+        "height": 43.4375
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 43.421875,
+        "height": 43.421875
+      },
+      {
+        "component": "habit-recent-cell is-empty",
+        "width": 43.421875,
+        "height": 43.421875
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "record-compose",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "record-daily-review",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "day-overview",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "day-records",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "record-detail",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "day-actions",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "day-review",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "day-review-editor",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "calendar",
+    "tiles": [
+      {
+        "component": "calendar-day is-outside has-habit",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day has-entry has-habit",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day has-entry has-habit",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day has-habit",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day is-today has-entry has-task is-selected",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 45.140625,
+        "height": 45.140625
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "growth",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "weekly-review",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "weekly-review-editor",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "task-analysis",
+    "tiles": [
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-level-2",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 21.65625,
+        "height": 21.65625
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "94px"
+  },
+  {
+    "name": "habit-analysis-overview",
+    "tiles": [
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.546875,
+        "height": 43.546875
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.546875,
+        "height": 43.546875
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.546875,
+        "height": 43.546875
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.546875,
+        "height": 43.546875
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "94px"
+  },
+  {
+    "name": "habit-analysis-detail",
+    "tiles": [
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-missed",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-missed",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 43.421875,
+        "height": 43.4375
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 43.421875,
+        "height": 43.4375
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 43.4375,
+        "height": 43.4375
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 43.421875,
+        "height": 43.4375
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 43.4375,
+        "height": 43.4375
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 43.421875,
+        "height": 43.4375
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 43.421875,
+        "height": 43.4375
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "94px"
+  },
+  {
+    "name": "settings",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-companion",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-assessment",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-ai",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-data",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-privacy",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-storage",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-display",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-rules",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "rule-create",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-notifications",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "date-preview",
+    "tiles": [
+      {
+        "component": "calendar-day is-outside has-habit",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day has-entry has-habit",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day has-entry has-habit",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day has-habit",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day is-today has-entry has-task is-selected",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 45.140625,
+        "height": 45.140625
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 45.140625,
+        "height": 45.140625
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "growth-ledger",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "badges",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "badge-detail",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "record-history",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "plan-habits",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "habit-edit",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "completion-feedback",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "task-result",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "ai-send",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "ai-candidates",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "weekly-ai",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "weekly-ai-edit",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "weekly-review-editor-end",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "plan-future",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "goal-ai",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "delete-confirmation",
+    "tiles": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  }
+]

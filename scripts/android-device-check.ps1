@@ -43,6 +43,7 @@ $env:GRADLE_USER_HOME = Join-Path $tempRoot 'gradle'
 $env:KOTLIN_DAEMON_RUN_FILES_PATH = Join-Path $tempRoot 'kotlin-daemon'
 $jdkCandidates = @(@(
     $env:JAVA_HOME
+    'D:\dev\jdk21\jdk-21.0.12+8'
     (Join-Path $env:ProgramFiles 'Android\Android Studio\jbr')
     (Join-Path $env:ProgramFiles 'Eclipse Adoptium')
 ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) })
@@ -70,12 +71,14 @@ if (-not $jdkHome) { throw 'Android 构建需要 JDK 21。请设置 JAVA_HOME，
 $env:JAVA_HOME = $jdkHome
 $env:ANDROID_HOME = $androidSdk
 $env:ANDROID_SDK_ROOT = $androidSdk
-$defaultAndroidUserHome = Join-Path $env:USERPROFILE '.android'
 $projectAndroidUserHome = Join-Path $workspace '.android-user'
-$env:ANDROID_USER_HOME = if (Test-Path -LiteralPath (Join-Path $defaultAndroidUserHome 'debug.keystore')) {
-    $defaultAndroidUserHome
+$env:ANDROID_USER_HOME = if ($env:ANDROID_USER_HOME -and $env:ANDROID_USER_HOME -like 'D:\*') {
+    $env:ANDROID_USER_HOME
 } else {
     $projectAndroidUserHome
+}
+if (-not (Test-Path -LiteralPath (Join-Path $env:ANDROID_USER_HOME 'debug.keystore'))) {
+    throw '项目更新签名缺失，停止构建；不得生成另一份签名。'
 }
 $env:ANDROID_SERIAL = $serial
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"

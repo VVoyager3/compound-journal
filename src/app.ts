@@ -55,9 +55,8 @@ import type { AnalysisRequest } from './ai-engine.ts';
 import { Capacitor } from '@capacitor/core';
 import maleAvatarImage from '../design-assets/pre-development/avatar-male-cartoon.png';
 import femaleAvatarImage from '../design-assets/pre-development/avatar-female-cartoon.png';
-import roomBackgroundImage from '../design-assets/pre-development/room-background.png';
-import maleMotionAtlas from '../design-assets/pre-development/character-motion-male-runtime.png';
-import femaleMotionAtlas from '../design-assets/pre-development/character-motion-female-runtime.png';
+import maleCompanionImage from '../design-assets/pre-development/character-frames/male/01-idle-front.png';
+import femaleCompanionImage from '../design-assets/pre-development/character-frames/female/01-idle-front.png';
 import badgeMilestoneImage from '../design-assets/generated/growth-icons/badge-milestone.png';
 import badgeGoalImage from '../design-assets/generated/growth-icons/badge-goal.png';
 import badgeHabitImage from '../design-assets/generated/growth-icons/badge-habit.png';
@@ -99,8 +98,6 @@ import experienceIcon from '../design-assets/generated/ui-icons/experience.png';
 import providerIcon from '../design-assets/generated/ui-icons/provider.png';
 import organizeIcon from '../design-assets/generated/ui-icons/organize.png';
 
-const motionAtlases = { male: maleMotionAtlas, female: femaleMotionAtlas } as const;
-const motionFramePreloads = new Map<Exclude<Profile['avatar'], null>, Promise<void>>();
 
 type RouteName = 'today' | 'calendar' | 'record' | 'tasks' | 'growth' | 'system' | 'day' | 'review' | 'task-analysis' | 'habit-analysis';
 type SemanticIcon = 'nav-today' | 'nav-tasks' | 'nav-record' | 'nav-growth' | 'nav-settings' | 'calendar'
@@ -134,7 +131,6 @@ interface TaskFeedbackDraft {
 const DRAFT_KEY = 'qiguang.record-drafts.v2';
 const TASK_FEEDBACK_DRAFT_PREFIX = 'qiguang.task-feedback-draft.';
 const SEEN_BADGES_KEY = 'qiguang.seen-badges.v1';
-const ROOM_GUIDE_KEY = 'qiguang.room-guide-seen.v1';
 const RECORD_IMAGE_MAX_BYTES = 1_500_000;
 const INTERRUPTED_TAKEOVER_MS = 2 * 60_000;
 const SUCCESS_PROMPT = '今天做成、推进、坚持或照顾好了什么？';
@@ -150,11 +146,6 @@ const MEMORY_TYPE_LABELS: Record<SystemMemory['type'], string> = {
   principle: '我认同的原则',
 };
 const CONFIDENCE_LABELS = { high: '高', medium: '中', low: '低' } as const;
-const FURNITURE_APPROACH_MS = 960;
-const FURNITURE_USE_MS = 720;
-const FURNITURE_RETURN_MS = 920;
-const AMBIENT_SETTLE_MS = 6_300;
-const IDLE_GESTURE_MS = 1_200;
 const NATIVE_PLATFORM = Capacitor.isNativePlatform();
 const NATIVE_AI_UNAVAILABLE = 'AI 未配置';
 const BASE_AI_READY = !NATIVE_PLATFORM || (() => {
@@ -250,8 +241,8 @@ document.addEventListener('click', (event) => {
   const panel = root.querySelector<HTMLElement>('.character-panel:not([hidden])');
   const target = event.target;
   if (!panel || !(target instanceof Node) || panel.contains(target)) return;
-  if (target instanceof Element && target.closest('.room-hotspot.is-character')) return;
-  const trigger = root.querySelector<HTMLButtonElement>('.room-hotspot.is-character');
+  if (target instanceof Element && target.closest('.companion-trigger')) return;
+  const trigger = root.querySelector<HTMLButtonElement>('.companion-trigger');
   panel.hidden = true;
   trigger?.setAttribute('aria-expanded', 'false');
   if (panel.contains(document.activeElement)) trigger?.focus({ preventScroll: true });
@@ -292,26 +283,6 @@ function resolvedCompanionName(profile: Profile | undefined): string {
   return saved && saved !== '小栖' ? saved : avatarName(profile?.avatar ?? null);
 }
 
-function preloadMotionFrames(avatar: Exclude<Profile['avatar'], null>, url: string): Promise<void> {
-  const cached = motionFramePreloads.get(avatar);
-  if (cached) return cached;
-  const preload = new Promise<void>((resolve) => {
-    const image = new Image();
-    image.addEventListener('load', () => { void image.decode().catch(() => undefined).finally(resolve); }, { once: true });
-    image.addEventListener('error', () => resolve(), { once: true });
-    image.src = url;
-  });
-  motionFramePreloads.set(avatar, preload);
-  return preload;
-}
-
-function applyMotionFrames(character: HTMLElement, avatar: Exclude<Profile['avatar'], null>): Promise<void> {
-  const atlas = motionAtlases[avatar];
-  character.style.setProperty('--motion-atlas', `url("${atlas}")`);
-  const ready = preloadMotionFrames(avatar, atlas);
-  void ready.then(() => character.classList.add('is-motion-ready'));
-  return ready;
-}
 
 function node<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text?: string): HTMLElementTagNameMap[K] {
   const result = document.createElement(tag);
@@ -447,7 +418,10 @@ function showCompletionToast(message: string, action?: { label: string; run: () 
   const title = message.includes('目标已完成') ? '目标已完成'
     : message.includes('子任务已完成') || message.includes('最后一个子任务') ? '子任务已完成'
       : '任务已完成';
-  const detail = experience ? `${experience[1]} ${experience[2]} 成长值` : badge ? `新徽章 · ${badge[1]}` : '';
+  const detail = [
+    experience && Number(experience[2]) !== 0 ? `${experience[1]} ${experience[2]} 成长值` : '',
+    badge ? `新徽章 · ${badge[1]}` : '',
+  ].filter(Boolean).join('\n');
   showToast(`${title}${detail ? `\n${detail}` : ''}`, 'completion', action);
 }
 
@@ -699,12 +673,26 @@ function bottomNavigation(route: Route): HTMLElement {
     ['growth', '轨迹', 'nav-growth'],
     ['system', '设置', 'nav-settings'],
   ];
+  const outlines: Record<string, string> = {
+    today: '<circle cx="12" cy="12" r="5"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+    tasks: '<rect x="5" y="2" width="15" height="20" rx="1.5"/><path d="m8 8 1.5 1.5L12 6m2 2h3m-9 6 1.5 1.5L12 12m2 2h3m-9 5h9"/>',
+    record: '<path d="M12 4C9 2 5 2 2 3v17c3-1 7-1 10 1 3-2 7-2 10-1V3c-3-1-7-1-10 1Zm0 0v17"/>',
+    growth: '<path d="M12 22V10C12 4 7 3 2 4c0 6 4 8 10 7m0 0c0-6 4-8 10-7 0 6-4 8-10 7"/>',
+    system: '<path d="m9 3 1-2h4l1 2 2 1 2-.5 2 3-1 2v3l1 2-2 3-2-.5-2 1-1 3h-4l-1-3-2-1-2 .5-2-3 1-2v-3l-1-2 2-3 2 .5Z"/><circle cx="12" cy="10.5" r="3.5"/>',
+  };
   for (const [name, label, icon] of items) {
-    const active = route.name === name || (name === 'growth' && ['calendar', 'day', 'review'].includes(route.name));
+    const active = route.name === name || (name === 'growth' && ['calendar', 'day', 'review'].includes(route.name))
+      || (name === 'tasks' && ['task-analysis', 'habit-analysis'].includes(route.name));
     const link = node('a', `nav-item${active ? ' is-active' : ''}`);
     link.href = `#/${name}`;
     if (active) link.setAttribute('aria-current', 'page');
-    link.append(semanticIcon(icon), node('span', '', label));
+    const mark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    mark.setAttribute('viewBox', '0 0 24 24');
+    mark.setAttribute('class', 'navigation-icon');
+    mark.setAttribute('aria-hidden', 'true');
+    const parsed = new DOMParser().parseFromString(`<svg xmlns="http://www.w3.org/2000/svg">${outlines[name] ?? ''}</svg>`, 'image/svg+xml');
+    mark.append(...Array.from(parsed.documentElement.children));
+    link.append(mark, node('span', '', label));
     nav.append(link);
   }
   return nav;
@@ -718,7 +706,7 @@ function renderShell(main: HTMLElement, route: Route): void {
   const connectivity = networkBadge();
   connectivity.classList.add('shell-network-status');
   shell.append(connectivity, main);
-  if (!secondary) shell.append(bottomNavigation(route));
+  shell.append(bottomNavigation(route));
   root.replaceChildren(shell);
   if (skipFocusRequested) {
     skipFocusRequested = false;
@@ -742,265 +730,52 @@ function renderShell(main: HTMLElement, route: Route): void {
   });
 }
 
-function companionMessage(welcoming: boolean, cue: RoomCue | null, hasMainQuest: boolean): string {
-  if (settings.guidanceTone === 'direct') {
-    if (welcoming) return '先记录最近发生的一件事，再决定下一步。';
-    if (cue === 'rest') return '今天先做一个轻量恢复动作。';
-    if (cue === 'focus') return '先完成今天这一步的最小版本。';
-    if (cue === 'play') return '安排一点不带产出的兴趣时间。';
-    return hasMainQuest ? '先处理今天最值得做的一步。' : '先从一件真实的小事开始。';
-  }
-  if (welcoming) return '你回来啦。先把最近发生的一件事放下吧。';
-  if (cue === 'rest') return '先缓一缓，今天只做一件轻一点的事也可以。';
-  if (cue === 'focus') return '今天这一步还在这儿。先做最小版本吧。';
-  if (cue === 'play') return '给自己留一点有趣的空白，今天才更像生活。';
-  return hasMainQuest ? '今天最值得做的一步已经在等你了。' : '我在。今天想从哪里开始？';
-}
 
-function confirmFirstRoomInteraction(): Promise<boolean> {
-  if (localStorage.getItem(ROOM_GUIDE_KEY) === '1') return Promise.resolve(true);
-  return new Promise((resolve) => {
-    const { dialog, content, actions } = dialogShell('这个房间可以互动');
-    content.append(node('p', '', '点小人看建议；点家具去页面。'));
-    let settled = false;
-    const finish = (continueAction: boolean): void => {
-      if (settled) return;
-      settled = true;
-      if (continueAction) localStorage.setItem(ROOM_GUIDE_KEY, '1');
-      dialog.close();
-      resolve(continueAction);
-    };
-    const later = node('button', 'button button-secondary', '先不操作');
-    later.type = 'button';
-    later.addEventListener('click', () => finish(false));
-    const continueButton = node('button', 'button button-primary', '知道了，继续');
-    continueButton.type = 'button';
-    continueButton.addEventListener('click', () => finish(true));
-    dialog.addEventListener('close', () => {
-      if (settled) return;
-      settled = true;
-      resolve(false);
-    }, { once: true });
-    actions.append(later, continueButton);
-    dialog.showModal();
-    continueButton.focus();
-  });
-}
-
-function roomStage(compact = false, avatar: Profile['avatar'] = null, companionName = '鱼鱼', welcoming = false, cue: RoomCue | null = null, snapshotDate: string | null = null, hasMainQuest = false, achievementCount = 0, guidance: { title: string; reason: string; settled?: boolean } | null = null, companionContext: string[] = []): HTMLElement {
-  const stage = node('section', `room-stage${compact ? ' is-compact' : ''}`);
+function roomStage(compact = false, avatar: Profile['avatar'] = null, companionName = '鱼鱼', welcoming = false, cue: RoomCue | null = null, snapshotDate: string | null = null, hasMainQuest = false): HTMLElement {
+  const stage = node('section', `room-stage companion-stage${compact ? ' is-compact' : ''}`);
+  stage.setAttribute('aria-label', '生活分身');
   if (snapshotDate) stage.dataset.snapshotDate = snapshotDate;
-  stage.setAttribute('aria-label', '温暖的像素房间：包含日记桌、任务板、日历、书架工作台、窗边床铺和生活分身。所有功能也能通过普通导航进入。');
-  const scene = node('div', 'room-scene');
-  const hour = new Date().getHours();
-  const ambientAction = snapshotDate ? null : roomAmbientAction();
-  scene.style.setProperty('--room-background', `url("${roomBackgroundImage}")`);
-  scene.classList.add(snapshotDate ? 'is-day' : hour < 6 ? 'is-night' : hour < 12 ? 'is-morning' : hour < 18 ? 'is-day' : 'is-evening');
-  if (cue) scene.classList.add(`is-cue-${cue}`);
-  scene.setAttribute('aria-hidden', 'true');
-  scene.append(node('div', 'room-lamp'));
-  if (!compact && achievementCount > 0) {
-    const displayStage = achievementCount >= 20 ? 4 : achievementCount >= 8 ? 3 : achievementCount >= 3 ? 2 : 1;
-    const trophy = node('div', `room-achievement is-stage-${displayStage}`, '✦');
-    trophy.dataset.stage = String(displayStage);
-    trophy.title = `已留下 ${achievementCount} 项现实成就 · 陈列阶段 ${displayStage}/4`;
-    trophy.setAttribute('aria-label', `累计留下 ${achievementCount} 项现实成就`);
-    scene.append(trophy);
+  const portrait = node('img', 'companion-figure');
+  portrait.src = avatar === 'male' ? maleCompanionImage : femaleCompanionImage;
+  portrait.alt = companionName;
+  if (compact) {
+    stage.append(portrait);
+    return stage;
   }
-  if (cue) scene.append(node('div', `room-cue is-${cue}`));
-  const celebratingCharacter = !compact && Boolean(sessionStorage.getItem('qiguang.character-celebration'));
-  const characterState = celebratingCharacter ? ['celebrating', '庆祝'] as const
-    : welcoming ? ['listening', '倾听'] as const
-      : cue === 'rest' ? ['recovering', '恢复'] as const
-        : cue === 'focus' ? ['thinking', '思考'] as const
-          : cue === 'play' ? ['playing', '放松'] as const
-            : hasMainQuest ? ['guiding', '指导'] as const : ['present', '在场'] as const;
-  const character = node('div', `room-character is-happy is-${avatar ?? 'neutral'}${ambientAction ? ` is-ambient-${ambientAction}` : ''}${celebratingCharacter ? ' is-celebrating' : ''}${welcoming ? ' is-welcoming' : ''}${cue === 'rest' || ambientAction === 'rest' ? ' is-resting' : ''}`);
-  let motionReady = Promise.resolve();
-  if (avatar) {
-    character.classList.add('has-motion');
-    motionReady = applyMotionFrames(character, avatar);
-  }
-  scene.append(character);
-  if (!compact && characterState[0] !== 'present') scene.append(node('span', `character-state is-${characterState[0]}`, characterState[1]));
-  if (celebratingCharacter) sessionStorage.removeItem('qiguang.character-celebration');
-  stage.append(scene);
-  if (!compact) {
-    let actionPending = false;
-    let actionTimer: number | undefined;
-    let idleTimer: number | undefined;
-    const roomMotionReduced = settings.reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const characterPanelId = `character-panel-${crypto.randomUUID()}`;
-    const feedback = node('p', 'room-interaction-feedback');
-    feedback.hidden = true;
-    feedback.setAttribute('role', 'status');
-    feedback.setAttribute('aria-live', 'polite');
-    stage.append(feedback);
-    const scheduleIdleGesture = (delay = 5_000 + Math.random() * 4_000): void => {
-      idleTimer = window.setTimeout(() => {
-        if (!character.isConnected) return;
-        if (actionPending) {
-          scheduleIdleGesture();
-          return;
-        }
-        const gestures = ['wave', 'calm', 'think', 'read'] as const;
-        const gesture = gestures[Math.floor(Math.random() * gestures.length)] ?? 'wave';
-        character.style.setProperty('--idle-gesture-frame', `var(--${gesture}-frame)`);
-        character.dataset.idleGesture = gesture;
-        character.classList.add('is-idle-gesture');
-        idleTimer = window.setTimeout(() => {
-          character.classList.remove('is-idle-gesture');
-          delete character.dataset.idleGesture;
-          scheduleIdleGesture();
-        }, IDLE_GESTURE_MS);
-      }, delay);
-    };
-    if (avatar && !roomMotionReduced) void motionReady.then(() => {
-      idleTimer = window.setTimeout(() => {
-        if (!character.isConnected) return;
-        if (ambientAction) character.classList.remove(`is-ambient-${ambientAction}`);
-        scheduleIdleGesture(700 + Math.random() * 800);
-      }, AMBIENT_SETTLE_MS);
-    });
-    const hotspots: Array<[string, string, Route | null, string]> = [
-      ['desk', '记录', { name: 'record' }, '坐到椅子上，写下一件真实发生的事。'],
-      ['board', '任务', { name: 'tasks' }, '看一眼今天真正要推进的事。'],
-      ['calendar', '日历', { name: 'calendar' }, '翻到想回看的那一天。'],
-      ['workbench', '成长', { name: 'growth' }, '查看已经完成的事情和成长进度。'],
-      ['window', '状态', { name: 'system' }, '停一下，看看最近的状态。'],
-      ['bed', '休息', null, '歇一会儿。准备好再继续，也算照顾今天。'],
-      ['character', '生活分身', null, ''],
-    ];
-    for (const [position, label, destination, response] of hotspots) {
-      const button = node('button', `room-hotspot is-${position}`);
-      button.type = 'button';
-      button.setAttribute('aria-label', position === 'bed' ? '在床边休息' : destination ? `打开${label}` : label);
-      button.append(node('span', 'hotspot-label', label));
-      const target = destination;
-      if (position !== 'character') button.addEventListener('click', async () => {
-        if (actionPending) return;
-        if (!await confirmFirstRoomInteraction()) return;
-        if (actionPending) return;
-        if (roomMotionReduced || !avatar) {
-          if (target) go(target);
-          else showToast(response);
-          return;
-        }
-        actionPending = true;
-        character.classList.remove('is-idle-gesture');
-        delete character.dataset.idleGesture;
-        button.disabled = true;
-        await motionReady;
-        if (!button.isConnected || !character.isConnected) {
-          actionPending = false;
-          button.disabled = false;
-          return;
-        }
-        const actionClass = `is-action-${position}`;
-        stage.classList.add('is-character-moving');
-        stage.setAttribute('aria-busy', 'true');
-        button.classList.add('is-active');
-        character.classList.add(actionClass, 'is-walking');
-        actionTimer = window.setTimeout(() => {
-          character.classList.remove('is-walking');
-          character.classList.add('is-interacting');
-          feedback.textContent = response;
-          feedback.hidden = false;
-          actionTimer = window.setTimeout(() => {
-            feedback.hidden = true;
-            character.classList.remove('is-interacting');
-            if (target) {
-              actionPending = false;
-              button.disabled = false;
-              button.classList.remove('is-active');
-              stage.classList.remove('is-character-moving');
-              stage.removeAttribute('aria-busy');
-              character.classList.remove(actionClass);
-              go(target);
-              actionTimer = undefined;
-              return;
-            }
-            character.classList.add('is-returning');
-            actionTimer = window.setTimeout(() => {
-              actionPending = false;
-              button.disabled = false;
-              button.classList.remove('is-active');
-              stage.classList.remove('is-character-moving');
-              stage.removeAttribute('aria-busy');
-              character.classList.remove(actionClass, 'is-returning');
-              actionTimer = undefined;
-            }, FURNITURE_RETURN_MS);
-          }, FURNITURE_USE_MS);
-        }, FURNITURE_APPROACH_MS);
-      });
-      else {
-        button.setAttribute('aria-expanded', 'false');
-        button.addEventListener('click', async () => {
-          if (!await confirmFirstRoomInteraction()) return;
-          const panel = stage.querySelector<HTMLElement>('.character-panel');
-          if (panel) {
-            panel.hidden = !panel.hidden;
-            button.setAttribute('aria-expanded', String(!panel.hidden));
-            if (!panel.hidden) panel.querySelector<HTMLButtonElement>('.button-primary')?.focus();
-            return;
-          }
-          character.classList.remove('is-idle-gesture');
-          delete character.dataset.idleGesture;
-          character.classList.add('is-welcoming');
-          window.setTimeout(() => character.classList.remove('is-welcoming'), 520);
-          const created = node('div', 'character-panel');
-          created.id = characterPanelId;
-          const closePanel = (restoreFocus = true): void => {
-            created.hidden = true;
-            button.setAttribute('aria-expanded', 'false');
-            if (restoreFocus) button.focus({ preventScroll: true });
-          };
-          const close = node('button', 'character-panel-close', '×');
-          close.type = 'button';
-          close.setAttribute('aria-label', '关闭生活分身');
-          close.addEventListener('click', () => closePanel());
-          created.append(close);
-          if (avatar) {
-            const portrait = node('img', 'character-portrait') as HTMLImageElement;
-            portrait.src = avatarAsset(avatar);
-            portrait.alt = '';
-            created.append(portrait);
-          }
-          const companionCopy = guidance?.settled ? '今天已经记下来了，可以回看，也可以停下。' : companionMessage(welcoming, cue, hasMainQuest);
-          const recordIsPrimary = guidance?.title === '先讲一件最近发生的事';
-          created.append(node('strong', '', companionName || avatarName(avatar)), node('p', 'character-response', companionCopy));
-          if (guidance && !guidance.settled && !recordIsPrimary) created.append(node('p', 'quest-minimum', guidance.title));
-          if (companionContext.length) {
-            const remembered = node('details', 'companion-memory');
-            remembered.append(node('summary', '', `我记得的背景 · ${companionContext.length}`));
-            const list = node('ul', 'compact-list'); companionContext.forEach((item) => list.append(node('li', '', item))); remembered.append(list);
-            created.append(remembered);
-          }
-          const actions = node('div', 'character-actions');
-          if (recordIsPrimary) actions.classList.add('is-single');
-          const why = node('button', `button ${recordIsPrimary ? 'button-secondary' : 'button-primary'}`, guidance?.settled ? '回看今天' : '查看今天的行动');
-          why.type = 'button';
-          why.addEventListener('click', () => {
-            const guide = document.querySelector<HTMLElement>(guidance?.settled ? '.daily-closeout, .daily-guide' : '.daily-guide, .main-action');
-            guide?.scrollIntoView({ behavior: settings.reduceMotion ? 'auto' : 'smooth', block: 'center' });
-            (guide?.querySelector<HTMLButtonElement>('button') ?? guide)?.focus({ preventScroll: true });
-            closePanel(false);
-          });
-          const record = node('button', `button ${recordIsPrimary ? 'button-primary' : 'button-quiet'}`, guidance?.settled ? '再记一件事' : '记录一件事');
-          record.type = 'button';
-          record.addEventListener('click', () => go({ name: 'record' }));
-          if (!recordIsPrimary) actions.append(why);
-          actions.append(record);
-          created.append(actions);
-          stage.append(created);
-          button.setAttribute('aria-controls', characterPanelId);
-          button.setAttribute('aria-expanded', 'true');
-          (recordIsPrimary ? record : why).focus();
-        });
-      }
-      stage.append(button);
-    }
-  }
+  const button = node('button', 'companion-trigger');
+  button.type = 'button';
+  button.setAttribute('aria-label', '生活分身');
+  button.setAttribute('aria-expanded', 'false');
+  button.append(portrait);
+  const panel = node('div', 'character-panel');
+  panel.id = `character-panel-${crypto.randomUUID()}`;
+  panel.hidden = true;
+  button.setAttribute('aria-controls', panel.id);
+  const closePanel = (): void => {
+    panel.hidden = true;
+    button.setAttribute('aria-expanded', 'false');
+    button.focus({ preventScroll: true });
+  };
+  const close = node('button', 'character-panel-close', '×');
+  close.type = 'button';
+  close.setAttribute('aria-label', '关闭生活分身');
+  close.addEventListener('click', closePanel);
+  panel.append(close, node('strong', '', companionName || avatarName(avatar)));
+  const actions = node('div', 'character-actions');
+  actions.append(
+    primaryButton('回看今天', () => go({ name: 'day', date: localDate() })),
+    iconButton('再记一件事', null, () => go({ name: 'record' }), 'button button-quiet'),
+  );
+  panel.append(actions);
+  button.addEventListener('click', () => {
+    panel.hidden = !panel.hidden;
+    button.setAttribute('aria-expanded', String(!panel.hidden));
+    if (!panel.hidden) close.focus();
+  });
+  stage.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !panel.hidden) { event.preventDefault(); closePanel(); }
+  });
+  stage.append(button, panel);
   return stage;
 }
 
@@ -1025,13 +800,6 @@ function roomCueFor(state?: ResolvedDimensionState): RoomCue | null {
   return ({ energy: 'rest', mind: 'rest', connection: null, progress: 'focus', play: 'play' } as const)[state.dimension];
 }
 
-function roomAmbientAction(now = new Date()): 'rest' | 'walk' | 'focus' | 'read' {
-  const hour = now.getHours() + now.getMinutes() / 60;
-  if (hour < 6 || hour >= 22) return 'rest';
-  if (hour < 9 || (hour >= 14 && hour < 17)) return 'walk';
-  if (hour < 12 || (hour >= 17 && hour < 20)) return 'read';
-  return 'focus';
-}
 
 function snapshotVariantFor(
   date: string,
@@ -1098,22 +866,24 @@ async function openStateDetail(dimension: (typeof DIMENSIONS)[number], observati
   const sameDayCalibrationOverrides = observation && ledger.some((item) => item.active && item.kind === 'event-impact'
     && item.localDate === observation.localDate && !observation.observationIds.includes(item.id));
   const { dialog, content, actions } = dialogShell(`${dimension.label}当前状态`);
+  dialog.classList.add('full-screen-editor', 'state-detail-dialog');
+  addDialogBack(dialog, content);
+  const scoreSection = node('section', 'state-score-section');
+  content.append(scoreSection);
   if (observation) {
     const stale = observationIsStale(observation, referenceDate);
-    content.append(
-      node('p', 'state-current-score', `当前分数 ${observation.value}`),
-      node('p', '', dimension.description),
-      node('p', 'muted', `最近更新于 ${formatDate(observation.localDate, { year: 'numeric' })}`),
+    const score = node('p', 'state-current-score');
+    score.setAttribute('aria-label', `当前分数 ${observation.value}`);
+    score.append(node('strong', '', String(observation.value)), node('span', '', '分'));
+    scoreSection.append(score, node('p', 'muted state-score-date', formatDate(observation.localDate, { year: 'numeric' })));
+    if (stale || sameDayCalibrationOverrides || observation.clamped) content.append(
       node('p', stale ? 'danger-copy' : 'caption', stale
         ? referenceDate === localDate() ? '这个分数已经超过 7 天，建议重新评估。' : '这是当天能够找到的最近一次分数。'
         : sameDayCalibrationOverrides ? '当天填写的问卷分数优先。'
-          : observation.clamped ? `当天记录使分数变化了 ${observation.dailyDelta > 0 ? '+' : ''}${observation.dailyDelta}。` : '这是你目前的状态，不是需要达到的目标。'),
+          : `当天记录使分数变化了 ${observation.dailyDelta > 0 ? '+' : ''}${observation.dailyDelta}。`),
     );
   } else {
-    content.append(
-      node('p', '', dimension.description),
-      node('p', 'empty-copy', '暂无分数'),
-    );
+    scoreSection.append(node('p', 'empty-copy', '暂无分数'));
   }
 
   const feedbackByQuest = activeFeedbackByQuest(feedbacks);
@@ -1185,7 +955,7 @@ async function openStateDetail(dimension: (typeof DIMENSIONS)[number], observati
       );
       history.append(row);
     });
-    content.append(history);
+    content.insertBefore(history, content.querySelector('.state-related-section'));
   }
   const close = node('button', 'button button-secondary', '关闭');
   close.type = 'button';
@@ -1195,7 +965,7 @@ async function openStateDetail(dimension: (typeof DIMENSIONS)[number], observati
     const assess = node('button', 'button button-primary', '评估这一项');
     assess.type = 'button';
     assess.addEventListener('click', () => { dialog.close(); openAssessmentQuestionnaire(30, dimension.key); });
-    actions.append(assess);
+    scoreSection.append(assess);
   }
   dialog.showModal();
   close.focus();
@@ -1516,7 +1286,7 @@ async function openQuestFeedbackDialog(quest: Quest, initialResult?: FeedbackRes
   const skippedAttempts = feedbackHistory.filter((item) => !item.undoneAt && item.result === 'skipped').length;
   const previousEffect = previousFeedback ? stateHistory.find((item) => item.evidenceId === previousFeedback.id && item.active) : undefined;
   const { dialog, content, actions } = dialogShell(quest.status === 'pending' ? '记录任务结果' : '修改任务结果');
-  dialog.classList.add('task-feedback-dialog');
+dialog.classList.add('task-feedback-dialog', 'full-screen-editor');
   const closeDialog = node('button', 'feedback-dialog-close', '×');
   closeDialog.type = 'button';
   closeDialog.setAttribute('aria-label', '关闭任务结果');
@@ -1868,6 +1638,8 @@ async function openGoalPathDecision(goalId: string, reason: string): Promise<voi
 
 async function openQuestAdjustmentDialog(quest: Quest): Promise<void> {
   const { dialog, content, actions } = dialogShell('修改任务');
+  dialog.classList.add('full-screen-editor', 'task-editor-dialog');
+  addDialogBack(dialog, content);
   const title = node('input', 'input'); title.maxLength = 160; title.value = quest.title;
   const date = node('input', 'input'); date.type = 'date'; date.min = localDate(); date.value = quest.localDate;
   if (quest.sourceType === 'habit') date.disabled = true;
@@ -2243,7 +2015,7 @@ async function todayPage(): Promise<HTMLElement> {
     db.listPendingBefore(today), db.listQuests(), db.listQuestFeedback(), db.listDailyAnalyses(shiftDate(today, -1)), db.listGoals(), db.listMilestones(), db.listHabits(),
   ]);
   const main = node('main', 'page page-today');
-  main.append(pageHeader(formatDate(today), '今天'));
+  main.append(pageHeader(formatDate(today), '今日'));
 
   const latestEntry = entryHistory.at(-1);
   const isReturning = Boolean(latestEntry
@@ -2424,7 +2196,6 @@ async function recordPage(route: Route): Promise<HTMLElement> {
 
   const lifePanel = node('section', 'record-tab-panel life-diary-panel');
   const lifeHeader = node('div', 'life-diary-header');
-  lifeHeader.append(node('h2', '', '生活日记'));
   const lifeActions = node('div', 'life-diary-actions');
   const analysableEntries = savedEntries.filter((entry) => entry.body.trim());
   const aiArchive = node('button', 'section-text-action', 'AI整理');
@@ -2465,7 +2236,7 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   imageButton.addEventListener('click', () => imageInput.click());
   const input = node('textarea', 'life-diary-input');
   input.name = 'body';
-  input.rows = 1;
+  input.rows = 3;
   input.maxLength = 12_000;
   input.placeholder = '现在的想法';
   input.value = initialDraft.body;
@@ -2493,14 +2264,13 @@ async function recordPage(route: Route): Promise<HTMLElement> {
     imagePreview.append(image, remove);
   };
   const composerRow = node('div', 'life-diary-composer-row');
-  composerRow.append(imageButton, input, send, imageInput);
-  composer.append(imagePreview, composerRow, saveState);
+  composerRow.append(imageButton, saveState, send, imageInput);
+  composer.append(imagePreview, input, composerRow);
   lifePanel.append(lifeHeader, feed, composer);
 
   const reviewPanel = node('section', 'record-tab-panel daily-review-panel');
   const reviewForm = node('form', 'personal-review-card daily-review-form');
   const reviewHeader = node('header', 'personal-review-header');
-  reviewHeader.append(node('h2', '', '每日复盘'));
   const reviewFields = node('div', 'personal-review-fields');
   const reviewInputs = new Map<ReviewFieldKey, HTMLTextAreaElement>();
   DAILY_REVIEW_FIELDS.forEach(([key, label]) => {
@@ -2655,7 +2425,8 @@ function calendarDates(cursor: Date): string[] {
   const mondayOffset = (first.getDay() + 6) % 7;
   const start = new Date(first);
   start.setDate(first.getDate() - mondayOffset);
-  return Array.from({ length: 42 }, (_, index) => {
+  const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+  return Array.from({ length: Math.ceil((mondayOffset + daysInMonth) / 7) * 7 }, (_, index) => {
     const date = new Date(start);
     date.setDate(start.getDate() + index);
     return localDate(date);
@@ -2807,7 +2578,11 @@ async function calendarPage(): Promise<HTMLElement> {
       if (hasHabit) dots.append(node('span', 'date-dot is-habit', '习惯'));
       button.append(dots);
     }
-    button.addEventListener('click', () => { calendarSelectedDate = dateValue; void render(); });
+    button.addEventListener('click', () => {
+      calendarSelectedDate = dateValue;
+      grid.querySelectorAll('.calendar-day').forEach((cell) => cell.classList.toggle('is-selected', cell === button));
+      void showPreview();
+    });
     grid.append(button);
   }
   panel.append(grid);
@@ -2821,6 +2596,7 @@ async function calendarPage(): Promise<HTMLElement> {
   panel.append(footer);
   main.append(panel);
 
+  const showPreview = async (): Promise<void> => {
   const selectedQuests = allQuests.filter((quest) => quest.sourceType !== 'habit' && feedbackByQuest.get(quest.id)?.result === 'completed' && questResultDate(quest, feedbackByQuest) === calendarSelectedDate);
   const selectedHabitLogs = completedHabitLogs.filter((item) => item.localDate === calendarSelectedDate);
   const selectedEntries = entriesByDate.get(calendarSelectedDate) ?? [];
@@ -2854,7 +2630,18 @@ async function calendarPage(): Promise<HTMLElement> {
   openReview.addEventListener('click', () => go({ name: 'day', date: calendarSelectedDate }));
   previewActions.append(editCaption, openReview);
   selectedPreview.append(previewActions);
-  main.append(selectedPreview);
+  const [profile, observations, analyses] = await Promise.all([db.getProfile(), db.resolvedStateAtOrBefore(calendarSelectedDate), db.listDailyAnalyses(calendarSelectedDate)]);
+  const { dialog, content, actions } = dialogShell(formatDate(calendarSelectedDate));
+  dialog.classList.add('day-snapshot-dialog');
+  content.append(snapshotRoomStage(calendarSelectedDate, selectedEntries, observations, selectedQuests, profile, analyses.find((item) => item.status === 'ready')), selectedPreview);
+  const close = node('button', 'button button-quiet', '关闭');
+  close.type = 'button';
+  close.addEventListener('click', () => dialog.close());
+  actions.append(close);
+  openReview.addEventListener('click', () => dialog.close());
+  dialog.showModal();
+
+  };
 
   const monthStart = localDate(new Date(calendarCursor.getFullYear(), calendarCursor.getMonth(), 1));
   const monthEnd = localDate(new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() + 1, 0));
@@ -2950,10 +2737,11 @@ async function calendarPage(): Promise<HTMLElement> {
     growthDetails.append(node('p', 'monthly-growth-row', `${dimension.label} · +${current}${delta === 0 ? ' · 与上月持平' : ` · 比上月${delta > 0 ? '多' : '少'} ${Math.abs(delta)}`}`));
   }
   monthly.append(growthDetails);
-  main.append(monthly);
+  const monthlyDetails = node('details', 'calendar-monthly-details optional-details');
+  monthlyDetails.append(node('summary', '', '本月变化'), monthly);
 
   const search = node('section', 'search-section calendar-search-panel');
-  search.hidden = true;
+  search.hidden = false;
   searchPanel = search;
   search.append(node('h2', '', '查找记录'));
   const searchForm = node('form', 'search-form');
@@ -2999,7 +2787,7 @@ async function calendarPage(): Promise<HTMLElement> {
   closeSearch.type = 'button';
   closeSearch.addEventListener('click', () => { search.hidden = true; searchAction.focus(); });
   search.append(closeSearch);
-  main.append(search);
+  main.append(search, monthlyDetails);
   return main;
 }
 
@@ -3012,6 +2800,14 @@ function dialogShell(title: string): { dialog: HTMLDialogElement; content: HTMLE
   content.append(heading);
   const actions = node('div', 'dialog-actions');
   dialog.append(content, actions);
+  const navigation = bottomNavigation(currentRoute);
+  navigation.classList.add('dialog-navigation');
+  navigation.addEventListener('click', (event) => {
+    if ((event.target as Element).closest('a')) {
+      document.querySelectorAll<HTMLDialogElement>('dialog[open]').forEach((open) => open.close());
+    }
+  });
+  dialog.append(navigation);
   document.body.append(dialog);
   const viewport = window.visualViewport;
   const syncViewport = (): void => {
@@ -3153,7 +2949,9 @@ async function openAnalysisPreview(date: string, entries: JournalEntry[], retryJ
   if (!NATIVE_AI_READY) { showToast(NATIVE_AI_UNAVAILABLE, 'error'); return; }
   const textEntries = entries.filter((entry) => entry.body.trim());
   if (!retryJob && !textEntries.length) { showToast('先写一条文字记录。', 'error'); return; }
-  const { dialog, content, actions } = dialogShell(retryJob ? '检查并重试整理' : '检查本次发送范围');
+  const { dialog, content, actions } = dialogShell(retryJob ? '检查并重试整理' : '发送内容');
+  dialog.classList.add('full-screen-editor', 'analysis-preview-dialog');
+  addDialogBack(dialog, content);
   if (retryJob) {
     if (retryJob.operation !== 'daily_analysis') throw new Error('这不是每日整理任务。');
     appendStoredRequestPreview(content, retryJob.request as DailyAnalysisRequest);
@@ -3181,7 +2979,7 @@ async function openAnalysisPreview(date: string, entries: JournalEntry[], retryJ
     return { entry, input: option.input };
   });
   const contextGroup = node('section', 'preview-group');
-  contextGroup.append(node('h3', '', '可选上下文'));
+  contextGroup.append(node('h3', '', '附加信息（可选）'));
   const eventOption = previewContextRow('当天已确认事件', `${choices.events.length} 条；用于避免重复提取`, Boolean(choices.events.length));
   const stateOption = previewContextRow('最近七天五维摘要', `${choices.recentStates.length} 天；不包含历史原文`, Boolean(choices.recentStates.length));
   const goalOption = previewContextRow('当前目标', choices.goals.map((item) => item.result).join('；') || '无', Boolean(choices.goals.length));
@@ -3787,6 +3585,7 @@ function personalReviewSection(
     row.append(node('strong', '', label), node('p', value ? '' : 'is-empty', value || '—'));
     list.append(row);
   });
+  if (fields === WEEKLY_REVIEW_FIELDS) section.classList.add('weekly-review-summary');
   section.append(header, list);
   return section;
 }
@@ -4149,6 +3948,8 @@ async function openWeeklyReviewPreview(period: { start: string; end: string }, r
 
 async function openReviewConfirmation(review: Review): Promise<void> {
   const { dialog, content, actions } = dialogShell('确认下周重点和小尝试');
+  dialog.classList.add('full-screen-editor');
+  addDialogBack(dialog, content);
   const theme = node('input', 'input'); theme.maxLength = 120; theme.value = review.nextTheme;
   const hypothesis = node('textarea', 'input compact-textarea'); hypothesis.maxLength = 500; hypothesis.value = review.nextExperiment.hypothesis;
   const minimum = node('textarea', 'input compact-textarea'); minimum.maxLength = 300; minimum.value = review.nextExperiment.minimumAction;
@@ -4208,11 +4009,11 @@ async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
   const habitChecks = periodQuests.filter((quest) => quest.sourceType === 'habit' && (quest.status === 'completed' || quest.status === 'partial')).length;
   const summary = node('section', 'review-summary-card');
   const summaryStats = node('div', 'review-summary-stats');
-  summaryStats.append(
-    node('span', '', `完成\n${completedTasks} 项任务`),
-    node('span', '', `习惯\n${habitChecks} 次`),
-    node('span', '', `留下\n${weekEntries.length} 篇记录`),
-  );
+  for (const [label, value] of [['完成任务', completedTasks], ['习惯打卡', habitChecks], ['记录', weekEntries.length]]) {
+    const stat = node('span');
+    stat.append(node('strong', '', String(value)), node('small', '', String(label)));
+    summaryStats.append(stat);
+  }
   summary.append(summaryStats);
   main.append(summary);
   main.append(personalReviewSection('我的周复盘', caption?.weeklyReview, WEEKLY_REVIEW_FIELDS, () => {
@@ -4588,6 +4389,8 @@ async function openGoalDialog(): Promise<void> {
 
 async function openGoalSettingsDialog(goal: Goal): Promise<void> {
   const { dialog, content, actions } = dialogShell('编辑目标');
+  dialog.classList.add('full-screen-editor', 'goal-editor-dialog');
+  addDialogBack(dialog, content);
   const result = node('input', 'input');
   result.maxLength = 160;
   result.value = goal.result;
@@ -4733,6 +4536,8 @@ async function openGoalReplanDialog(goal: Goal): Promise<void> {
 
 async function openMilestoneDialog(goal: Goal): Promise<void> {
   const { dialog, content, actions } = dialogShell('添加子任务');
+  dialog.classList.add('full-screen-editor', 'task-editor-dialog');
+  addDialogBack(dialog, content);
   const title = node('input', 'input');
   title.maxLength = 160;
   const date = node('input', 'input');
@@ -4782,6 +4587,8 @@ async function openMilestoneDialog(goal: Goal): Promise<void> {
 
 async function openQuestDialog(goal?: Goal, suggestedTitle = ''): Promise<void> {
   const { dialog, content, actions } = dialogShell(goal ? '安排目标下一步' : '安排每日任务');
+  dialog.classList.add('full-screen-editor', 'task-editor-dialog');
+  addDialogBack(dialog, content);
   const title = node('input', 'input');
   title.maxLength = 160;
   title.value = suggestedTitle || goal?.nextStep || '';
@@ -4989,11 +4796,10 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
   meter.max = 100;
   meter.value = progress;
   const progressLine = node('div', 'goal-detail-progress-line');
-  progressLine.append(node('strong', '', `${completed} / ${currentMilestones.length || '—'} 子任务`), node('strong', '', `${progress}%`));
-  hero.append(progressLine, meter);
+  progressLine.append(node('span', '', `${completed} / ${currentMilestones.length || '—'} 子任务`), node('span', '', goal.targetDate ? formatDate(goal.targetDate) : '未设日期'));
+  hero.append(progressLine);
   const goalMeta = node('section', 'goal-detail-meta-grid');
   goalMeta.append(node('span', '', goal.targetDate ? `完成日期 ${formatDate(goal.targetDate)}` : '未设完成日期'));
-  hero.append(goalMeta);
   const more = node('button', 'detail-header-more', '⋮');
   more.type = 'button';
   more.setAttribute('aria-label', '更多目标操作');
@@ -5021,7 +4827,7 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
       const controls = node('div', 'goal-stage-actions');
       const marker = node('span', `stage-toggle ${milestone.status === 'completed' ? 'is-complete' : ''}`, milestone.status === 'completed' ? '✓' : '');
       marker.setAttribute('aria-label', milestone.status === 'completed' ? `已完成：${milestone.description}` : `待完成：${milestone.description}`);
-      controls.append(marker);
+      row.prepend(marker);
       if (linkedQuest?.status === 'pending') {
         const editStage = node('button', 'button button-quiet button-compact', '编辑');
         editStage.type = 'button';
@@ -5069,7 +4875,7 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
 }
 
 async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<void> {
-  const [logs, quests, momentum] = await Promise.all([db.listHabitLogs(), db.listQuests(), db.habitMomentum(habit.id)]);
+  const [logs, quests] = await Promise.all([db.listHabitLogs(), db.listQuests()]);
   const habitLogs = logs.filter((item) => item.habitId === habit.id).sort((left, right) => right.localDate.localeCompare(left.localDate));
   const { dialog, content, actions } = dialogShell('习惯详情');
   dialog.classList.add('full-screen-editor', 'habit-detail-dialog');
@@ -5077,7 +4883,7 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
   const hero = node('section', 'entity-detail-hero');
   const habitIcon = node('span', 'entity-detail-icon is-habit-icon');
   habitIcon.append(semanticIcon('habit'));
-  hero.append(habitIcon, node('h3', '', habit.name), node('p', 'success-copy', habit.status === 'active' && habit.bonusEnabled ? '● 进行中' : '● 已暂停'));
+  hero.append(node('h3', '', habit.name), node('p', 'caption', `${habitScheduleLabel(habit.scheduleDays)} · ${habit.targetCount ?? 1}${habit.countUnit || '次'} · ${dimensionLabel(habit.dimension)}`));
   const habitMeta = node('section', 'habit-detail-meta');
   const metaRow = (label: string, value: string): HTMLElement => {
     const row = node('p', 'habit-detail-meta-row');
@@ -5089,7 +4895,6 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
     metaRow('触发方式', `${habit.trigger || '未设置'} · ${habitScheduleLabel(habit.scheduleDays)}`),
   );
   habitMeta.append(metaRow('五维状态', dimensionLabel(habit.dimension)));
-  hero.append(habitMeta);
   const more = node('button', 'detail-header-more', '⋮');
   more.type = 'button';
   more.setAttribute('aria-label', '更多习惯操作');
@@ -5097,17 +4902,16 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
   const analysis = node('button', 'detail-header-analysis', '分析');
   analysis.type = 'button';
   analysis.addEventListener('click', () => { dialog.close(); go({ name: 'habit-analysis', entityId: habit.id }); });
-  content.append(analysis, more, hero);
+  content.append(more, hero);
   const currentWeek = weekRange(localDate());
-  const weekCompleted = new Set(habitLogs.filter((item) => item.localDate >= currentWeek.start && item.localDate <= currentWeek.end && ['completed', 'partial'].includes(item.result)).map((item) => item.localDate)).size;
+  const weekCompleted = new Set(habitLogs.filter((item) => item.localDate >= currentWeek.start && item.localDate <= currentWeek.end && item.result === 'completed').map((item) => item.localDate)).size;
   const stats = node('section', 'habit-detail-stats');
   const stat = (label: string, value: string, caption: string): HTMLElement => {
     const item = node('span', 'habit-stat');
     item.append(node('span', '', label), node('strong', '', value), node('small', '', caption));
     return item;
   };
-  stats.append(stat(`本周（计划${habit.scheduleDays.length}天）`, `${weekCompleted}/${habit.scheduleDays.length}`, '已完成 / 计划天数'), stat('近7计划日', `${momentum}/5`, '完成节奏'), stat('累计', `${habitLogs.length} 次`, '总打卡次数'));
-  content.append(stats);
+  stats.append(stat('本周', `${weekCompleted}/${habit.scheduleDays.length} 天`, ''), stat('累计', `${habitLogs.filter((item) => item.result === 'completed').length} 天`, ''));
   const weekCard = node('section', 'habit-week-card');
   const week = node('section', 'habit-week');
   for (let offset = 0; offset < 7; offset += 1) {
@@ -5119,7 +4923,6 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
     week.append(cell);
   }
   weekCard.append(week);
-  content.append(weekCard);
   if (showCheckIn) {
     const todayQuest = quests.find((quest) => quest.localDate === localDate() && quest.sourceType === 'habit' && quest.sourceId === habit.id);
     const checkinActions = node('div', 'habit-detail-checkin-actions');
@@ -5157,16 +4960,17 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
     const log = habitLogs.find((item) => item.localDate === date);
     const result = log?.result ?? 'empty';
     const day = node('span', 'habit-recent-day');
-    const cell = node('span', `habit-recent-cell is-${result}`, result === 'completed' ? '✓' : result === 'partial' ? '·' : result === 'skipped' || result === 'exempt' ? '–' : '');
+    const dayQuest = quests.find((item) => item.sourceType === 'habit' && item.sourceId === habit.id && item.localDate === date);
+    const progress = dayQuest?.status === 'completed' ? dayQuest.targetCount ?? 1 : dayQuest?.progressCount ?? 0;
+    const cell = node('span', `habit-recent-cell is-${result}`, dayQuest?.targetCount ? `${progress}/${dayQuest.targetCount}` : result === 'completed' ? '✓' : result === 'partial' ? '·' : '–');
     cell.setAttribute('role', 'img');
     cell.setAttribute('aria-label', `${formatDate(date)}：${result === 'completed' ? '完成' : result === 'partial' ? '有进展' : result === 'skipped' || result === 'exempt' ? '跳过' : '无记录'}`);
     cell.title = cell.getAttribute('aria-label') ?? '';
     day.append(cell, node('time', '', `${parseLocalDate(date).getMonth() + 1}/${parseLocalDate(date).getDate()}`));
     recentGrid.append(day);
   }
-  if (habitLogs.length) recent.append(recentGrid);
-  if (!habitLogs.length) recent.append(node('p', 'empty-copy', '暂无打卡记录'));
-  content.append(recent);
+  recent.append(recentGrid);
+  content.append(recent, stats);
   const edit = node('button', 'button button-secondary', '编辑计划');
   edit.type = 'button';
   edit.addEventListener('click', () => { dialog.close(); void openHabitDialog(habit); });
@@ -5177,7 +4981,9 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
     try { await db.saveHabit(habit.id, { status: 'active', bonusEnabled: !(habit.status === 'active' && habit.bonusEnabled) }); dialog.close(); await render(); }
     catch (error) { pause.disabled = false; showToast(errorMessage(error), 'error'); }
   });
-  actions.append(edit, pause);
+  analysis.className = 'button button-secondary';
+  analysis.textContent = '查看分析';
+  actions.append(edit, analysis);
   dialog.showModal();
 }
 
@@ -5523,48 +5329,44 @@ async function growthPage(): Promise<HTMLElement> {
   main.append(trailTabs('growth'));
 
   const activeLedger = ledger.filter((item) => !item.reversedAt);
-  const totalXp = activeLedger.reduce((sum, item) => sum + item.finalXp, 0);
   const growthToday = localDate();
+  const selectedPeriod = sessionStorage.getItem('qiguang.growth-period') ?? '30';
+  const periodStart = selectedPeriod === 'all' ? '0000-01-01' : shiftDate(growthToday, selectedPeriod === '7' ? -6 : -29);
   const recentThirtyStart = shiftDate(growthToday, -29);
-  const recentThirtyXp = activeLedger
-    .filter((item) => item.localDate >= recentThirtyStart && item.localDate <= growthToday)
-    .reduce((sum, item) => sum + item.finalXp, 0);
-  const overallLevel = Math.floor(totalXp / 100) + 1;
-  const levelXp = totalXp % 100;
-  const overview = node('section', 'growth-overview');
-  const monthStat = node('div', 'growth-overview-stat growth-month-stat');
-  const monthValue = node('span', 'growth-overview-value');
-  monthValue.append(node('strong', 'growth-month-xp', String(recentThirtyXp)), node('span', '', '成长值'));
-  monthStat.append(node('span', 'caption', '近30天获得'), monthValue);
-  const levelStat = node('div', 'growth-overview-stat growth-level-stat');
-  levelStat.append(node('span', 'caption', '等级'), node('strong', 'growth-overall-level', String(overallLevel)));
-  const overallProgress = node('progress', 'xp-progress growth-overall-progress');
-  overallProgress.max = 100;
-  overallProgress.value = levelXp;
-  overallProgress.setAttribute('aria-label', `等级 ${overallLevel}，本级成长值 ${levelXp}/100`);
-  const progressStat = node('div', 'growth-overview-stat growth-progress-stat');
-  progressStat.append(node('span', 'growth-level-progress', `${levelXp} / 100`), overallProgress);
-  overview.append(monthStat, levelStat, progressStat);
-  main.append(overview);
+  const periods = node('nav', 'growth-period-tabs');
+  periods.setAttribute('aria-label', '成长周期');
+  for (const [value, label] of [['7', '最近7天'], ['30', '最近30天'], ['all', '累计']]) {
+    const tab = node('button', selectedPeriod === value ? 'is-active' : '', label);
+    tab.type = 'button';
+    tab.setAttribute('aria-pressed', String(selectedPeriod === value));
+    tab.addEventListener('click', () => { sessionStorage.setItem('qiguang.growth-period', value!); void render(); });
+    periods.append(tab);
+  }
+  main.append(periods);
 
   const badges = selectGrowthBadges({ milestones, goals, ledger, habits, habitLogs, quests, feedbacks, reviews });
   const badgeSection = node('section', 'surface growth-badges');
   const badgeHeading = node('div', 'section-heading');
-  badgeHeading.append(node('h2', '', '成果徽章'));
+  badgeHeading.append(node('h2', '', '成就册'));
   badgeSection.append(badgeHeading);
   if (!badges.length) badgeSection.append(node('p', 'empty-copy', '暂无徽章'));
   else {
     const recent = node('div', 'badge-grid');
-    badges.slice(0, 4).forEach((badge) => recent.append(growthBadgeButton(badge)));
+    badges.slice(0, 3).forEach((badge) => recent.append(growthBadgeButton(badge)));
     badgeSection.append(recent);
-    if (badges.length > 4) {
-      const all = node('details', 'badge-all');
-      all.append(node('summary', '', `全部 ${badges.length} ›`));
+    const all = node('button', 'section-text-action', '查看全部 ›');
+    all.type = 'button';
+    all.addEventListener('click', () => {
+      const { dialog, content, actions } = dialogShell('成就册');
+      dialog.classList.add('full-screen-editor');
+      addDialogBack(dialog, content);
       const allGrid = node('div', 'badge-grid');
       badges.forEach((badge) => allGrid.append(growthBadgeButton(badge)));
-      all.append(allGrid);
-      badgeSection.append(all);
-    }
+      content.append(allGrid);
+      actions.remove();
+      dialog.showModal();
+    });
+    badgeHeading.append(all);
   }
   const questById = new Map(quests.map((item) => [item.id, item]));
   const milestoneById = new Map(milestones.map((item) => [item.id, item]));
@@ -5581,14 +5383,15 @@ async function growthPage(): Promise<HTMLElement> {
       .filter((item) => item.localDate >= recentThirtyStart && item.localDate <= growthToday)
       .reduce((sum, item) => sum + item.finalXp, 0);
 
-    const card = node('article', 'growth-dimension-card');
+    const card = node('button', 'growth-dimension-card');
+    card.type = 'button';
     card.dataset.dimension = dimension.key;
     const heading = node('div', 'growth-dimension-heading');
     const icon = node('img', 'growth-dimension-icon') as HTMLImageElement;
     icon.src = DIMENSION_ICON_ASSETS[dimension.key];
     icon.alt = '';
     const headingCopy = node('span', 'growth-dimension-copy');
-    headingCopy.append(node('h3', '', dimension.label), node('span', 'caption', `累计 ${value.totalXp} · 近30天 +${dimensionThirtyXp}`));
+    headingCopy.append(node('h3', '', dimension.label));
     heading.append(icon, headingCopy);
     const stats = node('div', 'growth-dimension-stats');
     stats.append(node('span', '', `等级 ${value.level}`));
@@ -5596,10 +5399,12 @@ async function growthPage(): Promise<HTMLElement> {
     meter.max = value.nextLevelXp;
     meter.value = value.currentXp;
     meter.setAttribute('aria-label', `${dimension.label}等级 ${value.level}，当前成长值 ${value.currentXp}/${value.nextLevelXp}`);
-    card.append(heading, stats, meter);
+    const periodXp = dimensionLedger.filter((item) => item.localDate >= periodStart && item.localDate <= growthToday).reduce((sum, item) => sum + item.finalXp, 0);
+    card.append(heading, node('strong', 'growth-period-value', String(periodXp)));
+    card.setAttribute('aria-label', `查看${dimension.label}成长记录，${periodXp}成长值`);
 
-    const evidence = node('details', 'growth-evidence-list');
-    evidence.append(node('summary', '', dimensionLedger.length ? `全部记录 · ${dimensionLedger.length}` : '暂无成长记录'));
+    const evidence = node('div', 'growth-evidence-list');
+    if (!dimensionLedger.length) evidence.append(node('p', 'empty-copy', '暂无成长记录'));
     dimensionLedger.forEach((item) => {
       const quest = item.sourceType === 'quest' ? questById.get(item.sourceId) : undefined;
       const milestone = item.sourceType === 'milestone' ? milestoneById.get(item.sourceId) : undefined;
@@ -5615,7 +5420,14 @@ async function growthPage(): Promise<HTMLElement> {
       );
       evidence.append(row);
     });
-    if (dimensionLedger.length) card.append(evidence);
+    card.addEventListener('click', () => {
+      const { dialog, content, actions } = dialogShell(`${dimension.label}成长记录`);
+      dialog.classList.add('full-screen-editor', 'growth-ledger-dialog');
+      addDialogBack(dialog, content);
+      content.append(stats, meter, evidence);
+      actions.remove();
+      dialog.showModal();
+    });
     grid.append(card);
   });
   main.append(grid, badgeSection);
@@ -5708,7 +5520,8 @@ function openAssessmentQuestionnaire(length: AssessmentLength, onlyDimension?: D
   let index = 0;
   const selectedDimension = onlyDimension ? DIMENSIONS.find((item) => item.key === onlyDimension) : undefined;
   const { dialog, content, actions } = dialogShell(selectedDimension ? `${selectedDimension.label}状态自评` : `${length} 题状态评估`);
-  dialog.classList.add('assessment-dialog');
+dialog.classList.add('assessment-dialog', 'full-screen-editor');
+  addDialogBack(dialog, content);
   const progress = node('p', 'assessment-progress');
   const questionArea = node('div', 'assessment-question');
   questionArea.tabIndex = -1;
@@ -5842,7 +5655,12 @@ function profileForm(profile: Profile): HTMLElement {
   const updatePreview = () => {
     const selected = (avatar.value || null) as Profile['avatar'];
     preview.hidden = selected === null;
-    if (selected) preview.src = avatarAsset(selected);
+    if (selected) preview.src = selected === 'male' ? maleCompanionImage : femaleCompanionImage;
+    choices.querySelectorAll<HTMLButtonElement>('button').forEach((button) => {
+      const active = button.dataset.avatar === selected;
+      button.classList.toggle('is-selected', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
   };
   let currentDefaultName = avatarName(profile.avatar);
   avatar.addEventListener('change', () => {
@@ -5853,13 +5671,27 @@ function profileForm(profile: Profile): HTMLElement {
     currentDefaultName = avatarName(selected);
     updatePreview();
   });
+  const choices = node('div', 'avatar-choices profile-avatar-choices');
+  for (const [value, name, source] of [['female', '鱼鱼', femaleCompanionImage], ['male', '包包', maleCompanionImage]]) {
+    const choice = node('button', 'avatar-choice');
+    choice.type = 'button';
+    choice.dataset.avatar = value;
+    choice.setAttribute('aria-label', `选择${name}`);
+    const image = node('img', 'avatar-choice-image');
+    image.src = source!;
+    image.alt = '';
+    choice.append(image, node('span', '', name));
+    choice.addEventListener('click', () => { avatar.value = value!; avatar.dispatchEvent(new Event('change')); });
+    choices.append(choice);
+  }
+  avatar.hidden = true;
   updatePreview();
   const status = node('p', 'save-state', '');
   const save = node('button', 'button button-secondary', '保存人物设置');
   save.type = 'submit';
   form.append(
     labelledControl('你的称呼', userName), labelledControl('生活分身称呼', companionName),
-    labelledControl('当前阶段', chapterTitle), labelledControl('人物形象', avatar), preview, status, save,
+    labelledControl('当前阶段', chapterTitle), avatar, preview, choices, status, save,
   );
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -6118,6 +5950,8 @@ async function openSystemCandidateReview(memories: SystemMemory[], events: Journ
 
 async function openAddMemoryDialog(): Promise<void> {
   const { dialog, content, actions } = dialogShell('告诉生活分身一条规则');
+  dialog.classList.add('full-screen-editor');
+  addDialogBack(dialog, content);
   const type = node('select', 'input');
   type.append(
     selectOption('constraint', '限制或不要再建议的事'), selectOption('preference', '稳定偏好'),
@@ -6127,7 +5961,6 @@ async function openAddMemoryDialog(): Promise<void> {
   statement.placeholder = '例如：连续会议后不要建议我立刻做高专注任务。';
   const status = node('p', 'save-state'); status.setAttribute('role', 'status');
   content.append(
-    node('p', 'privacy-boundary', '这条内容由你直接设定，不是 AI 推断。保存后会进入伙伴记忆；仍可编辑、减少提醒或忘记。'),
     labelledControl('规则类型', type), labelledControl('具体内容', statement), status,
   );
   const cancel = node('button', 'button button-secondary', '取消'); cancel.type = 'button'; cancel.addEventListener('click', () => dialog.close());
@@ -6723,106 +6556,74 @@ function analysisPercent(value: number, total: number): number {
 }
 
 async function taskAnalysisPage(): Promise<HTMLElement> {
-  const [allQuests, feedbacks] = await Promise.all([db.listQuests(), db.listQuestFeedback()]);
+  const [allQuests, feedbacks, ledger] = await Promise.all([db.listQuests(), db.listQuestFeedback(), db.listXpLedger()]);
   const main = node('main', 'page page-analysis page-task-analysis');
   let weeks: AnalysisWeeks = 12;
   let category: 'all' | Dimension = 'all';
   const body = node('div', 'analysis-page-body');
-  main.append(secondaryPageHeader('任务分析', undefined, { name: 'tasks' }));
-
   const categoryTabs = node('nav', 'analysis-category-tabs');
   categoryTabs.setAttribute('aria-label', '五维筛选');
-  main.append(categoryTabs, body);
-  const renderBody = (): void => {
-    const activeFeedback = activeFeedbackByQuest(feedbacks);
-    const rows = allQuests.filter((quest) => quest.sourceType !== 'habit' && !quest.systemRetiredAt).flatMap((quest) => {
-      const feedback = activeFeedback.get(quest.id);
-      const result = feedback?.result ?? (quest.status === 'pending' ? undefined : quest.status);
-      return result ? [{ quest, result, date: feedback?.completedDate ?? quest.localDate }] : [];
-    });
-    const categoryRows = rows.filter(({ quest }) => category === 'all' || quest.dimension === category);
-    const period = analysisRange(weeks);
-    const current = categoryRows.filter(({ date }) => date >= period.start && date <= period.end);
-    const completed = current.filter(({ result }) => result === 'completed').length;
-    const partial = current.filter(({ result }) => result === 'partial').length;
-    const skipped = current.filter(({ result }) => result === 'skipped' || result === 'exempt').length;
-    const focusMinutes = current.reduce((sum, { quest, result }) => sum + (result === 'completed' ? quest.estimatedMinutes ?? 0 : result === 'partial' ? (quest.estimatedMinutes ?? 0) / 2 : 0), 0);
+  main.append(secondaryPageHeader('任务分析', undefined, { name: 'tasks' }), categoryTabs, body);
+  const activeFeedback = activeFeedbackByQuest(feedbacks);
+  const rows = allQuests.filter((quest) => quest.sourceType !== 'habit' && !quest.systemRetiredAt).flatMap((quest) => {
+    const feedback = activeFeedback.get(quest.id);
+    const result = feedback?.result ?? (quest.status === 'pending' ? undefined : quest.status);
+    return result ? [{ quest, result, date: feedback?.completedDate ?? quest.localDate }] : [];
+  });
 
+  const renderBody = (): void => {
+    const period = analysisRange(weeks);
+    const current = rows.filter(({ quest, date }) => date >= period.start && date <= period.end && (category === 'all' || quest.dimension === category));
+    const completed = current.filter(({ result }) => result === 'completed');
+    const questIds = new Set(current.map(({ quest }) => quest.id));
+    const xp = ledger.filter((item) => !item.reversedAt && item.sourceType === 'quest' && questIds.has(item.sourceId)
+      && item.localDate >= period.start && item.localDate <= period.end).reduce((sum, item) => sum + item.finalXp, 0);
     categoryTabs.replaceChildren();
-    const dimensionTabs: Array<readonly ['all' | Dimension, string]> = [['all', '全部'], ...DIMENSIONS.map((item) => [item.key, item.label] as const)];
-    for (const [key, label] of dimensionTabs) {
+    const dimensions: Array<readonly ['all' | Dimension, string]> = [['all', '全部'], ...DIMENSIONS.map((item) => [item.key, item.label] as const)];
+    for (const [key, label] of dimensions) {
       const tab = node('button', category === key ? 'is-active' : '', label);
       tab.type = 'button';
       tab.setAttribute('aria-current', category === key ? 'page' : 'false');
       tab.addEventListener('click', () => { category = key; renderBody(); });
       categoryTabs.append(tab);
     }
-
-    body.replaceChildren();
     const summary = node('section', 'analysis-summary-grid');
-    for (const [label, value, tone = ''] of [
-      ['完成', String(completed)], ['有进展', String(partial)], ['跳过', String(skipped), 'is-warning'], ['专注', `${Math.round(focusMinutes / 6) / 10} 小时`],
-    ]) {
-      const stat = node('span', tone);
+    for (const [label, value] of [['完成', `${completed.length} 项`], ['成长值', `+${xp}`]]) {
+      const stat = node('span');
       stat.append(node('small', '', label), node('strong', '', value));
       summary.append(stat);
     }
-    body.append(summary);
-
-    const daily = new Map<string, { done: number; skipped: number }>();
-    current.forEach(({ date, result }) => {
-      const value = daily.get(date) ?? { done: 0, skipped: 0 };
-      if (result === 'completed' || result === 'partial') value.done += 1;
-      else value.skipped += 1;
-      daily.set(date, value);
-    });
-    const heat = analysisHeatmap('任务热力图', weeks, (date) => {
-      const value = daily.get(date);
-      if (!value) return { tone: 'empty', label: `${formatDate(date)}：没有任务结果` };
-      if (!value.done) return { tone: 'skipped', label: `${formatDate(date)}：跳过 ${value.skipped} 项` };
-      const tone = `level-${Math.min(4, value.done)}` as AnalysisHeatTone;
-      return { tone, label: `${formatDate(date)}：推进 ${value.done} 项${value.skipped ? `，跳过 ${value.skipped} 项` : ''}` };
-    });
-    heat.querySelector('h2')?.after(analysisRangeTabs(weeks, (value) => { weeks = value; renderBody(); }));
-    body.append(heat);
-
-    const distribution = node('section', 'analysis-section analysis-result-section');
-    distribution.append(node('h2', '', '结果分布'));
-    const total = completed + partial + skipped;
-    const resultList = node('div', 'analysis-result-list');
-    for (const [label, value] of [['已完成', completed], ['有进展', partial], ['跳过', skipped]] as const) {
-      const percent = analysisPercent(value, total);
-      const row = node('div', 'analysis-result-row');
-      const meter = node('span', 'analysis-meter');
-      meter.style.setProperty('--value', `${percent}%`);
-      row.append(node('strong', '', label), meter, node('span', '', `${percent}%`));
-      resultList.append(row);
-    }
-    distribution.append(resultList);
-    body.append(distribution);
-
-    const categorySection = node('section', 'analysis-section analysis-category-section');
-    categorySection.append(node('h2', '', '五维完成'));
+    body.replaceChildren(analysisRangeTabs(weeks, (value) => { weeks = value; renderBody(); }), summary);
+    const daily = new Map<string, number>();
+    completed.forEach(({ date }) => daily.set(date, (daily.get(date) ?? 0) + 1));
+    body.append(analysisHeatmap(`最近${weeks}周`, weeks, (date) => {
+      const done = daily.get(date) ?? 0;
+      return { tone: done ? `level-${Math.min(4, done)}` as AnalysisHeatTone : 'empty', label: `${formatDate(date)}：完成 ${done} 项` };
+    }));
+    const categories = node('section', 'analysis-category-section');
+    categories.setAttribute('aria-label', '五维完成');
     for (const { key, label } of DIMENSIONS) {
-      const values = current.filter(({ quest }) => quest.dimension === key);
-      const done = values.filter(({ result }) => result === 'completed').length;
-      const percent = analysisPercent(done, values.length);
-      const row = node('div', 'analysis-category-row');
-      row.append(node('strong', '', label));
-      const meter = node('span', 'analysis-meter');
-      meter.style.setProperty('--value', `${percent}%`);
-      row.append(meter, node('span', 'analysis-category-value', `${done}项 · ${percent}%`));
-      categorySection.append(row);
+      const values = completed.filter(({ quest }) => quest.dimension === key);
+      const row = node('button', 'analysis-category-row');
+      row.type = 'button';
+      row.append(node('strong', '', label), node('span', 'analysis-category-value', `完成 ${values.length} 项 ›`));
+      row.addEventListener('click', () => {
+        const { dialog, content, actions } = dialogShell(`${label}已完成任务`);
+        dialog.classList.add('full-screen-editor');
+        addDialogBack(dialog, content);
+        if (!values.length) content.append(node('p', 'empty-copy', '暂无已完成任务'));
+        values.forEach(({ quest, date }) => {
+          const entry = node('div', 'analysis-completed-row');
+          entry.append(node('strong', '', quest.title), node('time', 'caption', formatDate(date)));
+          content.append(entry);
+        });
+        actions.remove();
+        dialog.showModal();
+      });
+      categories.append(row);
     }
-    body.append(categorySection);
-    const actions = node('footer', 'analysis-bottom-actions');
-    const back = node('button', 'button button-primary', '返回任务');
-    back.type = 'button';
-    back.addEventListener('click', () => { sessionStorage.setItem('qiguang.task-view', 'today'); go({ name: 'tasks' }); });
-    actions.append(back);
-    body.append(actions);
+    body.append(categories);
   };
-
   renderBody();
   return main;
 }
@@ -6875,11 +6676,16 @@ async function habitAnalysisOverviewPage(habits: Habit[], logs: HabitLog[]): Pro
     node('span', '', `总体完成率 ${totalRate}%`),
     node('small', delta === 0 ? '' : delta > 0 ? 'is-positive' : 'is-negative', delta === 0 ? '与上个周期持平' : `比上个周期${delta > 0 ? '提高' : '下降'} ${Math.abs(delta)}%`),
   );
-  main.append(summary);
+  const range = node('div', 'habit-overview-period');
+  range.append(node('span', '', '近四周'), node('span', '', `${formatDate(start)} — ${formatDate(end)}`));
+  main.append(range);
 
   const list = node('section', 'habit-comparison-list');
   const heading = node('div', 'habit-comparison-heading');
-  heading.append(node('h2', '', '近四周'), node('span', '', '第1周　 第2周　 第3周　 本周'));
+  const weekLabels = node('span');
+  Array.from({ length: 4 }, (_, week) => shiftDate(start, week * 7).slice(5).replace('-', '.'))
+    .forEach((label) => weekLabels.append(node('span', '', label)));
+  heading.append(node('span', 'habit-comparison-name', '习惯'), weekLabels, node('span', 'habit-comparison-total', '完成率'));
   list.append(heading);
   if (!active.length) list.append(node('p', 'empty-copy', '暂无习惯'));
   active.forEach((habit) => {
@@ -6890,7 +6696,7 @@ async function habitAnalysisOverviewPage(habits: Habit[], logs: HabitLog[]): Pro
     const icon = node('img', 'habit-comparison-icon') as HTMLImageElement;
     icon.src = habitImage(habit);
     icon.alt = '';
-    copy.append(icon, node('span', '', habit.name), node('small', '', habitScheduleLabel(habit.scheduleDays)));
+    copy.append(node('span', '', habit.name));
     const total = habitPeriodStats(habit, logs, start, end);
     const weeksRow = node('span', 'habit-comparison-weeks');
     for (let week = 0; week < 4; week += 1) {
@@ -6899,8 +6705,8 @@ async function habitAnalysisOverviewPage(habits: Habit[], logs: HabitLog[]): Pro
       weeksRow.append(node('span', '', `${value.completed}/${value.planned}`));
     }
     const score = node('span', 'habit-comparison-score');
-    score.append(node('strong', '', `${total.rate}%`), node('small', '', `${total.completed}/${total.planned}`));
-    row.append(copy, score, weeksRow);
+    score.append(node('strong', '', `${total.rate}%`));
+    row.append(copy, weeksRow, score);
     row.addEventListener('click', () => go({ name: 'habit-analysis', entityId: habit.id }));
     list.append(row);
   });
@@ -6914,26 +6720,12 @@ async function habitAnalysisPage(habitId: string): Promise<HTMLElement> {
   if (!habitId) return habitAnalysisOverviewPage(habits, logs);
   const habit = habits.find((item) => item.id === habitId);
   const main = node('main', 'page page-analysis page-habit-analysis');
-  if (!habit) {
-    main.append(secondaryPageHeader('习惯分析', undefined, { name: 'tasks' }), node('p', 'empty-copy', '习惯不存在'));
-    return main;
-  }
-  const momentum = await db.habitMomentum(habit.id);
+  main.append(secondaryPageHeader(habit ? `${habit.name}分析` : '习惯分析', undefined, { name: 'tasks' }));
+  if (!habit) { main.append(node('p', 'empty-copy', '习惯不存在')); return main; }
   const logByDate = new Map(logs.map((log) => [log.localDate, log]));
   let weeks: AnalysisWeeks = 12;
   const body = node('div', 'analysis-page-body');
-  const select = analysisRangeSelect(weeks, (value) => { weeks = value; select.value = String(value); renderBody(); });
-  main.append(secondaryPageHeader('习惯分析', select, { name: 'tasks' }));
-  const hero = node('section', 'habit-analysis-hero');
-  const heroIcon = node('img', 'habit-specific-icon') as HTMLImageElement;
-  heroIcon.src = habitImage(habit);
-  heroIcon.alt = '';
-  hero.append(heroIcon);
-  const heroCopy = node('div');
-  heroCopy.append(node('h2', '', habit.name), node('p', '', habitScheduleLabel(habit.scheduleDays)));
-  hero.append(heroCopy);
-  main.append(hero, body);
-
+  main.append(body);
   const renderBody = (): void => {
     const period = analysisRange(weeks);
     const plannedDates: string[] = [];
@@ -6942,52 +6734,35 @@ async function habitAnalysisPage(habitId: string): Promise<HTMLElement> {
       if (schedule?.trackingEnabled && schedule.scheduleDays.includes(parseLocalDate(date).getDay() || 7)) plannedDates.push(date);
     }
     const completed = plannedDates.filter((date) => logByDate.get(date)?.result === 'completed').length;
-    const rate = analysisPercent(completed, plannedDates.length);
-    const previousDates: string[] = [];
-    for (let date = period.previousStart; date <= period.previousEnd; date = shiftDate(date, 1)) {
-      const schedule = habitAnalysisSchedule(habit, date);
-      if (schedule?.trackingEnabled && schedule.scheduleDays.includes(parseLocalDate(date).getDay() || 7)) previousDates.push(date);
-    }
-    const previousRate = analysisPercent(previousDates.filter((date) => logByDate.get(date)?.result === 'completed').length, previousDates.length);
-    const delta = rate - previousRate;
-    body.replaceChildren();
     const summary = node('section', 'habit-focus-summary');
-    const rateBlock = node('div', 'habit-focus-rate');
-    rateBlock.append(node('small', '', '近周期完成率'), node('strong', '', `${rate}%`), node('span', '', `${completed}/${plannedDates.length} 个计划日`));
-    const momentumBlock = node('div', 'habit-focus-momentum');
-    const momentumMeter = node('span', 'habit-momentum-meter');
-    momentumMeter.style.setProperty('--value', `${momentum * 20}%`);
-    momentumBlock.append(node('small', '', '近 7 个计划日动量'), node('strong', '', `${momentum}/5`), momentumMeter, node('span', delta === 0 ? '' : delta > 0 ? 'is-positive' : 'is-negative', delta === 0 ? '与上一周期持平' : `比上一周期${delta > 0 ? '提高' : '下降'} ${Math.abs(delta)}%`));
-    summary.append(rateBlock, momentumBlock);
-    body.append(summary);
-    const heat = analysisHeatmap('完成热力图', weeks, (date) => {
-      const schedule = habitAnalysisSchedule(habit, date);
-      const planned = date <= period.end && schedule?.trackingEnabled && schedule.scheduleDays.includes(parseLocalDate(date).getDay() || 7);
-      if (!planned) return { tone: 'empty', label: `${formatDate(date)}：未计划` };
+    for (const [label, value] of [['完成天数', `${completed} 天`], ['完成率', `${analysisPercent(completed, plannedDates.length)}%`]]) {
+      const stat = node('div', 'habit-focus-rate');
+      stat.append(node('small', '', label), node('strong', '', value));
+      summary.append(stat);
+    }
+    body.replaceChildren(analysisRangeTabs(weeks, (value) => { weeks = value; renderBody(); }), summary);
+    const plannedSet = new Set(plannedDates);
+    const heat = analysisHeatmap('完成情况', weeks, (date) => {
+      if (!plannedSet.has(date)) return { tone: 'empty', label: `${formatDate(date)}：未计划` };
       const log = logByDate.get(date);
-      if (!log || log.result === 'skipped' || log.result === 'exempt') return { tone: 'missed', label: `${formatDate(date)}：未完成` };
+      if (log?.result !== 'completed') return { tone: 'missed', label: `${formatDate(date)}：未完成` };
       return { tone: 'level-5', label: `${formatDate(date)}：已完成` };
     });
-    heat.querySelector('h2')?.after(analysisRangeTabs(weeks, (value) => { weeks = value; select.value = String(value); renderBody(); }));
-    heat.append(node('p', 'habit-heat-summary', `${completed} 个计划日已完成 · ${plannedDates.length - completed} 个未完成`));
     body.append(heat);
-
-    const weekdayStats = habit.scheduleDays.slice().sort((left, right) => left - right).map((day) => {
+    const weekdays = node('section', 'analysis-section habit-weekday-section');
+    weekdays.append(node('h2', '', '按星期看'));
+    const chart = node('div', 'habit-weekday-chart');
+    for (let day = 1; day <= 7; day += 1) {
       const dates = plannedDates.filter((date) => (parseLocalDate(date).getDay() || 7) === day);
       const done = dates.filter((date) => logByDate.get(date)?.result === 'completed').length;
-      return { day, rate: analysisPercent(done, dates.length) };
-    });
-    const names = '一二三四五六日';
-    const weekdaySection = node('section', 'analysis-section habit-weekday-section');
-    weekdaySection.append(node('h2', '', '按星期看'));
-    const weekdayChart = node('div', 'habit-weekday-chart');
-    weekdayStats.forEach(({ day, rate: weekdayRate }) => {
-      const column = node('div', `habit-weekday-column is-day-${day}`);
-      column.append(node('span', '', `周${names[day - 1]}`), node('strong', '', `${weekdayRate}%`));
-      weekdayChart.append(column);
-    });
-    weekdaySection.append(weekdayChart);
-    body.append(weekdaySection);
+      const rate = analysisPercent(done, dates.length);
+      const column = node('div', 'habit-weekday-column');
+      column.style.setProperty('--weekday-opacity', String(.12 + rate / 150));
+      column.append(node('span', '', '一二三四五六日'[day - 1]), node('strong', '', dates.length ? `${rate}%` : '—'));
+      chart.append(column);
+    }
+    weekdays.append(chart);
+    body.append(weekdays);
   };
   renderBody();
   return main;

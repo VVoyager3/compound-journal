@@ -67,7 +67,7 @@ async function setDay(page, day, openApp = true) {
   await page.goto(`${baseUrl}/#/today`);
   await page.reload();
   await page.locator('#main-content').waitFor();
-  await assert.doesNotReject(() => page.getByRole('heading', { name: '今天', exact: true }).waitFor());
+  await assert.doesNotReject(() => page.getByRole('heading', { name: '今日', exact: true }).waitFor());
 }
 
 async function finishOnboarding(page) {
@@ -86,7 +86,7 @@ async function openTaskPlan(page) {
 
 async function directionTitle(page, allowRecordOnly = false) {
   await page.goto(`${baseUrl}/#/today`);
-  await page.getByRole('heading', { name: '今天', exact: true }).waitFor();
+  await page.getByRole('heading', { name: '今日', exact: true }).waitFor();
   const title = page.locator('.recovery-action h2, .today-focus-list .task-list-item h3').first();
   if (!allowRecordOnly) {
     await title.waitFor();
@@ -374,8 +374,8 @@ test('formal pages sustain a 30 day loop without historic debt', async () => {
 
     await page.goto(`${baseUrl}/#/growth`);
     await assert.doesNotReject(() => page.locator('.growth-dimension-card').first().waitFor());
-    await assert.doesNotReject(() => page.getByRole('heading', { name: '成果徽章' }).waitFor());
-    await page.locator('.badge-all > summary').click();
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '成就册' }).waitFor());
+    await page.getByRole('button', { name: '查看全部 ›' }).click();
     await page.getByRole('button', { name: '查看徽章详情：完成第一段可检查成果' }).click();
     const badgeEvidence = page.getByRole('dialog', { name: '徽章详情' });
     assert.equal(await badgeEvidence.getByText(GOAL, { exact: true }).count(), 0, 'badge details should not repeat the whole goal title');

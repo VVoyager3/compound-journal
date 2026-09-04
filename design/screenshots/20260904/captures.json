@@ -1,0 +1,222 @@
+[
+  {
+    "name": "today",
+    "file": "01-today.png"
+  },
+  {
+    "name": "state-detail",
+    "file": "02-state-detail.png"
+  },
+  {
+    "name": "state-self-assessment",
+    "file": "03-state-self-assessment.png"
+  },
+  {
+    "name": "tasks-today",
+    "file": "04-tasks-today.png"
+  },
+  {
+    "name": "tasks-plan",
+    "file": "05-tasks-plan.png"
+  },
+  {
+    "name": "task-create",
+    "file": "06-task-create.png"
+  },
+  {
+    "name": "task-edit",
+    "file": "07-task-edit.png"
+  },
+  {
+    "name": "goal-create",
+    "file": "08-goal-create.png"
+  },
+  {
+    "name": "goal-detail",
+    "file": "09-goal-detail.png"
+  },
+  {
+    "name": "habit-create",
+    "file": "10-habit-create.png"
+  },
+  {
+    "name": "habit-detail",
+    "file": "11-habit-detail.png"
+  },
+  {
+    "name": "record-compose",
+    "file": "12-record-compose.png"
+  },
+  {
+    "name": "record-daily-review",
+    "file": "13-record-daily-review.png"
+  },
+  {
+    "name": "day-overview",
+    "file": "14-day-overview.png"
+  },
+  {
+    "name": "day-records",
+    "file": "15-day-records.png"
+  },
+  {
+    "name": "record-detail",
+    "file": "16-record-detail.png"
+  },
+  {
+    "name": "day-actions",
+    "file": "17-day-actions.png"
+  },
+  {
+    "name": "day-review",
+    "file": "18-day-review.png"
+  },
+  {
+    "name": "day-review-editor",
+    "file": "19-day-review-editor.png"
+  },
+  {
+    "name": "calendar",
+    "file": "20-calendar.png"
+  },
+  {
+    "name": "growth",
+    "file": "21-growth.png"
+  },
+  {
+    "name": "weekly-review",
+    "file": "22-weekly-review.png"
+  },
+  {
+    "name": "weekly-review-editor",
+    "file": "23-weekly-review-editor.png"
+  },
+  {
+    "name": "task-analysis",
+    "file": "24-task-analysis.png"
+  },
+  {
+    "name": "habit-analysis-overview",
+    "file": "25-habit-analysis-overview.png"
+  },
+  {
+    "name": "habit-analysis-detail",
+    "file": "26-habit-analysis-detail.png"
+  },
+  {
+    "name": "settings",
+    "file": "27-settings.png"
+  },
+  {
+    "name": "settings-companion",
+    "file": "28-settings-companion.png"
+  },
+  {
+    "name": "settings-assessment",
+    "file": "29-settings-assessment.png"
+  },
+  {
+    "name": "settings-ai",
+    "file": "30-settings-ai.png"
+  },
+  {
+    "name": "settings-data",
+    "file": "31-settings-data.png"
+  },
+  {
+    "name": "settings-privacy",
+    "file": "32-settings-privacy.png"
+  },
+  {
+    "name": "settings-storage",
+    "file": "33-settings-storage.png"
+  },
+  {
+    "name": "settings-display",
+    "file": "34-settings-display.png"
+  },
+  {
+    "name": "settings-rules",
+    "file": "35-settings-rules.png"
+  },
+  {
+    "name": "rule-create",
+    "file": "36-rule-create.png"
+  },
+  {
+    "name": "settings-notifications",
+    "file": "37-settings-notifications.png"
+  },
+  {
+    "name": "date-preview",
+    "file": "38-date-preview.png"
+  },
+  {
+    "name": "growth-ledger",
+    "file": "39-growth-ledger.png"
+  },
+  {
+    "name": "badges",
+    "file": "40-badges.png"
+  },
+  {
+    "name": "badge-detail",
+    "file": "41-badge-detail.png"
+  },
+  {
+    "name": "record-history",
+    "file": "42-record-history.png"
+  },
+  {
+    "name": "plan-habits",
+    "file": "43-plan-habits.png"
+  },
+  {
+    "name": "habit-edit",
+    "file": "44-habit-edit.png"
+  },
+  {
+    "name": "completion-feedback",
+    "file": "45-completion-feedback.png"
+  },
+  {
+    "name": "task-result",
+    "file": "46-task-result.png"
+  },
+  {
+    "name": "ai-send",
+    "file": "47-ai-send.png"
+  },
+  {
+    "name": "ai-candidates",
+    "file": "48-ai-candidates.png"
+  },
+  {
+    "name": "weekly-ai",
+    "file": "49-weekly-ai.png"
+  },
+  {
+    "name": "weekly-ai-edit",
+    "file": "50-weekly-ai-edit.png"
+  },
+  {
+    "name": "weekly-review-editor-end",
+    "file": "51-weekly-review-editor-end.png"
+  },
+  {
+    "name": "plan-future",
+    "file": "52-plan-future.png"
+  },
+  {
+    "name": "goal-ai",
+    "file": "53-goal-ai.png"
+  },
+  {
+    "name": "delete-confirmation",
+    "file": "54-delete-confirmation.png"
+  },
+  {
+    "name": "onboarding",
+    "file": "55-onboarding.png"
+  }
+]
