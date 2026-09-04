@@ -1,0 +1,791 @@
+{
+  "date": "2026-09-04",
+  "project": "diary-maker / 栖光",
+  "status": "reference-draft-awaiting-user-audit",
+  "generator": "built-in image_gen",
+  "referenceScreen": {
+    "width": 1280,
+    "height": 2772,
+    "orientation": "portrait",
+    "userSpecification": "2772×1280"
+  },
+  "nativePixelsExact": false,
+  "appCodeChanged": false,
+  "notes": [
+    "56张独立页面/关键状态参考图，非运行截图。",
+    "生成稿保留原图，不裁切、不拉伸；原生尺寸不同于参考屏幕。",
+    "统一暖米白、森林绿、低饱和金与鼠尾草绿的设计方向；个别生成字形、组件间距、状态栏和图标仍存在细微差异，未标记为像素级验收通过。",
+    "热力图方格、具体日期及统计数是设计示意，不可作为真实业务数据或几何测量基线；开发时须使用真实数据和等宽高网格。",
+    "长页为当前视口，不代表全部滚动内容；图内按钮不具备真实交互。",
+    "功能、隐私与结算规则以PRODUCT.md和已确认实现为准，不以生成图意外添加的细节改变业务。"
+  ],
+  "screens": [
+    {
+      "id": "01-today-v2",
+      "title": "今日",
+      "file": "01-today-v2.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1691795
+    },
+    {
+      "id": "02-state-detail",
+      "title": "身体状态",
+      "file": "02-state-detail.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1229728
+    },
+    {
+      "id": "03-state-assessment",
+      "title": "单维自评",
+      "file": "03-state-assessment.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1135720
+    },
+    {
+      "id": "04-tasks-today",
+      "title": "任务·今天",
+      "file": "04-tasks-today.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1383088
+    },
+    {
+      "id": "05-plan-goals",
+      "title": "计划·目标",
+      "file": "05-plan-goals.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1192956
+    },
+    {
+      "id": "06-plan-habits",
+      "title": "计划·习惯",
+      "file": "06-plan-habits.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1324837
+    },
+    {
+      "id": "07-plan-future",
+      "title": "之后已安排",
+      "file": "07-plan-future.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1233124
+    },
+    {
+      "id": "08-task-create",
+      "title": "安排任务",
+      "file": "08-task-create.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 965646
+    },
+    {
+      "id": "09-task-edit",
+      "title": "编辑任务",
+      "file": "09-task-edit.png",
+      "width": 852,
+      "height": 1847,
+      "bytes": 1031132
+    },
+    {
+      "id": "10-task-result",
+      "title": "行动结果",
+      "file": "10-task-result.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1292152
+    },
+    {
+      "id": "11-goal-create",
+      "title": "新建目标",
+      "file": "11-goal-create.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1400533
+    },
+    {
+      "id": "12-goal-ai",
+      "title": "目标拆分草案",
+      "file": "12-goal-ai.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1050327
+    },
+    {
+      "id": "13-goal-detail",
+      "title": "目标详情",
+      "file": "13-goal-detail.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 993911
+    },
+    {
+      "id": "14-habit-create",
+      "title": "新建习惯",
+      "file": "14-habit-create.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 916883
+    },
+    {
+      "id": "15-habit-detail",
+      "title": "习惯详情",
+      "file": "15-habit-detail.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1010999
+    },
+    {
+      "id": "16-habit-edit",
+      "title": "编辑习惯",
+      "file": "16-habit-edit.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 959318
+    },
+    {
+      "id": "17-life-diary",
+      "title": "生活日记",
+      "file": "17-life-diary.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1089164
+    },
+    {
+      "id": "18-daily-review",
+      "title": "每日复盘",
+      "file": "18-daily-review.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 829897
+    },
+    {
+      "id": "19-ai-send",
+      "title": "AI整理发送确认",
+      "file": "19-ai-send.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1331724
+    },
+    {
+      "id": "20-ai-candidates",
+      "title": "AI归档确认",
+      "file": "20-ai-candidates.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1020140
+    },
+    {
+      "id": "21-calendar",
+      "title": "日历",
+      "file": "21-calendar.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1299815
+    },
+    {
+      "id": "22-date-preview",
+      "title": "日期预览",
+      "file": "22-date-preview.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1086854
+    },
+    {
+      "id": "23-day-overview",
+      "title": "日期总览",
+      "file": "23-day-overview.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1085648
+    },
+    {
+      "id": "24-day-records",
+      "title": "日期记录",
+      "file": "24-day-records.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1440386
+    },
+    {
+      "id": "25-record-editor",
+      "title": "记录详情编辑",
+      "file": "25-record-editor.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1034836
+    },
+    {
+      "id": "26-record-history",
+      "title": "记录修改历史",
+      "file": "26-record-history.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1352220
+    },
+    {
+      "id": "27-day-actions",
+      "title": "当日行动",
+      "file": "27-day-actions.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1386626
+    },
+    {
+      "id": "28-week-overview",
+      "title": "本周复盘总览",
+      "file": "28-week-overview.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1261147
+    },
+    {
+      "id": "29-week-form",
+      "title": "周复盘表单上半",
+      "file": "29-week-form.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 937096
+    },
+    {
+      "id": "30-week-form-end",
+      "title": "周复盘表单下半",
+      "file": "30-week-form-end.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 910098
+    },
+    {
+      "id": "31-week-ai",
+      "title": "下周建议",
+      "file": "31-week-ai.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 968761
+    },
+    {
+      "id": "32-week-ai-edit",
+      "title": "修改下周建议",
+      "file": "32-week-ai-edit.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 938813
+    },
+    {
+      "id": "33-growth",
+      "title": "成长",
+      "file": "33-growth.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1306308
+    },
+    {
+      "id": "34-growth-ledger",
+      "title": "单维成长记录",
+      "file": "34-growth-ledger.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1180501
+    },
+    {
+      "id": "35-badges",
+      "title": "成就册",
+      "file": "35-badges.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1855782
+    },
+    {
+      "id": "36-badge-detail",
+      "title": "成就详情",
+      "file": "36-badge-detail.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1388050
+    },
+    {
+      "id": "37-task-analysis",
+      "title": "任务分析",
+      "file": "37-task-analysis.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1022899
+    },
+    {
+      "id": "38-habit-overview",
+      "title": "多习惯分析",
+      "file": "38-habit-overview.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1212298
+    },
+    {
+      "id": "39-habit-analysis",
+      "title": "单习惯分析",
+      "file": "39-habit-analysis.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1010264
+    },
+    {
+      "id": "40-settings",
+      "title": "设置",
+      "file": "40-settings.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 992684
+    },
+    {
+      "id": "41-companion",
+      "title": "人物与陪伴",
+      "file": "41-companion.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1387746
+    },
+    {
+      "id": "42-assessment-modes",
+      "title": "状态自评选择",
+      "file": "42-assessment-modes.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 912453
+    },
+    {
+      "id": "43-ai-settings",
+      "title": "AI设置",
+      "file": "43-ai-settings.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1272013
+    },
+    {
+      "id": "44-ai-privacy",
+      "title": "AI发送范围",
+      "file": "44-ai-privacy.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 985195
+    },
+    {
+      "id": "45-data-transfer",
+      "title": "导入与导出",
+      "file": "45-data-transfer.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 910846
+    },
+    {
+      "id": "46-storage",
+      "title": "本地存储",
+      "file": "46-storage.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1251377
+    },
+    {
+      "id": "47-delete-data",
+      "title": "删除全部数据",
+      "file": "47-delete-data.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 989268
+    },
+    {
+      "id": "48-display",
+      "title": "显示与语气",
+      "file": "48-display.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 842087
+    },
+    {
+      "id": "49-rules",
+      "title": "行动规则",
+      "file": "49-rules.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 876456
+    },
+    {
+      "id": "50-rule-edit",
+      "title": "编辑行动规则",
+      "file": "50-rule-edit.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 885028
+    },
+    {
+      "id": "51-widget",
+      "title": "今日任务小组件",
+      "file": "51-widget.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 979575
+    },
+    {
+      "id": "52-notifications",
+      "title": "通知与提醒",
+      "file": "52-notifications.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 797540
+    },
+    {
+      "id": "53-onboarding",
+      "title": "首次选择人物",
+      "file": "53-onboarding.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 1409614
+    },
+    {
+      "id": "54-image-view",
+      "title": "日记图片查看",
+      "file": "54-image-view.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1694356
+    },
+    {
+      "id": "55-completion-feedback",
+      "title": "任务完成反馈",
+      "file": "55-completion-feedback.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 1415641
+    },
+    {
+      "id": "56-ai-error",
+      "title": "AI整理失败状态",
+      "file": "56-ai-error.png",
+      "width": 853,
+      "height": 1844,
+      "bytes": 855057
+    }
+  ],
+  "correctionPasses": [
+    {
+      "key": "fixes",
+      "items": [
+        {
+          "id": "05-plan-goals",
+          "prompt": "Keep palette and goal cards. Change title to 任务, left-aligned. Navigation MUST be TWO ROWS: first row exactly two equal-width segments 今天 / 计划, 计划 active; second row exactly three equal-width segments 目标 / 习惯 / 之后已安排, 目标 active. New 新建 text button on separate row right. Every goal card has small … inset at right. Do not combine navigation levels."
+        },
+        {
+          "id": "09-task-edit",
+          "prompt": "Keep layout but replace label 优先级 with 难度, label 类型 with 维度. Remove the four decorative icons above the 2x2 action labels; use text-only buttons with equal height and spacing. Modal title left aligned. Bottom selected tab 任务, never 今日."
+        },
+        {
+          "id": "12-goal-ai",
+          "prompt": "Keep content and spacing. Remove all redundant little icons before dates, 身体, difficulty and candidate label. Bottom selected tab MUST be 任务 instead of 今日. Main button 保存所选 full-width, 重新生成 small text secondary above it. Only candidate checkbox and small edit control remain."
+        },
+        {
+          "id": "13-goal-detail",
+          "prompt": "Keep everything but select bottom 任务 instead of 今日. First completed task date change to 9月3日 (not future9月5日). Completed task name 步行与慢跑交替15分钟. Tiny read-only status squares, not oversized completion buttons."
+        },
+        {
+          "id": "16-habit-edit",
+          "prompt": "Keep form breathable. Remove outer wrapping card border, leave input outlines only; remove decorative icons from fields. Header left beside back. Select bottom 任务 not 今日. Each weekday selection itself is a SINGLE square with the weekday text centered; do not put a colored square inside tall rectangle. Rename 七天打卡目标 to 计划日."
+        },
+        {
+          "id": "17-life-diary",
+          "prompt": "Change top title to left-aligned 记录, with date on right; REMOVE back arrow because this is a main page. Remove sparkle and calendar icon next to AI整理 and 查看今天, text only. Make rain photo smaller, approx 220dp wide by135dp tall, right-aligned. Increase writing box to145dp tall with 18dp padding. Preserve3 diary messages, image action, draft status, send, bottom记录 active, more negative space."
+        },
+        {
+          "id": "21-calendar",
+          "prompt": "Keep navigation and accurate month dates. All calendar cells MUST be equal-width equal-height SQUARES; only today4 has a full thin antique gold square outline. Remove borders around all ordinary dates. Generous gaps between rows. Do NOT show future record dots after today's4. Search results dates use9月4日 instead of2026/09/04. Keep bottom轨迹 active."
+        },
+        {
+          "id": "28-week-overview",
+          "prompt": "Keep layout. Header EXACT 轨迹 not栖光, no back. Top 日历/本周/成长 equal-width segmented row identical calendar reference, 本周 pale gold active. Remove decorative sprout next to suggestion and pencil icons next to buttons; use text only. Since review already exists, bottom main button 修改周复盘. Remove duplicate 编辑 on preview."
+        },
+        {
+          "id": "33-growth",
+          "prompt": "Keep aligned five dimension rows and beautiful identifiable icons. CRITICAL DELETE ALL gray locked achievement slots and ALL lock icons; no unearned badges in this app! Under 成就册 show ONLY three acquired badges, short labels 阅读七次 / 跑完两公里 / 一周实践, no explanations or continuous streak goals. No random new reward conditions. Remove top back arrow main page title轨迹. Top equal-width boxed tabs 日历/本周/成长 use palegold selected 成长, matching calendar, not underline. Fill deleted lower area with quiet blank paper, no replacement decoration."
+        },
+        {
+          "id": "34-growth-ledger",
+          "prompt": "Keep layout, remove label 大统计 completely. Replace 来源：生活日记 below散步 and慢跑 with 任务, and habit with习惯. Remove decorative icons and their little boxes from list rows. Header left aligned, bottom轨迹 stays selected. Do not add replacement labels."
+        },
+        {
+          "id": "46-storage",
+          "prompt": "Keep layout. Change 事实记录 label to 记录. Select bottom设置 not今日. Remove all decorative icons from facts and main button. Bottom主按钮导出备份 should be at bottom safe area with generous space above. Keep data loss warning."
+        },
+        {
+          "id": "02-state-detail",
+          "prompt": "Keep content. Move title 身体 from centered to left-aligned beside back control, same baseline. Remove redundant up-arrow icons on changes and icons in related-action rows; keep right aligned statuses and numbers. No other modifications."
+        }
+      ]
+    },
+    {
+      "key": "fixes2",
+      "items": [
+        {
+          "id": "06-plan-habits",
+          "prompt": "Title must be 任务. Replace combined nav with two DISTINCT rows: equal-width今天/计划 (计划 selected), then equal-width目标/习惯/之后已安排 (习惯 selected). Keep 分析 新建 right aligned in section header. Remove big habit icons and keep name, one compact factual second line, inset … only. Bottom任务 selected."
+        },
+        {
+          "id": "07-plan-future",
+          "prompt": "Add missing first nav row 今天/计划 with计划 selected above existing目标/习惯/之后已安排 row. New button is text新建 without giant plus. September5 2026 is周六, September6 is周日: correct weekday labels. Keep whitespace, bottom任务."
+        },
+        {
+          "id": "08-task-create",
+          "prompt": "Make task-name input 72dp high, not huge text area. Left align 安排任务 beside back. Select底栏任务 instead今日. Preserve remaining fields and all styling, no more fields."
+        },
+        {
+          "id": "10-task-result",
+          "prompt": "Delete ENTIRE 影响维度 five-row block and ENTIRE 备注 input block, keep blank paper instead. Remove false0/500 count. Keep the main actual result textarea; underneath add a clear text button AI帮我填写. Status已完成 aligns FAR RIGHT in status row, no arrow. Keep only名称/状态/日期/身体成长值+4 above. Main保存修改 at bottom safe area. Select bottom任务. No decorative icons. Close open…menu."
+        },
+        {
+          "id": "11-goal-create",
+          "prompt": "Left align新建目标 beside back, remove sparkle icon fromAI拆分 button, select bottom任务 not今日. Preserve only two fields and existing spacing."
+        },
+        {
+          "id": "35-badges",
+          "prompt": "All twelve badges must be CRISP PIXEL ENAMEL, no smooth vector/3D coin render. Use consistent small HEXAGON copper border like original pixel game's badge, each64dp with large surrounding whitespace. Different inner objects remain immediately recognizable: book, cup, trophy, target, heart, quill, shoe, kite etc. Keep3 columns4 rows. Replace labels with factual earned milestones 阅读七次/喝水七次/跑完两公里/完成演讲/恢复三次/一周实践/散步十四次/玩乐三次/睡前整理/阅读三十次/慢跑七次/恢复七次. No motivational or login/streak achievements. Top just12枚 not redundant成就册12枚. Select bottom轨迹, no locks."
+        },
+        {
+          "id": "39-habit-analysis",
+          "prompt": "Make every heatmap cell strictly square, same width and height, exactly7 rows and12 columns; use smaller cells to fit, not rectangles. Remove ENTIRE相关任务card and+1button (analysis cannot execute tasks). 12week month headings read6月/7月/8月/9月. Seven weekday percentage cells strictly square. No color legend, no bar chart. Selected bottom任务, not今日. Leave blank space below weekday grid; do not invent new modules."
+        },
+        {
+          "id": "40-settings",
+          "prompt": "Remove all decorative icons from settings rows, keep clean labels/status/chevrons. Correct companion name鱼鱼 (not鱼鱼 variation rendered incorrectly). Keep uniform row heights, group labels, same palette, bottom设置. End content safely above nav; don't show half-clipped行 动规则; show entire row or leave it for scroll below."
+        }
+      ]
+    },
+    {
+      "key": "fixes3",
+      "items": [
+        {
+          "id": "22-date-preview",
+          "prompt": "RECOMPOSE into a centered compact MODAL above dimmed calendar, NOT full-screen date report. Modal is24dp inset and420dp high max: left title9月4日周五 and closeX right; small pixel room thumbnail80dp tall; 今日一句 with existing sentence; single factual line3条记录 · 2项完成 ·1次习惯; one tiny diary line; full-width打开完整回顾. Delete lunar calendar and2025, all extra three view links, all extra icons. Dimmed background calendar9月2026, bottom轨迹 active."
+        },
+        {
+          "id": "23-day-overview",
+          "prompt": "Title left9月4日 beside back; exact equal-width 总览/记录/行动 row. Remove all decorative icons and checkboxes from the action summary, show ONLY TWO rows: 散步20分钟 已完成 at far right / 喝水8/8杯 已打卡 far right. Keep今日一句, five scores withNO bars, short复盘摘要. Add small pixel room thumbnail100dp high below今日一句. No nested cards. Preserve spacious layout, bottom轨迹."
+        },
+        {
+          "id": "24-day-records",
+          "prompt": "REMOVE the bottom 历史记录 and编辑 buttons entirely. Remove individual pencil buttons on records and large sun icon beside summary. Keep full diary text in roomy boxes, times, one photo. Select ONLY底栏轨迹; all other nav neutral. Top new entry is text新建. Do not add any replacement action."
+        },
+        {
+          "id": "29-week-form",
+          "prompt": "Remove outer borders around form sections (no box-inside-box). Keep thin borders only directly on actual text inputs. Remove0/300 counter and partial next-section label under fixed bottom button. Select底栏轨迹. Keep section headings and sensible whitespace; continuation is separate next reference."
+        },
+        {
+          "id": "36-badge-detail",
+          "prompt": "Replace large smooth round coin with96dp precise PIXEL ENAMEL HEXAGON badge, copper hex border, darkforest field, opened book glyph. Identical family to growth page badges. Remove repeated获得日期 row since date already below title. Keep short factual action and habit rows, no descriptive slogans. Bottom轨迹 selected."
+        },
+        {
+          "id": "41-companion",
+          "prompt": "Select bottom设置, not今日. Header left人物与陪伴 beside back arrow, remove separate返回 text. Keep character centered and all spacing. Do not add fields or decorations."
+        },
+        {
+          "id": "03-state-assessment",
+          "prompt": "Move single-dimension assessment header to left beside back arrow, preserve progress1/6 on right. No decorative icons on answer rows. Bottom今日 selected. Preserve question and answer spacing."
+        }
+      ]
+    },
+    {
+      "key": "fixes4",
+      "items": [
+        {
+          "id": "14-habit-create",
+          "prompt": "Weekday selectors must explicitly show 一 二 三 四 五 六 日, equal SQUARES, not seven checkmarks. Left-align header with back. Remove decorative body-person and difficulty-smiley icons. Bottom active tab 任务, never 今日."
+        },
+        {
+          "id": "15-habit-detail",
+          "prompt": "Make every day tile in 最近记录 a perfect SQUARE equal width and height; no color legend. Remove giant decorative drinking-cup emblem, keep habit name. Left-align header with back. Bottom active tab 任务."
+        },
+        {
+          "id": "18-daily-review",
+          "prompt": "Rebuild top header as 记录 left and 9月4日 right, then full-width equal two-tab row 生活日记 / 每日复盘, 每日复盘 active. Four fixed-format form fields stay, about100dp tall each. Bottom active tab 记录. No subtitles/descriptive copy."
+        },
+        {
+          "id": "19-ai-send",
+          "prompt": "Left-align header. Bottom active tab 记录, not 今日. Remove decorative icons. Keep selected user diary content, necessary privacy/AI data scope, clear confirm action; no invented explanations."
+        },
+        {
+          "id": "20-ai-candidates",
+          "prompt": "Bottom active tab 记录. Left-align header. Remove decorative leaf and smiley icons. Change 关联原记录摘录 to 原记录. Keep classification candidates and explicit confirmation."
+        },
+        {
+          "id": "25-record-editor",
+          "prompt": "Header left title 记录详情 with back. Delete bottom 修改历史 and 删除 entries and any history/delete footer; keep only 保存修改 primary action. Remove tags field and fictitious character counter. Exactly one attached photo, quiet 更换图片 link, no second image upload box. Large multiline editable text field. Bottom nav 记录 active."
+        },
+        {
+          "id": "30-week-form-end",
+          "prompt": "Bottom active nav 轨迹, not 今日. Remove every character counter such as10/200, no descriptive sentences. Keep four form inputs and 保存复盘."
+        },
+        {
+          "id": "31-week-ai",
+          "prompt": "Remove big target/lightbulb/clipboard/sparkle decorative icons; preserve three factual suggestion fields. One fullwidth primary and one equalwidth secondary button, two quiet text operations. Bottom nav 轨迹 active."
+        },
+        {
+          "id": "32-week-ai-edit",
+          "prompt": "Bottom active nav 轨迹, not 今日. Remove invented character counters. Keep readable multiline fields and save action, no descriptions."
+        },
+        {
+          "id": "37-task-analysis",
+          "prompt": "Title 任务分析, not 任务. Heatmap EXACTLY7 rows ×12 columns of perfectly SQUARE cells, equal widthheight, no color legend. DELETE any bottom 任务执行/执行情况 card. Remove giant metric icons and decorative dimension icons. Bottom nav 任务 active."
+        },
+        {
+          "id": "38-habit-overview",
+          "prompt": "Fix factual matrix completion math: rows 喝水 four weeks5/7,6/7,4/7,3/7 overall64%; 阅读4/7,5/7,4/7,3/7 overall57%; 散步6/7,5/7,4/7,2/7 overall61%. Keep all matrix cells perfect squares, no color legend. Remove big habit icons. Column heading 完成率 one line. Bottom active nav任务."
+        },
+        {
+          "id": "42-assessment-modes",
+          "prompt": "Bottom nav 设置 active, not 今日. Remove decorative dimension icons, keep textual dimension names and clear all/single selection. Header left aligned."
+        },
+        {
+          "id": "44-ai-privacy",
+          "prompt": "Remove meta-design heading 必要隐私 and awkward descriptive sentence 下方每次发送前确认已启用. Replace with simple row 每次发送前确认 and enabled switch. Remove decorative icons. Keep actual privacy scope controls. Bottom active nav设置."
+        },
+        {
+          "id": "45-data-transfer",
+          "prompt": "DELETE hallucinated 删除备份 section entirely; no delete or backup management operations on this screen. Remove cloud icon, this is LOCAL export/import not cloud sync. 导出全部数据 solid forest primary, 导入备份 equalheight outlined secondary. Bottom nav设置 active. No descriptive copy."
+        },
+        {
+          "id": "47-delete-data",
+          "prompt": "Remove giant warning illustration and duplicate giant 删除全部数据 title. Keep full necessary irreversible deletion warning and list, typed confirmation field and disabled danger button; safety text MUST remain. Quiet 取消 text. Bottom active nav设置."
+        },
+        {
+          "id": "48-display",
+          "prompt": "REPLACE content with ONLY TWO existing settings: 减少动态效果 switch and 指导语气 with equal options 温和 / 直接. Bottom 保存设置 button. Delete every invented other setting including 返回首页/退出确认/individual animation options. No descriptions/subtitles. Header 显示与语气, left back. Bottom nav设置 active. Spacious minimal."
+        },
+        {
+          "id": "49-rules",
+          "prompt": "Remove decorative rule icons. Each rule row has ONLY one trailing … menu, no duplicated 编辑 action; keep concise factual state if present. Clean consistent rows and right-aligned 新建. Bottom active nav设置."
+        },
+        {
+          "id": "50-rule-edit",
+          "prompt": "Remove large 删除规则 section; keep destructive action only inside a subtle top-right … menu (closed). Remove body-person icon and fictitious character counter. Keep editable rule form. Bottom nav设置 active."
+        },
+        {
+          "id": "51-widget",
+          "prompt": "Remove explanatory subtitle 快速查看并完成今日任务 and all equivalent descriptions. Keep widget preview and add-to-home action. Bottom nav设置 active."
+        },
+        {
+          "id": "52-notifications",
+          "prompt": "REPLACE screen contents with ONLY TWO READ-ONLY status rows: 系统通知 / 关闭 and 应用内提醒 / 开启. NO switches or settings controls; existing feature does not support toggling here. No description paragraphs or 事实状态 heading, no duplicate statuses. Bottom nav设置 active."
+        },
+        {
+          "id": "56-ai-error",
+          "prompt": "Remove giant unused decorative illustration and redundant paragraph 您的记录内容已安全保存... Keep concise status 本地记录已保存, error AI返回的内容无法识别，请稍后重试 and 结果没有写入正式数据, retry/return actions. Bottom active nav记录. No decorative icons."
+        }
+      ]
+    },
+    {
+      "key": "fixes5",
+      "items": [
+        {
+          "id": "55-completion-feedback",
+          "prompt": "Use image1 as the exact background of this task completion feedback state. Keep its task page and all hierarchy. Only first task 背诵英语演讲开头 becomes completed with checked square and subtle strike; other task/habit values unchanged. Add ONE compact floating toast just above bottom nav: 已完成 · 工作/学习成长值 +4 with quiet 撤销. Do NOT display state score change76→80. Do NOT change any state score. Do not add badges/largecards/sparkles."
+        },
+        {
+          "id": "33-growth",
+          "prompt": "Restore missing app chrome: title 轨迹 at top below statusbar and fixed bottomnav 今日/任务/记录/轨迹/设置 with轨迹active. Existing content can shift down and scroll, never remove nav or squeeze. Keep equal 日历/本周/成长 tabs and periodtabs. Use image2 badge art style for the three earned badges in image1, small64dp, matching pixel green/gold detailed medallions, NOT smooth outlined hexagons. Exactly 阅读七次(book)/跑完两公里(trophy)/一周实践(calendar). No locked badges. Keep five-dimension row alignment and whitespace."
+        },
+        {
+          "id": "36-badge-detail",
+          "prompt": "Change ONLY badgeart: use identical first badge 阅读七次 from image2 (pixel art round green/gold medallion with open book and leaf), NOT smooth3D hexagon. Display96dp opticalsize, ample space. All layout/text/bottomnav fromimage1unchanged."
+        },
+        {
+          "id": "39-habit-analysis",
+          "prompt": "CRITICAL geometrical correction. Existing heatmap is WRONG tall rectangular tiles. Replace ENTIRE heatmap by EXACTLY 12 columns and 7 rows; individual cells width46px AND height46px at 853pxwide output. Horizontal gaps13px, vertical gaps13px IDENTICAL. Entire matrix boundingbox695px wide x400px tall. No ticks/minuses inside cells, ONLY flat muted sage/forest fills. Monthlabels6月7月8月9月 above. All weekdays 一二三四五六日 left. No color legend. Below show seven weekday percentages each in square86px×86px. Bottom任务active. Existing title/time controls and two summary facts retained."
+        },
+        {
+          "id": "22-date-preview",
+          "prompt": "Change ONLY backgroundcalendar today4 from a filled CIRCLE to thin squareoutline with equalwidthheight. Remove ornamental sun before今日一句 and bookicon inbutton. Keepcompactmodal, thumbnail, factualmetrics, closeX, openfullreviewbutton."
+        },
+        {
+          "id": "41-companion",
+          "prompt": "Change ONLY right male character 包包 to MATCH EXACTLY image2 ORIGINALmaleidentity: pale cream tousled hair, cream antlered owl hat, offwhite top, blackpants brownboots. Do NOT use brown hair/greenhoodie. Keep female identity and all layout. Remove fictitious2/12counter."
+        },
+        {
+          "id": "53-onboarding",
+          "prompt": "Change ONLY right male character 包包 to MATCH EXACTLY image2 ORIGINALmaleidentity including pale cream tousledhair and cream antlered owlhat, offwhitetop blackpants brownboots. Keep female identity, selectedstate and all layout."
+        }
+      ]
+    },
+    {
+      "key": "fixes6",
+      "items": [
+        {
+          "id": "10-task-result",
+          "prompt": "Restore bottom navigation EXACTLY FIVE evenly spaced items, each small icon above label: 今日(sun),任务(checklist ACTIVE sage),记录(openbook),轨迹(sprout),设置(gear). NOT four labels. Keep all page contents unchanged. Content ends24dp above nav."
+        },
+        {
+          "id": "16-habit-edit",
+          "prompt": "Correct crowded lower form: 状态 must have a complete visible 启用 switchrow ABOVE save, not clipped behind button. To fit, use compact two-column rows for 分类 and 难度, preserve18dp internalpadding and24dp sectiongaps. Leftalignheader besideback; restorestatusbar9:41. Markall7weekdayplansselectedsoftgold. Keepfixednav任务active andfullwidthsave. No partial fields hidden beneathsave."
+        },
+        {
+          "id": "21-calendar",
+          "prompt": "Only edit calendarrecorddots: remove ALLdotsunder dates5 through30 (future), keep dotsunder1,2,3and4only. Makecalendarcells perfectlysquare100x100pixelsat853width; rowgaps40px, colgaps12px. Keep today4gold thin square border. No circles around dates. Keepheadernav/search."
+        },
+        {
+          "id": "28-week-overview",
+          "prompt": "Delete small 编辑 inside 我的周复盘 card because bottom 修改周复盘 is the soleeditaction. Top 日历/本周/成长 tabs mustbe equal thirds inONE thin outlined segmented container with palegold本周 selection, matching sharednav. Keepallothercontents."
+        },
+        {
+          "id": "03-state-assessment",
+          "prompt": "Delete explanatory sentence 退出将保存未完成进度 entirely, replacewithnothing. 上一题 disabled mutedgray on question1/6. KeepallotherUI unchanged."
+        }
+      ]
+    },
+    {
+      "key": "fixes7",
+      "items": [
+        {
+          "id": "33-growth",
+          "prompt": "DELETE the entire bottom bordered block containing NINE additionalbadges (喝水七次,完成演讲,恢复三次,散步十四次,玩乐三次,睡前整理,阅读三十次,慢跑七次,恢复七次). Replace that WHOLE block by emptyivory whitespace. Exactly THREEbadges remain, just one row 阅读七次/跑完两公里/一周实践, nothingbelow except bottomnav. Leftaligntitle轨迹 at x48px insteadcenter, font52pxsameas任务page. Do NOT addanything. Do NOT changeotherlayout."
+        },
+        {
+          "id": "40-settings",
+          "prompt": "Bottomnav must show allFIVE standard smalllineicons sun/checklist/book/sprout/gear above their respective labels今日任务记录轨迹设置. Restoremissing sun andgear. Move 高级/行动规则 row tobelowviewport as scrollcontinuation, doNOT show clippedpartialcard above bottomnav. Endvisiblecontentafter AI发送范围 with48pxsafe whitespace."
+        },
+        {
+          "id": "46-storage",
+          "prompt": "ONLY fixbottomnav: replace incorrectarrow on今日 withsmallSUNicon andrestoregearicon ABOVE设置 label. Exactly5equallyspaced navitems matching app. Do notchange any otherpixel."
+        }
+      ]
+    },
+    {
+      "key": "fixes8",
+      "items": [
+        {
+          "id": "19-ai-send",
+          "prompt": "Restore top status bar9:41 and bottom navigation EXACTLY FIVE evenly spaced items each smalllineicon ABOVE label: 今日(sun),任务(checklist),记录(book ACTIVE sagebackground),轨迹(sprout),设置(gear). NOT four text-only tabs. Addsmallbackarrowleftoftitle. Keepprivacycontentandallotherfieldsidentical. OneportraitflatUI sameivoryforestpalette."
+        }
+      ]
+    },
+    {
+      "key": "fixes9",
+      "items": [
+        {
+          "id": "18-daily-review",
+          "prompt": "Four current formboxes too tall and SAVE missing. Reduceeachtextboxheight to240pixelsat853wideoutput, retain32pxgaps and36pxinternalpadding. Addfullwidthforestgreen 保存复盘 button100pxhigh at y1510, 48pxgap above bottomnavat1680. Restore9:41statusbar atverytop andheader记录with9月4日belowit, matchinglife-diary. No fieldsremoved; all4fixedformatfieldsmustremain. Bottom5naviconswith记录active."
+        },
+        {
+          "id": "42-assessment-modes",
+          "prompt": "Restore top9:41statusbar and smallbackarrow besideheader. Restorebottomnav EXACTLY FIVE evenlyspaced smalllineicons ABOVE labels: 今日sun,任务checklist,记录book,轨迹sprout,设置gearwithsageselected. DoNOT removeexistingcontent orchange typography."
+        },
+        {
+          "id": "44-ai-privacy",
+          "prompt": "Restore top9:41statusbar. Restorebottomnav EXACTLY FIVE evenlyspaced smalllineicons ABOVE labels: 今日sun,任务checklist,记录book,轨迹sprout,设置gearwithsageselected. DoNOT removeexistingcontent orchange typography."
+        },
+        {
+          "id": "49-rules",
+          "prompt": "DELETE empty sage square placeholdersleftofeachrule, shifttitleandrulecontent leftto normalpadding. No iconplaceholder. Restoretop9:41statusbar. Restorebottomnav EXACTLY FIVE evenlyspaced smalllineicons ABOVE labels: 今日sun,任务checklist,记录book,轨迹sprout,设置gearwithsageselected. Nootherchanges."
+        }
+      ]
+    }
+  ]
+}

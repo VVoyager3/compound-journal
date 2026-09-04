@@ -1,0 +1,293 @@
+{
+  "referenceScreen": {
+    "width": 1280,
+    "height": 2772,
+    "orientation": "portrait",
+    "sourceUserSpecification": "2772×1280",
+    "note": "Generated raster native sizes are recorded separately; reference viewport does not imply exact native PNG dimensions."
+  },
+  "generator": "built-in image_gen",
+  "designPrompt": "Create ONE standalone high fidelity Android app UI reference image for the Chinese app 栖光. Target phone reference screen is 1280 pixels wide × 2772 pixels tall (2772×1280 phone specification, portrait). Render the full UI edge-to-edge, flat front-on RAW SCREEN ONLY with no physical device bezel or external canvas; this is a pixel-reconstruction reference sheet, not a marketing poster. Ask for exact 1280x2772 output if supported, otherwise preserve this precise aspect ratio. All screens in this set MUST share this locked design system:\nWarm ivory paper #F7F3E8 background with extremely faint paper grain, near-white #FCFAF4 surfaces, forest green #214D3C text and primary actions, muted sage #DEE6D8 completed surfaces, pale antique gold #EEE0B5 current selection, hairline warm gray #D9D2C1 borders, muted #7D8275 secondary type, muted brick red only dangerous actions. No gradients, no heavy outlines or shadows. Small 8dp corners on buttons/cards; slightly softened message bubbles permitted. Chinese system sans Noto Sans CJK / Android system sans, NOT serif, NOT calligraphy, NOT pixel text. Baseline logical canvas 400x866dp: page title 28dp/medium, section title 18dp/medium, body 15dp/regular, helper 12dp. Parallel text and controls have identical sizes and alignment. Page horizontal margin 24dp, input/card padding 18dp, section gaps 28dp, list row height 58dp minimum, buttons 48dp with 44dp touch areas. Content breathes vertically and horizontally; never cram all content into the viewport, long pages can continue by scrolling. No orphan characters or arbitrarily broken button labels. Short factual Chinese labels only, absolutely no explanatory paragraphs, slogans, motivational text, business jargon such as 证据/合约/兑现/收束; exception necessary privacy/error/destructive warnings and actual user-authored diary text. No meaningless decorative icons. Concrete pixel-enamel icons only for meaningful companions, room, badges and bottom nav; crisp consistent small optical size. Controls use simple conventional back, more and square checks.\nStatus bar 9:41 same for all screens, safe top inset; fixed bottom nav same baseline and sizes across all screens: 今日 / 任务 / 记录 / 轨迹 / 设置, with very small recognizable sun / checklist / open diary / sprout / cog motifs, selected with soft sage small rounded rectangle, not oversized circle. Content ends at least 24dp before nav; system gesture inset below. For full-screen focused subpage use a back control and same safe-area discipline. Example fictional demo data, no invented functional modules.",
+  "screens": [
+    {
+      "id": "01-today-v2",
+      "title": "今日",
+      "spec": "Create ONE standalone high fidelity Android app UI reference image for the Chinese app 栖光. Target phone reference screen is 1280 pixels wide × 2772 pixels tall (2772×1280 phone specification, portrait). Render the full UI edge-to-edge, flat front-on RAW SCREEN ONLY with no physical device bezel or external canvas; this is a pixel-reconstruction reference sheet, not a marketing poster. Ask for exact 1280x2772 output if supported, otherwise preserve this precise aspect ratio. All screens in this set MUST share this locked design system:\nWarm ivory paper #F7F3E8 background with extremely faint paper grain, near-white #FCFAF4 surfaces, forest green #214D3C text and primary actions, muted sage #DEE6D8 completed surfaces, pale antique gold #EEE0B5 current selection, hairline warm gray #D9D2C1 borders, muted #7D8275 secondary type, muted brick red only dangerous actions. No gradients, no heavy outlines or shadows. Small 8dp corners on buttons/cards; slightly softened message bubbles permitted. Chinese system sans Noto Sans CJK / Android system sans, NOT serif, NOT calligraphy, NOT pixel text. Baseline logical canvas 400x866dp: page title 28dp/medium, section title 18dp/medium, body 15dp/regular, helper 12dp. Parallel text and controls have identical sizes and alignment. Page horizontal margin 24dp, input/card padding 18dp, section gaps 28dp, list row height 58dp minimum, buttons 48dp with 44dp touch areas. Content breathes vertically and horizontally; never cram all content into the viewport, long pages can continue by scrolling. No orphan characters or arbitrarily broken button labels. Short factual Chinese labels only, absolutely no explanatory paragraphs, slogans, motivational text, business jargon such as 证据/合约/兑现/收束; exception necessary privacy/error/destructive warnings and actual user-authored diary text. No meaningless decorative icons. Concrete pixel-enamel icons only for meaningful companions, room, badges and bottom nav; crisp consistent small optical size. Controls use simple conventional back, more and square checks.\nStatus bar 9:41 same for all screens, safe top inset; fixed bottom nav same baseline and sizes across all screens: 今日 / 任务 / 记录 / 轨迹 / 设置, with very small recognizable sun / checklist / open diary / sprout / cog motifs, selected with soft sage small rounded rectangle, not oversized circle. Content ends at least 24dp before nav; system gesture inset below. For full-screen focused subpage use a back control and same safe-area discipline. Example fictional demo data, no invented functional modules.\nSCREEN 01: 今日, date 9月4日 周五 top right. Upper content a bounded warm original pixel room occupying about 23% screen height: wooden desk, open book, bed edge, plant, small white-haired friendly front-facing companion, room center empty. Below 五维状态 heading with right text 自评; aligned five equal columns 身体72 | 心理64 | 关系58 | 工作/学习76 | 玩乐61. No bars under scores. 今天要做 heading, one roomy task row square checkbox 背诵英语演讲开头 and inset … at far right. 习惯打卡 heading, two rows 喝水 3/8杯 with +1 and 睡前收好书包 with 打卡; calm partial sage fill. 今天留下 heading right 查看今天, one single-line diary preview 雨停后散步，心情轻松了许多. Bottom 今日 active. Carefully balance so screen is breathable, no nested cards, no button overflow."
+    },
+    {
+      "id": "02-state-detail",
+      "title": "身体状态",
+      "spec": "标题 身体，返回；大但克制的72分与9月4日，上次评估9月3日。主要操作 重新自评。近期变化两行 睡眠恢复 +2 / 晚间散步 +1；相关行动两行 散步20分钟 已完成 / 喝水 3/8杯；相关记录一段短正文。状态与成长值绝不混为一个总分。"
+    },
+    {
+      "id": "03-state-assessment",
+      "title": "单维自评",
+      "spec": "标题 身体自评，右上 1/6；题目 过去一周，醒来后通常感觉如何？ 四个足够留白的等宽选择行：精力充足 / 大多数时候还好 / 经常疲惫 / 很难恢复。第二项选中浅金。底部 下一题，次级 上一题，退出保存未完成进度。无巨型圆圈。"
+    },
+    {
+      "id": "04-tasks-today",
+      "title": "任务·今天",
+      "spec": "标题 任务，右上 新建；等宽 今天 / 计划 标签，今天选中。今天要做三行 背诵英语演讲开头 / 整理数学错题 / 晚饭后散步，每行左小方框、右内收…，不显示完成/有进展按钮、不分重点其他。习惯打卡两行 喝水3/8杯 +1 / 阅读0/1次 打卡。已完成2项折叠行。底部任务选中。"
+    },
+    {
+      "id": "05-plan-goals",
+      "title": "计划·目标",
+      "spec": "任务标题。今天/计划，计划选中；目标 / 习惯 / 之后已安排 二级等宽导航。目标选中，右对齐 新建。三张平面轻卡片：完成英语演讲 9月12日 1/3；跑完五公里 9月30日 2/4；读完一本书 9月20日 1/3。每张标题、日期、短进度行，…向内留距。无完成按钮。任务底栏选中。"
+    },
+    {
+      "id": "06-plan-habits",
+      "title": "计划·习惯",
+      "spec": "任务标题，今天/计划 计划选中；目标/习惯/之后已安排，习惯选中。习惯标题与右对齐 分析 新建。三个宽松平面列表项：喝水，下行 本周3/7天 · 每天8杯；阅读，下行 本周2/5天 · 每天1次；晚饭后散步，下行 本周3/4天 · 每天1次。每项…向内收。无打卡按钮（此为管理计划）。底栏任务。"
+    },
+    {
+      "id": "07-plan-future",
+      "title": "之后已安排",
+      "spec": "任务标题，计划选中；目标/习惯/之后已安排，最后选中。9月5日分组两条 准备英语演讲卡片 / 整理错题；9月6日分组一条 公园慢跑20分钟。仅标题、简洁日期事实、…编辑，无完成控件。新建右上。底栏任务。"
+    },
+    {
+      "id": "08-task-create",
+      "title": "安排任务",
+      "spec": "聚焦大编辑页面 标题 安排任务、返回。大文本输入已有 整理数学错题。日期 2026年9月4日。完成方式两个等宽选项 完成一次/计数打卡。五维单行字段 工作/学习；难度 普通。更多安排折叠。底部48dp绿色 保存任务。字段间宽松不在每项旁放图案。不出现任务描述/证据描述/手动。"
+    },
+    {
+      "id": "09-task-edit",
+      "title": "编辑任务",
+      "spec": "大尺寸居中编辑面板，背后今日任务页微弱遮罩。标题 编辑任务，右上关闭。正文名称 整理数学错题、日期2026年9月4日、工作/学习、普通，同级字段对齐。低频操作2×2均匀网格：做个更小版本 / 换一个任务 / 改到明天 / 删除任务（红色）。底部全宽 保存修改。面板与屏幕边缘24dp，内部留白，键盘关闭。"
+    },
+    {
+      "id": "10-task-result",
+      "title": "行动结果",
+      "spec": "返回标题 行动结果，名称 晚饭后散步。状态 已完成放行最右，日期2026年9月4日，身体 成长值+4。实际结果多行输入 晚饭后走了二十分钟。AI帮我填写独立明确可点击文字操作。保存修改一个全宽主按钮在底部。撤销结果收进右上…菜单。"
+    },
+    {
+      "id": "11-goal-create",
+      "title": "新建目标",
+      "spec": "返回 新建目标。只两个字段：目标名称 已填 连续跑完五公里；完成日期 2026年9月30日。中下方宽松区域，次操作 AI拆分；底部主按钮 保存目标。不添加领域/理由/标准等表单。"
+    },
+    {
+      "id": "12-goal-ai",
+      "title": "目标拆分草案",
+      "spec": "返回 目标拆分，标题 连续跑完五公里保持用户原话。3个候选子任务卡宽松纵排，左方框：步行与慢跑交替15分钟 9月5日 身体 简单；连续慢跑两公里 9月12日 身体 普通；连续跑完五公里 9月30日 身体 挑战。每卡右编辑，无多余解释。底部 保存所选，次操作重新生成。展示候选尚未自动保存。"
+    },
+    {
+      "id": "13-goal-detail",
+      "title": "目标详情",
+      "spec": "返回 目标详情、…右上。连续跑完五公里简短标题；截止9月30日与1/3同一行。三个子任务平面卡，第一个小方框勾与已完成，第二个 pale gold背景下一项 连续慢跑两公里，下行9月12日 身体，右编辑；第三个 9月30日 连续跑完五公里。卡内详情/放入今天若出现必须同一行，不额外分行。下方 添加子任务。计划详情不放巨大完成√。"
+    },
+    {
+      "id": "14-habit-create",
+      "title": "新建习惯",
+      "spec": "返回 新建习惯。名称 喝水；完成方式 完成一次/计数打卡（后者选中）。每日目标数字8与单位杯同一行。星期一到日七个等大正方形选中。维度 身体；难度 简单；更多设置折叠。主按钮 创建习惯固定底部安全区。宽松字段，不多层卡片。"
+    },
+    {
+      "id": "15-habit-detail",
+      "title": "习惯详情",
+      "spec": "返回 习惯详情 右…；喝水，轻量事实 每天8杯 · 身体，培养中。最近记录用14日两排7个等大日期正方形，显示日期+3/8或8/8小事实，有计划未完成留中性、完成深绿，日期全部排满不乱跳。不要已完成/今日待完成颜色图例。下方 本周3/7天、累计21天 两个统计。底部 编辑习惯次操作、查看分析。此为计划详情不打卡。"
+    },
+    {
+      "id": "16-habit-edit",
+      "title": "编辑习惯",
+      "spec": "返回 编辑习惯。名称 喝水；每日次数8杯；七天等宽方块；最小动作 喝一杯水；触发 早餐后；分类 身体；难度 简单；状态 培养中。采用宽松可滚动表单，本屏可呈现到难度，后续字段滑动可见，不缩小字体强塞。底部保存修改。"
+    },
+    {
+      "id": "17-life-diary",
+      "title": "生活日记",
+      "spec": "记录标题右日期9月4日。两个等宽标签 生活日记/每日复盘，前者深绿。右侧轻量AI整理、查看今天。消息流3条右对齐暖灰小圆角气泡，时间在左侧小号：外面下了好大的雨；上午工作还算顺利；雨停后散步，心情轻松了许多。穿插一张雨窗照片，保持宽松。底部明显完整多行正文输入框高度约145dp，内边距18dp，灰色占位 现在的想法；框下内置 图片 按钮、草稿已保存状态、深绿小圆角发送按钮。保留完整底栏记录选中。无分类、模板、标题、取消。"
+    },
+    {
+      "id": "18-daily-review",
+      "title": "每日复盘",
+      "spec": "记录标题，9月4日；生活日记/每日复盘，后者深绿。四个固定表单，每个独立标签与浅白细边框多行输入，字段：今天推进了什么（完成了英语演讲开头）；今天留下了什么（整理了一页错题）；最大问题（下午刷手机太久）；明天最重要的一件事（完成演讲练习）。行高1.5，标签和输入框间12dp，字段间24dp。底部 保存复盘，保留记录底栏。没有描述性占位长句。"
+    },
+    {
+      "id": "19-ai-send",
+      "title": "AI整理发送确认",
+      "spec": "返回 AI整理；日期9月4日，选中2条文字记录预览。标题 发送内容，两条方框选择的日记摘要。下方简短必要隐私说明：所选文字将发送至MiniMax；图片不发送。任务/状态附加信息默认可选择。底部主按钮 开始整理，次操作 返回。文字边缘留足空间。"
+    },
+    {
+      "id": "20-ai-candidates",
+      "title": "AI归档确认",
+      "spec": "返回 整理结果，待确认2项。候选一 散步20分钟，分类 身体，成长值+2，关联原记录摘录可展开；候选二 今天心情放松，分类心理，状态+1。各项可编辑、勾选。底部 确认所选；忽略文字操作。只显示候选状态，不宣称已加分，不出现合约/证据/推断术语。"
+    },
+    {
+      "id": "21-calendar",
+      "title": "日历",
+      "spec": "标题 轨迹，日历/本周/成长三个等宽占满，日历选中。2026年9月，左右月箭头。真实9月2026日历：周一开头第一行31,1,2,3,4,5,6，五行到28,29,30,1,2,3,4。七列等宽，行间距舒展，每日期56dp左右单元，不拥挤；今天4用完整小方框，非圆圈；记录日有小圆点。下方 查找记录，搜索字段与选择日期占位，结果两行。底栏轨迹。"
+    },
+    {
+      "id": "22-date-preview",
+      "title": "日期预览",
+      "spec": "日历页上方中央轻量日期预览，清晰关闭X。9月4日 周五；房间小横幅缩略图高度80dp；今日一句 雨停后散步，心情轻松了许多。并列 3条记录 2项完成 1次习惯。短记录一行。底部打开完整回顾。不要巨大房间图，遮罩触控明确。"
+    },
+    {
+      "id": "23-day-overview",
+      "title": "日期总览",
+      "spec": "返回9月4日，子导航 总览/记录/行动，总览选中。今日一句可编辑标题性摘要 雨停后散步，心情轻松了许多。小房间缩略图100dp。五维分数72|64|58|76|61对齐，无任何条形进度。每日复盘摘要两个事实行，查看复盘轻量。行级行动结果 已完成置最右无>；不全部展开造成过长。底栏轨迹。"
+    },
+    {
+      "id": "24-day-records",
+      "title": "日期记录",
+      "spec": "返回 9月4日；总览/记录/行动，记录选中；上方今日一句摘要。两块有充分内距的完整正文框：今天完成了英语演讲开头。反复练了三遍，最后一次比前两次自然。/晚上雨停后去散步，沿着河边走了二十分钟。回来以后心情轻松了许多。右下小时间，无文字截断，第二块带小照片。整框可进入编辑，右上新建，无编辑+历史双按钮。底栏轨迹。"
+    },
+    {
+      "id": "25-record-editor",
+      "title": "记录详情编辑",
+      "spec": "返回 记录详情、右上…；日期2026年9月4日；大尺寸有内距正文框占屏高约40%，完整文字 今天完成了英语演讲开头。反复练了三遍，最后一次比前两次自然。附图缩略图，图片操作轻量。类型 生活日记可调整但不抢眼。主按钮 保存修改在底部，历史/删除不常驻。保留记录底栏。"
+    },
+    {
+      "id": "26-record-history",
+      "title": "记录修改历史",
+      "spec": "返回 修改历史，9月4日记录。两个宽松历史条目：21:16 当前版本正文两行；20:30 v1原文两行。恢复此版本次操作仅旧项。单层纸面列表，不比较表格，不长堆按钮。底栏记录。"
+    },
+    {
+      "id": "27-day-actions",
+      "title": "当日行动",
+      "spec": "返回9月4日；总览/记录/行动，行动选中。任务分组三个宽行：英语演讲练习 最右已完成；整理数学错题 最右已完成；公园慢跑 最右今天未做。习惯分组 喝水8/8杯 最右已打卡；阅读1/1次 最右已打卡。无最右箭头，无可在历史更改结果的复选框，整行可查看详情。底栏轨迹。"
+    },
+    {
+      "id": "28-week-overview",
+      "title": "本周复盘总览",
+      "spec": "标题轨迹，日历/本周/成长 本周选中。8月31日—9月6日。单行三统计 12项完成 / 18次打卡 / 9条记录。我的周复盘两行实际摘录 完成演讲初稿、建立错题复习节奏，右编辑。AI周建议摘要 每天复习一道错题，待确认，查看建议。一个主操作写周复盘。留白充足不展示四个不等宽按钮。底栏轨迹。"
+    },
+    {
+      "id": "29-week-form",
+      "title": "周复盘表单上半",
+      "spec": "返回 周复盘，8月31日—9月6日。固定六节可滚动表单只展示自然首屏，不压缩强塞：本周进展：事业/财富/身体三个短文本子行（这是用户复盘模板原词）；本周形成的资产：能力/方法/作品/资产/关系轻量可写分行；最大进步多行输入。下一节最大浪费部分可延续下方。主操作 保存复盘靠底，允许内容滚动。无额外说明。"
+    },
+    {
+      "id": "30-week-form-end",
+      "title": "周复盘表单下半",
+      "spec": "与周复盘编辑上一图完全一致但滚动后下半状态，顶固定标题 周复盘。最大进步（完成第一次完整演讲）；最大浪费（刷资讯）；停止或减少（睡前刷手机）；下周最重要的一件事（完成英语演讲练习）。四个宽松多行表单，底部保存复盘。"
+    },
+    {
+      "id": "31-week-ai",
+      "title": "下周建议",
+      "spec": "返回 下周建议。标题 每天复习一道错题；日期9月7日—13日。3个宽松事实区域：下周重点 数学错题复盘；每天的小尝试 晚饭后复习一道错题；怎样判断有效 完成5次复习。全宽深绿采用建议，全宽轻描边修改后采用。下方同一行 重新检查 / 暂不采用文字按钮。不出现habit或其他技术字段。"
+    },
+    {
+      "id": "32-week-ai-edit",
+      "title": "修改下周建议",
+      "spec": "返回 修改建议。多行自动增高输入：下周重点 数学错题复盘；每天的小尝试 晚饭后复习一道错题；怎样判断有效 本周完成五次复习；开始日期9月7日。全部正文可见无硬截断。底部 保存并采用。"
+    },
+    {
+      "id": "33-growth",
+      "title": "成长",
+      "spec": "标题轨迹，日历/本周/成长，成长选中。成长值最近7天/30天/累计切换，30天选中。五维成长用精确等高五行，固定图标列32dp、名称列、数值列右对齐：身体48 心理22 关系16 工作/学习64 玩乐20。每行不同具体可辨认像素图标(水杯/灯/两人对话/完成页/风筝)，细分隔线从相同x到相同x完全不重叠。下方成就册 12枚 右查看全部，三枚精致像素珐琅徽章（书本、奖杯、羽毛笔）带短名，保持48dp视觉尺寸。无粗糙红健字、无装饰大图、无总人生分。底栏轨迹。"
+    },
+    {
+      "id": "34-growth-ledger",
+      "title": "单维成长记录",
+      "spec": "返回 身体成长。大统计累计128、近7天+12与近30天+48。成长记录用日期分组，9月4日散步20分钟 +4；喝水达标 +2；9月3日慢跑两公里 +4，全部数值右对齐。来源在次行简短任务/习惯/生活日记。不是状态分，无额外图表。底栏轨迹。"
+    },
+    {
+      "id": "35-badges",
+      "title": "成就册",
+      "spec": "返回 成就册，12枚。三列四行宽松徽章，每个独立清晰48-56dp像素珐琅纪念章，有识别不同书本、水杯、奖杯、靶心、爱心、羽毛笔、跑鞋、风筝等与实际来源一致的变体，绿金铜有限色。短名称最多一行，边框统一但内部图形明显区别。仅已获得，无锁定灰图、无稀有等级。顶部来源筛选全部/目标/习惯/恢复，底栏轨迹。"
+    },
+    {
+      "id": "36-badge-detail",
+      "title": "成就详情",
+      "spec": "返回 成就详情。居中精致约96dp像素珐琅打开书本徽章，外轮廓金铜与森林绿。名称 阅读七次；获得日期2026年9月4日。下方宽松事实 行为 阅读20分钟，累计7次，关联习惯 阅读。查看记录文字按钮。无额外奖励数字、不重复加分、不用证据术语。底栏轨迹。"
+    },
+    {
+      "id": "37-task-analysis",
+      "title": "任务分析",
+      "spec": "返回 任务分析。全部+五维选择用单行紧凑可横滑但不裁文字，全部选中。12周/半年/全年等宽选择，12周选中。完成48项、成长值+126并列。最近12周热力图7行12列，严格等大正方形，六月/七月/八月/九月位置准确覆盖当前区间日期；不可画整个月空洞，未计划中性细描边，完成同一森林绿渐度。不出现颜色图例。下方五维各一行完成数，图与文字空间舒展。底栏任务。"
+    },
+    {
+      "id": "38-habit-overview",
+      "title": "多习惯分析",
+      "spec": "返回 习惯分析，近四周8月10日—9月6日。三项习惯用统一横向矩阵表，每行名称，右总体完成率，下面四个等大正方形周完成小格显示5/7 6/7 4/7 3/7等，列标题08.10/08.17/08.24/08.31对齐；喝水79% 阅读70% 散步75%。不要把每日不同习惯合成一个热力图，不加颜色图例，不做柱状图。每行可进入单习惯分析，右上不堆按钮。底栏任务。"
+    },
+    {
+      "id": "39-habit-analysis",
+      "title": "单习惯分析",
+      "spec": "返回 喝水分析；12周/半年/全年。累计完成21天，完成率75%。日期热力图7行12列严格正方形，全部12周日期位置存在；未计划中性格，已完成深绿小勾，未完成描边短横；月份不能空白消失，无颜色图例。下方按星期看，七个等大正方形单元每个周一到日及86%/71%/86%/71%/86%/57%/71%，深浅低饱和绿，不用柱状图。底栏任务。"
+    },
+    {
+      "id": "40-settings",
+      "title": "设置",
+      "spec": "标题设置。个人分组：人物与陪伴 鱼鱼、状态自评 今天已评估、显示与语气 温和；功能分组：AI整理 已开启、今日任务小组件 已添加、通知与提醒 关闭；数据与隐私分组：本地存储 正常、导入与导出 9月3日、AI发送范围 每次确认。高级行动规则在后续滚动区域。极克制列表，宽松同高行，无每行粗框、无解释说明。底栏设置。"
+    },
+    {
+      "id": "41-companion",
+      "title": "人物与陪伴",
+      "spec": "返回 人物与陪伴。顶部居中原创友好睁眼白发像素人物鱼鱼形象，与今日房间一致，约160dp，不能偏左；下方鱼鱼/包包两张等宽整卡选择，有清晰未选/选中，鱼鱼浅金选中，男生另一原创角色。昵称 鱼鱼单行表单。底部保存设置。暖纸不杂乱。"
+    },
+    {
+      "id": "42-assessment-modes",
+      "title": "状态自评选择",
+      "spec": "返回状态自评。单维自评五个等高行 身体/心理/关系/工作与学习/玩乐，每行右上次9月3日；全部自评区两项 快速评估30题、完整评估60题。只有事实与可点击行，不填说明文字，允许随时进入。底栏设置。"
+    },
+    {
+      "id": "43-ai-settings",
+      "title": "AI设置",
+      "spec": "返回AI整理。开关 AI整理 已开启；服务方 MiniMax；模型选择 MiniMax-M3；本机密钥密码框不展示真实凭据，保存与清除密钥左右等宽，检查连接全宽次按钮，旁轻状态连接成功。技术详情折叠，和模型字段保持空间，不显示安装包密钥紧贴像错误。底栏设置。"
+    },
+    {
+      "id": "44-ai-privacy",
+      "title": "AI发送范围",
+      "spec": "返回AI发送范围。默认范围八个等高开关行 记录摘要/状态/任务/习惯/成长/目标/周建议/已确认规则。必要隐私短句 MiniMax处理所选信息；日记原文逐次确认，图片不发送。下方每次发送前确认已启用。底部保存设置。无“长期发送范围”术语。"
+    },
+    {
+      "id": "45-data-transfer",
+      "title": "导入与导出",
+      "spec": "返回导入与导出。上次备份2026年9月3日简短事实。一个主操作 导出全部数据，一个同高次按钮 导入备份，宽松排布。必要短提示 备份包含本机记录、任务、习惯与复盘，不含密钥。下方备份文件一行qiguang-backup-2026-09-03.json可自然折行不要截断。删除不混在普通操作组。"
+    },
+    {
+      "id": "46-storage",
+      "title": "本地存储",
+      "spec": "返回本地存储。状态正常，记录保存在此设备。事实记录128条 图片12张 最近备份9月3日。必要安全句 卸载应用或清除应用数据会删除本机内容。下方导出备份主按钮。原生Android不要出现请求浏览器持久存储/清除浏览器数据。"
+    },
+    {
+      "id": "47-delete-data",
+      "title": "删除全部数据",
+      "spec": "全屏安全确认界面，返回，标题删除全部数据。红色只用于危险标题/按钮。完整必要说明 将永久删除本机记录、图片、任务、目标、习惯和复盘，无法恢复。未输入时键盘关闭以便阅读。输入框标签 输入“删除全部数据”确认。底部红色按钮 永久删除 灰化未启用，取消文字，先导出备份次操作。留足安全间距。"
+    },
+    {
+      "id": "48-display",
+      "title": "显示与语气",
+      "spec": "返回显示与语气。减少动态效果开关；指导语气两等宽选择 温和/直接。保持品牌暖纸主题。选中温和。低密度设置页但空间有节奏，主保存底部，不增加不存在主题或字体设置。"
+    },
+    {
+      "id": "49-rules",
+      "title": "行动规则",
+      "spec": "返回行动规则，右上新建。两条只读规则，晚上九点后不安排高强度运动；复习前先整理桌面。每条名称适当两行，右内收…编辑，无常驻输入/保存/删除堆叠。已确认标签很轻。不出现记忆命中/证据。底栏设置。"
+    },
+    {
+      "id": "50-rule-edit",
+      "title": "编辑行动规则",
+      "spec": "返回编辑规则。多行正文输入 晚上九点后不安排高强度运动；适用范围 身体；状态启用。主保存规则在底部。危险删除收…，不新增复杂条件构建器。"
+    },
+    {
+      "id": "51-widget",
+      "title": "今日任务小组件",
+      "spec": "返回今日任务小组件。手机页面内三张同风格不同尺寸预览小/中/大：小一项 英语演讲练习；中两项；大四项；每项左方框。小组件仅任务无头像、日记、成长值。隐藏任务名称开关。底部 添加到桌面。正常留白不做海报。"
+    },
+    {
+      "id": "52-notifications",
+      "title": "通知与提醒",
+      "spec": "返回通知与提醒。事实状态 系统通知 关闭；应用内提醒 开启。无不存在的定时提醒配置。宽松简单列表，与所有设置同一标题字体和间距。底栏设置。"
+    },
+    {
+      "id": "53-onboarding",
+      "title": "首次选择人物",
+      "spec": "标题 栖光；区块 选择伙伴。两个等宽原创像素人物卡 鱼鱼/包包，与房间形象一致，鱼鱼选中浅金小方框勾，另一张中性，整卡点击视觉明确。无长欢迎说明、无登录注册。底部开始记录主按钮。此首次页不需要底栏，保留Android系统安全区。"
+    },
+    {
+      "id": "54-image-view",
+      "title": "日记图片查看",
+      "spec": "返回记录图片。中心大雨窗照片，约屏宽扣48dp，维持原比例，纸色周围留白。顶部日期9月4日18:22。下方日记短句 雨停后散步。右上…含保存图片入口可见展开的简单三行菜单 保存图片/更换图片/删除图片，后者红色。不要仿系统社交分享页面。"
+    },
+    {
+      "id": "55-completion-feedback",
+      "title": "任务完成反馈",
+      "spec": "同04任务今天页，第一条英语演讲标题划线左方框已勾；中部上方轻量非模态浮条 已完成 · 工作/学习 +4，右撤销。表现轻微向上浮出消失的单一静帧，不画动画箭头或多重重影。浮条不覆盖待点击控件，其他内容保持原位。"
+    },
+    {
+      "id": "56-ai-error",
+      "title": "AI整理失败状态",
+      "spec": "同生活日记的AI整理结果页，标题AI整理。内联错误 AI返回的内容无法识别，请稍后重试。事实 本地记录已保存。重新尝试主按钮，返回记录次操作。留白清楚无纯白屏、不用合约格式技术词，无无意义旋转圈。"
+    }
+  ]
+}
