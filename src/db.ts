@@ -54,7 +54,7 @@ import {
 import { DIFFICULTY_XP, MILESTONE_XP, habitMomentum, levelFromXp, normalizeDifficulty, questXp, resolveStateTimeline, totalXp, type Difficulty, type FeedbackResult, type LegacyDifficulty } from './rules.ts';
 
 export const DB_NAME = 'qiguang';
-export const DB_VERSION = 7;
+export const DB_VERSION = 8;
 export const BACKUP_FORMAT_VERSION = 6;
 export const APP_VERSION = '0.7.0';
 export const LEGACY_SUCCESS_PROMPT = '今天做成或推进了什么？哪怕很小：';
@@ -569,7 +569,14 @@ function openRawDatabase(name: string): Promise<IDBDatabase> {
         });
       }
       if (!database.objectStoreNames.contains('habitLogs')) {
-        database.createObjectStore('habitLogs', { keyPath: 'id' }).createIndex('byHabitDate', ['habitId', 'localDate'], { unique: true });
+        const store = database.createObjectStore('habitLogs', { keyPath: 'id' });
+        store.createIndex('byHabitDate', ['habitId', 'localDate']);
+        store.createIndex('byQuestId', 'questId', { unique: true });
+      } else if ((event as IDBVersionChangeEvent).oldVersion < 8) {
+        const store = request.transaction!.objectStore('habitLogs');
+        store.deleteIndex('byHabitDate');
+        store.createIndex('byHabitDate', ['habitId', 'localDate']);
+        store.createIndex('byQuestId', 'questId', { unique: true });
       }
       if (!database.objectStoreNames.contains('branches')) {
         database.createObjectStore('branches', { keyPath: 'id' }).createIndex('byParentId', 'parentId');
@@ -995,6 +1002,7 @@ function habitScheduleHistory(habit: Habit): HabitScheduleHistory {
   return [{
     effectiveFrom: localDate(new Date(habit.createdAt)),
     scheduleDays: [...habit.scheduleDays],
+    weeklyTarget: habit.weeklyTarget,
     // Legacy records cannot reveal old pause dates, so never manufacture pending periods while inactive.
     trackingEnabled: habit.status === 'active' && habit.bonusEnabled,
   }];
@@ -1572,6 +1580,10 @@ export function parseBackup(text: string): BackupBundle {
     assertCommonRecord(item, '习惯');
     assertText(item.name, '习惯名称', 60);
     assertText(item.minimumAction, '习惯最小动作', 160);
+    if (item.weeklyTarget !== undefined) {
+      assertInteger(item.weeklyTarget, 1, 1_000, '每周目标次数');
+      if (item.targetCount !== undefined) throw new Error('每日与每周目标不能同时设置。');
+    }
     if (item.targetCount !== undefined) {
       assertInteger(item.targetCount, 2, 1_000, '习惯目标次数');
       assertText(item.countUnit, '习惯计数单位', 20);
@@ -1586,6 +1598,7 @@ export function parseBackup(text: string): BackupBundle {
         if (!Array.isArray(period.scheduleDays) || !period.scheduleDays.length || new Set(period.scheduleDays).size !== period.scheduleDays.length) throw new Error('习惯计划历史无效。');
         period.scheduleDays.forEach((day) => assertInteger(day, 1, 7, '习惯计划历史'));
         if (typeof period.trackingEnabled !== 'boolean') throw new Error('习惯计划历史无效。');
+        if (period.weeklyTarget !== undefined) assertInteger(period.weeklyTarget, 1, 1_000, '每周计划历史');
         previousDate = period.effectiveFrom;
       });
     }
@@ -1672,7 +1685,7 @@ export function parseBackup(text: string): BackupBundle {
     if (item.settlementKey !== undefined) assertText(item.settlementKey, '习惯结算键', 200);
   });
   uniqueIds(habitLogs, '习惯记录');
-  if (new Set(habitLogs.map((item) => `${item.habitId}:${item.localDate}`)).size !== habitLogs.length) throw new Error('同一习惯日期重复。');
+  if (new Set(habitLogs.map((item) => item.questId)).size !== habitLogs.length) throw new Error('同一习惯打卡记录重复。');
 
   const dimensionData = { quests, habits, milestones, goals, areas, branches };
   data.xpLedger = normalizeLedgerDimensions(data.xpLedger as XpLedger[], dimensionData);
@@ -3418,12 +3431,16 @@ export class QiguangDb {
   }
 
   async addHabit(
-    input: Pick<Habit, 'name' | 'minimumAction' | 'scheduleDays' | 'dimension' | 'difficulty'> & Partial<Pick<Habit, 'trigger' | 'bonusEnabled' | 'targetCount' | 'countUnit'>>,
+    input: Pick<Habit, 'name' | 'minimumAction' | 'scheduleDays' | 'dimension' | 'difficulty'> & Partial<Pick<Habit, 'trigger' | 'bonusEnabled' | 'targetCount' | 'countUnit' | 'weeklyTarget'>>,
     effectiveDate = localDate(),
   ): Promise<Habit> {
     if (!isLocalDate(effectiveDate)) throw new Error('习惯生效日期无效。');
     assertText(input.name, '习惯名称', 60);
     assertText(input.minimumAction, '习惯最小动作', 160);
+    if (input.weeklyTarget !== undefined) {
+      assertInteger(input.weeklyTarget, 1, 1_000, '每周目标次数');
+      if (input.targetCount !== undefined) throw new Error('每日与每周目标不能同时设置。');
+    }
     if (input.targetCount !== undefined) {
       assertInteger(input.targetCount, 2, 1_000, '习惯目标次数');
       assertText(input.countUnit, '习惯计数单位', 20);
@@ -3438,11 +3455,13 @@ export class QiguangDb {
     const habit: Habit = {
       id: crypto.randomUUID(), name: input.name.trim(), minimumAction: input.minimumAction.trim(),
       targetCount: input.targetCount, countUnit: input.countUnit?.trim(),
+      weeklyTarget: input.weeklyTarget,
       scheduleDays: [...input.scheduleDays].sort(), trigger: input.trigger?.trim() || undefined,
       scheduleHistory: [{
         effectiveFrom: effectiveDate,
         scheduleDays: [...input.scheduleDays].sort(),
         trackingEnabled: Boolean(input.bonusEnabled),
+        weeklyTarget: input.weeklyTarget,
       }],
       dimension: input.dimension, difficulty: input.difficulty,
       status: 'active', bonusEnabled: Boolean(input.bonusEnabled),
@@ -3455,7 +3474,7 @@ export class QiguangDb {
 
   async saveHabit(
     id: string,
-    patch: Partial<Pick<Habit, 'name' | 'minimumAction' | 'scheduleDays' | 'trigger' | 'dimension' | 'difficulty' | 'status' | 'bonusEnabled' | 'targetCount' | 'countUnit'>>,
+    patch: Partial<Pick<Habit, 'name' | 'minimumAction' | 'scheduleDays' | 'trigger' | 'dimension' | 'difficulty' | 'status' | 'bonusEnabled' | 'targetCount' | 'countUnit' | 'weeklyTarget'>>,
     effectiveDate = localDate(),
   ): Promise<Habit> {
     if (!isLocalDate(effectiveDate)) throw new Error('习惯生效日期无效。');
@@ -3469,6 +3488,10 @@ export class QiguangDb {
     const updated = { ...current, ...patch, scheduleDays: [...(patch.scheduleDays ?? current.scheduleDays)].sort(), updatedAt: nowIso(), version: current.version + 1 };
     assertText(updated.name, '习惯名称', 60);
     assertText(updated.minimumAction, '习惯最小动作', 160);
+    if (updated.weeklyTarget !== undefined) {
+      assertInteger(updated.weeklyTarget, 1, 1_000, '每周目标次数');
+      if (updated.targetCount !== undefined) throw new Error('每日与每周目标不能同时设置。');
+    }
     if (updated.targetCount !== undefined) {
       assertInteger(updated.targetCount, 2, 1_000, '习惯目标次数');
       assertText(updated.countUnit, '习惯计数单位', 20);
@@ -3483,9 +3506,9 @@ export class QiguangDb {
     assertOneOf(updated.status, ['active', 'paused', 'ended'], '习惯状态');
     const trackingEnabled = updated.status === 'active' && updated.bonusEnabled;
     const currentTrackingEnabled = current.status === 'active' && current.bonusEnabled;
-    const scheduleChanged = updated.scheduleDays.join(',') !== [...current.scheduleDays].sort().join(',');
+    const scheduleChanged = updated.scheduleDays.join(',') !== [...current.scheduleDays].sort().join(',') || updated.weeklyTarget !== current.weeklyTarget;
     if (scheduleChanged || trackingEnabled !== currentTrackingEnabled) {
-      const period = { effectiveFrom: effectiveDate, scheduleDays: [...updated.scheduleDays], trackingEnabled };
+      const period = { effectiveFrom: effectiveDate, scheduleDays: [...updated.scheduleDays], trackingEnabled, weeklyTarget: updated.weeklyTarget };
       updated.scheduleHistory = [...habitScheduleHistory(current).filter((item) => item.effectiveFrom !== effectiveDate), period]
         .sort((left, right) => left.effectiveFrom.localeCompare(right.effectiveFrom));
     }
@@ -3751,14 +3774,21 @@ export class QiguangDb {
     const created: Quest[] = [];
     for (const habit of habits.filter((item) => {
       const schedule = habitScheduleOn(item, date);
-      return item.status === 'active' && item.bonusEnabled && schedule?.trackingEnabled && schedule.scheduleDays.includes(weekday);
+      return item.status === 'active' && item.bonusEnabled && schedule?.trackingEnabled && (schedule.weeklyTarget || schedule.scheduleDays.includes(weekday));
     })) {
-      if (current.some((item) => item.sourceType === 'habit' && item.sourceId === habit.id)) continue;
+      const sameDay = current.filter((item) => item.sourceType === 'habit' && item.sourceId === habit.id);
+      const weeklyTarget = habitScheduleOn(habit, date)?.weeklyTarget;
+      if (weeklyTarget) {
+        const start = shiftDate(date, 1 - weekday);
+        const end = shiftDate(start, 6);
+        const weekCompleted = allQuests.filter(item => item.sourceType === 'habit' && item.sourceId === habit.id && item.status === 'completed' && !item.userRemovedAt && item.localDate >= start && item.localDate <= end).length;
+        if (weekCompleted >= weeklyTarget || sameDay.some(item => item.status === 'pending' || item.userRemovedAt || item.systemRetiredAt)) continue;
+      } else if (sameDay.length) continue;
       const quest: Quest = {
         id: crypto.randomUUID(), localDate: date, sourceType: 'habit', sourceId: habit.id,
-        actionId: validateActionId(`habit:${habit.id}:${date}`), settlementVersion: 0, title: habit.name,
+        actionId: validateActionId(`habit:${habit.id}:${date}${weeklyTarget ? `:${sameDay.length + 1}` : ''}`), settlementVersion: 0, title: habit.name,
         reason: '习惯打卡。', minimumAction: habit.minimumAction,
-        targetCount: habit.targetCount, progressCount: habit.targetCount ? 0 : undefined, countUnit: habit.countUnit,
+        targetCount: weeklyTarget ? undefined : habit.targetCount, progressCount: !weeklyTarget && habit.targetCount ? 0 : undefined, countUnit: weeklyTarget ? undefined : habit.countUnit,
         difficulty: habit.difficulty, dimension: habit.dimension,
         status: 'pending', aiSuggested: false, userModified: false,
         createdAt: timestamp, updatedAt: timestamp, version: 1,
@@ -3778,7 +3808,7 @@ export class QiguangDb {
     assertInteger(stateDelta, -15, 15, '状态变化');
     if (completedDate !== undefined && !isLocalDate(completedDate)) throw new Error('任务实际完成日期无效。');
     if (result === 'skipped' || result === 'exempt') stateDelta = 0;
-    const transaction = this.database.transaction(['quests', 'questFeedback', 'habitLogs', 'xpLedger', 'observations', 'milestones', 'goals', 'events'], 'readwrite');
+    const transaction = this.database.transaction(['habits', 'quests', 'questFeedback', 'habitLogs', 'xpLedger', 'observations', 'milestones', 'goals', 'events'], 'readwrite');
     const feedback = await this.writeQuestFeedback(transaction, id, result, note, actual, difficulty, stateDelta, completedDate);
     await transactionDone(transaction);
     return feedback;
@@ -3792,7 +3822,7 @@ export class QiguangDb {
     assertInteger(stateDelta, -15, 15, '状态变化');
     if (completedDate !== undefined && !isLocalDate(completedDate)) throw new Error('任务实际完成日期无效。');
     if (result === 'skipped' || result === 'exempt') stateDelta = 0;
-    const transaction = this.database.transaction(['quests', 'questFeedback', 'habitLogs', 'xpLedger', 'observations', 'milestones', 'goals', 'events'], 'readwrite');
+    const transaction = this.database.transaction(['habits', 'quests', 'questFeedback', 'habitLogs', 'xpLedger', 'observations', 'milestones', 'goals', 'events'], 'readwrite');
     try {
       const feedback = await this.writeQuestFeedback(transaction, id, result, note, actual, difficulty, stateDelta, completedDate);
       const progression = result === 'completed' || result === 'partial'
@@ -3836,6 +3866,18 @@ export class QiguangDb {
     if (!isLocalDate(actualCompletedDate)) {
       transaction.abort();
       throw new Error('任务实际完成日期无效。');
+    }
+    if (quest.sourceType === 'habit' && quest.sourceId && result === 'completed') {
+      const habit = await requestResult(transaction.objectStore('habits').get(quest.sourceId)) as Habit | undefined;
+      const target = habit && habitScheduleOn(habit, quest.localDate)?.weeklyTarget;
+      if (target) {
+        const start = shiftDate(quest.localDate, 1 - (parseLocalDate(quest.localDate).getDay() || 7));
+        const end = shiftDate(start, 6);
+        if (actualCompletedDate < start || actualCompletedDate > end) throw new Error('每周打卡的完成日期必须在同一周内。');
+        const completed = (await requestResult(quests.index('bySourceId').getAll(quest.sourceId)) as Quest[])
+          .filter(item => item.id !== id && item.sourceType === 'habit' && item.status === 'completed' && !item.userRemovedAt && item.localDate >= start && item.localDate <= end);
+        if (completed.length >= target) throw new Error('本周目标已完成，没有重复打卡。');
+      }
     }
     priorFeedback.filter((item) => !item.undoneAt).forEach((item) => feedbackStore.put({ ...item, undoneAt: timestamp, updatedAt: timestamp, version: item.version + 1 }));
     const observations = transaction.objectStore('observations');
@@ -3915,7 +3957,7 @@ export class QiguangDb {
     });
     if (quest.sourceType === 'habit' && quest.sourceId) {
       const logs = transaction.objectStore('habitLogs');
-      const existingLog = await requestResult(logs.index('byHabitDate').get([quest.sourceId, quest.localDate])) as HabitLog | undefined;
+      const existingLog = await requestResult(logs.index('byQuestId').get(id)) as HabitLog | undefined;
       const log: HabitLog = {
         id: existingLog?.id ?? crypto.randomUUID(), habitId: quest.sourceId, localDate: quest.localDate,
         result, questId: id, settlementKey: xp > 0 && !activeSameAction ? settlementKey : undefined,
@@ -4062,7 +4104,7 @@ export class QiguangDb {
     ledger.filter((item) => item.sourceType === 'quest' && item.sourceId === id && !item.reversedAt)
       .forEach((item) => ledgerStore.put({ ...item, reversedAt: timestamp, updatedAt: timestamp, version: item.version + 1 }));
     if (quest.sourceType === 'habit' && quest.sourceId) {
-      transaction.objectStore('habitLogs').index('byHabitDate').getKey([quest.sourceId, quest.localDate]).addEventListener('success', (event) => {
+      transaction.objectStore('habitLogs').index('byQuestId').getKey(id).addEventListener('success', (event) => {
         const key = (event.target as IDBRequest<IDBValidKey | undefined>).result;
         if (key !== undefined) transaction.objectStore('habitLogs').delete(key);
       }, { once: true });

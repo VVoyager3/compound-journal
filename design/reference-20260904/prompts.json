@@ -7,6 +7,7 @@
     "note": "Generated raster native sizes are recorded separately; reference viewport does not imply exact native PNG dimensions."
   },
   "generator": "built-in image_gen",
+  "characterAssetPolicy": "所有页面沿用design-assets/pre-development原素材。鱼鱼：avatar-female-cartoon.png与character-frames/female/，牛纹帽双辫；包包：avatar-male-cartoon.png与character-frames/male/，鹿角头饰。直接使用既有头像、全身形象与动作帧，不生成新人物、不换装改色。原素材优先于已生成参考PNG中的错误人物。",
   "revision": {
     "date": "2026-09-04",
     "screens": ["01-today-v2", "15-habit-detail", "19-ai-send", "21-calendar", "22-date-preview", "23-day-overview", "37-task-analysis", "39-habit-analysis", "40-settings", "41-companion"],
@@ -218,7 +219,7 @@
     {
       "id": "41-companion",
       "title": "人物与陪伴",
-      "spec": "返回 人物与陪伴。顶部居中原创友好睁眼白发像素人物鱼鱼形象，与今日房间一致，约160dp，不能偏左；下方鱼鱼/包包两张等宽整卡选择，有清晰未选/选中，鱼鱼浅金选中，男生另一原创角色。昵称 鱼鱼单行表单。底部保存设置。暖纸不杂乱。"
+      "spec": "返回 人物与陪伴。顶部居中使用原素材库的鱼鱼全身形象，牛纹帽双辫，约160dp，等比完整展示；下方鱼鱼/包包两张等宽整卡选择，均直接使用旧库素材，包包保留鹿角头饰，有清晰未选/选中，鱼鱼浅金选中。不生成新角色，不展示房间。昵称 鱼鱼单行表单。底部保存设置。暖纸不杂乱。"
     },
     {
       "id": "42-assessment-modes",

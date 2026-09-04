@@ -1774,15 +1774,29 @@ function enableTaskReordering(list: HTMLElement, date: string): void {
   });
 }
 
-function habitTodayRow(habit: Habit, quest: Quest): HTMLElement {
+function todayHabitQuests(quests: Quest[]): Quest[] {
+  const rows = new Map<string, Quest>();
+  for (const quest of quests.filter(item => item.sourceType === 'habit' && !item.systemRetiredAt && !item.userRemovedAt)) {
+    const previous = rows.get(quest.sourceId!);
+    if (!previous || quest.status === 'pending' || previous.status !== 'pending') rows.set(quest.sourceId!, quest);
+  }
+  return [...rows.values()];
+}
+
+function weeklyHabitCompleted(habit: Habit, quests: Quest[], date = localDate()): number {
+  const start = weekRange(date).start;
+  return quests.filter(item => item.sourceType === 'habit' && item.sourceId === habit.id && item.status === 'completed' && !item.userRemovedAt && item.localDate >= start && item.localDate <= shiftDate(start, 6)).length;
+}
+
+function habitTodayRow(habit: Habit, quest: Quest, allQuests: Quest[] = []): HTMLElement {
   const row = node('article', `today-habit-row is-${quest.status}`);
   row.dataset.questId = quest.id;
-  const target = quest.targetCount ?? 1;
-  const progress = quest.status === 'completed' ? target : quest.progressCount ?? 0;
+  const target = habit.weeklyTarget ?? quest.targetCount ?? 1;
+  const progress = habit.weeklyTarget ? weeklyHabitCompleted(habit, allQuests) : quest.status === 'completed' ? target : quest.progressCount ?? 0;
   const copy = node('span', 'today-habit-copy');
-  copy.append(node('h3', '', habit.name), node('span', 'caption', `今天 ${progress}/${target} ${quest.countUnit || '次'}`));
+  copy.append(node('h3', '', habit.name), node('span', 'caption', `${habit.weeklyTarget ? '本周' : '今天'} ${progress}/${target} ${quest.countUnit || '次'}`));
   row.append(copy);
-  if (quest.status === 'pending') {
+  if (quest.status === 'pending' && progress < target) {
     const checkIn = node('button', 'button button-secondary habit-today-checkin', quest.targetCount ? '+1' : '打卡');
     checkIn.type = 'button';
     checkIn.setAttribute('aria-label', `记录今天的习惯“${habit.name}”，当前 ${progress}/${target}${quest.countUnit || '次'}`);
@@ -2125,12 +2139,12 @@ async function todayPage(): Promise<HTMLElement> {
   todayTasks.append(todayTasksHeading);
   if (!pendingTodayQuests.length) todayTasks.append(node('p', 'empty-copy', '今天已经安排好了'));
   pendingTodayQuests.slice(0, 3).forEach((quest) => todayTasks.append(taskListQuest(quest, false, true)));
-  const todayHabitQuests = quests.filter((quest) => quest.sourceType === 'habit' && !quest.systemRetiredAt);
-  if (todayHabitQuests.length) {
+  const visibleHabits = todayHabitQuests(quests);
+  if (visibleHabits.length) {
     todayTasks.append(node('h3', 'today-habit-heading', '习惯打卡'));
-    todayHabitQuests.forEach((quest) => {
+    visibleHabits.forEach((quest) => {
       const habit = habits.find((item) => item.id === quest.sourceId);
-      if (habit) todayTasks.append(habitTodayRow(habit, quest));
+      if (habit) todayTasks.append(habitTodayRow(habit, quest, allQuests));
     });
   }
   main.append(todayTasks);
@@ -4654,15 +4668,23 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
   minimum.placeholder = '例如：穿鞋出门走 5 分钟';
   minimum.value = habit?.minimumAction ?? '';
   const completionMode = node('select', 'input');
-  completionMode.append(selectOption('once', '每天完成一次', !habit?.targetCount), selectOption('count', '每天计数打卡', Boolean(habit?.targetCount)));
+  completionMode.append(selectOption('once', '完成一次', !habit?.targetCount && !habit?.weeklyTarget), selectOption('count', '每日计数', Boolean(habit?.targetCount)), selectOption('weekly', '每周次数', Boolean(habit?.weeklyTarget)));
+  completionMode.hidden = true;
+  const completionChoices = node('div', 'habit-completion-choices');
+  for (const option of [...completionMode.options]) {
+    const button = node('button', '', option.text);
+    button.type = 'button';
+    button.dataset.value = option.value;
+    button.addEventListener('click', () => { completionMode.value = option.value; completionMode.dispatchEvent(new Event('change')); });
+    completionChoices.append(button);
+  }
   const targetCount = node('input', 'input');
-  targetCount.type = 'number'; targetCount.min = '2'; targetCount.max = '1000'; targetCount.value = String(habit?.targetCount ?? 8);
+  targetCount.type = 'number'; targetCount.min = habit?.weeklyTarget ? '1' : '2'; targetCount.max = '1000'; targetCount.value = String(habit?.weeklyTarget ?? habit?.targetCount ?? 8);
   const countUnit = node('input', 'input');
   countUnit.maxLength = 20; countUnit.value = habit?.countUnit ?? '次';
   const countFields = node('div', 'count-task-fields');
-  countFields.hidden = !habit?.targetCount;
-  countFields.append(labelledControl('每日目标次数', targetCount), labelledControl('计数单位', countUnit));
-  completionMode.addEventListener('change', () => { countFields.hidden = completionMode.value !== 'count'; });
+  const targetLabel = labelledControl(habit?.weeklyTarget ? '每周打卡次数' : '每日打卡次数', targetCount);
+  countFields.append(targetLabel, labelledControl('单位', countUnit));
   const trigger = node('select', 'input');
   const triggerValue = habit?.trigger ?? '';
   const triggerOptions = ['晚饭后', '起床后', '放学后', '完成晚间洗漱后', '睡前'];
@@ -4670,16 +4692,27 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
   if (triggerValue && !triggerOptions.includes(triggerValue)) trigger.append(selectOption(triggerValue, triggerValue, true));
   triggerOptions.forEach((value) => trigger.append(selectOption(value, value, triggerValue === value)));
   const schedule = node('fieldset', 'weekday-picker');
-  schedule.append(node('legend', 'field-label', '计划日'));
-  ['周一', '周二', '周三', '周四', '周五', '周六', '周日'].forEach((labelText, index) => {
+  schedule.append(node('legend', 'field-label', '重复'));
+  ['一', '二', '三', '四', '五', '六', '日'].forEach((labelText, index) => {
     const label = node('label', 'weekday-option');
     const checkbox = node('input');
     checkbox.type = 'checkbox';
     checkbox.value = String(index + 1);
+    checkbox.setAttribute('aria-label', `周${labelText}`);
     checkbox.checked = habit ? habit.scheduleDays.includes(index + 1) : index < 5;
     label.append(checkbox, node('span', '', labelText));
     schedule.append(label);
   });
+  const updateCompletionMode = () => {
+    const weekly = completionMode.value === 'weekly';
+    countFields.hidden = completionMode.value === 'once';
+    schedule.hidden = weekly;
+    countUnit.disabled = weekly;
+    targetCount.min = weekly ? '1' : '2';
+    targetLabel.firstChild!.textContent = weekly ? '每周打卡次数' : '每日打卡次数';
+    completionChoices.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.value === completionMode.value)));
+  };
+  completionMode.addEventListener('change', updateCompletionMode);
   const dimension = taskDimensionSelect(habit?.dimension ?? 'progress');
   const difficulty = taskDifficultySelect(habit?.difficulty ?? 'standard');
   const habitStatus = node('select', 'input');
@@ -4713,38 +4746,38 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
         if ([...difficulty.options].some((item) => item.value === difficultyValue)) difficulty.value = difficultyValue;
         if ([...habitStatus.options].some((item) => item.value === statusValue)) habitStatus.value = statusValue;
         bonus.checked = draft.bonus !== 'false';
+        if (['once', 'count', 'weekly'].includes(draft.completionMode ?? '')) completionMode.value = draft.completionMode!;
+        targetCount.value = draft.targetCount ?? targetCount.value;
+        countUnit.value = draft.countUnit ?? countUnit.value;
         const savedDays = new Set((draft.scheduleDays ?? '').split(',').filter(Boolean));
         if (savedDays.size) schedule.querySelectorAll<HTMLInputElement>('input').forEach((input) => { input.checked = savedDays.has(input.value); });
         editorDraftState.textContent = '草稿已保存';
       }
     } catch { /* The editor remains usable if its local draft is damaged. */ }
-    completionMode.value = 'once';
-    countFields.hidden = true;
     const persistEditorDraft = () => {
       try {
         const scheduleDays = Array.from(schedule.querySelectorAll<HTMLInputElement>('input:checked')).map((input) => input.value).join(',');
-        localStorage.setItem(editorDraftKey, JSON.stringify({ name: name.value, minimum: minimum.value, trigger: trigger.value, scheduleDays, dimension: dimension.value, difficulty: difficulty.value, status: habitStatus.value, bonus: String(bonus.checked) }));
+        localStorage.setItem(editorDraftKey, JSON.stringify({ name: name.value, minimum: minimum.value, trigger: trigger.value, scheduleDays, dimension: dimension.value, difficulty: difficulty.value, status: habitStatus.value, bonus: String(bonus.checked), completionMode: completionMode.value, targetCount: targetCount.value, countUnit: countUnit.value }));
         editorDraftState.textContent = '草稿已保存';
       } catch { editorDraftState.textContent = '草稿暂时无法保存'; }
     };
-    [name, minimum, trigger, schedule, dimension, difficulty, habitStatus, bonus].forEach((control) => {
+    [name, minimum, trigger, schedule, dimension, difficulty, habitStatus, bonus, completionMode, targetCount, countUnit].forEach((control) => {
       control.addEventListener('input', persistEditorDraft);
       control.addEventListener('change', persistEditorDraft);
     });
   }
   const status = node('p', 'save-state');
   const advanced = node('details', 'form-advanced');
-  advanced.open = Boolean(habit?.targetCount);
-  advanced.append(node('summary', '', '计数设置（可选）'));
+  advanced.append(node('summary', '', '更多设置'));
   const advancedFields = node('div', 'form-advanced-fields');
-  advancedFields.append(labelledControl('完成方式', completionMode), countFields);
+  advancedFields.append(labelledControl('什么时候做', trigger), bonusLabel, labelledControl('状态', habitStatus));
   advanced.append(advancedFields);
   content.append(
-    editorDraftState, labelledControl('习惯名称', name), labelledControl('最简单做法', minimum), labelledControl('什么时候做', trigger), schedule,
-    labelledControl('五维状态', dimension), labelledControl('难度', difficulty), bonusLabel,
-    labelledControl('状态', habitStatus), status,
+    labelledControl('习惯名称', name), labelledControl('完成方式', completionMode), completionChoices, countFields, schedule,
+    labelledControl('五维状态', dimension), labelledControl('难度', difficulty), status,
   );
   content.insertBefore(advanced, status);
+  updateCompletionMode();
   const cancel = node('button', 'button button-secondary', '取消');
   cancel.type = 'button';
   cancel.addEventListener('click', () => dialog.close());
@@ -4755,7 +4788,8 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
     const days = Array.from(schedule.querySelectorAll<HTMLInputElement>('input:checked')).map((item) => Number(item.value));
     try {
       const value = {
-        name: name.value, minimumAction: minimum.value.trim() || name.value.trim(), trigger: trigger.value, scheduleDays: days,
+        name: name.value, minimumAction: minimum.value.trim() || name.value.trim(), trigger: trigger.value, scheduleDays: completionMode.value === 'weekly' ? [1, 2, 3, 4, 5, 6, 7] : days,
+        weeklyTarget: completionMode.value === 'weekly' ? Number(targetCount.value) : undefined,
         targetCount: completionMode.value === 'count' ? Number(targetCount.value) : undefined,
         countUnit: completionMode.value === 'count' ? countUnit.value : undefined,
         dimension: dimension.value as Dimension, difficulty: difficulty.value as Difficulty,
@@ -4883,7 +4917,7 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
   const hero = node('section', 'entity-detail-hero');
   const habitIcon = node('span', 'entity-detail-icon is-habit-icon');
   habitIcon.append(semanticIcon('habit'));
-  hero.append(node('h3', '', habit.name), node('p', 'caption', `${habitScheduleLabel(habit.scheduleDays)} · ${habit.targetCount ?? 1}${habit.countUnit || '次'} · ${dimensionLabel(habit.dimension)}`));
+  hero.append(node('h3', '', habit.name), node('p', 'caption', `${habit.weeklyTarget ? `每周 ${habit.weeklyTarget} 次` : `${habitScheduleLabel(habit.scheduleDays)} · 每天 ${habit.targetCount ?? 1}${habit.countUnit || '次'}`} · ${dimensionLabel(habit.dimension)}`));
   const habitMeta = node('section', 'habit-detail-meta');
   const metaRow = (label: string, value: string): HTMLElement => {
     const row = node('p', 'habit-detail-meta-row');
@@ -4904,14 +4938,14 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
   analysis.addEventListener('click', () => { dialog.close(); go({ name: 'habit-analysis', entityId: habit.id }); });
   content.append(more, hero);
   const currentWeek = weekRange(localDate());
-  const weekCompleted = new Set(habitLogs.filter((item) => item.localDate >= currentWeek.start && item.localDate <= currentWeek.end && item.result === 'completed').map((item) => item.localDate)).size;
+  const weekCompleted = habitLogs.filter((item) => item.localDate >= currentWeek.start && item.localDate <= currentWeek.end && item.result === 'completed').length;
   const stats = node('section', 'habit-detail-stats');
   const stat = (label: string, value: string, caption: string): HTMLElement => {
     const item = node('span', 'habit-stat');
     item.append(node('span', '', label), node('strong', '', value), node('small', '', caption));
     return item;
   };
-  stats.append(stat('本周', `${weekCompleted}/${habit.scheduleDays.length} 天`, ''), stat('累计', `${habitLogs.filter((item) => item.result === 'completed').length} 天`, ''));
+  stats.append(stat('本周', `${weekCompleted}/${habit.weeklyTarget ?? habit.scheduleDays.length} ${habit.weeklyTarget ? '次' : '天'}`, ''), stat('累计', `${habitLogs.filter((item) => item.result === 'completed').length} 次`, ''));
   const weekCard = node('section', 'habit-week-card');
   const week = node('section', 'habit-week');
   for (let offset = 0; offset < 7; offset += 1) {
@@ -4924,7 +4958,7 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
   }
   weekCard.append(week);
   if (showCheckIn) {
-    const todayQuest = quests.find((quest) => quest.localDate === localDate() && quest.sourceType === 'habit' && quest.sourceId === habit.id);
+    const todayQuest = todayHabitQuests(quests.filter(quest => quest.localDate === localDate())).find(quest => quest.sourceId === habit.id);
     const checkinActions = node('div', 'habit-detail-checkin-actions');
     if (todayQuest?.status === 'pending') {
       const target = todayQuest.targetCount ?? 1;
@@ -5061,7 +5095,7 @@ async function tasksPage(): Promise<HTMLElement> {
     day.append(node('p', 'empty-copy', '暂无任务'));
   } else {
     const pendingQuests = quests.filter((quest) => quest.status === 'pending' && quest.sourceType !== 'habit');
-    const habitQuests = quests.filter((quest) => quest.sourceType === 'habit' && !quest.systemRetiredAt);
+    const habitQuests = todayHabitQuests(quests);
     const settledQuests = quests.filter((quest) => quest.status !== 'pending' && quest.sourceType !== 'habit' && !quest.systemRetiredAt);
     const retiredQuests = quests.filter((quest) => quest.systemRetiredAt && quest.systemRetiredReason !== 'capacity');
     if (pendingQuests.length) {
@@ -5075,7 +5109,7 @@ async function tasksPage(): Promise<HTMLElement> {
       habitGroup.append(node('h3', '', `习惯打卡 · ${habitPendingCount} 项待打卡`));
       habitQuests.forEach((quest) => {
         const habit = storedHabits.find((item) => item.id === quest.sourceId);
-        if (habit) habitGroup.append(habitTodayRow(habit, quest));
+        if (habit) habitGroup.append(habitTodayRow(habit, quest, allQuests));
       });
       day.append(habitGroup);
     }
@@ -5108,9 +5142,6 @@ async function tasksPage(): Promise<HTMLElement> {
   day.append(quickAdd);
   todayPanel.append(day);
 
-  const planIntro = node('div', 'plan-overview-heading');
-  planIntro.append(node('h2', '', '计划总览'));
-  planPanel.append(planIntro);
   const goalSection = node('section', 'task-goals');
   const goalHeading = node('div', 'section-heading');
   goalHeading.append(
@@ -5195,7 +5226,7 @@ async function tasksPage(): Promise<HTMLElement> {
     const row = node('article', 'habit-row');
     const copy = node('div');
     copy.append(node('h3', '', habit.name));
-    copy.append(node('p', 'habit-plan-summary', `本周完成 ${weekCompleted}/${habit.scheduleDays.length} 次 · 每周 ${habit.scheduleDays.length} 天`));
+    copy.append(node('p', 'habit-plan-summary', habit.weeklyTarget ? `本周 ${weekCompleted}/${habit.weeklyTarget} 次` : `本周 ${weekCompleted}/${habit.scheduleDays.length} 天 · 每天 ${habit.targetCount ?? 1}${habit.countUnit || '次'}`));
     const more = node('details', 'quest-more-actions');
     const moreButtons = node('div', 'quest-more-buttons');
     const edit = iconButton('修改习惯', null, () => { void openHabitDialog(habit); }, 'button button-secondary button-compact');
@@ -5240,7 +5271,24 @@ async function tasksPage(): Promise<HTMLElement> {
     });
     habitSection.append(paused);
   }
-  planPanel.append(...(futureQuests.length ? [future] : []), goalSection, habitSection);
+  const planTabs = node('nav', 'plan-section-tabs');
+  planTabs.setAttribute('aria-label', '计划分类');
+  const panels = [goalSection, habitSection, future];
+  const sectionNames = ['目标', '习惯', '之后已安排'];
+  const selectPlanSection = (index: number) => {
+    panels.forEach((panel, i) => { panel.hidden = i !== index; });
+    planTabs.querySelectorAll('button').forEach((button, i) => button.setAttribute('aria-pressed', String(i === index)));
+    sessionStorage.setItem('qiguang.plan-section', String(index));
+  };
+  sectionNames.forEach((label, index) => {
+    const button = node('button', 'plan-section-tab', label);
+    button.type = 'button';
+    button.addEventListener('click', () => selectPlanSection(index));
+    planTabs.append(button);
+  });
+  if (!futureQuests.length) future.append(node('p', 'empty-copy', '暂无之后安排'));
+  planPanel.append(planTabs, ...panels);
+  selectPlanSection(Math.min(2, Math.max(0, Number(sessionStorage.getItem('qiguang.plan-section')) || 0)));
   const initialView = sessionStorage.getItem('qiguang.task-view') === 'plan' ? 'plan' : 'today';
   selectView(initialView, false);
   return main;

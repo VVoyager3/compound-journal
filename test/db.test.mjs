@@ -6,6 +6,30 @@ import 'fake-indexeddb/auto';
 import { selectGrowthBadges } from '../src/badges.ts';
 import { DB_VERSION, LEGACY_SUCCESS_PROMPT, QiguangDb, migrateLegacyJournalContent, parseBackup } from '../src/db.ts';
 
+test('weekly habits preserve separate same-day completions, quota, undo and backup', async (t) => {
+  const db = await withDatabase(t, 'weekly-quota');
+  const habit = await db.addHabit({ name: '每周运动', minimumAction: '运动一次', weeklyTarget: 3, scheduleDays: [1, 2, 3, 4, 5, 6, 7], dimension: 'energy', difficulty: 'light', bonusEnabled: true }, '2026-09-01');
+  const ids = [];
+  for (const date of ['2026-09-01', '2026-09-01', '2026-09-03']) {
+    const [quest] = await db.ensureTodayBonusQuests(date);
+    assert.ok(quest);
+    ids.push(quest.id);
+    await db.feedbackQuest(quest.id, 'completed', '', '', undefined, 0, date);
+  }
+  assert.equal((await db.listHabitLogs(habit.id)).length, 3);
+  assert.equal((await db.ensureTodayBonusQuests('2026-09-04')).length, 0);
+  assert.equal((await db.listXpLedger()).filter(item => !item.reversedAt).reduce((sum, item) => sum + item.finalXp, 0), 6);
+  await db.undoQuestFeedback(ids[0]);
+  assert.equal((await db.listHabitLogs(habit.id)).length, 2);
+  assert.equal((await db.listHabitLogs(habit.id)).filter(item => item.localDate === '2026-09-01').length, 1);
+  await db.feedbackQuest(ids[0], 'completed', '', '', undefined, 0, '2026-09-01');
+  assert.equal((await db.listHabitLogs(habit.id)).length, 3);
+  assert.equal((await db.ensureTodayBonusQuests('2026-09-07')).length, 1);
+  const backup = await db.exportBundle();
+  assert.doesNotThrow(() => parseBackup(JSON.stringify(backup)));
+  await assert.rejects(() => db.saveHabit(habit.id, { weeklyTarget: 0 }), /每周目标/);
+});
+
 test('unfinished tasks keep the user-defined order', async (t) => {
   const db = await withDatabase(t, 'task-order');
   const first = await db.addQuest({ localDate: '2026-09-02', type: 'side', sourceType: 'manual', title: '第一项', reason: '手动安排', difficulty: 'light', dimension: 'progress' });
@@ -288,11 +312,11 @@ async function patchRawRecord(database, storeName, id, patch) {
   raw.close();
 }
 
-test('v7 schema contains all twenty-one documented stores and five-dimension ledger indexes', async (t) => {
+test('v8 schema contains all documented stores and five-dimension ledger indexes', async (t) => {
   const db = await withDatabase(t, 'schema');
   const raw = await openRawDatabase(db.name);
   try {
-    assert.equal(raw.version, 7);
+    assert.equal(raw.version, 8);
     assert.deepEqual(Array.from(raw.objectStoreNames), [
       'analyses', 'analysisJobs', 'areas', 'branches', 'dayCaptions', 'entries', 'events', 'goals', 'habitLogs',
       'habits', 'memories', 'milestones', 'observations', 'profile', 'questFeedback', 'quests',
@@ -303,7 +327,8 @@ test('v7 schema contains all twenty-one documented stores and five-dimension led
     assert.equal(transaction.objectStore('revisions').index('byEntryVersion').unique, true);
     assert.equal(transaction.objectStore('observations').index('byAssessmentDimension').unique, true);
     assert.equal(transaction.objectStore('observations').index('byEvidenceId').unique, false);
-    assert.equal(transaction.objectStore('habitLogs').index('byHabitDate').unique, true);
+    assert.equal(transaction.objectStore('habitLogs').index('byHabitDate').unique, false);
+    assert.equal(transaction.objectStore('habitLogs').index('byQuestId').unique, true);
     assert.equal(transaction.objectStore('xpLedger').index('bySettlementKey').unique, true);
     assert.equal(transaction.objectStore('xpLedger').index('byDimension').unique, false);
     assert.equal(transaction.objectStore('analyses').index('byRequestId').unique, true);

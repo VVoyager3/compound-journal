@@ -362,6 +362,8 @@ export interface QuestFeedback extends ImportableEntity {
 export interface Habit extends ImportableEntity {
   name: string;
   minimumAction: string;
+  /** Flexible completions per local Monday–Sunday week; mutually exclusive with a daily count target. */
+  weeklyTarget?: number;
   targetCount?: number;
   countUnit?: string;
   scheduleDays: number[];
@@ -370,6 +372,7 @@ export interface Habit extends ImportableEntity {
     effectiveFrom: string;
     scheduleDays: number[];
     trackingEnabled: boolean;
+    weeklyTarget?: number;
   }>;
   trigger?: string;
   dimension: Dimension;
