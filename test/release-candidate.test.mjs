@@ -94,7 +94,8 @@ test('record editor keeps life diary and daily review as two simple subpages', a
   const app = await read('src/app.ts');
   const styles = await read('src/styles.css');
   assert.match(app, /'生活日记'/);
-  assert.match(app, /'成功小记'/);
+  // The user removed the former success-diary category; keep it out of the UI.
+  assert.doesNotMatch(app, /'成功小记'|'成功日记'/);
   assert.match(app, /'每日复盘'/);
   assert.doesNotMatch(app, /'难忘的事'|'日常记录'|'成功记录'|'趣事记录'|'普通记录'/);
   assert.doesNotMatch(app, /record-summary-input/);
@@ -111,13 +112,15 @@ test('record editor keeps life diary and daily review as two simple subpages', a
 
 test('typography and settings density follow the global UI rules', async () => {
   const styles = await read('src/styles.css');
+  const components = await read('src/design-system.css');
   const checklist = await read('DESIGN-CHECKLIST.md');
   assert.match(styles, /--line:\s*1px/);
   assert.match(styles, /--text-page:\s*clamp\(2rem,\s*7\.5vw,\s*2\.25rem\)/);
   assert.match(styles, /h1,[\s\S]*h3\s*\{[^}]*font-family:\s*inherit/s);
   assert.doesNotMatch(styles, /Noto Serif SC|Source Han Serif SC|Songti SC/);
-  assert.match(styles, /\.button\s*\{[^}]*min-height:\s*48px;[^}]*border:\s*1px solid var\(--forest\);[^}]*box-shadow:\s*none/s);
-  assert.match(styles, /\.input,[\s\S]*\.journal-input\s*\{[^}]*border:\s*1px solid rgb\(40 50 40 \/ 48%\);[^}]*box-shadow:\s*none/s);
+  assert.ok(components.includes('min-height: var(--ui-touch-size)'));
+  assert.ok(components.includes('border: var(--ui-border-width) solid var(--ui-color-line)'));
+  assert.ok(components.includes('gap: var(--ui-field-gap)'));
   assert.match(styles, /\.page\s*\{[^}]*padding:\s*18px var\(--page-pad\) var\(--page-bottom-space\)/s);
   assert.match(styles, /--page-bottom-space:\s*calc\(var\(--bottom-nav-height\) \+ 64px \+ env\(safe-area-inset-bottom\)\)/);
   assert.doesNotMatch(await read('src/app.ts'), /record-number-tools|record-attachment-button/);

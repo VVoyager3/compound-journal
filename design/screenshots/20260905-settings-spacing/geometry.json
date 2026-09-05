@@ -1,0 +1,4641 @@
+[
+  {
+    "name": "today",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row today-record-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row today-record-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row today-record-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "state-detail",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row today-record-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row today-record-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row today-record-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "state-self-assessment",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row today-record-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row today-record-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row today-record-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "tasks-today",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "tasks-plan",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "task-create",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "task-edit",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "goal-create",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "goal-detail",
+    "tiles": [
+      {
+        "component": "stage-toggle is-complete",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "stage-toggle ",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "stage-toggle ",
+        "width": 22,
+        "height": 22
+      }
+    ],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "habit-create",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "habit-detail",
+    "tiles": [
+      {
+        "component": "habit-recent-cell is-empty",
+        "width": 44.5625,
+        "height": 44.5625
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-recent-cell is-empty",
+        "width": 44.5625,
+        "height": 44.5625
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 44.5625,
+        "height": 44.5625
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-recent-cell is-empty",
+        "width": 44.5625,
+        "height": 44.5625
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-recent-cell is-empty",
+        "width": 44.5625,
+        "height": 44.5625
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 44.5625,
+        "height": 44.5625
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-recent-cell is-empty",
+        "width": 44.578125,
+        "height": 44.578125
+      }
+    ],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "record-compose",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "record-daily-review",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "day-overview",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "day-records",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "record-detail",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "day-actions",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "day-review",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "day-review-editor",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "calendar",
+    "tiles": [
+      {
+        "component": "calendar-day is-outside has-habit",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day has-entry has-habit",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day has-entry has-habit",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day has-habit",
+        "width": 46.296875,
+        "height": 46.296875
+      },
+      {
+        "component": "calendar-day is-today has-entry has-task is-selected",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.296875,
+        "height": 46.296875
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.296875,
+        "height": 46.296875
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.296875,
+        "height": 46.296875
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 46.296875,
+        "height": 46.296875
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 46.28125,
+        "height": 46.28125
+      }
+    ],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "growth",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "weekly-review",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "weekly-review-editor",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "task-analysis",
+    "tiles": [
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-level-2",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 18.65625,
+        "height": 18.65625
+      }
+    ],
+    "listRows": [
+      {
+        "component": "ui-list-row analysis-category-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row analysis-category-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row analysis-category-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row analysis-category-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row analysis-category-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "94px"
+  },
+  {
+    "name": "habit-analysis-overview",
+    "tiles": [
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.546875,
+        "height": 43.546875
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.546875,
+        "height": 43.546875
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.546875,
+        "height": 43.546875
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.53125,
+        "height": 43.53125
+      },
+      {
+        "component": "",
+        "width": 43.546875,
+        "height": 43.546875
+      }
+    ],
+    "listRows": [
+      {
+        "component": "ui-data-row habit-comparison-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-data-row habit-comparison-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-data-row habit-comparison-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-data-row habit-comparison-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "94px"
+  },
+  {
+    "name": "habit-analysis-detail",
+    "tiles": [
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-missed",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-missed",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-missed",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 22,
+        "height": 22
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 44.5625,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 44.5625,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 44.5625,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-weekday-column",
+        "width": 44.578125,
+        "height": 44.578125
+      }
+    ],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "94px"
+  },
+  {
+    "name": "settings",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-storage-status",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-danger",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-companion",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-storage-status",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-danger",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-assessment",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-storage-status",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-danger",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-ai",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-storage-status",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-danger",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-data",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-storage-status",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-danger",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-privacy",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-storage-status",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-danger",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-storage",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-storage-status",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-danger",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-display",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-storage-status",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-danger",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-rules",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-storage-status",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-danger",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "rule-create",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-storage-status",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-danger",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "settings-notifications",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-storage-status",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-danger",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "date-preview",
+    "tiles": [
+      {
+        "component": "calendar-day is-outside has-habit",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day has-entry has-habit",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day has-entry has-habit",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day has-habit",
+        "width": 46.296875,
+        "height": 46.296875
+      },
+      {
+        "component": "calendar-day is-today has-entry has-task is-selected",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.296875,
+        "height": 46.296875
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.296875,
+        "height": 46.296875
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.296875,
+        "height": 46.296875
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 46.296875,
+        "height": 46.296875
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 46.28125,
+        "height": 46.28125
+      },
+      {
+        "component": "calendar-day is-outside",
+        "width": 46.28125,
+        "height": 46.28125
+      }
+    ],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "growth-ledger",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "badges",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "badge-detail",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row growth-dimension-card",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "record-history",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "plan-habits",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "habit-edit",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "completion-feedback",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "task-result",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "ai-send",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "ai-candidates",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "20px"
+  },
+  {
+    "name": "weekly-ai",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "weekly-ai-edit",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "weekly-review-editor-end",
+    "tiles": [],
+    "listRows": [],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "plan-future",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "goal-ai",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-mind is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-progress is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-source-habit is-dimension-energy has-count is-habit-checkin",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-goal is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-progress",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-completed is-source-manual is-dimension-connection",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row ui-action-row habit-row habit-list-row",
+        "minHeight": "50px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 793,
+      "width": 400,
+      "height": 73,
+      "top": 793,
+      "right": 400,
+      "bottom": 866,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  },
+  {
+    "name": "delete-confirmation",
+    "tiles": [],
+    "listRows": [
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-storage-status",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      },
+      {
+        "component": "ui-list-row settings-overview-row is-danger",
+        "minHeight": "50px",
+        "paddingInline": "16px 16px",
+        "paddingBlock": "8px 8px",
+        "radius": "8px"
+      }
+    ],
+    "previewOverflow": 0,
+    "navigation": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    },
+    "pagePadding": "97px"
+  }
+]

@@ -1,0 +1,47 @@
+/* Shared review layout. One owner for each gap; app geometry remains unchanged. */
+.sample-page { padding: var(--ui-page-padding); }
+.review-screen {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  gap: var(--review-page-title-gap, var(--ui-title-gap));
+}
+.review-screen > * { min-width: 0; margin: 0; }
+.review-titlebar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: var(--ui-touch-size);
+  gap: var(--ui-space-3);
+  margin: 0;
+  padding: 0;
+}
+.review-titlebar:has(> .ui-back-button) {
+  grid-template-columns: var(--ui-touch-size) minmax(0, 1fr);
+}
+.review-titlebar > .ui-page-title {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--ui-font-page);
+  font-weight: var(--ui-weight-heading);
+  line-height: var(--ui-leading-page);
+}
+.review-screen > .ui-settings-stack {
+  gap: var(--review-section-gap, var(--ui-group-gap));
+}
+.review-screen :is(.ui-list-section, .ui-settings-group) {
+  gap: var(--review-heading-gap, var(--ui-section-gap));
+}
+.review-screen :is(.ui-list-heading, .ui-settings-group-title) {
+  margin: 0;
+  font-size: var(--ui-font-title);
+  font-weight: var(--ui-weight-heading);
+  line-height: var(--ui-leading-title);
+}
+.sample-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-2);
+}
+.sample-section-head > h2 { margin: 0; }

@@ -9,7 +9,10 @@ const output = process.env.QIGUANG_CAPTURE_OUTPUT || fileURLToPath(new URL('../d
 const today = '2026-09-04';
 await mkdir(output, { recursive: true });
 if (process.argv.includes('--gallery-only')) {
-  await writeGallery(JSON.parse(await readFile(`${output}/captures.json`, 'utf8')));
+  const saved = JSON.parse(await readFile(`${output}/captures.json`, 'utf8'));
+  await writeGallery(saved);
+  try { await writeTextAudit(JSON.parse(await readFile(`${output}/text-audit.json`, 'utf8')), saved); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
   process.exit(0);
 }
 process.env.NODE_ENV = 'test';
@@ -127,26 +130,93 @@ let shotIndex = 0;
 const captures = [];
 const geometry = [];
 async function shot(name, options = {}) {
+  const target = options.target || page;
   shotIndex += 1;
-  await page.waitForTimeout(180);
-  if (!options.keepScroll) await page.evaluate(() => window.scrollTo(0, 0));
+  await target.waitForTimeout(180);
+  if (!options.keepScroll) await target.evaluate(() => window.scrollTo(0, 0));
   const path = `${output}/${String(shotIndex).padStart(2, '0')}-${name}.png`;
-  await page.screenshot({ path, fullPage: options.fullPage ?? false, animations: 'disabled' });
-  geometry.push({ name, ...await page.evaluate(() => {
+  await target.screenshot({ path, fullPage: options.fullPage ?? false, animations: 'disabled' });
+  geometry.push({ name, ...await target.evaluate(() => {
+    // Audit the active dialog rather than counting the obscured page as visible.
+    const scope = [...document.querySelectorAll('dialog[open]')].at(-1) || document.querySelector('main');
+    const rendered = el => el.getBoundingClientRect().width > 0 && getComputedStyle(el).visibility !== 'hidden';
+    const metaSelectors = '.caption,.muted,.empty-copy,.save-state,.status-name,.settings-overview-status,.page-header-meta,.character-count,.field-character-count,.state-score-date,.ui-row-value,.ui-row-meta,.habit-plan-summary';
+    const textMetrics = [...scope.querySelectorAll(`.ui-page-title,.ui-list-heading,h2,h3,p,${metaSelectors},.ui-row-label,.field-label,.input,textarea`)]
+      .filter(rendered).map(el => {
+        const role = el.matches('.ui-page-title') ? 'page'
+          : el.closest('[data-ui-row]') && el.matches('h2,h3,.ui-row-label') ? 'body'
+          : el.matches('.ui-list-heading,h2,h3') ? 'section'
+          : el.matches(metaSelectors) ? 'meta'
+          : el.matches('.field-label') ? 'label' : 'body';
+        const style = getComputedStyle(el);
+        return { role, tag: el.tagName, classes: el.className, text: (el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 90), size: style.fontSize, weight: style.fontWeight, leading: style.lineHeight };
+      });
+    const sectionGaps = [...scope.querySelectorAll('.ui-list-section,.ui-settings-group')].filter(rendered).map(el => {
+      const children = [...el.children].filter(rendered);
+      return { title: children[0]?.textContent?.slice(0, 40), gap: children.length > 1 ? children[1].getBoundingClientRect().top - children[0].getBoundingClientRect().bottom : null };
+    });
     const selectors = '.calendar-day,.analysis-heat-cell,.habit-recent-cell,.habit-weekday-column,.habit-comparison-weeks > span,.goal-detail-stage > .stage-toggle';
-    const tiles = [...document.querySelectorAll(selectors)].map(element => {
+    const tiles = [...scope.querySelectorAll(selectors)].map(element => {
       const rect = element.getBoundingClientRect();
       return { component: element.className, width: rect.width, height: rect.height };
     }).filter(tile => tile.width > 0 && tile.height > 0);
     const navigation = [...document.querySelectorAll('.bottom-nav')].at(-1);
-    const previewOverflow = [...document.querySelectorAll('.preview-option')].filter(element => {
+    const previewOverflow = [...scope.querySelectorAll('.preview-option')].filter(element => {
       const rect = element.getBoundingClientRect();
       const copy = element.querySelector(':scope > span')?.getBoundingClientRect();
       return copy && (copy.bottom > rect.bottom + 1 || copy.right > rect.right + 1);
     }).length;
-    return { tiles, previewOverflow, navigation: navigation?.getBoundingClientRect().toJSON(), pagePadding: getComputedStyle(document.querySelector('main')).paddingBottom };
+    const listRows = [...scope.querySelectorAll('[data-ui-row]')].filter(rendered).map(element => {
+      const style = getComputedStyle(element);
+      return {
+        component: element.className,
+        height: element.getBoundingClientRect().height,
+        width: element.getBoundingClientRect().width,
+        grouped: element.parentElement.classList.contains('ui-list-group'),
+        minHeight: style.minHeight,
+        paddingInline: `${style.paddingLeft} ${style.paddingRight}`,
+        paddingBlock: `${style.paddingTop} ${style.paddingBottom}`,
+        radius: style.borderRadius,
+      };
+    });
+    const metricCenters = [...scope.querySelectorAll('.ui-metrics > :is(span, div)')].map(element => {
+      const rect = element.getBoundingClientRect();
+      const number = element.querySelector('strong')?.getBoundingClientRect();
+      return number ? Math.abs((number.left + number.right - rect.left - rect.right) / 2) : 0;
+    });
+    const filterHeader = scope.querySelector('.ui-titlebar-with-filter');
+    const filter = filterHeader?.querySelector('.analysis-range-tabs')?.getBoundingClientRect();
+    const header = filterHeader?.getBoundingClientRect();
+    const typography = [...scope.querySelectorAll('.ui-page-title, .ui-list-heading, h2, h3')]
+      .filter(el => el.getBoundingClientRect().width)
+      .map(el => ({
+        text: el.textContent,
+        role: el.classList.contains('ui-page-title') ? 'page'
+          : el.closest('[data-ui-row]') ? 'row'
+            : 'section',
+        size: getComputedStyle(el).fontSize,
+        weight: getComputedStyle(el).fontWeight,
+      }));
+    const titlebars = [...scope.querySelectorAll('.page > .ui-titlebar, dialog[open] .dialog-content > .ui-titlebar')].filter(rendered);
+    const titlebar = titlebars.at(-1);
+    const shell = titlebar?.parentElement;
+    const next = titlebar?.nextElementSibling;
+    const shellStyle = shell ? getComputedStyle(shell) : null;
+    const titleStyle = titlebar?.querySelector('.ui-page-title') ? getComputedStyle(titlebar.querySelector('.ui-page-title')) : null;
+    const pageShell = shell && titlebar && next ? {
+      paddingLeft: shellStyle.paddingLeft,
+      paddingRight: shellStyle.paddingRight,
+      titleHeight: titlebar.getBoundingClientRect().height,
+      titleGap: next.getBoundingClientRect().top - titlebar.getBoundingClientRect().bottom,
+      titleSize: titleStyle.fontSize,
+      titleWeight: titleStyle.fontWeight,
+    } : null;
+    const shellCoverage = { scope: scope.tagName === 'DIALOG' ? 'dialog' : 'page', measured: Boolean(pageShell), reason: pageShell ? 'active titlebar' : 'no measurable shared titlebar in active scope; not validated' };
+    return { tiles, listRows, metricCenters, typography, textMetrics, sectionGaps, pageShell, shellCoverage, filterRightGap: filter && header ? header.right - filter.right : null, previewOverflow, navigation: navigation?.getBoundingClientRect().toJSON(), pagePadding: getComputedStyle(document.querySelector('main')).paddingBottom };
   }) });
   captures.push({ name, file: path.split('/').at(-1) });
+  await writeFile(`${output}/captures.json`, JSON.stringify(captures, null, 2));
+  await writeGallery(captures);
   console.log(path);
 }
 async function go(route) {
@@ -158,7 +228,7 @@ await go('today');
 await shot('today');
 await page.locator('.status-item').first().click();
 await shot('state-detail', { fullPage: false });
-await page.getByRole('button', { name: '评估这一项' }).click();
+await page.getByRole('button', { name: '重新评估' }).click();
 await shot('state-self-assessment', { fullPage: false });
 await page.keyboard.press('Escape');
 
@@ -171,10 +241,14 @@ await page.getByRole('button', { name: '添加任务' }).click();
 await shot('task-create', { fullPage: false });
 await page.keyboard.press('Escape');
 await page.locator('.task-item-details').first().click();
+await page.getByRole('dialog').locator('.task-item-management > summary').click();
+await page.getByRole('button', { name: /^编辑任务：/ }).click();
+await page.getByRole('dialog', { name: '修改任务', exact: true }).waitFor();
 await shot('task-edit', { fullPage: false });
 await page.keyboard.press('Escape');
 
 await page.getByRole('tab', { name: '计划', exact: true }).click();
+await page.getByRole('button', { name: '目标', exact: true }).click();
 await page.locator('.task-goals .section-heading').getByRole('button', { name: '新建', exact: true }).click();
 await shot('goal-create', { fullPage: false });
 await page.keyboard.press('Escape');
@@ -182,6 +256,7 @@ await page.getByRole('button', { name: /查看目标.*的子任务/ }).click();
 await shot('goal-detail', { fullPage: false });
 await page.keyboard.press('Escape');
 
+await page.getByRole('button', { name: '习惯', exact: true }).click();
 await page.locator('.task-habits .section-heading').getByRole('button', { name: '新建', exact: true }).click();
 await shot('habit-create', { fullPage: false });
 await page.keyboard.press('Escape');
@@ -268,6 +343,7 @@ await shot('record-history');
 await page.keyboard.press('Escape');
 await go('tasks');
 await page.getByRole('tab', { name: '计划', exact: true }).click();
+await page.getByRole('button', { name: '习惯', exact: true }).click();
 await page.locator('.task-habits').scrollIntoViewIfNeeded();
 await shot('plan-habits', { keepScroll: true });
 await page.locator('.task-habits .habit-row').first().locator('summary').click();
@@ -297,6 +373,9 @@ await page.waitForFunction(async date => {
   return ready;
 }, today);
 await go(`day/${today}`);
+// Wait for the async result render before expanding; an earlier render can
+// replace the details element and silently close the just-clicked section.
+await page.getByRole('heading', { name: '测试整理结果', includeHidden: true }).waitFor({ state: 'attached' });
 await page.locator('.day-evidence-details > summary').click();
 await page.getByRole('heading', { name: '测试整理结果' }).waitFor();
 await page.getByRole('heading', { name: '测试整理结果' }).scrollIntoViewIfNeeded();
@@ -306,11 +385,11 @@ await page.getByRole('button', { name: '检查范围并生成' }).click();
 await page.getByRole('dialog', { name: '生成本周复盘' }).getByRole('button', { name: '确认并生成' }).click();
 const consent = page.getByRole('dialog', { name: '允许这一次 AI 周复盘？' });
 if (await consent.count()) await consent.getByRole('button', { name: '允许并继续' }).click();
-await page.locator('.review-focus-card').getByText('保留可持续节奏', { exact: true }).waitFor();
-await page.locator('.review-focus-card').scrollIntoViewIfNeeded();
+await page.locator('.review-next-plan').getByText('保留可持续节奏', { exact: true }).waitFor();
+await page.locator('.review-next-plan').scrollIntoViewIfNeeded();
 await page.locator('.toast').waitFor({ state: 'hidden' }).catch(() => {});
 await shot('weekly-ai', { keepScroll: true });
-await page.getByRole('button', { name: '编辑后采用' }).click();
+await page.getByRole('button', { name: '修改下周建议' }).click();
 await shot('weekly-ai-edit');
 await page.keyboard.press('Escape');
 await page.locator('.personal-review-card').getByRole('button', { name: '修改' }).click();
@@ -319,8 +398,10 @@ await shot('weekly-review-editor-end', { keepScroll: true });
 await page.keyboard.press('Escape');
 await go('tasks');
 await page.getByRole('tab', { name: '计划', exact: true }).click();
+await page.getByRole('button', { name: '之后已安排', exact: true }).click();
 await page.locator('.task-future').scrollIntoViewIfNeeded();
 await shot('plan-future', { keepScroll: true });
+await page.getByRole('button', { name: '目标', exact: true }).click();
 await page.locator('.task-goals .section-heading').getByRole('button', { name: '新建', exact: true }).click();
 const goalEditor = page.getByRole('dialog', { name: '新建目标' });
 await goalEditor.getByRole('textbox', { name: '目标名称' }).fill('整理一份数学复习提纲');
@@ -340,17 +421,55 @@ try {
   const onboarding = await firstUse.newPage();
   await onboarding.goto(base);
   await onboarding.getByRole('dialog', { name: '选一个陪伴角色' }).waitFor();
-  const file = `${String(++shotIndex).padStart(2, '0')}-onboarding.png`;
-  await onboarding.screenshot({ path: `${output}/${file}`, animations: 'disabled' });
-  captures.push({ name: 'onboarding', file });
+  await shot('onboarding', { target: onboarding });
 } finally { await firstUse.close(); }
 
 await writeFile(`${output}/captures.json`, JSON.stringify(captures, null, 2));
 await writeGallery(captures);
 await writeFile(`${output}/geometry.json`, JSON.stringify(geometry, null, 2));
+// Findings are an audit, not a claim that every leaf has a known semantic role.
+const expectedText = { page: [16, 800, 19.2], section: [14.5, 800, 19.575], body: [12.5, 400, 18.75], meta: [11.5, 400, 15.525], label: [12.5, 500, 18.75] };
+const findings = geometry.flatMap(screen => screen.textMetrics.flatMap(item => {
+  const expected = expectedText[item.role];
+  return [item.size, item.weight, item.leading].some((value, i) => Math.abs(parseFloat(value) - expected[i]) > .06)
+    ? [{ screen: screen.name, ...item, expected }] : [];
+}));
+const textAudit = { screenshots: captures.length, measuredTextNodes: geometry.reduce((n, screen) => n + screen.textMetrics.length, 0), scope: 'Visible DOM in active dialog or page; known roles only. Includes line-height; semantic exceptions require review.', findings };
+await writeFile(`${output}/text-audit.json`, JSON.stringify(textAudit, null, 2));
+await writeTextAudit(textAudit, captures);
+console.log(`Text audit: ${findings.length} candidates for semantic/style review; see text-audit.json`);
+assert.equal(findings.length, 0, 'Known text roles must match size, weight and line-height; inspect text-audit.json for failures');
 for (const screen of geometry) assert.equal(screen.previewOverflow, 0, `${screen.name}: preview content must stay inside its card`);
+for (const screen of geometry) if (screen.pageShell) {
+  assert.equal(screen.pageShell.paddingLeft, '20px', `${screen.name}: page uses shared left padding`);
+  assert.equal(screen.pageShell.paddingRight, '20px', `${screen.name}: page uses shared right padding`);
+  assert.equal(screen.pageShell.titleHeight, 44, `${screen.name}: page uses shared titlebar height`);
+  assert.ok(Math.abs(screen.pageShell.titleGap - 4) < .1, `${screen.name}: page uses shared title-to-content gap (${screen.pageShell.titleGap}px)`);
+  assert.equal(screen.pageShell.titleSize, '16px', `${screen.name}: page uses approved title size`);
+  assert.equal(screen.pageShell.titleWeight, '800', `${screen.name}: page uses approved title weight`);
+}
+for (const screen of geometry) for (const type of screen.typography) {
+  const expected = type.role === 'page'
+    ? { size: '16px', weight: '800' }
+    : type.role === 'section'
+      ? { size: '14.5px', weight: '800' }
+      : { size: '12.5px', weight: '400' };
+  assert.equal(type.size, expected.size, `${screen.name}: ${type.role} “${type.text}” uses the shared font size`);
+  assert.equal(type.weight, expected.weight, `${screen.name}: ${type.role} “${type.text}” uses the shared font weight`);
+}
 for (const screen of geometry) for (const tile of screen.tiles) {
   assert.ok(Math.abs(tile.width - tile.height) < .1, `${screen.name}: ${tile.component} must be square (${tile.width}×${tile.height})`);
+}
+for (const screen of geometry) {
+  for (const offset of screen.metricCenters) assert.ok(offset < 1, `${screen.name}: metric must be centered`);
+  if (screen.filterRightGap !== null) assert.ok(Math.abs(screen.filterRightGap) < 5, `${screen.name}: range filter must align right`);
+}
+for (const screen of geometry) for (const row of screen.listRows) {
+  assert.equal(row.minHeight, '45px', `${screen.name}: ${row.component} must use the shared row height`);
+  if (!row.grouped) assert.equal(row.radius, '8px', `${screen.name}: standalone row uses shared radius`);
+  const isAction = row.component.includes('ui-action-row');
+  assert.equal(row.paddingInline, isAction ? '0px 0px' : '20px 20px', `${screen.name}: ${row.component} must use shared horizontal padding`);
+  assert.equal(row.paddingBlock, '0px 0px', `${screen.name}: ${row.component} must use shared vertical padding`);
 }
 } finally {
   await browser.close();
@@ -358,25 +477,18 @@ for (const screen of geometry) for (const tile of screen.tiles) {
 }
 
 async function writeGallery(captures) {
-  const manifest = JSON.parse(await readFile(new URL('../design/reference-20260904/manifest.json', import.meta.url), 'utf8'));
-  const referenceIds = {
-    today: 1, 'state-detail': 2, 'state-self-assessment': 3, 'tasks-today': 4, 'tasks-plan': 5,
-    'plan-habits': 6, 'plan-future': 7, 'task-create': 8, 'task-edit': 9, 'task-result': 10,
-    'goal-create': 11, 'goal-ai': 12, 'goal-detail': 13, 'habit-create': 14, 'habit-detail': 15, 'habit-edit': 16,
-    'record-compose': 17, 'record-daily-review': 18, 'ai-send': 19, 'ai-candidates': 20,
-    calendar: 21, 'date-preview': 22, 'day-overview': 23, 'day-records': 24, 'record-detail': 25, 'record-history': 26,
-    'day-actions': 27, 'weekly-review': 28, 'weekly-review-editor': 29, 'weekly-review-editor-end': 30, 'weekly-ai': 31, 'weekly-ai-edit': 32,
-    growth: 33, 'growth-ledger': 34, badges: 35, 'badge-detail': 36, 'task-analysis': 37, 'habit-analysis-overview': 38, 'habit-analysis-detail': 39,
-    settings: 40, 'settings-companion': 41, 'settings-assessment': 42, 'settings-ai': 43, 'settings-privacy': 44,
-    'settings-data': 45, 'settings-storage': 46, 'delete-confirmation': 47, 'settings-display': 48, 'settings-rules': 49,
-    'rule-create': 50, widget: 51, 'settings-notifications': 52, onboarding: 53, 'image-view': 54, 'completion-feedback': 55, 'ai-error': 56,
-  };
-  const used = new Set(captures.map(item => referenceIds[item.name]));
-  const missing = manifest.screens.filter(screen => !used.has(Number(screen.id.slice(0, 2))));
-  const picture = (src, label) => `<figure><figcaption>${label}</figcaption><a href="${src}"><img src="${src}" loading="lazy" alt="${label}"></a></figure>`;
-  const sections = captures.map(item => {
-    const reference = manifest.screens.find(screen => Number(screen.id.slice(0, 2)) === referenceIds[item.name]);
-    return `<section><h2>${reference?.title ?? item.name}</h2><div class="pair">${reference ? picture(`../../reference-20260904/${reference.file}`, '参考稿') : ''}${picture(item.file, '实际运行 · ' + item.file)}</div></section>`;
-  }).join('');
-  await writeFile(`${output}/index.html`, `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>栖光 · 逐页对照审计</title><style>body{margin:32px;background:#f7f3e8;color:#214d3c;font:16px/1.5 sans-serif}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,640px),1fr));gap:40px}section{min-width:0}h1{font-size:26px}h2{font-size:18px;font-weight:500}.pair{display:flex;gap:16px;align-items:start}figure{flex:1;min-width:0;margin:0}figcaption{font-size:12px;margin-bottom:12px;overflow-wrap:anywhere}img{width:100%;border:1px solid #d9d2c1}a{color:inherit}details{margin:24px 0}</style><h1>栖光 · 逐页对照审计</h1><p>${captures.length} 张实际运行截图 · 400×866 CSS 视口 · 独立仿真数据 · AI 使用本地合约测试响应</p><details><summary>尚未实拍的参考状态：${missing.length}</summary>${missing.map(screen=>`<p><a href="../../reference-20260904/${screen.file}">${screen.id} ${screen.title}</a></p>`).join('')}</details><main>${sections}</main></html>`);
+  const sections = captures.map(item => `<section><h2>${item.file.replace('.png', '')}</h2><a href="${item.file}"><img src="${item.file}" loading="lazy" alt="${item.file}"></a></section>`).join('');
+  await writeFile(`${output}/index.html`, `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>栖光 · 最新页面截图审计</title><style>body{margin:32px;background:#f7f3e8;color:#214d3c;font:16px/1.5 sans-serif}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:32px 24px}section{min-width:0}h1{font-size:26px}h2{margin:0 0 10px;font-size:15px}img{display:block;width:100%;border:1px solid #d9d2c1;background:#fcfaf4}a{color:inherit}</style><h1>栖光 · 最新页面截图审计</h1><p>${captures.length} 张实际运行截图 · 400×866 CSS 视口 · 点击图片查看原图</p><main>${sections}</main></html>`);
+}
+
+async function writeTextAudit(audit, captures) {
+  const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+  const groups = new Map();
+  for (const item of audit.findings) {
+    const key = [item.role, item.tag, item.classes, item.size, item.weight, item.leading].join(' / ');
+    const group = groups.get(key) || { item, count: 0, screens: new Set() };
+    group.count++; group.screens.add(item.screen); groups.set(key, group);
+  }
+  const rows = [...groups.values()].map(({ item, count, screens }) => `<tr><td>${escape(item.role)}<br><code>${escape(item.tag + '.' + item.classes)}</code></td><td>${escape(item.text)}</td><td>${escape([item.size, item.weight, item.leading].join(' / '))}<br>基准：${item.expected.join(' / ')}</td><td>${count}</td><td>${[...screens].map(name => `<a href="${escape(captures.find(capture => capture.name === name).file)}">${escape(name)}</a>`).join('<br>')}</td></tr>`).join('');
+  await writeFile(`${output}/text-audit.html`, `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>栖光 · 组件审计结果</title><style>body{margin:24px;color:#214d3c;background:#fcfaf4;font:14px/1.5 system-ui}table{border-collapse:collapse;width:100%}td,th{text-align:left;border-bottom:1px solid #d9d2c1;padding:12px;vertical-align:top}code{overflow-wrap:anywhere}a{color:inherit}main{overflow:auto}</style><h1>还不能判定全部统一</h1><p>${audit.screenshots} 张页面/状态截图，${audit.measuredTextNodes} 个已识别角色的文字节点。${audit.findings.length} 次偏差合并为 ${groups.size} 组选择器/规格组合，不等于 ${audit.findings.length} 个独立缺陷。</p><p>只检查已识别文字角色；重复页面状态会重复计数。统计、日期和说明的语义例外需要人工判断，未覆盖所有交互状态、设备字体和断点。</p><p><a href="../../ui-tuner.html?view=components&revision=template-audit">打开可调整模板</a> · <a href="index.html">全部截图</a> · <a href="text-audit.json">原始检测结果</a></p><main><table><thead><tr><th>角色 / 选择器</th><th>示例</th><th>字号 / 字重 / 行高</th><th>次数</th><th>截图</th></tr></thead><tbody>${rows}</tbody></table></main></html>`);
 }

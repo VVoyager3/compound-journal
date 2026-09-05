@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>栖光 · 组件尺寸审查</title>
+  <style>
+    .control[hidden],#controls details[hidden]{display:none}
+    *{box-sizing:border-box}body{margin:0;background:#eae8df;color:#214d3c;font:14px/1.5 "Microsoft YaHei",system-ui,sans-serif}
+    button,input,select,textarea{font:inherit}button,select{cursor:pointer}button,input,select{border:1px solid #c8cabc;border-radius:6px;background:#fffef8;color:inherit;padding:7px 10px}button:hover{background:#dee6d8}
+    :focus-visible{outline:2px solid #214d3c;outline-offset:2px}header{padding:16px 24px;background:#fcfaf4;border-bottom:1px solid #d9d2c1}h1{font-size:20px;margin:0}header p{margin:4px 0 0;color:#667264}
+    .layout{display:grid;grid-template-columns:290px minmax(0,1fr);align-items:start}.controls{position:sticky;top:0;max-height:100dvh;overflow:auto;background:#f7f5ed;padding:16px;border-right:1px solid #d9d2c1}.controls details{border-bottom:1px solid #d9d2c1;padding:10px 0}.controls summary{font-weight:700;cursor:pointer;margin-bottom:8px}
+    .control{display:grid;grid-template-columns:1fr 70px;align-items:center;gap:4px 8px;margin-bottom:12px}.control label{font-size:12px}.control input[type=range]{grid-column:1/-1;width:100%;padding:0;accent-color:#214d3c}.control input[type=number]{width:70px;padding:4px}.actions{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}.primary{color:#fcfaf4;background:#214d3c}.primary:hover{background:#32684e}#status{font-size:12px;min-height:36px;margin:8px 0;color:#526650}#transfer{width:100%;min-height:100px;font:11px/1.5 monospace}
+    .work{padding:18px;min-width:0}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}.toolbar select{min-width:220px}.toolbar small{color:#667264}.compare{display:flex;align-items:flex-start;gap:20px;overflow-x:auto;padding:4px 2px 16px}.pane{flex:none;width:var(--frame-width,400px)}.pane h2{font-size:13px;margin:0 0 8px}.pane iframe{display:block;width:100%;height:866px;border:1px solid #cecbbd;border-radius:10px;background:#fcfaf4}.pane .metrics{min-height:40px;font:12px/1.5 monospace;margin:6px 0;color:#637164}
+    .review{background:#fcfaf4;border:1px solid #d9d2c1;border-radius:8px;margin-top:16px;padding:16px}.review h2{margin:0 0 10px;font-size:17px}.review p{margin:6px 0}.review table{border-collapse:collapse;width:100%;font-size:12px}.review th,.review td{text-align:left;padding:9px;border-bottom:1px solid #e2ddcf;vertical-align:top}.review th:first-child{width:70px}.review .scroll{overflow:auto}.reference{display:block;max-width:400px;width:100%;height:auto}.muted{color:#667264}details.review summary{cursor:pointer;font-weight:700}#file{display:none}
+    @media(max-width:760px){.layout{grid-template-columns:1fr}.controls{position:static;max-height:400px;border-bottom:1px solid #d9d2c1}.work{padding:12px}.pane iframe{height:760px}}
+  </style>
+</head>
+<body>
+<header><h1>栖光 · 组件尺寸审查</h1><p>先调整公共模板，再检查实际页面。前 3 个视图使用真实组件，后 8 个为原型；参数不会自动修改 App。</p></header>
+<div class="layout">
+  <aside class="controls" aria-label="组件参数">
+    <div class="actions"><button id="base">恢复 32 基准</button><button id="compact">紧凑候选</button></div>
+    <div id="controls"></div>
+    <div class="actions"><button id="save" class="primary">保存参数</button><button id="export">导出参数</button><button id="import">导入参数</button></div>
+    <input id="file" type="file" accept="application/json,.json">
+    <p id="status" role="status" aria-live="polite">修改会自动保存在此浏览器。确认后请导出 JSON 发给我。</p>
+    <details><summary>参数文本 / 复制给我</summary><textarea id="transfer" readonly aria-label="当前参数 JSON"></textarea><button id="copy">复制参数</button></details>
+  </aside>
+  <main class="work">
+    <div class="toolbar"><label for="view">预览</label><select id="view" aria-label="预览组件">
+      <option value="components">统一组件 · 列表 / 按钮 / 切换 / 表单</option>
+      <option value="lists">01 / 02 / 04 · 任务、习惯、已完成</option>
+      <option value="settings">27 / 32 · 设置分组</option>
+      <option value="goals">05 / 08 · 目标与手动子任务</option>
+      <option value="edit">07 · 居中任务弹窗</option>
+      <option value="repeat">10 · 重复日期</option>
+      <option value="daily">13 · 每日复盘模板</option>
+      <option value="weekly">22 / 23 · 周复盘模板</option>
+      <option value="calendar">20 · 日历与搜索</option>
+      <option value="growth">21 · 简线状态与徽章</option>
+      <option value="analysis">24 · 热力图与统计行</option>
+    </select><label><input id="compare" type="checkbox" checked> 显示当前 App 尺寸</label><small>先看当前尺寸；觉得偏大或偏松，再调左侧候选。</small></div>
+    <p id="preview-kind" role="note"></p>
+    <div class="compare">
+      <section class="pane" id="candidate-pane"><h2>可调整候选 · 多页共用一套尺寸</h2><iframe id="candidate" title="可调整的组件样例"></iframe><p class="metrics" id="metrics"></p></section>
+      <section class="pane" id="baseline-pane"><h2>当前 App 尺寸 · 不随参数变化</h2><iframe id="baseline" title="当前 App 组件"></iframe><p class="metrics" id="baseline-metrics"></p></section>
+    </div>
+    <section class="review">
+      <h2>只确认公共组件，不再逐页调尺寸</h2>
+      <p>建议顺序：字体 → 列表 → 标题与分组间距 → 按钮和表单。最后导出参数文件发给我；不用再逐页报像素。</p>
+      <p>向下滚动预览可查看列表、标题栏、按钮、分段、表单和提示。确认字是否舒服、密度是否合适、操作是否清楚即可。</p>
+      <p>“页面标题到正文”统一从标题栏下沿开始计算；“分组标题到列表”控制正文内的小标题间隔。预览下方会显示实际测量值。</p>
+      <p class="muted">所有预览共用标题与分组布局；任务、设置和组件样板直接使用 App 列表组件，其余为交互原型。调整保存在本浏览器，不自动覆盖 App；确认后点击“导出参数”。</p>
+    </section>
+    <section class="review" id="templates"><h2>可调整模板清单</h2>
+      <div class="scroll"><table><thead><tr><th>模板</th><th>调什么</th><th>在哪里看 / 边界</th></tr></thead><tbody>
+        <tr><td>页面壳 / 标题栏</td><td>左右边距、标题字号、标题到正文</td><td>统一组件；一级/二级壳共用规则。确认弹层需回正式页面复核</td></tr>
+        <tr><td>四级文字</td><td>页面标题、组件标题、正文、辅助信息；标题/正文粗细</td><td>统一组件底部的文字与正文样板；控件用正文大小、500字重</td></tr>
+        <tr><td>内容分组</td><td>分组之间、分组标题到内容</td><td>设置分组；与页面标题到正文是两项不同参数</td></tr>
+        <tr><td>统一列表</td><td>最低高度、内边距、圆角、行内距离、计数到 +1、操作列宽</td><td>任务 / 习惯 / 已完成；只读、导航、操作、控件是同一几何的不同用途</td></tr>
+        <tr><td>按钮 / 分段</td><td>可见高度、点击高度</td><td>统一组件；最低触控 44px，不能靠压缩触控区域变小</td></tr>
+        <tr><td>表单 / 正文</td><td>标签到输入框、字段之间、多行高度</td><td>统一组件；“正文”为组件标题，小字段标签仍用正文级</td></tr>
+        <tr><td>容器 / 提示</td><td>圆角、内部文字；内边距暂固定公共令牌</td><td>统一组件；没有独立颜色、边框宽度或内边距滑块</td></tr>
+        <tr><td>特殊内容</td><td>复盘高度、重复日期间距、热力图方格/间距/列表宽</td><td>对应原型视图；人物、徽章、底栏没有实时调节模板，需正式页面复核</td></tr>
+      </tbody></table></div>
+    </section>
+    <details class="review"><summary>全部参数与基准数值（31 项）</summary><div class="scroll"><table><thead><tr><th>分类</th><th>参数</th><th>基准</th><th>导出键</th></tr></thead><tbody id="parameter-catalog"></tbody></table></div></details>
+    <details class="review"><summary>其他页面的旧原型记录（非本轮验收）</summary>
+      <div class="scroll"><table><thead><tr><th>编号</th><th>问题 / 要求</th><th>候选与实现边界</th></tr></thead><tbody id="audit"></tbody></table></div>
+    </details>
+    <details class="review"><summary>查看原来的 32 截图</summary><p>历史参照，只沿用分组结构；不是当前 App 的截图。</p><img class="reference" src="screenshots/20260905-rebuilt-pages/32-settings-privacy.png" alt="32 AI 发送范围历史截图"></details>
+  </main>
+</div>
+<script defer src="./ui-tuner.js"></script>
+</body>
+</html>

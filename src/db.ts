@@ -1293,7 +1293,7 @@ function migrateLegacyBackupJournals(data: Partial<BackupData>, timestamp: strin
     }
     if (!referencesMigratedEntry) return job;
     const { errorCode: _errorCode, nextAttemptAt: _nextAttemptAt, ...withoutRetry } = job;
-    return { ...withoutRetry, status: 'stale', errorMessage: '旧版成功日记已迁移，请重新整理。', updatedAt: timestamp, version: job.version + 1 };
+    return { ...withoutRetry, status: 'stale', errorMessage: '旧版记录已迁移，请重新整理。', updatedAt: timestamp, version: job.version + 1 };
   });
 
   const invalidEventIds = new Set<string>();
