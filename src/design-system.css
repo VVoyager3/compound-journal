@@ -69,8 +69,13 @@
   --ui-review-input-height: 116px;
   --ui-heat-cell: 16px;
   --ui-heat-gap: 5px;
+  --ui-monthly-trend-height: 14px;
   --ui-analysis-width: 100%;
+  --ui-viewport-height: 100vh;
+  --ui-dynamic-viewport-height: 100dvh;
   --ui-touch-size: 44px;
+  /* Clipped accessible text/file inputs retain a nonzero layout box. */
+  --ui-a11y-hidden-size: 1px;
   --ui-button-height: 36px;
   --ui-button-hit-inset: max(0px, calc((var(--ui-touch-size) - var(--ui-button-height)) / 2));
   --ui-tab-height: 28px;
@@ -80,6 +85,7 @@
   --ui-row-height: 45px;
   --ui-row-action-width: 55px;
   --ui-icon-size: 24px;
+  --ui-inline-icon-size: 1em;
   --ui-nav-height: 73px;
   --ui-nav-item-size: 56px;
   --ui-popover-width: 210px;
@@ -151,6 +157,19 @@ body {
   background: var(--ui-color-page);
 }
 
+/* Accessible labels and the native file input share one clipped-box geometry.
+ * Their existing position/clip rules remain in place; no visible label is hidden. */
+.sr-only,
+.shell-network-status:not(.is-offline),
+.icon-only.is-previous > span,
+.icon-only.is-next > span,
+.hotspot-label,
+.room-hotspot.is-character .hotspot-label,
+.file-button input {
+  width: var(--ui-a11y-hidden-size);
+  height: var(--ui-a11y-hidden-size);
+}
+
 body,
 button,
 input,
@@ -164,6 +183,35 @@ body {
   font-weight: var(--ui-weight-regular);
   line-height: var(--ui-leading-body);
 }
+
+/* Ordinary text inherits one of the four roles. Business layout CSS owns no type. */
+:where(.page, .dialog) strong { font-weight: inherit; }
+:where(.boot-screen) { font-size: var(--ui-font-body); line-height: var(--ui-leading-body); }
+.boot-screen strong { font-size: var(--ui-font-page); font-weight: var(--ui-weight-heading); }
+:is(.network-badge, .life-diary-time, .day-record-meta, .editor-draft-state,
+    .feedback-character-count, .habit-week-day, .habit-week-label, .habit-result-tag,
+    .habit-weekday-column, .analysis-heat-months, .analysis-weekday-labels,
+    .monthly-stat-label, .monthly-stat-comparison, .goal-status, .plan-section-count,
+    .tag, .event-kind, .confirmation-tag, .nav-item) {
+  font-size: var(--ui-font-meta);
+  font-weight: var(--ui-weight-regular);
+  line-height: var(--ui-leading-meta);
+}
+:is(.state-current-score strong, .habit-stat strong, .habit-focus-rate strong,
+    .habit-focus-summary strong, .habit-overview-summary strong, .growth-month-xp,
+    .growth-overall-level, .growth-period-value, .status-item strong) {
+  font-size: var(--ui-font-metric);
+  font-weight: var(--ui-weight-regular);
+  line-height: var(--ui-leading-page);
+}
+:is(.button-icon, .icon-only, .character-panel-close, .nav-icon, .header-icon-button,
+    .task-item-details, .task-drag-handle, .record-detail-more > summary,
+    .day-record-more > summary, .detail-header-more, .secondary-back) {
+  font-size: var(--ui-font-icon);
+  line-height: 1;
+}
+.task-quick-submit { font-size: 0; }
+.task-quick-submit::before { font-size: var(--ui-font-body); }
 
 :focus-visible {
   outline: var(--ui-space-1) solid var(--ui-color-focus);
@@ -283,8 +331,22 @@ body {
 }
 
 .ui-dialog-titlebar {
-  grid-template-columns: var(--ui-touch-size) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
+}
+
+.ui-dialog-titlebar:has(> .ui-back-button) { grid-template-columns: var(--ui-touch-size) minmax(0, 1fr); }
+.ui-dialog-titlebar:has(> .ui-titlebar-action) { grid-template-columns: minmax(0, 1fr) var(--ui-touch-size); }
+.ui-titlebar-action {
+  display: grid;
+  place-items: center;
+  width: var(--ui-touch-size);
+  min-height: var(--ui-touch-size);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--ui-color-muted);
+  font-size: var(--ui-font-icon);
 }
 
 .ui-dialog-titlebar:has(> :nth-child(3)) {
@@ -292,9 +354,10 @@ body {
 }
 
 .ui-dialog-titlebar > .ui-page-title {
-  grid-column: 2;
+  grid-column: 1;
   justify-self: start;
 }
+.ui-dialog-titlebar:has(> .ui-back-button) > .ui-page-title { grid-column: 2; }
 
 .ui-dialog-titlebar > :nth-child(3) {
   grid-column: 3;
@@ -751,7 +814,7 @@ button.ui-list-row:is(:hover,:focus-visible) { background: var(--ui-color-accent
   background: var(--ui-color-surface);
 }
 
-.full-screen-editor .dialog-content {
+.dialog .dialog-content {
   gap: 0;
   padding: max(var(--ui-page-padding), env(safe-area-inset-top)) var(--ui-page-padding) var(--ui-page-padding);
 }
@@ -1129,7 +1192,7 @@ button.ui-list-row:is(:hover,:focus-visible) { background: var(--ui-color-accent
 
 .ui-tone-options { margin: 0; min-width: 0; }
 .ui-tone-options .ui-segmented-item { display: flex; justify-content: center; gap: var(--ui-space-2); padding-inline: var(--ui-space-3); }
-.ui-tone-icon { width: 1em; height: 1em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ui-tone-icon { width: var(--ui-inline-icon-size); height: var(--ui-inline-icon-size); flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .ui-switch {
   appearance: none;
   display: grid;
@@ -1188,10 +1251,10 @@ button.ui-list-row:is(:hover,:focus-visible) { background: var(--ui-color-accent
 }
 
 /* One page shell: the same title and group rhythm on routes and full-screen editors. */
-:is(.page, .full-screen-editor .dialog-content) { gap: 0; }
-:is(.page, .full-screen-editor .dialog-content) > .ui-titlebar { margin: 0; }
-:is(.page, .full-screen-editor .dialog-content) > .ui-titlebar + * { margin-block-start: var(--ui-title-gap); }
-:is(.page, .full-screen-editor .dialog-content) > :not(.ui-titlebar) + * { margin-block-start: var(--ui-group-gap); }
+:is(.page, .dialog .dialog-content) { gap: 0; }
+:is(.page, .dialog .dialog-content) > .ui-titlebar { margin: 0; }
+:is(.page, .dialog .dialog-content) > .ui-titlebar + * { margin-block-start: var(--ui-title-gap); }
+:is(.page, .dialog .dialog-content) > :not(.ui-titlebar) + * { margin-block-start: var(--ui-group-gap); }
 .personal-review-fields .compact-textarea { min-height: var(--ui-review-input-height); }
 .weekday-picker legend { margin-bottom: var(--ui-repeat-gap); }
 .page-task-analysis .analysis-category-section { width: var(--ui-analysis-width); margin-inline: auto; }

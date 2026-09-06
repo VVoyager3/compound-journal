@@ -55,6 +55,12 @@ test('habit check-in customises the shared task row through its API', () => {
   assert.doesNotMatch(app, /row\.querySelector\('h3'\)/);
 });
 
+test('every dialog gets the shared titlebar before optional back navigation', () => {
+  const shell = app.slice(app.indexOf('function dialogShell('), app.indexOf('function addDialogBack('));
+  assert.match(shell, /node\('header', 'ui-titlebar ui-dialog-titlebar'\)/);
+  assert.doesNotMatch(shell, /content\.append\(heading\)/);
+});
+
 test('migrated content uses shared primitives without a second goal menu skin', () => {
   for (const component of ['ui-panel', 'ui-actions', 'ui-form-stack', 'ui-row-main']) {
     assert.ok(app.includes(component), component);
@@ -81,4 +87,13 @@ test('migrated text roles cannot regain legacy typography or discrete shared pix
       assert.doesNotMatch(decl.value, /\d+(?:\.\d+)?px\b/, `${decl.parent.selector}: shared sizes belong to tokens`);
     }
   });
+});
+
+test('business layout CSS cannot define a parallel typography system', () => {
+  const violations = [];
+  postcss.parse(legacyCss).walkDecls(decl => {
+    if (/^(font|font-size|font-weight|line-height|letter-spacing)$/.test(decl.prop)
+      || (decl.prop === 'font-family' && decl.value !== 'inherit')) violations.push(`${decl.parent.selector}: ${decl.prop}`);
+  });
+  assert.deepEqual(violations, []);
 });

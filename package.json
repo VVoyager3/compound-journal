@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^7.6.8",
+    "css-tree": "^3.2.1",
     "fake-indexeddb": "^6.2.5",
     "playwright-core": "^1.54.0",
     "typescript": "^7.0.2",

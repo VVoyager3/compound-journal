@@ -1,0 +1,340 @@
+{
+  "baselineRef": "index",
+  "viewport": [
+    400,
+    866
+  ],
+  "scope": "Identical isolated fixture DOM with before/after CSS; not business, responsive or device validation.",
+  "results": [
+    {
+      "file": "01-today.html",
+      "identical": true,
+      "before": "683ab620c6ccb5d53cc666793776de7ccfeec5153a05b53f8e06e274b8087432",
+      "after": "683ab620c6ccb5d53cc666793776de7ccfeec5153a05b53f8e06e274b8087432"
+    },
+    {
+      "file": "02-state-detail.html",
+      "identical": true,
+      "before": "a8701b18c302432a932562420cbbb15e4f6f872f0310694a1fcf055a18948662",
+      "after": "a8701b18c302432a932562420cbbb15e4f6f872f0310694a1fcf055a18948662"
+    },
+    {
+      "file": "03-state-self-assessment.html",
+      "identical": true,
+      "before": "1aa83b35bdfcbaee16ae37af180e1b8fd0c6fc195359bd8f322b5f987428da71",
+      "after": "1aa83b35bdfcbaee16ae37af180e1b8fd0c6fc195359bd8f322b5f987428da71"
+    },
+    {
+      "file": "04-tasks-today.html",
+      "identical": true,
+      "before": "8e947840335993e5aa445f06701f8c9dd8ffb4cdf970be7a7d0d0fe68ab4e8c1",
+      "after": "8e947840335993e5aa445f06701f8c9dd8ffb4cdf970be7a7d0d0fe68ab4e8c1"
+    },
+    {
+      "file": "05-tasks-plan.html",
+      "identical": true,
+      "before": "eb09ac4d38f0c7f2a653cd2e2bee8e5115a76c0d297be244e9789f1bfea3eff4",
+      "after": "eb09ac4d38f0c7f2a653cd2e2bee8e5115a76c0d297be244e9789f1bfea3eff4"
+    },
+    {
+      "file": "06-task-create.html",
+      "identical": true,
+      "before": "035c19944db7a2644c0548685580e1ac48837d0b0c090993ae502ec2ae65e941",
+      "after": "035c19944db7a2644c0548685580e1ac48837d0b0c090993ae502ec2ae65e941"
+    },
+    {
+      "file": "07-task-edit.html",
+      "identical": true,
+      "before": "71f76b641714402591be180ea56df013f6d3f1438b482a3b965f6a018e0fa977",
+      "after": "71f76b641714402591be180ea56df013f6d3f1438b482a3b965f6a018e0fa977"
+    },
+    {
+      "file": "08-goal-create.html",
+      "identical": true,
+      "before": "69c0faac2732c07aecc3f20a66262736102ddba53652d4bcbdd443d6bbbf7356",
+      "after": "69c0faac2732c07aecc3f20a66262736102ddba53652d4bcbdd443d6bbbf7356"
+    },
+    {
+      "file": "09-goal-detail.html",
+      "identical": true,
+      "before": "782a0ea340da6dfe08ba2e2dbd11de1dfdf5a3bc75acc4d80e5a97b0d3fbab3f",
+      "after": "782a0ea340da6dfe08ba2e2dbd11de1dfdf5a3bc75acc4d80e5a97b0d3fbab3f"
+    },
+    {
+      "file": "10-habit-create.html",
+      "identical": true,
+      "before": "149e635e3c76740f5ebd7fec8ccd32890b8d0b4f38d780fb97c57471dd581e88",
+      "after": "149e635e3c76740f5ebd7fec8ccd32890b8d0b4f38d780fb97c57471dd581e88"
+    },
+    {
+      "file": "11-habit-detail.html",
+      "identical": true,
+      "before": "2bbe4231f25c7099ca29755e31acda71a8b59994093239b89b2e080feea5891e",
+      "after": "2bbe4231f25c7099ca29755e31acda71a8b59994093239b89b2e080feea5891e"
+    },
+    {
+      "file": "12-record-compose.html",
+      "identical": true,
+      "before": "8f1406d130a81141f80ce7c03c5602ee3c7f2966bd5b053b9ae87586786c2e6a",
+      "after": "8f1406d130a81141f80ce7c03c5602ee3c7f2966bd5b053b9ae87586786c2e6a"
+    },
+    {
+      "file": "13-record-daily-review.html",
+      "identical": true,
+      "before": "4b25f9f0d0aebe6d0ff77311cab7c3ef6ce2bbeb1a810e5ae83610ecd079b640",
+      "after": "4b25f9f0d0aebe6d0ff77311cab7c3ef6ce2bbeb1a810e5ae83610ecd079b640"
+    },
+    {
+      "file": "14-day-overview.html",
+      "identical": true,
+      "before": "5112e26b447b03c1cc1892739ba8ff9906dc06632c43375535005aae080d05d2",
+      "after": "5112e26b447b03c1cc1892739ba8ff9906dc06632c43375535005aae080d05d2"
+    },
+    {
+      "file": "15-day-records.html",
+      "identical": true,
+      "before": "8775e341cbee0e84b2b729d4f6fe0e897f3e6e4459a223f67f6953ad5781336e",
+      "after": "8775e341cbee0e84b2b729d4f6fe0e897f3e6e4459a223f67f6953ad5781336e"
+    },
+    {
+      "file": "16-record-detail.html",
+      "identical": true,
+      "before": "0decd4683881a048fb93f9fc802a47d6375582dce14a850f88d6a83762a8092a",
+      "after": "0decd4683881a048fb93f9fc802a47d6375582dce14a850f88d6a83762a8092a"
+    },
+    {
+      "file": "17-day-actions.html",
+      "identical": true,
+      "before": "ed6270722bf9f423432658d4344cbc47ebd246d4791de5c8e4651734c1fc7e7c",
+      "after": "ed6270722bf9f423432658d4344cbc47ebd246d4791de5c8e4651734c1fc7e7c"
+    },
+    {
+      "file": "18-day-review.html",
+      "identical": true,
+      "before": "ea6a588decc8100eae6f9b3d45776a19f41f7e327a800827a9e7b907da7ad9e3",
+      "after": "ea6a588decc8100eae6f9b3d45776a19f41f7e327a800827a9e7b907da7ad9e3"
+    },
+    {
+      "file": "19-day-review-editor.html",
+      "identical": true,
+      "before": "33332e81d42e8d3d9d12b2473e35738eae1890635369a7a73df11a26d3575b7a",
+      "after": "33332e81d42e8d3d9d12b2473e35738eae1890635369a7a73df11a26d3575b7a"
+    },
+    {
+      "file": "20-calendar.html",
+      "identical": true,
+      "before": "927b0b2659cec2913327fc14d776ede8b2963b8ea2f9776c11934f08b6a8a9e8",
+      "after": "927b0b2659cec2913327fc14d776ede8b2963b8ea2f9776c11934f08b6a8a9e8"
+    },
+    {
+      "file": "21-growth.html",
+      "identical": true,
+      "before": "4079b48ccec55d8918fda480824d7a30c36cd1af648e37dd509d462f33c87f7c",
+      "after": "4079b48ccec55d8918fda480824d7a30c36cd1af648e37dd509d462f33c87f7c"
+    },
+    {
+      "file": "22-weekly-review.html",
+      "identical": true,
+      "before": "6dc557bf4e9f1cc71816508aa14aa780e32c399f8027762a421bba1147fcc961",
+      "after": "6dc557bf4e9f1cc71816508aa14aa780e32c399f8027762a421bba1147fcc961"
+    },
+    {
+      "file": "23-weekly-review-editor.html",
+      "identical": true,
+      "before": "a190155621ca0939c1ef954719d7e80c4a4fdfa3d14f5441e3f009fcb2536c15",
+      "after": "a190155621ca0939c1ef954719d7e80c4a4fdfa3d14f5441e3f009fcb2536c15"
+    },
+    {
+      "file": "24-task-analysis.html",
+      "identical": true,
+      "before": "7863c4df84f95931d99e901694de21a7efad3c6f53247849cebb62f73a25b65e",
+      "after": "7863c4df84f95931d99e901694de21a7efad3c6f53247849cebb62f73a25b65e"
+    },
+    {
+      "file": "25-habit-analysis-overview.html",
+      "identical": true,
+      "before": "fc580dd0199f60f0a523047a9efc170964c1c131bdea09f14c295ade5dfef6d9",
+      "after": "fc580dd0199f60f0a523047a9efc170964c1c131bdea09f14c295ade5dfef6d9"
+    },
+    {
+      "file": "26-habit-analysis-detail.html",
+      "identical": true,
+      "before": "d2ecea9e62f9bc26294cc076a1ab56f3427318f254bee62cb28fed7b76dd1624",
+      "after": "d2ecea9e62f9bc26294cc076a1ab56f3427318f254bee62cb28fed7b76dd1624"
+    },
+    {
+      "file": "27-settings.html",
+      "identical": true,
+      "before": "70da6323fd4ede1ca7927de2423159ba3b2b71c816eaf7ba2616614fd54ed349",
+      "after": "70da6323fd4ede1ca7927de2423159ba3b2b71c816eaf7ba2616614fd54ed349"
+    },
+    {
+      "file": "28-settings-companion.html",
+      "identical": true,
+      "before": "0c070944fd146edd29bbf869286368f8fffc90f586e084b0793248b03db1f9a9",
+      "after": "0c070944fd146edd29bbf869286368f8fffc90f586e084b0793248b03db1f9a9"
+    },
+    {
+      "file": "29-settings-assessment.html",
+      "identical": true,
+      "before": "84295dab984d224ce867d431e028a3e56a24f686d6ac7a845a1c3c36a75f5c5d",
+      "after": "84295dab984d224ce867d431e028a3e56a24f686d6ac7a845a1c3c36a75f5c5d"
+    },
+    {
+      "file": "30-settings-ai.html",
+      "identical": true,
+      "before": "6b537a8f83f9feeb975c2c080beae50394df4dc0b54988b8a19304945152ef2e",
+      "after": "6b537a8f83f9feeb975c2c080beae50394df4dc0b54988b8a19304945152ef2e"
+    },
+    {
+      "file": "31-settings-data.html",
+      "identical": true,
+      "before": "5b1b9688262bc346ed005abd438427f3c6e58de9bf969d289bd65b4ec36c1063",
+      "after": "5b1b9688262bc346ed005abd438427f3c6e58de9bf969d289bd65b4ec36c1063"
+    },
+    {
+      "file": "32-settings-privacy.html",
+      "identical": true,
+      "before": "34c11966c80ac03e612635bfbc5a20c7c8b92d1e3a622c6693fd04f50d739869",
+      "after": "34c11966c80ac03e612635bfbc5a20c7c8b92d1e3a622c6693fd04f50d739869"
+    },
+    {
+      "file": "33-settings-storage.html",
+      "identical": true,
+      "before": "5be3130509579adef6ed2e2614073b038c1a348450fcfa765e94e30f1d1d980b",
+      "after": "5be3130509579adef6ed2e2614073b038c1a348450fcfa765e94e30f1d1d980b"
+    },
+    {
+      "file": "34-settings-display.html",
+      "identical": true,
+      "before": "926ec5e89f0ee7d5e9c3740b8bdad06a5af307d89798ea7d6a00a5895eee4fb0",
+      "after": "926ec5e89f0ee7d5e9c3740b8bdad06a5af307d89798ea7d6a00a5895eee4fb0"
+    },
+    {
+      "file": "35-settings-rules.html",
+      "identical": true,
+      "before": "f4ad099f01da001743aa96a3e03413ce8eb2fef75b576cf4d3625061ca0dfa7c",
+      "after": "f4ad099f01da001743aa96a3e03413ce8eb2fef75b576cf4d3625061ca0dfa7c"
+    },
+    {
+      "file": "36-rule-create.html",
+      "identical": true,
+      "before": "6250fdc7f5d31918331f7e42c773178083ded2c2a4821909de531f0731c9f824",
+      "after": "6250fdc7f5d31918331f7e42c773178083ded2c2a4821909de531f0731c9f824"
+    },
+    {
+      "file": "37-settings-notifications.html",
+      "identical": true,
+      "before": "0b490d356d4a1047d9f12c90d340b95208a12feee784a457411a70257e51d453",
+      "after": "0b490d356d4a1047d9f12c90d340b95208a12feee784a457411a70257e51d453"
+    },
+    {
+      "file": "38-date-preview.html",
+      "identical": true,
+      "before": "74bc8e99485d974be854a3cb76d96485220e3b9d0f70f1cb5c0b841aae0f9711",
+      "after": "74bc8e99485d974be854a3cb76d96485220e3b9d0f70f1cb5c0b841aae0f9711"
+    },
+    {
+      "file": "39-growth-ledger.html",
+      "identical": true,
+      "before": "431b67b7a4d0b5fbf1022fbe7f5e3c95e9beea0dc70ae5ac1d243c904085a81d",
+      "after": "431b67b7a4d0b5fbf1022fbe7f5e3c95e9beea0dc70ae5ac1d243c904085a81d"
+    },
+    {
+      "file": "40-badges.html",
+      "identical": true,
+      "before": "11fdbedf4a14ebb20b90c14998da749bcd5aa850334272236332963166c009f7",
+      "after": "11fdbedf4a14ebb20b90c14998da749bcd5aa850334272236332963166c009f7"
+    },
+    {
+      "file": "41-badge-detail.html",
+      "identical": true,
+      "before": "56d1eb26473f2edc00db8f035a14885618f0a6dfb17809a4edb1aefee41787da",
+      "after": "56d1eb26473f2edc00db8f035a14885618f0a6dfb17809a4edb1aefee41787da"
+    },
+    {
+      "file": "42-record-history.html",
+      "identical": true,
+      "before": "34155eb4273b2115150d107be3eafdb49e2f1749df66c07f2e44c1e762c510e8",
+      "after": "34155eb4273b2115150d107be3eafdb49e2f1749df66c07f2e44c1e762c510e8"
+    },
+    {
+      "file": "43-plan-habits.html",
+      "identical": true,
+      "before": "4bc664734ae75e90dbb6a3dff1b6c63b082ef29acedb4e2c17768eaa9bf63bb9",
+      "after": "4bc664734ae75e90dbb6a3dff1b6c63b082ef29acedb4e2c17768eaa9bf63bb9"
+    },
+    {
+      "file": "44-habit-edit.html",
+      "identical": true,
+      "before": "cc9e12888260ae2af3e3de1bf35bb10691a9337a7b1fb4b19815f148cf69313c",
+      "after": "cc9e12888260ae2af3e3de1bf35bb10691a9337a7b1fb4b19815f148cf69313c"
+    },
+    {
+      "file": "45-completion-feedback.html",
+      "identical": true,
+      "before": "943f17ae2f600f0bf813533b70411c4b6d85eb3f9b526f75b47b82131e06d158",
+      "after": "943f17ae2f600f0bf813533b70411c4b6d85eb3f9b526f75b47b82131e06d158"
+    },
+    {
+      "file": "46-task-result.html",
+      "identical": true,
+      "before": "f6c9e411cd6980ccac7384b2f0597f89ecce58cbeb82671d6c2b6f234555e96e",
+      "after": "f6c9e411cd6980ccac7384b2f0597f89ecce58cbeb82671d6c2b6f234555e96e"
+    },
+    {
+      "file": "47-ai-send.html",
+      "identical": true,
+      "before": "78f632646ec94d0fb4d943d7500eea6a8650251280a6393662c3fd31b41b22ef",
+      "after": "78f632646ec94d0fb4d943d7500eea6a8650251280a6393662c3fd31b41b22ef"
+    },
+    {
+      "file": "48-ai-candidates.html",
+      "identical": true,
+      "before": "15a104e2ab8b5898481ea24917f11de03c10d225800ff172a0cab3e635ead8f5",
+      "after": "15a104e2ab8b5898481ea24917f11de03c10d225800ff172a0cab3e635ead8f5"
+    },
+    {
+      "file": "49-weekly-ai.html",
+      "identical": true,
+      "before": "32a52d909737893d840976baa6e96370a135b9298465d757c5ea9a1afc24627a",
+      "after": "32a52d909737893d840976baa6e96370a135b9298465d757c5ea9a1afc24627a"
+    },
+    {
+      "file": "50-weekly-ai-edit.html",
+      "identical": true,
+      "before": "7dfe1e1694588c6f02de61430b24f365dfc74d4ea08c16f59b0adb92615c1aea",
+      "after": "7dfe1e1694588c6f02de61430b24f365dfc74d4ea08c16f59b0adb92615c1aea"
+    },
+    {
+      "file": "51-weekly-review-editor-end.html",
+      "identical": true,
+      "before": "a190155621ca0939c1ef954719d7e80c4a4fdfa3d14f5441e3f009fcb2536c15",
+      "after": "a190155621ca0939c1ef954719d7e80c4a4fdfa3d14f5441e3f009fcb2536c15"
+    },
+    {
+      "file": "52-plan-future.html",
+      "identical": true,
+      "before": "aa4f11caf3898804f8d92cb9135d619698df1cb5fe6fe6075aae7dd7b27b0bc3",
+      "after": "aa4f11caf3898804f8d92cb9135d619698df1cb5fe6fe6075aae7dd7b27b0bc3"
+    },
+    {
+      "file": "53-goal-ai.html",
+      "identical": true,
+      "before": "397f83eb7d0009d43624fe5461e702f38b8a43797243c0291e5d4ac3dcd08701",
+      "after": "397f83eb7d0009d43624fe5461e702f38b8a43797243c0291e5d4ac3dcd08701"
+    },
+    {
+      "file": "54-delete-confirmation.html",
+      "identical": true,
+      "before": "8c962cf2185274508b223b956858cf7678c6be33f0f37c2547c421db5459f83c",
+      "after": "8c962cf2185274508b223b956858cf7678c6be33f0f37c2547c421db5459f83c"
+    },
+    {
+      "file": "55-onboarding.html",
+      "identical": true,
+      "before": "1a915c824e2108c72c016268ea753044cc701c02449085df189f2c0819726fa4",
+      "after": "1a915c824e2108c72c016268ea753044cc701c02449085df189f2c0819726fa4"
+    }
+  ]
+}

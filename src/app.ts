@@ -1291,7 +1291,7 @@ async function openQuestFeedbackDialog(quest: Quest, initialResult?: FeedbackRes
   const previousEffect = previousFeedback ? stateHistory.find((item) => item.evidenceId === previousFeedback.id && item.active) : undefined;
   const { dialog, content, actions } = dialogShell(quest.status === 'pending' ? '记录任务结果' : '修改任务结果');
 dialog.classList.add('task-feedback-dialog', 'full-screen-editor');
-  const closeDialog = node('button', 'feedback-dialog-close', '×');
+  const closeDialog = node('button', 'ui-titlebar-action', '×');
   closeDialog.type = 'button';
   closeDialog.setAttribute('aria-label', '关闭任务结果');
   closeDialog.addEventListener('click', () => dialog.close());
@@ -1303,7 +1303,8 @@ dialog.classList.add('task-feedback-dialog', 'full-screen-editor');
   taskContextCopy.append(taskContextHeading);
   if (quest.minimumAction && quest.minimumAction !== quest.title) taskContextCopy.append(node('span', 'caption', `完成标准：${quest.minimumAction}`));
   taskContext.append(semanticIcon('task-focus', 'feedback-task-icon'), taskContextCopy);
-  content.append(closeDialog, taskContext);
+  content.querySelector('.ui-dialog-titlebar')!.append(closeDialog);
+  content.append(taskContext);
 
   const resultLabel = node('label', 'field-label', '结果');
   resultLabel.classList.add('feedback-result-select');
@@ -2230,7 +2231,7 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   imageInput.type = 'file';
   imageInput.accept = 'image/png,image/jpeg,image/webp,image/gif';
   imageInput.setAttribute('aria-label', '选择图片');
-  const imageButton = node('button', 'life-diary-image-button', '图片');
+  const imageButton = node('button', 'button button-quiet life-diary-image-button', '图片');
   imageButton.type = 'button';
   imageButton.addEventListener('click', () => imageInput.click());
   const input = node('textarea', 'life-diary-input');
@@ -2240,7 +2241,7 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   input.placeholder = '现在的想法';
   input.value = initialDraft.body;
   input.setAttribute('aria-label', '现在的想法');
-  const send = node('button', 'life-diary-send', '发送');
+  const send = node('button', 'button button-primary life-diary-send', '发送');
   send.type = 'submit';
   const imagePreview = node('div', 'life-diary-image-preview');
   const saveState = node('p', 'save-state');
@@ -2793,7 +2794,9 @@ function dialogShell(title: string): { dialog: HTMLDialogElement; content: HTMLE
   const heading = node('h2', 'ui-page-title', title);
   heading.id = `dialog-title-${crypto.randomUUID()}`;
   dialog.setAttribute('aria-labelledby', heading.id);
-  content.append(heading);
+  const titlebar = node('header', 'ui-titlebar ui-dialog-titlebar');
+  titlebar.append(heading);
+  content.append(titlebar);
   const actions = node('div', 'dialog-actions');
   dialog.append(content, actions);
   const navigation = bottomNavigation(currentRoute);
@@ -2827,11 +2830,8 @@ function addDialogBack(dialog: HTMLDialogElement, content: HTMLElement): HTMLEle
   back.type = 'button';
   back.setAttribute('aria-label', '返回');
   back.addEventListener('click', () => dialog.close());
-  const heading = content.querySelector<HTMLElement>(':scope > .ui-page-title');
-  if (!heading) { content.prepend(back); return back; }
-  const titlebar = node('header', 'ui-titlebar ui-dialog-titlebar');
-  titlebar.append(back, heading);
-  content.prepend(titlebar);
+  const titlebar = content.querySelector<HTMLElement>(':scope > .ui-dialog-titlebar')!;
+  titlebar.prepend(back);
   return titlebar;
 }
 

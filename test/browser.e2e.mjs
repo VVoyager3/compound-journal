@@ -368,11 +368,12 @@ test('all core pages survive 200 percent text at 320px with touch-safe actions',
     });
     assert.equal(headerActionLines, 1, 'short page-header actions must not wrap one Chinese character per line');
     await page.goto(`${baseUrl}/#/record`);
+    await page.locator('.life-diary-send').waitFor();
     const promptSizes = await page.locator('.record-subtab, .life-diary-send, .life-diary-image-button').evaluateAll((buttons) => buttons.map((button) => {
       const box = button.getBoundingClientRect();
       return { width: box.width, height: box.height };
     }));
-    assert(promptSizes.length === 4 && promptSizes.every((box) => box.width >= 44 && box.height >= 36), 'compact tabs and composer actions must remain usable');
+    assert(promptSizes.length === 4 && promptSizes.every((box) => box.width >= 44 && box.height >= 36), `compact tabs and composer actions must remain usable: ${JSON.stringify(promptSizes)}`);
     assert.equal(await page.locator('.record-number-button, .record-attachment-button').count(), 0, 'recording keeps only the writing controls in use');
     await page.goto(`${baseUrl}/#/calendar`);
     await page.getByRole('button', { name: '查找记录' }).click();

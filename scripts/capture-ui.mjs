@@ -136,6 +136,44 @@ async function shot(name, options = {}) {
   if (!options.keepScroll) await target.evaluate(() => window.scrollTo(0, 0));
   const path = `${output}/${String(shotIndex).padStart(2, '0')}-${name}.png`;
   await target.screenshot({ path, fullPage: options.fullPage ?? false, animations: 'disabled' });
+  // A real rendered DOM snapshot, not a separately maintained imitation page.
+  // This context contains only the fixture above. No app bootstrap or storage code
+  // is copied, so the tuner can change CSS without opening a user's database.
+  const snapshot = await target.evaluate(() => {
+    const copy = document.documentElement.cloneNode(true);
+    copy.querySelectorAll('script,link[rel="modulepreload"]').forEach(el => el.remove());
+    for (const container of copy.querySelectorAll('head,body')) {
+      for (const child of [...container.childNodes]) {
+        if (child.nodeType === Node.TEXT_NODE && !child.textContent.trim()) child.remove();
+      }
+    }
+    const originalFields = [...document.querySelectorAll('input,textarea,select')];
+    copy.querySelectorAll('input,textarea,select').forEach((el, index) => {
+      const original = originalFields[index];
+      if (el.tagName === 'TEXTAREA') el.textContent = original.value;
+      else if (el.tagName === 'INPUT') {
+        el.setAttribute('value', el.type === 'password' ? '' : original.value);
+        el.toggleAttribute('checked', original.checked);
+      } else [...el.options].forEach((option, i) => option.toggleAttribute('selected', original.options[i].selected));
+    });
+    [copy, ...copy.querySelectorAll('*')].forEach(el => {
+      // Keep runtime CSS inert while HTML parses under the unchanged production CSP.
+      if (el.hasAttribute('style')) {
+        el.dataset.snapshotStyle = JSON.stringify([...el.style].map(name => [name, el.style.getPropertyValue(name), el.style.getPropertyPriority(name)]));
+        el.removeAttribute('style');
+      }
+      for (const attribute of [...el.attributes]) if (attribute.name.startsWith('on')) el.removeAttribute(attribute.name);
+      for (const name of ['src', 'href']) if (el.hasAttribute(name)) {
+        const url = new URL(el.getAttribute(name), location.href);
+        if (url.origin === location.origin) el.setAttribute(name, url.pathname + url.search + url.hash);
+      }
+    });
+    const script = document.createElement('script'); script.src = '/design/snapshot-preview.js';
+    copy.querySelector('body').append(script);
+    copy.dataset.uiSnapshot = 'fixture-only';
+    return '<!doctype html>\n' + copy.outerHTML;
+  });
+  await writeFile(path.replace(/\.png$/, '.html'), snapshot);
   geometry.push({ name, ...await target.evaluate(() => {
     // Audit the active dialog rather than counting the obscured page as visible.
     const scope = [...document.querySelectorAll('dialog[open]')].at(-1) || document.querySelector('main');
@@ -440,7 +478,8 @@ await writeTextAudit(textAudit, captures);
 console.log(`Text audit: ${findings.length} candidates for semantic/style review; see text-audit.json`);
 assert.equal(findings.length, 0, 'Known text roles must match size, weight and line-height; inspect text-audit.json for failures');
 for (const screen of geometry) assert.equal(screen.previewOverflow, 0, `${screen.name}: preview content must stay inside its card`);
-for (const screen of geometry) if (screen.pageShell) {
+for (const screen of geometry) {
+  assert.ok(screen.pageShell, `${screen.name}: every active page/dialog must use a measurable titlebar`);
   assert.equal(screen.pageShell.paddingLeft, '20px', `${screen.name}: page uses shared left padding`);
   assert.equal(screen.pageShell.paddingRight, '20px', `${screen.name}: page uses shared right padding`);
   assert.equal(screen.pageShell.titleHeight, 44, `${screen.name}: page uses shared titlebar height`);

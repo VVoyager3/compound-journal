@@ -1,0 +1,4922 @@
+{
+  "format": "qiguang-ui-dimension-decisions",
+  "baseline": "design/screenshots/20260906-complete-unification/code-audit.json",
+  "groups": [
+    {
+      "indexes": [
+        84,
+        106,
+        112,
+        119,
+        130,
+        132,
+        146,
+        180,
+        185,
+        221,
+        225,
+        227,
+        271,
+        273,
+        338,
+        436,
+        482,
+        885,
+        886,
+        1031,
+        1111,
+        1137
+      ],
+      "action": "token",
+      "value": "var(--ui-action-gap)",
+      "reason": "Peer actions, navigation controls, toolbar controls and choice actions use the single approved action-group gap. This replaces legacy per-page 5–10px variants without changing hit-target ownership."
+    },
+    {
+      "indexes": [
+        237,
+        251,
+        254,
+        341,
+        480,
+        525,
+        864,
+        883,
+        944
+      ],
+      "action": "token",
+      "value": "var(--ui-list-gap)",
+      "reason": "Repeated list/grid items, weekday choices and compact evidence stacks use the single approved list gap."
+    },
+    {
+      "indexes": [
+        97,
+        124,
+        140,
+        193,
+        267,
+        314,
+        895
+      ],
+      "action": "token",
+      "value": "var(--ui-form-gap)",
+      "reason": "Record/search/count/feedback form groups and selectable form options use the single approved form-field group gap."
+    },
+    {
+      "indexes": [
+        121,
+        127,
+        143,
+        163,
+        168,
+        298,
+        316,
+        328,
+        344,
+        345,
+        351,
+        357,
+        367,
+        444,
+        507,
+        521,
+        603,
+        615,
+        682,
+        711,
+        731,
+        911,
+        924,
+        971,
+        1112,
+        1142,
+        1250
+      ],
+      "action": "token",
+      "value": "var(--ui-field-gap)",
+      "reason": "Labels, values, metadata, compact copy and nested status facts use the approved tight field gap rather than page-specific micro values."
+    },
+    {
+      "indexes": [
+        91,
+        96,
+        98,
+        99,
+        103,
+        105,
+        128,
+        129,
+        172,
+        186,
+        188,
+        202,
+        204,
+        228,
+        249,
+        259,
+        261,
+        276,
+        283,
+        301,
+        306,
+        308,
+        317,
+        353,
+        371,
+        469,
+        474,
+        477,
+        513,
+        516,
+        536,
+        544,
+        595,
+        602,
+        606,
+        614,
+        648,
+        653,
+        739,
+        740,
+        793,
+        834,
+        855,
+        878,
+        882,
+        912,
+        934,
+        1032,
+        1068,
+        1132,
+        1222,
+        1240,
+        1252
+      ],
+      "action": "token",
+      "value": "var(--ui-row-content-gap)",
+      "reason": "Row-level icon, copy, status and metadata arrangements use the approved row-content gap across tasks, records, reviews, growth and settings."
+    },
+    {
+      "indexes": [
+        86,
+        87,
+        90,
+        125,
+        134,
+        142,
+        196,
+        199,
+        264,
+        282,
+        285,
+        289,
+        423,
+        620,
+        636,
+        713,
+        728,
+        1055,
+        1070,
+        1078,
+        1091
+      ],
+      "action": "token",
+      "value": "var(--ui-group-gap)",
+      "reason": "Page-level content stacks, editor panels, analysis sections and dialog content groups use the approved spacing between peer groups."
+    },
+    {
+      "indexes": [
+        291,
+        293,
+        296,
+        303,
+        310,
+        405,
+        439,
+        510,
+        548,
+        747,
+        800,
+        829,
+        832,
+        837,
+        862,
+        966,
+        1033,
+        1043,
+        1115,
+        1204,
+        1219
+      ],
+      "action": "token",
+      "value": "var(--ui-section-gap)",
+      "reason": "Content within a single analysis, evidence, entity, diary or growth section uses the approved component-title/content spacing."
+    },
+    {
+      "indexes": [
+        1051,
+        1052,
+        1066,
+        1067,
+        1071,
+        1072
+      ],
+      "action": "token",
+      "value": "calc(-1 * var(--ui-space-6))",
+      "reason": "Wide analysis sections intentionally counter the 20px page gutter and now derive that offset from the same spacing step."
+    },
+    {
+      "indexes": [
+        705,
+        709,
+        714,
+        729,
+        745
+      ],
+      "action": "token",
+      "value": "0 calc(-1 * var(--ui-space-5))",
+      "reason": "Analysis bands counter the roomy 16px content inset while retaining zero vertical margin."
+    },
+    {
+      "indexes": [
+        754,
+        1063,
+        1064,
+        1088,
+        1089
+      ],
+      "action": "token",
+      "value": "calc(-1 * var(--ui-space-4))",
+      "reason": "Narrow-screen analysis bands counter the 12px responsive page inset through the same spacing step."
+    },
+    {
+      "indexes": [
+        347,
+        524,
+        557
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-4)",
+      "reason": "Evidence rows and disclosure controls use compact vertical and regular horizontal spacing from the shared scale."
+    },
+    {
+      "indexes": [
+        393,
+        584,
+        624
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-2)",
+      "reason": "Compact toolbar, action row and record option insets retain their vertical/horizontal roles using the shared scale."
+    },
+    {
+      "indexes": [
+        561,
+        940,
+        949
+      ],
+      "action": "token",
+      "value": "max(var(--ui-space-5), env(safe-area-inset-top))",
+      "reason": "Page and editor top insets share the 16px minimum while continuing to respect the device safe area."
+    },
+    {
+      "indexes": [
+        6,
+        619
+      ],
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Network and date controls retain tight vertical and compact horizontal insets through the shared scale."
+    },
+    {
+      "indexes": [
+        373,
+        555
+      ],
+      "action": "token",
+      "value": "calc(-1 * var(--ui-space-2))",
+      "reason": "Small alignment corrections for tabs and scope details derive from the same tight spacing step."
+    },
+    {
+      "indexes": [
+        382,
+        684
+      ],
+      "action": "token",
+      "value": "var(--ui-space-2) 0",
+      "reason": "Inline detail controls retain tight vertical spacing and zero horizontal inset."
+    },
+    {
+      "indexes": [
+        567,
+        638
+      ],
+      "action": "token",
+      "value": "var(--ui-space-2) 0 0",
+      "reason": "Day content and habit-analysis hero retain top-only tight spacing."
+    },
+    {
+      "indexes": [
+        631,
+        847
+      ],
+      "action": "token",
+      "value": "0 var(--ui-space-1)",
+      "reason": "Compact summary and calendar toolbar keep zero vertical and micro horizontal inset."
+    },
+    {
+      "indexes": [
+        650,
+        1075
+      ],
+      "action": "token",
+      "value": "var(--ui-space-7) var(--ui-space-6)",
+      "reason": "Habit overview and its empty state use the same expanded vertical and large horizontal content inset."
+    },
+    {
+      "indexes": [
+        927,
+        1039
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-5)",
+      "reason": "Preview action and growth-stat pairs share compact row and roomy column spacing."
+    },
+    {
+      "indexes": [
+        203
+      ],
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-1)",
+      "reason": "Legacy quest row retains regular vertical and micro horizontal inset through shared spacing values."
+    },
+    {
+      "indexes": [
+        213
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-1)",
+      "reason": "Quick-task input retains compact vertical and micro horizontal inset."
+    },
+    {
+      "indexes": [
+        265
+      ],
+      "action": "token",
+      "value": "max(var(--ui-space-5), env(safe-area-inset-bottom))",
+      "reason": "Feedback actions retain a roomy minimum bottom inset while respecting the device safe area."
+    },
+    {
+      "indexes": [
+        277
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3) 0",
+      "reason": "Review decision rows retain compact vertical and zero horizontal inset."
+    },
+    {
+      "indexes": [
+        300
+      ],
+      "action": "token",
+      "value": "var(--ui-space-1) var(--ui-space-3)",
+      "reason": "Event and confirmation tags use micro vertical and compact horizontal inset."
+    },
+    {
+      "indexes": [
+        452
+      ],
+      "action": "token",
+      "value": "var(--ui-space-4) 0",
+      "reason": "Journal sheet retains regular vertical and zero horizontal inset."
+    },
+    {
+      "indexes": [
+        461
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3) var(--page-pad) var(--ui-space-4)",
+      "reason": "Today focus list retains compact top, page-gutter sides and regular bottom inset."
+    },
+    {
+      "indexes": [
+        511
+      ],
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-3)",
+      "reason": "Habit week card uses regular vertical and compact horizontal inset."
+    },
+    {
+      "indexes": [
+        629
+      ],
+      "action": "token",
+      "value": "calc(-1 * var(--ui-space-3)) var(--ui-space-1) 0",
+      "reason": "Record save-state alignment retains its compact negative top, micro sides and zero bottom margin."
+    },
+    {
+      "indexes": [
+        652
+      ],
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-5) var(--ui-space-3)",
+      "reason": "Habit comparison heading keeps regular top, roomy sides and compact bottom inset."
+    },
+    {
+      "indexes": [
+        656
+      ],
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-4)",
+      "reason": "Habit comparison copy uses tight row and regular column spacing."
+    },
+    {
+      "indexes": [
+        710
+      ],
+      "action": "token",
+      "value": "var(--ui-space-5) var(--ui-space-4)",
+      "reason": "Analysis summary grid uses roomy vertical and regular horizontal inset."
+    },
+    {
+      "indexes": [
+        799
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-5) max(var(--ui-space-3), env(safe-area-inset-bottom))",
+      "reason": "Analysis actions use compact top, roomy sides and a safe-area-aware compact bottom inset."
+    },
+    {
+      "indexes": [
+        808
+      ],
+      "action": "token",
+      "value": "0 var(--ui-space-2) var(--ui-space-2)",
+      "reason": "Settings overview heading retains zero top and tight horizontal/bottom margins."
+    },
+    {
+      "indexes": [
+        819
+      ],
+      "action": "token",
+      "value": "var(--ui-space-6) 0 0",
+      "reason": "AI settings title retains a large top-only inset."
+    },
+    {
+      "indexes": [
+        874
+      ],
+      "action": "token",
+      "value": "max(var(--ui-space-3), env(safe-area-inset-bottom))",
+      "reason": "Day navigation retains a compact minimum bottom inset while respecting the safe area."
+    },
+    {
+      "indexes": [
+        908
+      ],
+      "action": "token",
+      "value": "calc(-1 * var(--ui-space-5))",
+      "reason": "Goal detail link counter-aligns the roomy list inset through the same shared spacing step."
+    },
+    {
+      "indexes": [
+        1028
+      ],
+      "action": "token",
+      "value": "max(var(--ui-space-6), env(safe-area-inset-bottom))",
+      "reason": "Secondary day pages retain a large minimum bottom inset while respecting the safe area."
+    },
+    {
+      "indexes": [
+        1059
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3) 0 var(--ui-space-2)",
+      "reason": "Day overview facts retain compact top, zero sides and tight bottom inset."
+    },
+    {
+      "indexes": [
+        1061
+      ],
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-5)",
+      "reason": "Day overview fact controls use regular vertical and roomy horizontal inset."
+    },
+    {
+      "indexes": [
+        1124
+      ],
+      "action": "token",
+      "value": "var(--ui-space-5) 0 var(--ui-space-2) auto",
+      "reason": "Floating task action retains roomy top, zero right, tight bottom and automatic left alignment."
+    },
+    {
+      "indexes": [
+        1165
+      ],
+      "action": "token",
+      "value": "max(var(--ui-space-7), env(safe-area-inset-top)) var(--page-pad) var(--ui-space-7)",
+      "reason": "Full-screen editor content uses expanded top/bottom insets and the shared page gutter while respecting the safe area."
+    },
+    {
+      "indexes": [
+        1196
+      ],
+      "action": "token",
+      "value": "var(--ui-space-6) 0",
+      "reason": "Analysis section uses large vertical and zero horizontal inset."
+    },
+    {
+      "indexes": [
+        1197
+      ],
+      "action": "token",
+      "value": "var(--ui-space-6) var(--ui-space-5)",
+      "reason": "Analysis summary uses large vertical and roomy horizontal inset."
+    },
+    {
+      "indexes": [
+        1202
+      ],
+      "action": "token",
+      "value": "0 0 var(--ui-space-6)",
+      "reason": "Diary feed retains bottom-only large inset."
+    },
+    {
+      "indexes": [
+        1230
+      ],
+      "action": "token",
+      "value": "var(--ui-space-6) var(--ui-space-4)",
+      "reason": "Habit detail statistics use large vertical and regular horizontal inset."
+    },
+    {
+      "indexes": [
+        1241
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3) 0 var(--ui-space-6)",
+      "reason": "Habit detail hero uses compact top, zero sides and large bottom inset."
+    },
+    {
+      "indexes": [
+        236,
+        773,
+        786
+      ],
+      "action": "token",
+      "value": "var(--ui-space-1)",
+      "reason": "Remaining single-value micro spacing declarations use the existing 2px spacing step; direction and component ownership remain unchanged."
+    },
+    {
+      "indexes": [
+        760
+      ],
+      "action": "token",
+      "value": "var(--ui-space-2)",
+      "reason": "The compact analysis-page top inset uses the existing tight spacing step."
+    },
+    {
+      "indexes": [
+        179,
+        190,
+        243,
+        252,
+        266,
+        674
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Remaining single-value compact gaps and insets use the existing 8px spacing step. This includes form/evidence internals, not artwork dimensions."
+    },
+    {
+      "indexes": [
+        753,
+        1086,
+        1087
+      ],
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "The analysis page's compact responsive horizontal inset uses the existing regular spacing step."
+    },
+    {
+      "indexes": [
+        1090
+      ],
+      "action": "token",
+      "value": "var(--ui-space-5)",
+      "reason": "The narrow record-page gutter uses the existing roomy spacing step."
+    },
+    {
+      "indexes": [
+        893,
+        1048,
+        1049,
+        1076,
+        1083
+      ],
+      "action": "token",
+      "value": "var(--ui-space-6)",
+      "reason": "Large section separation and wide responsive page gutters use the existing 20px spacing step; media-specific declarations retain their original contexts."
+    },
+    {
+      "indexes": [
+        114,
+        115,
+        116,
+        117,
+        118,
+        122,
+        123,
+        331,
+        337,
+        394,
+        395,
+        396,
+        467,
+        600,
+        601,
+        604,
+        605,
+        611,
+        612,
+        613,
+        852,
+        854,
+        856,
+        857,
+        867,
+        868,
+        925,
+        983,
+        1183,
+        1184,
+        1185,
+        1186,
+        1187,
+        1188,
+        1275
+      ],
+      "action": "exception",
+      "category": "calendar-grid-geometry",
+      "reason": "Calendar weekday and date grids, activity dots and compact monthly meters use calendar-specific square/cell geometry and responsive offsets. These values maintain seven equal columns and distinguish date evidence; they are not list rows, form fields or general section spacing. The surrounding page shell and preview surfaces are excluded from this exception."
+    },
+    {
+      "indexes": [
+        194,
+        258,
+        377,
+        407,
+        591,
+        592,
+        593,
+        616,
+        641,
+        642,
+        643,
+        645,
+        646,
+        647,
+        659,
+        664,
+        666,
+        667,
+        720,
+        724,
+        725,
+        726,
+        727,
+        742,
+        751,
+        752,
+        776,
+        781,
+        782,
+        783,
+        797,
+        805,
+        913,
+        1041,
+        1106,
+        1108,
+        1189,
+        1190,
+        1192,
+        1194,
+        1195,
+        1247,
+        1248
+      ],
+      "action": "exception",
+      "category": "data-visualization-geometry",
+      "reason": "Heat cells, progress/momentum tracks, weekday charts and their labels need chart-specific square sizes, bar thicknesses and alignment offsets. They remain inside the shared analysis page and typography shells but cannot use list-row or button geometry without breaking the visualization. Form weekday pickers are deliberately excluded."
+    },
+    {
+      "indexes": [
+        3,
+        4,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        50,
+        51,
+        54,
+        55,
+        56,
+        57,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        78,
+        79,
+        108,
+        109,
+        110,
+        339,
+        365,
+        450,
+        564,
+        565,
+        566,
+        689,
+        690,
+        691,
+        692,
+        693,
+        871,
+        889,
+        890,
+        891,
+        923,
+        954,
+        1170,
+        1171,
+        1172,
+        1173,
+        1174,
+        1175,
+        1176,
+        1177
+      ],
+      "action": "exception",
+      "category": "pixel-art-and-companion",
+      "reason": "Pixel artwork, character hit regions, portrait framing and companion stages use asset-specific geometry and optical alignment. They are not ordinary list, form or page-shell components; consolidating them into control tokens would distort the approved character assets. Their selectors remain explicitly inventoried for later asset-specific review."
+    },
+    {
+      "indexes": [
+        20,
+        21,
+        409,
+        411,
+        412,
+        455,
+        456,
+        490,
+        491,
+        514,
+        515,
+        519,
+        520,
+        550,
+        551,
+        571,
+        572,
+        573,
+        574,
+        608,
+        609,
+        639,
+        640,
+        657,
+        658,
+        662,
+        663,
+        670,
+        671,
+        732,
+        733,
+        734,
+        735,
+        736,
+        737,
+        787,
+        788,
+        789,
+        790,
+        791,
+        792,
+        810,
+        811,
+        821,
+        822,
+        830,
+        831,
+        840,
+        841,
+        850,
+        851,
+        860,
+        861,
+        898,
+        899,
+        915,
+        916,
+        917,
+        957,
+        958,
+        969,
+        970,
+        997,
+        998,
+        999,
+        1000,
+        1001,
+        1002,
+        1004,
+        1005,
+        1006,
+        1007,
+        1008,
+        1009,
+        1010,
+        1011,
+        1012,
+        1013,
+        1014,
+        1015,
+        1016,
+        1017,
+        1018,
+        1019,
+        1020,
+        1021,
+        1022,
+        1023,
+        1024,
+        1025,
+        1026,
+        1027,
+        1035,
+        1036,
+        1037,
+        1038,
+        1044,
+        1045,
+        1046,
+        1047,
+        1116,
+        1117,
+        1223,
+        1224,
+        1226,
+        1227,
+        1256,
+        1257
+      ],
+      "action": "exception",
+      "category": "semantic-icon-and-badge-optics",
+      "reason": "Semantic assets, badge marks and their containing canvases have context-specific optical sizes. These declarations describe image/mark rendering rather than the geometry of a list row or control; a single control-size token would make small inline icons and large evidence badges visually incorrect. Repeated width/height pairs stay together and remain audited as one optical-size category."
+    },
+    {
+      "indexes": [
+        386,
+        402,
+        414,
+        435,
+        437,
+        495,
+        581,
+        610,
+        888,
+        1062,
+        1140,
+        1198,
+        1203,
+        1205,
+        1212,
+        1231,
+        1243,
+        1251,
+        1254,
+        1259
+      ],
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Content surfaces, grouped rows, diary attachments and feedback choice surfaces share the approved surface corner. These existing 8px corners are not artwork curvature or circular status markers."
+    },
+    {
+      "indexes": [
+        369,
+        378,
+        578,
+        697,
+        743
+      ],
+      "action": "token",
+      "value": "var(--ui-radius-round)",
+      "reason": "Status chips and filled progress tracks intentionally use pill ends, separate from rectangular content surfaces."
+    },
+    {
+      "indexes": [
+        384,
+        389,
+        503
+      ],
+      "action": "token",
+      "value": "var(--ui-radius-control)",
+      "reason": "Date/text input and stage toggle control outlines use the shared control corner, not the surface corner."
+    },
+    {
+      "indexes": [
+        425,
+        431,
+        991,
+        1164
+      ],
+      "action": "token",
+      "value": "min(100%, var(--ui-page-width))",
+      "reason": "Full-screen editor, feedback shell and fixed submit strip follow the same responsive page-width ceiling rather than separate 480px widths."
+    },
+    {
+      "indexes": [
+        426,
+        432
+      ],
+      "action": "token",
+      "value": "var(--ui-page-width)",
+      "reason": "The maximum width of the editor and feedback shell belongs to the shared page-width ceiling."
+    },
+    {
+      "indexes": [
+        585,
+        1220
+      ],
+      "action": "token",
+      "value": "var(--ui-radius-surface) var(--ui-radius-surface) 0 0",
+      "reason": "First row rounds only the top corners of the same grouped surface."
+    },
+    {
+      "indexes": [
+        586,
+        1221
+      ],
+      "action": "token",
+      "value": "0 0 var(--ui-radius-surface) var(--ui-radius-surface)",
+      "reason": "Last row rounds only the bottom corners of the same grouped surface."
+    },
+    {
+      "indexes": [
+        2,
+        66,
+        88,
+        100,
+        162,
+        167,
+        287,
+        388,
+        397,
+        400,
+        568,
+        575,
+        582,
+        588,
+        621,
+        625,
+        637,
+        669,
+        768,
+        784,
+        795,
+        804,
+        820,
+        881,
+        894,
+        910,
+        914,
+        962,
+        967,
+        1113,
+        1147,
+        1191,
+        1193,
+        1232
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Reviewed compact internal content spacing: icon/copy, status facts, preview contents and repeated chart labels use the existing compact spacing step. This is internal layout, not spacing between page sections or between list rows."
+    },
+    {
+      "indexes": [
+        138,
+        210,
+        218
+      ],
+      "action": "token",
+      "value": "var(--ui-action-gap)",
+      "reason": "Assessment choice actions, quick-add input/action and task heading actions use the independent action-group spacing, not a section-title gap."
+    },
+    {
+      "indexes": [
+        68,
+        358,
+        680,
+        1143
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Compact inset for avatar choice, inline update notice, goal-link control and local image preview. They use the compact inset step rather than a page gutter."
+    },
+    {
+      "indexes": [
+        147,
+        268,
+        269,
+        279,
+        352,
+        438,
+        441,
+        494,
+        509,
+        594,
+        599,
+        644,
+        873,
+        933,
+        938,
+        947,
+        961,
+        963,
+        993,
+        1107,
+        1148
+      ],
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Local content separation/inset within disclosures, evidence blocks, action details and attachment metadata uses the compact spacing step. Media conditions and property sides remain unchanged; outer section spacing continues to be owned by the shared page/section layer."
+    },
+    {
+      "indexes": [
+        22,
+        80,
+        85,
+        93,
+        133,
+        135,
+        150,
+        161,
+        182,
+        270,
+        340,
+        429,
+        473,
+        531,
+        660,
+        744,
+        750,
+        918,
+        959,
+        1058,
+        1095,
+        1136,
+        1225,
+        1244,
+        1265
+      ],
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Reviewed regular internal content groups: return/notice rows, evidence and review sections, metadata and action/navigation strips share the regular spacing step. These legacy fallback declarations retain their cascade; public section/list contracts remain authoritative."
+    },
+    {
+      "indexes": [
+        17,
+        92,
+        141,
+        169,
+        309,
+        322,
+        355,
+        537,
+        686,
+        1253
+      ],
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Regular control/content inset shared by compact buttons, closeout/assessment/revision content, evidence, notices, task context and habit comparison rows; not the page gutter or approved list horizontal padding."
+    },
+    {
+      "indexes": [
+        23,
+        131,
+        280,
+        372,
+        375,
+        626,
+        696,
+        984,
+        1260
+      ],
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Regular local separation between content and its follow-up/details; keep direction and conditional selector intact. Shared page/section containers still override obsolete outer margins."
+    },
+    {
+      "indexes": [
+        11,
+        77,
+        94,
+        101,
+        184,
+        246,
+        370,
+        392,
+        538,
+        559,
+        668,
+        675,
+        756,
+        803,
+        839,
+        928,
+        1050,
+        1074,
+        1081,
+        1233
+      ],
+      "action": "token",
+      "value": "var(--ui-space-2)",
+      "reason": "Tight label/metadata separation and compact horizontal control inset use the shared tight spacing step. The selected properties are spacing only; 4px chart heights and decorative geometry are excluded."
+    },
+    {
+      "indexes": [
+        81,
+        195,
+        342,
+        376,
+        529,
+        563,
+        587,
+        635,
+        767,
+        802,
+        853,
+        865,
+        1030,
+        1040,
+        1077,
+        1096,
+        1114
+      ],
+      "action": "token",
+      "value": "var(--ui-space-1)",
+      "reason": "Micro spacing between metadata, status facts and compact icon labels uses the smallest shared spacing step; excludes border widths, pixel art and heatmap cell geometry."
+    },
+    {
+      "indexes": [
+        183,
+        187,
+        272,
+        627,
+        738,
+        926,
+        939,
+        1129,
+        1134,
+        1146,
+        1211,
+        1213
+      ],
+      "action": "token",
+      "value": "var(--ui-space-5)",
+      "reason": "Roomy content inset/separation for journal sections, review groups, full editor groups, summary panels and record rows uses the shared roomy spacing step. Page-level group and typography ownership is unchanged."
+    },
+    {
+      "indexes": [
+        159,
+        327,
+        1258
+      ],
+      "action": "token",
+      "value": "var(--ui-space-6)",
+      "reason": "Large container inset or separation for dialog content, fallback notice and calendar/overview blocks uses the existing large spacing step. Page gutters are independently controlled by --ui-page-padding."
+    },
+    {
+      "indexes": [
+        1110,
+        1245,
+        1246
+      ],
+      "action": "token",
+      "value": "var(--ui-space-7)",
+      "reason": "Expanded separation between assessment modes and between large habit summary/chart groups uses the existing expanded spacing step."
+    },
+    {
+      "indexes": [
+        0,
+        12,
+        13,
+        14,
+        15,
+        46,
+        47,
+        58,
+        59,
+        67,
+        136,
+        145,
+        152,
+        166,
+        173,
+        201,
+        212,
+        214,
+        215,
+        222,
+        223,
+        224,
+        229,
+        235,
+        255,
+        324,
+        333,
+        334,
+        362,
+        363,
+        387,
+        415,
+        539,
+        618,
+        685,
+        700,
+        764,
+        848,
+        849,
+        973,
+        974,
+        975,
+        976,
+        977,
+        981,
+        982,
+        985,
+        986,
+        987,
+        992,
+        1042,
+        1119,
+        1120,
+        1130,
+        1131,
+        1268,
+        1269
+      ],
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Reviewed interactive controls: skip link, icon/text actions, avatar choices, disclosure summaries, form controls, task actions, calendar navigation and editor back controls all reserve the shared minimum touch target. This is hit-area geometry, not the smaller visible button height; artwork and noninteractive statistics with coincidentally equal dimensions are excluded."
+    }
+  ],
+  "decisions": [
+    {
+      "index": 1,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 5,
+      "action": "token",
+      "value": "var(--ui-button-height)",
+      "reason": "Network status badge uses the shared compact control height."
+    },
+    {
+      "index": 7,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".shell-network-status:not(.is-offline)",
+          "value": "var(--ui-a11y-hidden-size)"
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".shell-network-status:not(.is-offline)",
+          "value": "var(--ui-a11y-hidden-size)"
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 10,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".page-header",
+          "value": "var(--ui-space-3)"
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".button",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".icon-only.is-previous > span",
+          "value": "var(--ui-a11y-hidden-size)"
+        },
+        {
+          "selector": ".icon-only.is-next > span",
+          "value": "var(--ui-a11y-hidden-size)"
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".icon-only.is-previous > span",
+          "value": "var(--ui-a11y-hidden-size)"
+        },
+        {
+          "selector": ".icon-only.is-next > span",
+          "value": "var(--ui-a11y-hidden-size)"
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 48,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".hotspot-label",
+          "value": "var(--ui-a11y-hidden-size)"
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".hotspot-label",
+          "value": "var(--ui-a11y-hidden-size)"
+        }
+      ]
+    },
+    {
+      "index": 52,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".room-hotspot.is-character .hotspot-label",
+          "value": "var(--ui-a11y-hidden-size)"
+        }
+      ]
+    },
+    {
+      "index": 53,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".room-hotspot.is-character .hotspot-label",
+          "value": "var(--ui-a11y-hidden-size)"
+        }
+      ]
+    },
+    {
+      "index": 82,
+      "action": "token",
+      "value": "var(--ui-tab-height)",
+      "reason": "Tags use the compact public tab height."
+    },
+    {
+      "index": 83,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 89,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 95,
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 102,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 104,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-1)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 107,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Status feedback reserves one shared compact line box."
+    },
+    {
+      "index": 111,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Status feedback reserves one shared compact line box."
+    },
+    {
+      "index": 113,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 120,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 126,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Status feedback reserves one shared compact line box."
+    },
+    {
+      "index": 137,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 139,
+      "action": "intrinsic",
+      "reason": "Remove arbitrary card minimum height; content and shared padding determine the component height."
+    },
+    {
+      "index": 144,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-1)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 148,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
+    },
+    {
+      "index": 149,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
+    },
+    {
+      "index": 151,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 153,
+      "action": "token",
+      "value": "var(--ui-row-action-width)",
+      "reason": "Trailing output and send actions use the shared row action width."
+    },
+    {
+      "index": 154,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 155,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".file-button input",
+          "value": "var(--ui-a11y-hidden-size)"
+        }
+      ]
+    },
+    {
+      "index": 156,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".file-button input",
+          "value": "var(--ui-a11y-hidden-size)"
+        }
+      ]
+    },
+    {
+      "index": 157,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 158,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 160,
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-6) var(--ui-space-6)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 164,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 165,
+      "action": "token",
+      "value": "var(--ui-textarea-height)",
+      "reason": "Multiline inputs use the shared textarea minimum height."
+    },
+    {
+      "index": 170,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 171,
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 174,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 175,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 176,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 177,
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 178,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 181,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-2)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 189,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 191,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 192,
+      "action": "intrinsic",
+      "reason": "Remove arbitrary card minimum height; content and shared padding determine the component height."
+    },
+    {
+      "index": 197,
+      "action": "token",
+      "value": "calc(var(--page-bottom-space) + var(--ui-nav-height))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 198,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "All page and dialog title bars use one shared compact header height."
+    },
+    {
+      "index": 200,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 205,
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 206,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".task-check",
+          "value": "var(--ui-space-6)"
+        }
+      ]
+    },
+    {
+      "index": 207,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".task-check",
+          "value": "var(--ui-space-6)"
+        }
+      ]
+    },
+    {
+      "index": 208,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".task-item-details",
+          "value": "100%"
+        }
+      ]
+    },
+    {
+      "index": 209,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".task-item-details",
+          "value": "max(var(--ui-touch-size), calc(var(--ui-row-height) - 2 * var(--ui-border-width)))"
+        }
+      ]
+    },
+    {
+      "index": 211,
+      "action": "token",
+      "value": "var(--ui-space-3) 0 var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 216,
+      "action": "token",
+      "value": "var(--ui-space-8)",
+      "reason": "Keep the task quick-action marker on the shared 32px spacing step instead of a private literal."
+    },
+    {
+      "index": 217,
+      "action": "token",
+      "value": "var(--ui-space-8)",
+      "reason": "Keep the task quick-action marker on the shared 32px spacing step instead of a private literal."
+    },
+    {
+      "index": 219,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 220,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 226,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 230,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 231,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
+    },
+    {
+      "index": 232,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
+    },
+    {
+      "index": 233,
+      "action": "token",
+      "value": "0 0 var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 234,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 238,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 239,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 240,
+      "action": "token",
+      "value": "0 var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 241,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 242,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 244,
+      "action": "token",
+      "value": "var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 245,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 247,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 248,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 250,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 253,
+      "action": "token",
+      "value": "var(--ui-space-2)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 256,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
+    },
+    {
+      "index": 257,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
+    },
+    {
+      "index": 260,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-1)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 262,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-1)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 263,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".profile-form",
+          "value": "var(--ui-space-5)"
+        }
+      ]
+    },
+    {
+      "index": 274,
+      "action": "token",
+      "value": "0 var(--ui-space-4) calc(calc(var(--ui-nav-height) + var(--ui-space-6)) + env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 275,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 278,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 281,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 284,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 286,
+      "action": "token",
+      "value": "var(--ui-space-4) 0",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 288,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 290,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 292,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 294,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 295,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 297,
+      "action": "token",
+      "value": "var(--ui-space-4) 0 var(--ui-space-5) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 299,
+      "action": "token",
+      "value": "var(--ui-tab-height)",
+      "reason": "Tags use the compact public tab height."
+    },
+    {
+      "index": 302,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 304,
+      "action": "token",
+      "value": "var(--ui-space-6)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 305,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 307,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 311,
+      "action": "token",
+      "value": "var(--ui-space-6)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 312,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 313,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 315,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 318,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 319,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 320,
+      "action": "token",
+      "value": "var(--ui-textarea-height)",
+      "reason": "Multiline inputs use the shared textarea minimum height."
+    },
+    {
+      "index": 321,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 323,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 325,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 326,
+      "action": "token",
+      "value": "calc(var(--ui-space-8) + var(--ui-space-3)) auto",
+      "reason": "The fallback notice keeps its original 40px vertical separation through spacing tokens; its margin is unrelated to button geometry."
+    },
+    {
+      "index": 329,
+      "action": "token",
+      "value": "var(--ui-space-2)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 330,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 332,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 335,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 336,
+      "action": "token",
+      "value": "var(--ui-border-width)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 343,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 346,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 348,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".sr-only",
+          "value": "var(--ui-a11y-hidden-size)"
+        }
+      ]
+    },
+    {
+      "index": 349,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".sr-only",
+          "value": "var(--ui-a11y-hidden-size)"
+        }
+      ]
+    },
+    {
+      "index": 350,
+      "action": "token",
+      "value": "calc(-1 * var(--ui-border-width))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 354,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 356,
+      "action": "token",
+      "value": "var(--ui-space-2) 0 0",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 359,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".app-shell",
+          "value": "min(100%, var(--ui-page-width))"
+        }
+      ]
+    },
+    {
+      "index": 360,
+      "action": "token",
+      "value": "calc(calc(var(--ui-nav-height) + var(--ui-space-6)) + env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 361,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".secondary-page-header",
+          "value": "var(--ui-space-3)"
+        }
+      ]
+    },
+    {
+      "index": 364,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".section-text-action",
+          "value": "var(--ui-space-3) var(--ui-space-4)"
+        }
+      ]
+    },
+    {
+      "index": 366,
+      "action": "token",
+      "value": "0 var(--page-pad) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 368,
+      "action": "token",
+      "value": "var(--ui-space-2)",
+      "reason": "Status accent uses the shared compact spacing step."
+    },
+    {
+      "index": 374,
+      "action": "token",
+      "value": "var(--ui-space-1)",
+      "reason": "Selected-tab indicators use one shared thin accent thickness."
+    },
+    {
+      "index": 379,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".task-check",
+          "value": "var(--ui-radius-control)"
+        }
+      ]
+    },
+    {
+      "index": 380,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 381,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 383,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 385,
+      "action": "token",
+      "value": "0 0 calc(var(--ui-nav-height) + var(--ui-space-4))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 390,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 391,
+      "action": "token",
+      "value": "calc(-1 * var(--ui-space-4))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 398,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 399,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 401,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 403,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 404,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 406,
+      "action": "token",
+      "value": "var(--ui-space-4) 0 var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 408,
+      "action": "token",
+      "value": "var(--ui-space-4) 0",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 410,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-1)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 413,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 416,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 417,
+      "action": "token",
+      "value": "var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 418,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 419,
+      "action": "token",
+      "value": "var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 420,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 421,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 422,
+      "action": "token",
+      "value": "var(--ui-radius-surface) var(--ui-radius-surface) 0 0",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 424,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".dialog-actions",
+          "value": "var(--ui-action-gap)"
+        }
+      ]
+    },
+    {
+      "index": 427,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 428,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 430,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 433,
+      "action": "token",
+      "value": "var(--ui-radius-surface) var(--ui-radius-surface) 0 0",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 434,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-5) max(var(--ui-space-3), env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 440,
+      "action": "token",
+      "value": "var(--ui-space-3) 0",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 442,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 443,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 445,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 446,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 447,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 448,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 449,
+      "action": "token",
+      "value": "var(--ui-space-3) 0",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 451,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".day-section-tab",
+          "value": "max(var(--ui-touch-size), var(--ui-tab-height))"
+        }
+      ]
+    },
+    {
+      "index": 453,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--page-pad) max(var(--ui-space-3), env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 454,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".badge-grid",
+          "value": "var(--ui-list-gap)"
+        }
+      ]
+    },
+    {
+      "index": 457,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 458,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 459,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 460,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-border-width) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 462,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Use the public touch target for floating, close and compact stage actions."
+    },
+    {
+      "index": 463,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Use the public touch target for floating, close and compact stage actions."
+    },
+    {
+      "index": 464,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 465,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 466,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 468,
+      "action": "token",
+      "value": "calc(var(--bottom-nav-height) + var(--ui-touch-size) + env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 470,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".review-summary-card",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "index": 471,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Review-card emblem canvases use the shared touch-sized square."
+    },
+    {
+      "index": 472,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Review-card emblem canvases use the shared touch-sized square."
+    },
+    {
+      "index": 475,
+      "action": "token",
+      "value": "var(--ui-space-5) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 476,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 478,
+      "action": "token",
+      "value": "var(--ui-space-5) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 479,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 481,
+      "action": "token",
+      "value": "var(--ui-space-6)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 483,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 484,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 485,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 486,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 487,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 488,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 489,
+      "action": "token",
+      "value": "calc(var(--ui-touch-size) + var(--ui-space-3))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 492,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 493,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 496,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 497,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 498,
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-4) var(--ui-space-2)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 499,
+      "action": "token",
+      "value": "var(--ui-border-width)",
+      "reason": "Connectors and separators use the shared hairline width."
+    },
+    {
+      "index": 500,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 501,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 502,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 504,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 505,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 506,
+      "action": "token",
+      "value": "var(--ui-space-4) 0",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 508,
+      "action": "token",
+      "value": "0 var(--ui-space-2)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 512,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 517,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 518,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 522,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 523,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 526,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 527,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 528,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 530,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 532,
+      "action": "token",
+      "value": "var(--ui-space-5) var(--ui-space-5) var(--ui-space-6)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 533,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 534,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Use the public touch target for floating, close and compact stage actions."
+    },
+    {
+      "index": 535,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Use the public touch target for floating, close and compact stage actions."
+    },
+    {
+      "index": 540,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 541,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
+    },
+    {
+      "index": 542,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
+    },
+    {
+      "index": 543,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 545,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 546,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 547,
+      "action": "token",
+      "value": "calc(var(--ui-space-7) + env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 549,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 552,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 553,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-1) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 554,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".ai-service-info > .button",
+          "value": "var(--ui-space-3)"
+        }
+      ]
+    },
+    {
+      "index": 556,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 558,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 560,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".page",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "index": 562,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".surface",
+          "value": "var(--ui-surface-pad)"
+        }
+      ]
+    },
+    {
+      "index": 569,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 570,
+      "action": "token",
+      "value": "var(--ui-space-3) 0",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 576,
+      "action": "token",
+      "value": "var(--ui-space-2)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 577,
+      "action": "token",
+      "value": "var(--ui-space-1) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 579,
+      "action": "intrinsic",
+      "reason": "Remove the arbitrary action-column width and let its shared controls determine the width."
+    },
+    {
+      "index": 580,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 583,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 589,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 590,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 596,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 597,
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 598,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 607,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 617,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "All page and dialog title bars use one shared compact header height."
+    },
+    {
+      "index": 622,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 623,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 628,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Status feedback reserves one shared compact line box."
+    },
+    {
+      "index": 630,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 632,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 633,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 634,
+      "action": "token",
+      "value": "calc(var(--ui-button-height) + 2 * var(--ui-space-3))",
+      "reason": "Fixed action bars derive their minimum height from the shared button height and vertical padding."
+    },
+    {
+      "index": 649,
+      "action": "token",
+      "value": "var(--ui-space-4) 0 var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 651,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 654,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 655,
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 661,
+      "action": "token",
+      "value": "var(--ui-border-width)",
+      "reason": "Connectors and separators use the shared hairline width."
+    },
+    {
+      "index": 665,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 672,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Task section icons use the shared icon size."
+    },
+    {
+      "index": 673,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Task section icons use the shared icon size."
+    },
+    {
+      "index": 676,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 677,
+      "action": "token",
+      "value": "var(--ui-space-2) 0",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 678,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 679,
+      "action": "token",
+      "value": "var(--ui-space-2) calc(-1 * var(--ui-touch-size)) 0 calc(-2 * var(--ui-space-8))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 681,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 683,
+      "action": "token",
+      "value": "0 var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 687,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 688,
+      "action": "token",
+      "value": "var(--ui-space-2) auto var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 694,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-1)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 695,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 698,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 699,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".page-header-text-action",
+          "value": "var(--ui-space-3) var(--ui-space-4)"
+        }
+      ]
+    },
+    {
+      "index": 701,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-1)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 702,
+      "action": "token",
+      "value": "min(100%, var(--ui-page-width))",
+      "reason": "Analysis content follows the shared responsive page width."
+    },
+    {
+      "index": 703,
+      "action": "token",
+      "value": "calc(var(--ui-row-action-width) + var(--ui-space-5))",
+      "reason": "Analysis selectors and tabs share one compact minimum label width."
+    },
+    {
+      "index": 704,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-5) var(--ui-space-2) var(--ui-space-1)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 706,
+      "action": "token",
+      "value": "calc(var(--ui-row-action-width) + var(--ui-space-5))",
+      "reason": "Analysis selectors and tabs share one compact minimum label width."
+    },
+    {
+      "index": 707,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 708,
+      "action": "token",
+      "value": "var(--ui-space-1)",
+      "reason": "Selected-tab indicators use one shared thin accent thickness."
+    },
+    {
+      "index": 712,
+      "action": "token",
+      "value": "0 var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 715,
+      "action": "token",
+      "value": "var(--ui-space-5) var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 716,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-section",
+          "value": "var(--ui-section-gap)"
+        }
+      ]
+    },
+    {
+      "index": 717,
+      "action": "token",
+      "value": "var(--ui-space-1)",
+      "reason": "Selected-tab indicators use one shared thin accent thickness."
+    },
+    {
+      "index": 718,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-months",
+          "value": "var(--heat-gap)"
+        }
+      ]
+    },
+    {
+      "index": 719,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-months",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "index": 721,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-body",
+          "value": "var(--ui-space-3)"
+        }
+      ]
+    },
+    {
+      "index": 722,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-weekday-labels",
+          "value": "var(--heat-gap)"
+        }
+      ]
+    },
+    {
+      "index": 723,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-cells",
+          "value": "var(--heat-gap)"
+        }
+      ]
+    },
+    {
+      "index": 730,
+      "action": "token",
+      "value": "var(--ui-space-5) var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 741,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 746,
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-5) max(var(--ui-space-4), env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 748,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3) var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 749,
+      "action": "token",
+      "value": "var(--ui-space-2) 0 0",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 755,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 757,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-range-tabs",
+          "value": "var(--ui-space-2)"
+        }
+      ]
+    },
+    {
+      "index": 758,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-cells",
+          "value": "var(--heat-gap)"
+        }
+      ]
+    },
+    {
+      "index": 759,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-months",
+          "value": "var(--heat-gap)"
+        }
+      ]
+    },
+    {
+      "index": 761,
+      "action": "token",
+      "value": "calc(calc(2 * var(--ui-space-8)) + env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 762,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "All page and dialog title bars use one shared compact header height."
+    },
+    {
+      "index": 763,
+      "action": "token",
+      "value": "var(--ui-button-height)",
+      "reason": "Compact range selector uses the shared button height."
+    },
+    {
+      "index": 765,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 766,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 769,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 770,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-section",
+          "value": "var(--ui-section-gap)"
+        }
+      ]
+    },
+    {
+      "index": 771,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-range-tabs",
+          "value": "var(--ui-space-2)"
+        }
+      ]
+    },
+    {
+      "index": 772,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-range-tabs button",
+          "value": "max(var(--ui-touch-size), var(--ui-tab-height))"
+        }
+      ]
+    },
+    {
+      "index": 774,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-months",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "index": 775,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-months",
+          "value": "var(--heat-gap)"
+        }
+      ]
+    },
+    {
+      "index": 777,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-body",
+          "value": "var(--ui-space-3)"
+        }
+      ]
+    },
+    {
+      "index": 778,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-weekday-labels",
+          "value": "var(--heat-gap)"
+        }
+      ]
+    },
+    {
+      "index": 779,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-cells",
+          "value": "var(--heat-gap)"
+        }
+      ]
+    },
+    {
+      "index": 780,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".analysis-heat-cell",
+          "value": "var(--ui-space-1)"
+        }
+      ]
+    },
+    {
+      "index": 785,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 794,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 796,
+      "action": "token",
+      "value": "calc(2 * var(--ui-space-8))",
+      "reason": "Analysis trailing value column follows the spacing scale."
+    },
+    {
+      "index": 798,
+      "action": "token",
+      "value": "min(100%, var(--ui-page-width))",
+      "reason": "Analysis content follows the shared responsive page width."
+    },
+    {
+      "index": 801,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 806,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 807,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 809,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 812,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 813,
+      "action": "token",
+      "value": "max(var(--ui-space-4), env(safe-area-inset-top)) var(--ui-space-5) calc(calc(var(--ui-nav-height) + var(--ui-space-2)) + env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 814,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "All page and dialog title bars use one shared compact header height."
+    },
+    {
+      "index": 815,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 816,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-5) max(var(--ui-space-3), env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 817,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 818,
+      "action": "token",
+      "value": "calc(var(--ui-space-4) + env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 823,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 824,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".ai-service-info > .button",
+          "value": "var(--ui-space-3)"
+        }
+      ]
+    },
+    {
+      "index": 825,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-1) var(--ui-space-2)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 826,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 827,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 828,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 833,
+      "action": "token",
+      "value": "var(--ui-space-3) 0",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 835,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 836,
+      "action": "token",
+      "value": "var(--ui-space-2)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 838,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 842,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 843,
+      "action": "token",
+      "value": "var(--ui-space-3) 0",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 844,
+      "action": "token",
+      "value": "max(var(--ui-space-3), env(safe-area-inset-top))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 845,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "All page and dialog title bars use one shared compact header height."
+    },
+    {
+      "index": 846,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Calendar toolbar uses the shared title/control row height."
+    },
+    {
+      "index": 858,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 859,
+      "action": "token",
+      "value": "calc(var(--ui-nav-height) + var(--ui-space-2))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 863,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 866,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 869,
+      "action": "token",
+      "value": "max(var(--ui-space-3), env(safe-area-inset-top))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 870,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "All page and dialog title bars use one shared compact header height."
+    },
+    {
+      "index": 872,
+      "action": "token",
+      "value": "var(--ui-space-2)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 875,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".page-review .review-period-nav",
+          "value": "var(--ui-space-2)"
+        }
+      ]
+    },
+    {
+      "index": 876,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".page-review .review-period-nav .button",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 877,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".page-review .review-period-nav .button",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 879,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Review-card emblem canvases use the shared touch-sized square."
+    },
+    {
+      "index": 880,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Review-card emblem canvases use the shared touch-sized square."
+    },
+    {
+      "index": 884,
+      "action": "token",
+      "value": "var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 887,
+      "action": "token",
+      "value": "0 var(--ui-space-2)",
+      "reason": "Attachment action retains zero vertical inset and the shared tight horizontal inset."
+    },
+    {
+      "index": 892,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 896,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 897,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 900,
+      "action": "token",
+      "value": "var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 901,
+      "action": "token",
+      "value": "var(--ui-space-4) var(--page-pad) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 902,
+      "action": "intrinsic",
+      "reason": "Remove arbitrary card minimum height; content and shared padding determine the component height."
+    },
+    {
+      "index": 903,
+      "action": "token",
+      "value": "var(--ui-space-8)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 904,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 905,
+      "action": "token",
+      "value": "calc(var(--ui-nav-height) + var(--ui-space-2))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 906,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Use the public touch target for floating, close and compact stage actions."
+    },
+    {
+      "index": 907,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Use the public touch target for floating, close and compact stage actions."
+    },
+    {
+      "index": 909,
+      "action": "token",
+      "value": "var(--ui-space-2)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 919,
+      "action": "intrinsic",
+      "reason": "Remove arbitrary card minimum height; content and shared padding determine the component height."
+    },
+    {
+      "index": 920,
+      "action": "intrinsic",
+      "reason": "Remove arbitrary card minimum height; content and shared padding determine the component height."
+    },
+    {
+      "index": 921,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 922,
+      "action": "token",
+      "value": "calc(var(--ui-button-height) + 2 * var(--ui-space-3))",
+      "reason": "Fixed action bars derive their minimum height from the shared button height and vertical padding."
+    },
+    {
+      "index": 929,
+      "action": "intrinsic",
+      "reason": "Remove arbitrary card minimum height; content and shared padding determine the component height."
+    },
+    {
+      "index": 930,
+      "action": "token",
+      "value": "var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 931,
+      "action": "intrinsic",
+      "reason": "Remove arbitrary card minimum height; content and shared padding determine the component height."
+    },
+    {
+      "index": 932,
+      "action": "token",
+      "value": "var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 935,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".page-system",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "index": 936,
+      "action": "token",
+      "value": "max(var(--ui-space-4), env(safe-area-inset-top))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 937,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "All page and dialog title bars use one shared compact header height."
+    },
+    {
+      "index": 941,
+      "action": "token",
+      "value": "calc(calc(var(--ui-nav-height) + var(--ui-space-4)) + env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 942,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".habit-editor-dialog .dialog-content",
+          "value": "var(--ui-form-gap)"
+        }
+      ]
+    },
+    {
+      "index": 943,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 945,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 946,
+      "action": "token",
+      "value": "calc(var(--ui-button-height) + 2 * var(--ui-space-3))",
+      "reason": "Fixed action bars derive their minimum height from the shared button height and vertical padding."
+    },
+    {
+      "index": 948,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".is-ai-settings .dialog-content",
+          "value": "var(--ui-form-gap)"
+        }
+      ]
+    },
+    {
+      "index": 950,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "All page and dialog title bars use one shared compact header height."
+    },
+    {
+      "index": 951,
+      "action": "token",
+      "value": "var(--ui-button-height)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 952,
+      "action": "intrinsic",
+      "reason": "Remove arbitrary card minimum height; content and shared padding determine the component height."
+    },
+    {
+      "index": 953,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 955,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-1) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 956,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 960,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 964,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 965,
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 968,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 972,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 978,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".secondary-back",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 979,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".secondary-back",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 980,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".secondary-back",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 988,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 989,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 990,
+      "action": "token",
+      "value": "calc(calc(2 * var(--ui-space-8)) + var(--bottom-nav-height) + var(--ui-space-7) + env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 994,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".task-drag-handle",
+          "value": "100%"
+        }
+      ]
+    },
+    {
+      "index": 995,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".task-drag-handle",
+          "value": "max(var(--ui-touch-size), calc(var(--ui-row-height) - 2 * var(--ui-border-width)))"
+        }
+      ]
+    },
+    {
+      "index": 996,
+      "action": "token",
+      "value": "var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1003,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1029,
+      "action": "token",
+      "value": "var(--ui-monthly-trend-height)",
+      "reason": "The monthly sparkline uses a dedicated visualization height instead of coupling chart geometry to section spacing."
+    },
+    {
+      "index": 1034,
+      "action": "token",
+      "value": "var(--ui-space-4) var(--ui-space-1) var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1053,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1054,
+      "action": "token",
+      "value": "var(--ui-space-6) var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1056,
+      "action": "token",
+      "value": "var(--ui-space-7) var(--ui-space-6) var(--ui-space-8)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1057,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "Use the public touch target for floating, close and compact stage actions."
+    },
+    {
+      "index": 1060,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 1065,
+      "action": "token",
+      "value": "var(--ui-space-6) var(--ui-space-2) var(--ui-space-7)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1069,
+      "action": "token",
+      "value": "var(--ui-space-6)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1073,
+      "action": "token",
+      "value": "var(--ui-space-7) var(--ui-space-6) var(--ui-space-8)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1079,
+      "action": "token",
+      "value": "var(--ui-space-6) var(--ui-space-6)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1080,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 1082,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-6)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1084,
+      "action": "token",
+      "value": "var(--ui-space-7) var(--ui-space-6)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1085,
+      "action": "token",
+      "value": "var(--ui-space-7)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1092,
+      "action": "token",
+      "value": "var(--ui-space-6) var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1093,
+      "action": "token",
+      "value": "var(--ui-space-5) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1094,
+      "action": "token",
+      "value": "var(--ui-border-width)",
+      "reason": "Connectors and separators use the shared hairline width."
+    },
+    {
+      "index": 1097,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 1098,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 1099,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 1100,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 1101,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 1102,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 1103,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 1104,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Goal stage markers and controls use the shared icon/selection size."
+    },
+    {
+      "index": 1105,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 1109,
+      "action": "token",
+      "value": "var(--ui-space-5) 0 var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1118,
+      "action": "token",
+      "value": "var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1121,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 1122,
+      "action": "token",
+      "value": "var(--ui-space-5) var(--ui-space-6)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1123,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 1125,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "All page and dialog title bars use one shared compact header height."
+    },
+    {
+      "index": 1126,
+      "action": "token",
+      "value": "0 var(--ui-touch-size)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1127,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 1128,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 1133,
+      "action": "token",
+      "value": "var(--ui-space-4) 0",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1135,
+      "action": "token",
+      "value": "calc(var(--ui-space-5) + var(--bottom-nav-height) + env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1138,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 1139,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 1141,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 1144,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 1145,
+      "action": "token",
+      "value": "calc(var(--ui-button-height) + var(--bottom-nav-height) + env(safe-area-inset-bottom))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1149,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".app-shell",
+          "value": "var(--ui-page-width)"
+        },
+        {
+          "selector": ".page",
+          "value": "var(--ui-page-width)"
+        }
+      ]
+    },
+    {
+      "index": 1150,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".page",
+          "value": "max(var(--ui-page-padding), env(safe-area-inset-top)) var(--ui-page-padding) var(--page-bottom-space)"
+        }
+      ]
+    },
+    {
+      "index": 1151,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".page-tasks",
+          "value": "max(var(--ui-page-padding), env(safe-area-inset-top)) var(--ui-page-padding) var(--page-bottom-space)"
+        },
+        {
+          "selector": ".page-record",
+          "value": "max(var(--ui-page-padding), env(safe-area-inset-top)) var(--ui-page-padding) var(--page-bottom-space)"
+        },
+        {
+          "selector": ".page-growth",
+          "value": "max(var(--ui-page-padding), env(safe-area-inset-top)) var(--ui-page-padding) var(--page-bottom-space)"
+        },
+        {
+          "selector": ".page-review",
+          "value": "max(var(--ui-page-padding), env(safe-area-inset-top)) var(--ui-page-padding) var(--page-bottom-space)"
+        },
+        {
+          "selector": ".page-analysis",
+          "value": "max(var(--ui-page-padding), env(safe-area-inset-top)) var(--ui-page-padding) var(--page-bottom-space)"
+        },
+        {
+          "selector": ".page-calendar",
+          "value": "max(var(--ui-page-padding), env(safe-area-inset-top)) var(--ui-page-padding) var(--page-bottom-space)"
+        },
+        {
+          "selector": ".page-day",
+          "value": "max(var(--ui-page-padding), env(safe-area-inset-top)) var(--ui-page-padding) var(--page-bottom-space)"
+        }
+      ]
+    },
+    {
+      "index": 1152,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".page-header",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 1153,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".section-text-action",
+          "value": "var(--ui-touch-size)"
+        },
+        {
+          "selector": ".page-header-text-action",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 1154,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".secondary-page-header",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 1155,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".bottom-nav",
+          "value": "min(100%, var(--ui-page-width))"
+        }
+      ]
+    },
+    {
+      "index": 1156,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".nav-item",
+          "value": "min(var(--ui-nav-item-size), 100%)"
+        },
+        {
+          "selector": ".nav-item:last-child",
+          "value": "min(var(--ui-nav-item-size), 100%)"
+        }
+      ]
+    },
+    {
+      "index": 1157,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".nav-item",
+          "value": "var(--ui-nav-item-size)"
+        },
+        {
+          "selector": ".nav-item:last-child",
+          "value": "var(--ui-nav-item-size)"
+        }
+      ]
+    },
+    {
+      "index": 1158,
+      "action": "token",
+      "value": "var(--ui-nav-item-size)",
+      "reason": "Use the public bottom-navigation item height."
+    },
+    {
+      "index": 1159,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".nav-item",
+          "value": "var(--ui-radius-surface)"
+        },
+        {
+          "selector": ".nav-item:last-child",
+          "value": "var(--ui-radius-surface)"
+        }
+      ]
+    },
+    {
+      "index": 1160,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".nav-item .semantic-icon",
+          "value": "var(--ui-icon-size)"
+        }
+      ]
+    },
+    {
+      "index": 1161,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".nav-item .semantic-icon",
+          "value": "var(--ui-icon-size)"
+        }
+      ]
+    },
+    {
+      "index": 1162,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".navigation-icon",
+          "value": "var(--ui-icon-size)"
+        }
+      ]
+    },
+    {
+      "index": 1163,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".navigation-icon",
+          "value": "var(--ui-icon-size)"
+        }
+      ]
+    },
+    {
+      "index": 1166,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".dialog-back",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 1167,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".dialog-back",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 1168,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".dialog-back",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 1169,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".dialog-back",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 1178,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+    },
+    {
+      "index": 1179,
+      "action": "token",
+      "value": "var(--ui-space-2) var(--ui-space-1)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1180,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".trail-tab",
+          "value": "var(--ui-radius-control)"
+        },
+        {
+          "selector": ".task-view-tab",
+          "value": "var(--ui-radius-control)"
+        },
+        {
+          "selector": ".record-subtab",
+          "value": "var(--ui-radius-control)"
+        },
+        {
+          "selector": ".analysis-range-tabs button",
+          "value": "var(--ui-radius-control)"
+        },
+        {
+          "selector": ".growth-period-tabs button",
+          "value": "var(--ui-radius-control)"
+        }
+      ]
+    },
+    {
+      "index": 1181,
+      "action": "token",
+      "value": "0 0 var(--ui-space-6)",
+      "reason": "Calendar toolbar retains bottom-only separation; shared spacing does not add side margins."
+    },
+    {
+      "index": 1182,
+      "action": "token",
+      "value": "0 0 var(--ui-space-5)",
+      "reason": "Weekday heading retains bottom-only separation from the date grid."
+    },
+    {
+      "index": 1199,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 1200,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 1201,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 1206,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".life-diary-input",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 1207,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    },
+    {
+      "index": 1208,
+      "action": "token",
+      "value": "var(--ui-space-3) var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1209,
+      "action": "token",
+      "value": "var(--ui-radius-surface)",
+      "reason": "Use the single public surface radius for component corners."
+    },
+    {
+      "index": 1210,
+      "action": "token",
+      "value": "var(--ui-row-action-width)",
+      "reason": "Trailing output and send actions use the shared row action width."
+    },
+    {
+      "index": 1214,
+      "action": "token",
+      "value": "0 0 var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1215,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".profile-form .avatar-preview",
+          "value": "var(--ui-portrait-preview-width)"
+        }
+      ]
+    },
+    {
+      "index": 1216,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".profile-form .avatar-preview",
+          "value": "var(--ui-portrait-preview-height)"
+        }
+      ]
+    },
+    {
+      "index": 1217,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".profile-form .avatar-preview",
+          "value": "0 auto"
+        }
+      ]
+    },
+    {
+      "index": 1218,
+      "action": "token",
+      "value": "0 0 var(--ui-space-4)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1228,
+      "action": "token",
+      "value": "0 auto var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1229,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "All page and dialog title bars use one shared compact header height."
+    },
+    {
+      "index": 1234,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".profile-avatar-choices",
+          "value": "var(--ui-space-4)"
+        }
+      ]
+    },
+    {
+      "index": 1235,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".profile-avatar-choices .avatar-choice",
+          "value": "var(--ui-portrait-choice-height)"
+        }
+      ]
+    },
+    {
+      "index": 1236,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".profile-avatar-choices .avatar-choice",
+          "value": "var(--ui-space-4)"
+        }
+      ]
+    },
+    {
+      "index": 1237,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".profile-avatar-choices .avatar-choice",
+          "value": "var(--ui-radius-surface)"
+        }
+      ]
+    },
+    {
+      "index": 1238,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".profile-avatar-choices .avatar-choice-image",
+          "value": "var(--ui-portrait-image-width)"
+        }
+      ]
+    },
+    {
+      "index": 1239,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".profile-avatar-choices .avatar-choice-image",
+          "value": "var(--ui-portrait-image-height)"
+        }
+      ]
+    },
+    {
+      "index": 1242,
+      "action": "token",
+      "value": "var(--ui-space-7) var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1249,
+      "action": "token",
+      "value": "var(--ui-row-height)",
+      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+    },
+    {
+      "index": 1255,
+      "action": "token",
+      "value": "var(--ui-space-5)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1261,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
+    },
+    {
+      "index": 1262,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
+    },
+    {
+      "index": 1263,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
+    },
+    {
+      "index": 1264,
+      "action": "token",
+      "value": "var(--ui-icon-size)",
+      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
+    },
+    {
+      "index": 1266,
+      "action": "token",
+      "value": "var(--ui-touch-size)",
+      "reason": "All page and dialog title bars use one shared compact header height."
+    },
+    {
+      "index": 1267,
+      "action": "token",
+      "value": "0 0 0 calc(var(--ui-touch-size) + var(--ui-space-3))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1270,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".plan-section-tab",
+          "value": "var(--ui-radius-control)"
+        }
+      ]
+    },
+    {
+      "index": 1271,
+      "action": "token",
+      "value": "0 var(--ui-space-2) var(--ui-space-3)",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1272,
+      "action": "token",
+      "value": "calc(var(--space-m) + var(--ui-border-width)) calc(var(--space-l) + var(--ui-border-width))",
+      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+    },
+    {
+      "index": 1273,
+      "action": "remove",
+      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
+      "owner": [
+        {
+          "selector": ".life-diary-input",
+          "value": "var(--ui-touch-size)"
+        }
+      ]
+    },
+    {
+      "index": 1274,
+      "action": "exception",
+      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
+      "category": "responsive-content-bound"
+    }
+  ]
+}

@@ -17,7 +17,7 @@
   </style>
 </head>
 <body>
-<header><h1>栖光 · 组件尺寸审查</h1><p>先调整公共模板，再检查实际页面。前 3 个视图使用真实组件，后 8 个为原型；参数不会自动修改 App。</p></header>
+<header><h1>栖光 · 组件尺寸审查</h1><p>先调整公共模板，再检查实际页面。前 3 个视图使用公共渲染器，后 8 个使用真实页面的测试数据快照；参数不会自动修改 App。</p></header>
 <div class="layout">
   <aside class="controls" aria-label="组件参数">
     <div class="actions"><button id="base">恢复 32 基准</button><button id="compact">紧凑候选</button></div>
@@ -51,7 +51,7 @@
       <p>建议顺序：字体 → 列表 → 标题与分组间距 → 按钮和表单。最后导出参数文件发给我；不用再逐页报像素。</p>
       <p>向下滚动预览可查看列表、标题栏、按钮、分段、表单和提示。确认字是否舒服、密度是否合适、操作是否清楚即可。</p>
       <p>“页面标题到正文”统一从标题栏下沿开始计算；“分组标题到列表”控制正文内的小标题间隔。预览下方会显示实际测量值。</p>
-      <p class="muted">所有预览共用标题与分组布局；任务、设置和组件样板直接使用 App 列表组件，其余为交互原型。调整保存在本浏览器，不自动覆盖 App；确认后点击“导出参数”。</p>
+      <p class="muted">所有预览共用标题与分组布局；任务、设置和组件样板使用公共渲染器，其余为真实页面只读快照。调整保存在本浏览器，不自动覆盖 App；确认后点击“导出参数”。</p>
     </section>
     <section class="review" id="templates"><h2>可调整模板清单</h2>
       <div class="scroll"><table><thead><tr><th>模板</th><th>调什么</th><th>在哪里看 / 边界</th></tr></thead><tbody>
@@ -62,13 +62,10 @@
         <tr><td>按钮 / 分段</td><td>可见高度、点击高度</td><td>统一组件；最低触控 44px，不能靠压缩触控区域变小</td></tr>
         <tr><td>表单 / 正文</td><td>标签到输入框、字段之间、多行高度</td><td>统一组件；“正文”为组件标题，小字段标签仍用正文级</td></tr>
         <tr><td>容器 / 提示</td><td>圆角、内部文字；内边距暂固定公共令牌</td><td>统一组件；没有独立颜色、边框宽度或内边距滑块</td></tr>
-        <tr><td>特殊内容</td><td>复盘高度、重复日期间距、热力图方格/间距/列表宽</td><td>对应原型视图；人物、徽章、底栏没有实时调节模板，需正式页面复核</td></tr>
+        <tr><td>特殊内容</td><td>复盘高度、重复日期间距、热力图方格/间距/列表宽</td><td>对应真实页面快照；只调整视觉，不执行任务、保存记录或发送 AI</td></tr>
       </tbody></table></div>
     </section>
     <details class="review"><summary>全部参数与基准数值（31 项）</summary><div class="scroll"><table><thead><tr><th>分类</th><th>参数</th><th>基准</th><th>导出键</th></tr></thead><tbody id="parameter-catalog"></tbody></table></div></details>
-    <details class="review"><summary>其他页面的旧原型记录（非本轮验收）</summary>
-      <div class="scroll"><table><thead><tr><th>编号</th><th>问题 / 要求</th><th>候选与实现边界</th></tr></thead><tbody id="audit"></tbody></table></div>
-    </details>
     <details class="review"><summary>查看原来的 32 截图</summary><p>历史参照，只沿用分组结构；不是当前 App 的截图。</p><img class="reference" src="screenshots/20260905-rebuilt-pages/32-settings-privacy.png" alt="32 AI 发送范围历史截图"></details>
   </main>
 </div>

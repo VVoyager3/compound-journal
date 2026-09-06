@@ -19,9 +19,9 @@
 ## UI 组件与审计
 
 - 公共组件样式：`src/design-system.css`；列表渲染器：`src/ui-list.ts`；分类与适用边界见 [组件规范](./docs/UI_COMPONENTS.md)。
-- 开发服务启动后打开 `/design/ui-tuner.html` 调整候选参数。前3个视图使用真实组件，其余为原型；导出参数不会自动修改正式应用。
+- 开发服务启动后打开 `/design/ui-tuner.html` 调整候选参数。前3个视图使用公共渲染器，其余8个使用真实页面的隔离数据快照；已移除手写原型及其专用样式。导出参数不会自动修改正式应用。
 - `node scripts/audit-ui-code.mjs` 生成静态样式清单；`npm test` 运行项目测试。截图检查见 `scripts/capture-ui.mjs`，使用隔离的测试数据，不读取用户日记。
-- 最新修复截图见 [页面审计](./design/screenshots/20260906-shared-rule-fix/index.html)。已识别文字角色已通过规格检查；旧布局迁移、原型替换及部分弹层验收仍列在 TODO，不代表全库统一完成。
+- 页面截图见 [页面审计](./design/screenshots/20260906-dimension-complete/index.html)。55个场景均有统一页面壳和文字规格，预览溢出为0；固定基线的1276条直接尺寸已全部迁移或明确分类，公共组件层不再直接声明尺寸。Android安全区、键盘和设备字体仍需单独验收。
 
 ## 技术栈
 
