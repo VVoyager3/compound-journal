@@ -125,7 +125,7 @@ test('typography and settings density follow the global UI rules', async () => {
   assert.match(components, /--page-bottom-space:\s*calc\(var\(--ui-nav-height\) \+ var\(--ui-space-7\) \+ env\(safe-area-inset-bottom\)\)/);
   assert.doesNotMatch(await read('src/app.ts'), /record-number-tools|record-attachment-button/);
   assert.match(styles, /\.trail-tabs\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
-  assert.match(styles, /\.review-actions > \.button\s*\{[^}]*width:\s*100%/s);
+  assert.doesNotMatch(styles, /\.review-actions(?:\s|\{|>)/, 'weekly review actions use the shared action group');
   assert.match(styles, /\.milestone-action\.is-complete[\s\S]*\.milestone-action\.is-undo/);
   assert.match(await read('src/app.ts'), /date-filter-placeholder', '选择日期'/);
   assert.match(styles, /max-height:\s*min\(calc\(var\(--dialog-viewport-height/);

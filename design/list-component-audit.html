@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>栖光 · 列表组件审计</title>
+  <style>
+    :root { color-scheme: light; font-family: "Microsoft YaHei UI", "PingFang SC", sans-serif; color: #174f3d; background: #f2efe6; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; }
+    main { width: min(1180px, 100%); margin: 0 auto; }
+    h1 { margin: 0 0 8px; font-size: 24px; }
+    .summary { margin: 0 0 24px; color: #657168; font-size: 14px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .legend span { padding: 6px 9px; border: 1px solid #d7cfbd; border-radius: 6px; background: #fbf8ef; font-size: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(250px,1fr)); gap: 16px; align-items: start; }
+    figure { margin: 0; overflow: hidden; border: 1px solid #d7cfbd; border-radius: 10px; background: #fbf8ef; }
+    figcaption { display: grid; gap: 5px; padding: 12px; border-bottom: 1px solid #e2dccd; }
+    figcaption strong { font-size: 15px; }
+    figcaption span { color: #657168; font-size: 12px; line-height: 1.5; }
+    img { display: block; width: 100%; height: 520px; object-fit: cover; object-position: top; background: #fffdf7; }
+    .status { color: #7a5b16; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>列表组件审计</h1>
+    <p class="summary">当前代码：1 个共享底座（ui-list-row / ui-list-group），6 类可见变体。截图来自当前应用最近一次完整页面采集。</p>
+    <div class="legend"><span>统一：共用行高、字体、内边距、分隔线</span><span>变体：只因交互目的不同</span><span class="status">待收敛：仍有页面私有结构</span></div>
+    <section class="grid">
+      <figure><figcaption><strong>1 · 行动列表</strong><span>任务、习惯、已完成。已统一到 taskRow，同一套高度和左右结构。</span></figcaption><a href="screenshots/20260905-shared-components/04-tasks-today.png"><img src="screenshots/20260905-shared-components/04-tasks-today.png" alt="任务今天页面"></a></figure>
+      <figure><figcaption><strong>2 · 信息／导航列表</strong><span>状态详情、设置、历史入口。已统一到 infoRow。</span></figcaption><a href="screenshots/20260905-shared-components/02-state-detail.png"><img src="screenshots/20260905-shared-components/02-state-detail.png" alt="身体状态详情页面"></a></figure>
+      <figure><figcaption><strong>3 · 管理列表</strong><span>目标、习惯管理。共享列表底座，但内部仍各自拼装，尚未完全统一。</span></figcaption><a href="screenshots/20260905-shared-components/05-tasks-plan.png"><img src="screenshots/20260905-shared-components/05-tasks-plan.png" alt="任务计划页面"></a></figure>
+      <figure><figcaption><strong>4 · 表单控制列表</strong><span>开关、输入、选择器。统一到 ui-control-row，但内容高度会随表单控件变化。</span></figcaption><a href="screenshots/20260905-shared-components/30-settings-ai.png"><img src="screenshots/20260905-shared-components/30-settings-ai.png" alt="AI 设置页面"></a></figure>
+      <figure><figcaption><strong>5 · 单选／问卷列表</strong><span>状态自评等单选项。统一到 ui-choice-row，交互状态与导航行不同。</span></figcaption><a href="screenshots/20260905-shared-components/29-settings-assessment.png"><img src="screenshots/20260905-shared-components/29-settings-assessment.png" alt="状态自评设置页面"></a></figure>
+      <figure><figcaption><strong>6 · 数据比较列表</strong><span>习惯分析的周期统计。使用 ui-data-row，仍是独立的数据排版变体。</span></figcaption><a href="screenshots/20260905-shared-components/26-habit-analysis-detail.png"><img src="screenshots/20260905-shared-components/26-habit-analysis-detail.png" alt="习惯分析详情页面"></a></figure>
+      <figure><figcaption><strong>待收敛 · 内容记录块</strong><span>修订历史、复盘证据、个人回顾仍是页面私有结构；不应冒充通用列表。</span></figcaption><a href="screenshots/20260905-shared-components/42-record-history.png"><img src="screenshots/20260905-shared-components/42-record-history.png" alt="记录历史页面"></a></figure>
+    </section>
+  </main>
+</body>
+</html>

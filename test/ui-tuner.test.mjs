@@ -98,12 +98,12 @@ test('UI tuner shares geometry, persists parameters and safely exports/imports w
         const titleGaps = await measureTitleGaps();
         assert.ok(titleGaps.length > 0);
         assert.ok(titleGaps.every(({gap, height, font, weight}) => gap === 12 && height === 44 && font === '16px' && weight === '800'), view + ' shares title geometry at ' + width + ': ' + JSON.stringify(titleGaps));
-        const groupGaps = await candidate.locator('dialog[open] .ui-list-section,body:not(:has(dialog[open])) .ui-list-section,body:not(:has(dialog[open])) .ui-settings-group').evaluateAll(groups => groups.filter(group => group.getBoundingClientRect().width > 0 && group.children.length > 1).map(group => group.children[1].getBoundingClientRect().top - group.children[0].getBoundingClientRect().bottom));
+        const groupGaps = await candidate.locator('dialog[open] .ui-list-section,body:not(:has(dialog[open])) .ui-list-section').evaluateAll(groups => groups.filter(group => group.getBoundingClientRect().width > 0 && group.children.length > 1).map(group => group.children[1].getBoundingClientRect().top - group.children[0].getBoundingClientRect().bottom));
         assert.ok(groupGaps.every(gap => gap === 8), view + ' uses the same section heading gap');
         await page.getByRole('spinbutton', { name: '页面标题到正文数值' }).fill('24');
         assert.ok((await measureTitleGaps()).every(({gap}) => gap === 24), view + ' responds to the title gap control');
         await page.getByRole('spinbutton', { name: '分组标题到列表数值' }).fill('16');
-        assert.ok((await candidate.locator('dialog[open] .ui-list-section,body:not(:has(dialog[open])) .ui-list-section,body:not(:has(dialog[open])) .ui-settings-group').evaluateAll(groups => groups.filter(group => group.getBoundingClientRect().width > 0 && group.children.length > 1).map(group => group.children[1].getBoundingClientRect().top - group.children[0].getBoundingClientRect().bottom))).every(gap => gap === 16), view + ' responds to the group heading gap control');
+        assert.ok((await candidate.locator('dialog[open] .ui-list-section,body:not(:has(dialog[open])) .ui-list-section').evaluateAll(groups => groups.filter(group => group.getBoundingClientRect().width > 0 && group.children.length > 1).map(group => group.children[1].getBoundingClientRect().top - group.children[0].getBoundingClientRect().bottom))).every(gap => gap === 16), view + ' responds to the group heading gap control');
         await page.getByRole('spinbutton', { name: '页面标题到正文数值' }).fill('12');
         await page.getByRole('spinbutton', { name: '分组标题到列表数值' }).fill('8');
         await candidate.locator('html').evaluate(el => el.style.setProperty('--ui-font-page', '32px'));
@@ -112,6 +112,7 @@ test('UI tuner shares geometry, persists parameters and safely exports/imports w
         await candidate.locator('html').evaluate(el => el.style.setProperty('--ui-font-page', '16px'));
         if (view === 'settings') {
           await baseline.locator('h1').filter({ hasText: '设置' }).waitFor();
+          await baseline.locator('.ui-list-heading').nth(3).waitFor();
           assert.equal(await baseline.locator('.ui-list-heading').count(), 4, 'baseline shows the same template');
           assert.equal(await candidate.locator('h1').textContent(), '设置');
           assert.deepEqual(await candidate.locator('.ui-list-heading').allTextContents(), ['个人','功能','数据与隐私','高级']);

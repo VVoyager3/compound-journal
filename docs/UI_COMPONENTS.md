@@ -5,8 +5,8 @@
 ## 唯一负责位置
 
 - `src/design-system.css`：字体、公共间隔、控件、标题栏及列表几何。
-- `src/ui-list.ts`：只读、导航、操作、控件行的统一 DOM。
-- `src/app.ts`：页面及业务组合；所有弹层由 `dialogShell` 建立公共标题栏，返回按钮只向该标题栏补入，不另造壳。
+- `src/ui-list.ts`：列表行、栏目标题、空状态、操作组、表单字段和分段选择器的统一 DOM 构造器；设置分组也使用同一套 `listSection`，业务页不得再次手写这些公共类结构。
+- `src/app.ts`：页面及业务组合；所有弹层由 `dialogShell` 建立公共标题栏，全屏类型、业务类名和返回按钮均通过同一入口声明，不在调用处二次拼装页面壳。
 - `src/styles.css`：业务布局、像素素材、图表与响应式结构；禁止 font / font-size / font-weight / line-height / letter-spacing。普通文字继承公共角色。
 - `design/ui-tuner.html`：只生成候选参数，不自动修改 App 或用户数据。
 
@@ -19,7 +19,7 @@
 | 上下文弹层 | 短编辑、日期快照、确认、首次引导 | 公共标题栏，正文，操作区；保留背景 |
 
 左右20px，360px及以下默认16px；人工候选可覆盖。标题栏最低44px，标题栏到内容4px，同级内容组16px。顶部、底部和键盘空间使用系统安全区与可用视口。
-返回/关闭/更多通过网格和相对布局对齐，不单独绝对定位。大字体允许标题栏自然增高。
+一级页与二级页均由 `pageHeader` 创建，只通过 `back`、`meta`、`action` 和 `fallback` 选项表达差异。返回/关闭/更多通过网格和相对布局对齐，不单独绝对定位。大字体允许标题栏自然增高。
 
 ## 字体：四级，外加两种明确用途的显示元素
 
@@ -35,21 +35,35 @@
 日记行高1.55保留为长文阅读变体。普通 strong 不自动把任务变成粗标题；公共标题负责强调。HTML 标签不同不能使同一语义变成另一字号。
 所有业务布局 CSS 的字体声明已移除，静态测试禁止重新引入。专用数值和图标的文字规格也集中在公共层。
 
-## 组件：七组基础模板
+## 组件：八组基础模板
 
 | 组件组 | 公共结构 | 可调整项 |
 | --- | --- | --- |
 | 标题栏 | ui-titlebar / ui-page-title / ui-back-button | 标题字号、左右内距、标题到正文 |
-| 内容分组 | ui-list-section / ui-list-heading / ui-stack | 标题到内容13px、组间16px |
+| 内容分组 | ui-list-section / section-heading / ui-stack | 标题到内容13px、组间16px |
 | 列表 | ui-list-group / ui-list-row | 最低45px、左右20px、上下0、圆角8px |
 | 内容容器 | surface / ui-panel / ui-surface-plain | 统一容器内距、边界或无框变体 |
 | 表单 | field-label / ui-form-stack / input | 标签间4px、字段间11px、多行最低104px |
-| 操作 | button / ui-actions / ui-actions-pair | 可见36px、触控至少44px、按钮间8px |
+| 操作 | button / ui-actions / ui-actions-pair / quest-more-actions | 可见36px、触控至少44px、按钮间8px；条目菜单共用一个溢出菜单骨架 |
 | 选择 | ui-segmented / ui-filter-tabs | 可见28px、触控至少44px、固定分段或横向筛选 |
+| 时间翻页 | ui-period-nav / ui-period-label | 三列相对网格、标签居中、前后按钮44px触控区 |
+| 图片选择 | ui-avatar-choice-group / avatar-choice / avatar-choice-image | 唯一容器、图片、名称、选中状态及无障碍名称；引导与设置复用同一轻量人物资源，不保留页面专属类 |
+| 单选列表项 | ui-choice-group / ui-choice-row | 三列选择容器、行高、内距、圆形标记、选中态与 `aria-pressed` 统一；任务结果、习惯完成方式与问卷答案复用 |
+| 页面返回 / 标题栏操作 | ui-back-button / ui-titlebar-action | 页面与弹层共用按钮结构、触控尺寸和无障碍名称；上下文类只保留定位差异 |
+| 折叠内容 | disclosure / details / summary | 唯一原生骨架；普通次要内容、设置展开项和溢出菜单只保留外观变体 |
 
-列表四种行为共用几何，不是四套皮肤：只读不打卡；导航行进入详情；操作行完成或+1；控件行提供开关或选项。组内只用一个外框和细分隔线；长文自然增高。
+列表四种行为共用几何，不是四套皮肤：只读不打卡；导航行进入详情；操作行完成或+1；控件行提供开关或选项。组内只用一个外框和细分隔线；长文自然增高。列表网格只为当前实际子项分列：纯内容为单列，“内容 + 状态/操作”为双列；不得为已删除的图标、箭头或菜单保留空轨道。
 人物、日历、热力图、徽章允许专用内部布局，不强塞进列表，但必须复用外层页面、字体及控件。
 图片、发送按钮也使用公共 button；不依靠文字宽度碰巧达到最小点击尺寸。
+`sectionHeading`、`listSection`、`emptyState`、`metricGroup`、`metricItem`、`actionGroup`、`formStack`、`labelledControl`、`textAction`、`actionButton`、`fileButton`、`primaryButton`、`statusMessage`、`titleBar`、`backButton`、`titlebarAction`、`disclosure`、`optionalDetails`、`overflowMenu`、`segmentedControl`、`segmentedItem`、`periodNavigator`、`avatarChoiceGroup`、`avatarChoice`、`choiceGroup` 和 `choiceRow` 是上述公共结构的唯一 DOM 入口；设置、问卷与复盘分组不再保留平行骨架。页面只传业务专用类、文字、状态和事件。普通按钮只允许 primary、secondary、quiet、danger 四种既有语义变体，并统一由 `actionButton` 设置样式、原生 button/submit 类型与可选点击行为；文件选择按钮由 `fileButton` 保留原生 input 语义。业务页不得再直接拼接标准按钮类。页面和弹层标题栏由 `titleBar` 生成，返回键由 `backButton` 建立，标题栏尾部的文字、符号或图标操作均由 `titlebarAction` 建立。所有 `<details><summary>` 先由 `disclosure` 建立；`optionalDetails` 与 `overflowMenu` 只添加各自语义和外观，不再重复创建原生骨架。周统计、任务分析与习惯统计的整组“标签 + 数值”均由 `metricGroup` 生成，单项由 `metricItem` 生成；日历月份与周复盘周期均由 `periodNavigator` 生成；初次引导和人物设置均由无页面专属类的 `avatarChoiceGroup` 与 `avatarChoice` 生成；任务结果和习惯完成方式由 `choiceGroup` 与 `choiceRow` 生成三列选择，问卷答案复用 `choiceRow` 的纵向列表形态。未被运行时调用的候选变体（如旧 `quest-row`）直接删除。趋势图等带图形的指标保留专用结构。
+记录页只保留“生活日记 + 每日复盘”的现行结构；旧分类提示、模板选择、编号按钮、旧附件按钮和固定提交栏不是可选皮肤，禁止重新引入。图片操作使用公共 `actionButton`，记录管理进入统一详情弹层。
+日期记录和周复盘同样不保留旧卡片皮肤：记录条目进入统一详情弹层；周复盘只保留当前摘要、调整清单和公共操作组，不再并行维护 hero、focus 或 experiment 卡。
+搜索结果、表单保存及异步错误统一由 `statusMessage` 提供状态区域；业务页只更新文字和 `is-error` 状态，不再创建同尺寸的页面专用状态类。
+
+没有挂载到页面的候选组件必须删除，不以“以后可能使用”为由保留平行 DOM、计算或 CSS。已完成、逾期任务直接复用 `taskRow`；习惯分析与成长记录复用现有数据/信息行，不再保留旧 momentum、ledger、milestone、habit-log 或 analysis-result 行皮肤。习惯分析总览只保留实际展示的近四周表格。
+状态、成长、习惯和目标页同样不保留旧 `growth-overview`、`growth-seed`、`goal-status`、`habit-actions`、`assessment-*-actions` 或专页标题/列表间距类；现行页面只由公共页面壳、栏目标题、列表行、指标组、操作组和表单间距组合。
+标准“标题 + 内容”区域直接使用 `listSection`；热力图、日历等必须保留专用内部网格的区域仅复用 `sectionHeading`。业务页不再用裸 `h2/h3` 另造同级小节标题和间距。日期记录、行动结果和月度概览属于标准区块；日期预览与复盘调整保留专用布局，但标题仍由 `sectionHeading` 生成。
+原 `iconButton` 已删除：无图标的文字按钮全部回到 `actionButton`；仅日历翻月保留 `calendarMonthButton` 这一种专用无文字图标按钮，避免把专用箭头样式扩散成第二套普通按钮。
 
 ## 间隔归属
 
@@ -63,7 +77,7 @@
 
 | 视图 | 来源 | 边界 |
 | --- | --- | --- |
-| 统一组件、任务列表、设置分组 | 公共渲染器 + App CSS | 可点击样例，不操作真实业务 |
+| 统一组件、任务列表、设置分组 | 与 App 相同的公共 DOM 构造器 + App CSS | 可点击样例，不操作真实业务；不得在预览页重写按钮、字段或分段控件 |
 | 目标、任务编辑、习惯重复、每日/周复盘、日历、成长、分析 | 真实 App DOM 的隔离测试数据快照 + App CSS | 实时调尺寸；不执行业务保存或 AI |
 
 8个手写原型及其专用 CSS 已退出调节页。左右两侧使用同一模板和视口，只有左侧应用候选参数。

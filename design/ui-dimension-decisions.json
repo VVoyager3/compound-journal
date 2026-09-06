@@ -5,26 +5,16 @@
     {
       "indexes": [
         84,
-        106,
-        112,
         119,
-        130,
         132,
         146,
         180,
-        185,
         221,
         225,
-        227,
-        271,
-        273,
         338,
-        436,
         482,
         885,
-        886,
         1031,
-        1111,
         1137
       ],
       "action": "token",
@@ -49,9 +39,7 @@
     },
     {
       "indexes": [
-        97,
         124,
-        140,
         193,
         267,
         314,
@@ -64,27 +52,23 @@
     {
       "indexes": [
         121,
-        127,
         143,
         163,
         168,
         298,
         316,
         328,
-        344,
         345,
         351,
         357,
         367,
         444,
-        507,
         521,
         603,
         615,
         682,
         711,
         731,
-        911,
         924,
         971,
         1112,
@@ -97,25 +81,12 @@
     },
     {
       "indexes": [
-        91,
         96,
-        98,
-        99,
         103,
-        105,
-        128,
-        129,
         172,
-        186,
-        188,
-        202,
         204,
         228,
-        249,
-        259,
-        261,
         276,
-        283,
         301,
         306,
         308,
@@ -123,28 +94,17 @@
         353,
         371,
         469,
-        474,
-        477,
         513,
-        516,
         536,
         544,
-        595,
         602,
         606,
         614,
-        648,
         653,
-        739,
         740,
-        793,
-        834,
         855,
         878,
-        882,
-        912,
         934,
-        1032,
         1068,
         1132,
         1222,
@@ -159,25 +119,20 @@
       "indexes": [
         86,
         87,
-        90,
         125,
         134,
         142,
-        196,
         199,
         264,
         282,
         285,
         289,
         423,
-        620,
         636,
         713,
         728,
         1055,
-        1070,
-        1078,
-        1091
+        1070
       ],
       "action": "token",
       "value": "var(--ui-group-gap)",
@@ -190,8 +145,6 @@
         296,
         303,
         310,
-        405,
-        439,
         510,
         548,
         747,
@@ -229,8 +182,7 @@
         705,
         709,
         714,
-        729,
-        745
+        729
       ],
       "action": "token",
       "value": "0 calc(-1 * var(--ui-space-5))",
@@ -238,7 +190,6 @@
     },
     {
       "indexes": [
-        754,
         1063,
         1064,
         1088,
@@ -261,8 +212,7 @@
     {
       "indexes": [
         393,
-        584,
-        624
+        584
       ],
       "action": "token",
       "value": "var(--ui-space-3) var(--ui-space-2)",
@@ -316,16 +266,6 @@
     },
     {
       "indexes": [
-        631,
-        847
-      ],
-      "action": "token",
-      "value": "0 var(--ui-space-1)",
-      "reason": "Compact summary and calendar toolbar keep zero vertical and micro horizontal inset."
-    },
-    {
-      "indexes": [
-        650,
         1075
       ],
       "action": "token",
@@ -340,14 +280,6 @@
       "action": "token",
       "value": "var(--ui-space-3) var(--ui-space-5)",
       "reason": "Preview action and growth-stat pairs share compact row and roomy column spacing."
-    },
-    {
-      "indexes": [
-        203
-      ],
-      "action": "token",
-      "value": "var(--ui-space-4) var(--ui-space-1)",
-      "reason": "Legacy quest row retains regular vertical and micro horizontal inset through shared spacing values."
     },
     {
       "indexes": [
@@ -439,19 +371,10 @@
     },
     {
       "indexes": [
-        799
-      ],
-      "action": "token",
-      "value": "var(--ui-space-3) var(--ui-space-5) max(var(--ui-space-3), env(safe-area-inset-bottom))",
-      "reason": "Analysis actions use compact top, roomy sides and a safe-area-aware compact bottom inset."
-    },
-    {
-      "indexes": [
         808
       ],
-      "action": "token",
-      "value": "0 var(--ui-space-2) var(--ui-space-2)",
-      "reason": "Settings overview heading retains zero top and tight horizontal/bottom margins."
+      "action": "intrinsic",
+      "reason": "The parallel settings heading was removed; the shared list section now owns heading-to-content spacing."
     },
     {
       "indexes": [
@@ -543,14 +466,6 @@
     },
     {
       "indexes": [
-        1230
-      ],
-      "action": "token",
-      "value": "var(--ui-space-6) var(--ui-space-4)",
-      "reason": "Habit detail statistics use large vertical and regular horizontal inset."
-    },
-    {
-      "indexes": [
         1241
       ],
       "action": "token",
@@ -577,8 +492,6 @@
     },
     {
       "indexes": [
-        179,
-        190,
         243,
         252,
         266,
@@ -611,8 +524,7 @@
         893,
         1048,
         1049,
-        1076,
-        1083
+        1076
       ],
       "action": "token",
       "value": "var(--ui-space-6)",
@@ -665,7 +577,6 @@
         194,
         258,
         377,
-        407,
         591,
         592,
         593,
@@ -694,7 +605,6 @@
         783,
         797,
         805,
-        913,
         1041,
         1106,
         1108,
@@ -746,9 +656,6 @@
         62,
         63,
         64,
-        65,
-        69,
-        70,
         71,
         72,
         73,
@@ -766,11 +673,6 @@
         564,
         565,
         566,
-        689,
-        690,
-        691,
-        692,
-        693,
         871,
         889,
         890,
@@ -807,10 +709,6 @@
         520,
         550,
         551,
-        571,
-        572,
-        573,
-        574,
         608,
         609,
         639,
@@ -841,8 +739,6 @@
         831,
         840,
         841,
-        850,
-        851,
         860,
         861,
         898,
@@ -850,22 +746,16 @@
         915,
         916,
         917,
-        957,
-        958,
         969,
         970,
         997,
         998,
-        999,
-        1000,
         1001,
         1002,
         1004,
         1005,
         1006,
         1007,
-        1008,
-        1009,
         1010,
         1011,
         1012,
@@ -907,13 +797,9 @@
     },
     {
       "indexes": [
-        386,
         402,
         414,
         435,
-        437,
-        495,
-        581,
         610,
         888,
         1062,
@@ -922,11 +808,9 @@
         1203,
         1205,
         1212,
-        1231,
         1243,
         1251,
-        1254,
-        1259
+        1254
       ],
       "action": "token",
       "value": "var(--ui-radius-surface)",
@@ -937,7 +821,6 @@
         369,
         378,
         578,
-        697,
         743
       ],
       "action": "token",
@@ -947,7 +830,6 @@
     {
       "indexes": [
         384,
-        389,
         503
       ],
       "action": "token",
@@ -958,7 +840,6 @@
       "indexes": [
         425,
         431,
-        991,
         1164
       ],
       "action": "token",
@@ -995,20 +876,15 @@
     {
       "indexes": [
         2,
-        66,
-        88,
-        100,
         162,
         167,
         287,
-        388,
         397,
         400,
         568,
         575,
         582,
         588,
-        621,
         625,
         637,
         669,
@@ -1019,7 +895,6 @@
         820,
         881,
         894,
-        910,
         914,
         962,
         967,
@@ -1035,7 +910,6 @@
     },
     {
       "indexes": [
-        138,
         210,
         218
       ],
@@ -1045,7 +919,6 @@
     },
     {
       "indexes": [
-        68,
         358,
         680,
         1143
@@ -1062,15 +935,10 @@
         279,
         352,
         438,
-        441,
-        494,
-        509,
         594,
         599,
         644,
         873,
-        933,
-        938,
         947,
         961,
         963,
@@ -1085,23 +953,17 @@
     {
       "indexes": [
         22,
-        80,
         85,
-        93,
         133,
         135,
         150,
         161,
-        182,
-        270,
         340,
         429,
         473,
         531,
         660,
-        744,
         750,
-        918,
         959,
         1058,
         1095,
@@ -1117,8 +979,6 @@
     {
       "indexes": [
         17,
-        92,
-        141,
         169,
         309,
         322,
@@ -1134,10 +994,8 @@
     {
       "indexes": [
         23,
-        131,
         280,
         372,
-        375,
         626,
         696,
         984,
@@ -1152,8 +1010,6 @@
         11,
         77,
         94,
-        101,
-        184,
         246,
         370,
         392,
@@ -1166,8 +1022,6 @@
         839,
         928,
         1050,
-        1074,
-        1081,
         1233
       ],
       "action": "token",
@@ -1176,7 +1030,6 @@
     },
     {
       "indexes": [
-        81,
         195,
         342,
         376,
@@ -1190,8 +1043,6 @@
         865,
         1030,
         1040,
-        1077,
-        1096,
         1114
       ],
       "action": "token",
@@ -1200,14 +1051,9 @@
     },
     {
       "indexes": [
-        183,
-        187,
-        272,
         627,
-        738,
         926,
         939,
-        1129,
         1134,
         1146,
         1211,
@@ -1220,8 +1066,7 @@
     {
       "indexes": [
         159,
-        327,
-        1258
+        327
       ],
       "action": "token",
       "value": "var(--ui-space-6)",
@@ -1229,7 +1074,6 @@
     },
     {
       "indexes": [
-        1110,
         1245,
         1246
       ],
@@ -1248,11 +1092,9 @@
         47,
         58,
         59,
-        67,
         136,
         145,
         152,
-        166,
         173,
         201,
         212,
@@ -1267,33 +1109,15 @@
         324,
         333,
         334,
-        362,
-        363,
-        387,
-        415,
-        539,
         618,
         685,
         700,
         764,
-        848,
-        849,
-        973,
-        974,
-        975,
-        976,
-        977,
-        981,
-        982,
-        985,
-        986,
         987,
         992,
         1042,
         1119,
         1120,
-        1130,
-        1131,
         1268,
         1269
       ],
@@ -1303,6 +1127,256 @@
     }
   ],
   "decisions": [
+    {
+      "index": 202,
+      "action": "intrinsic",
+      "reason": "The unused compact quest-row variant was removed; live task lists use taskRow and management cards use quest-card."
+    },
+    {
+      "index": 249,
+      "action": "intrinsic",
+      "reason": "The unmounted milestone-row component was removed; goal milestones now use the goal detail stage list."
+    },
+    {
+      "index": 516,
+      "action": "intrinsic",
+      "reason": "The unmounted habit-log-row layout was removed; habit history uses the current analysis list components."
+    },
+    {
+      "index": 738,
+      "action": "intrinsic",
+      "reason": "The unmounted analysis-result-list spacing was removed; task analysis uses metricGroup and shared data rows."
+    },
+    {
+      "index": 739,
+      "action": "intrinsic",
+      "reason": "The unmounted analysis-result-row gap was removed with its obsolete result layout."
+    },
+    {
+      "index": 793,
+      "action": "intrinsic",
+      "reason": "The obsolete responsive analysis-result-row override was removed with the component."
+    },
+    {
+      "index": 259,
+      "action": "intrinsic",
+      "reason": "The legacy habit-momentum-row gap was removed; current habit analysis renders through shared data rows."
+    },
+    {
+      "index": 261,
+      "action": "intrinsic",
+      "reason": "The legacy ledger-row gap was removed; current growth evidence renders through shared info rows."
+    },
+    {
+      "index": 88,
+      "action": "intrinsic",
+      "reason": "The unused overdue-quest-row branch was removed; overdue tasks already render through the shared taskRow list component."
+    },
+    {
+      "index": 203,
+      "action": "intrinsic",
+      "reason": "The unused compact quest-row padding was removed with its dead component variant."
+    },
+    {
+      "index": 312,
+      "action": "intrinsic",
+      "reason": "The dead day-quests quest-row spacing selector was removed; no runtime path emits quest-row."
+    },
+    {
+      "index": 65,
+      "action": "intrinsic",
+      "reason": "The legacy avatar group gap was removed; ui-avatar-choice-group is the single spacing owner."
+    },
+    {
+      "index": 66,
+      "action": "intrinsic",
+      "reason": "The legacy avatar card gap was removed; ui-avatar-choice-group owns the shared card layout."
+    },
+    {
+      "index": 67,
+      "action": "intrinsic",
+      "reason": "The legacy generic avatar minimum height was removed in favor of the shared portrait card height."
+    },
+    {
+      "index": 68,
+      "action": "intrinsic",
+      "reason": "The legacy avatar card padding was removed; ui-avatar-choice-group owns the shared inset."
+    },
+    {
+      "index": 69,
+      "action": "intrinsic",
+      "reason": "The legacy selected marker width was removed and now uses the shared icon token."
+    },
+    {
+      "index": 70,
+      "action": "intrinsic",
+      "reason": "The legacy selected marker height was removed and now uses the shared icon token."
+    },
+    {
+      "index": 362,
+      "action": "intrinsic",
+      "reason": "The calendar search action now uses the shared titlebar action width."
+    },
+    {
+      "index": 363,
+      "action": "intrinsic",
+      "reason": "The calendar search action now uses the shared titlebar action touch height."
+    },
+    {
+      "index": 999,
+      "action": "intrinsic",
+      "reason": "The calendar search icon now uses the shared titlebar icon width."
+    },
+    {
+      "index": 1000,
+      "action": "intrinsic",
+      "reason": "The calendar search icon now uses the shared titlebar icon height."
+    },
+    {
+      "index": 436,
+      "action": "intrinsic",
+      "reason": "Task feedback and habit completion now share ui-choice-group, so the page-specific feedback choice gap was removed."
+    },
+    {
+      "index": 90,
+      "action": "intrinsic",
+      "reason": "The dead closeout checklist selector was removed; the remaining live groups retain their shared group gap."
+    },
+    {
+      "index": 91,
+      "action": "intrinsic",
+      "reason": "The unmounted closeout item and its private content gap were removed."
+    },
+    {
+      "index": 92,
+      "action": "intrinsic",
+      "reason": "The unmounted closeout item and its private padding were removed."
+    },
+    {
+      "index": 105,
+      "action": "intrinsic",
+      "reason": "The unmounted first-use guide and its private grid gap were removed."
+    },
+    {
+      "index": 106,
+      "action": "intrinsic",
+      "reason": "The unmounted first-use next panel and its private action gap were removed."
+    },
+    {
+      "index": 138,
+      "action": "intrinsic",
+      "reason": "The dead assessment mode grid branch was removed; the active assessment actions retain the shared action gap."
+    },
+    {
+      "index": 140,
+      "action": "intrinsic",
+      "reason": "The unused assessment mode control and its private content gap were removed."
+    },
+    {
+      "index": 141,
+      "action": "intrinsic",
+      "reason": "The unused assessment mode control and its private padding were removed."
+    },
+    {
+      "index": 976,
+      "action": "intrinsic",
+      "reason": "The dead analysis range select branch was removed; live controls keep the shared minimum touch size."
+    },
+    {
+      "index": 977,
+      "action": "intrinsic",
+      "reason": "The unused analysis range select and its duplicate final height override were removed."
+    },
+    {
+      "index": 182,
+      "action": "intrinsic",
+      "reason": "The unused journal-sheet-heading wrapper was removed; listSection now owns the heading-to-content gap."
+    },
+    {
+      "index": 183,
+      "action": "intrinsic",
+      "reason": "The unused journal-sheet-heading wrapper was removed; listSection now owns section spacing without a second padding rule."
+    },
+    {
+      "index": 184,
+      "action": "intrinsic",
+      "reason": "The unused journal-sheet-heading h2 selector was removed; sectionHeading now owns title spacing."
+    },
+    {
+      "index": 439,
+      "action": "intrinsic",
+      "reason": "Habit detail statistics left the entity-specific grid group and now inherit ui-metrics spacing."
+    },
+    {
+      "index": 507,
+      "action": "intrinsic",
+      "reason": "Shared ui-metrics children now own metric label-to-value spacing."
+    },
+    {
+      "index": 509,
+      "action": "intrinsic",
+      "reason": "The unused habit statistics note was deleted with its private inset."
+    },
+    {
+      "index": 834,
+      "action": "intrinsic",
+      "reason": "The mobile habit summary gap override was removed in favor of the shared ui-metrics geometry."
+    },
+    {
+      "index": 1230,
+      "action": "intrinsic",
+      "reason": "The dialog-specific habit summary padding was removed; ui-metrics now supplies the shared inset."
+    },
+    {
+      "index": 1231,
+      "action": "intrinsic",
+      "reason": "The dialog-specific radius selector was removed; the base habit summary surface owns its shared radius."
+    },
+    {
+      "index": 437,
+      "action": "intrinsic",
+      "reason": "Task result choices now use choiceRow; ui-list-row owns the shared surface radius."
+    },
+    {
+      "index": 539,
+      "action": "intrinsic",
+      "reason": "Task result choices now use choiceRow; ui-list-row owns the shared minimum row height."
+    },
+    {
+      "index": 540,
+      "action": "intrinsic",
+      "reason": "Task result choices now use choiceRow; ui-list-row owns the shared row padding."
+    },
+    {
+      "index": 541,
+      "action": "intrinsic",
+      "reason": "Task result choices now use the shared ui-choice-row selection marker width."
+    },
+    {
+      "index": 542,
+      "action": "intrinsic",
+      "reason": "Task result choices now use the shared ui-choice-row selection marker height."
+    },
+    {
+      "index": 543,
+      "action": "intrinsic",
+      "reason": "Task result choices now use ui-choice-row flex gap instead of a marker-specific margin."
+    },
+    {
+      "index": 494,
+      "action": "intrinsic",
+      "reason": "The never-mounted goal detail metadata component and its private spacing were removed."
+    },
+    {
+      "index": 495,
+      "action": "intrinsic",
+      "reason": "The never-mounted goal detail metadata component and its private radius were removed."
+    },
+    {
+      "index": 918,
+      "action": "intrinsic",
+      "reason": "The never-mounted goal detail metadata override was removed with the component."
+    },
     {
       "index": 1,
       "action": "token",
@@ -1459,9 +1533,8 @@
     },
     {
       "index": 89,
-      "action": "token",
-      "value": "var(--ui-space-4)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The unused overdue-quest-row padding was removed with its dead standalone card skin."
     },
     {
       "index": 95,
@@ -1471,9 +1544,8 @@
     },
     {
       "index": 102,
-      "action": "token",
-      "value": "var(--ui-space-2) var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The obsolete numbered-record button was removed with the retired record editor."
     },
     {
       "index": 104,
@@ -1483,9 +1555,8 @@
     },
     {
       "index": 107,
-      "action": "token",
-      "value": "var(--ui-icon-size)",
-      "reason": "Status feedback reserves one shared compact line box."
+      "action": "intrinsic",
+      "reason": "The obsolete record submit bar was removed; the current life diary uses shared status and action controls."
     },
     {
       "index": 111,
@@ -1494,10 +1565,54 @@
       "reason": "Status feedback reserves one shared compact line box."
     },
     {
+      "index": 112,
+      "action": "intrinsic",
+      "reason": "Calendar and weekly period navigation now use the shared ui-period-nav gap."
+    },
+    {
       "index": 113,
-      "action": "token",
-      "value": "var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The calendar-specific navigator padding was deleted when both period controls adopted the shared component."
+    },
+    {
+      "index": 271,
+      "action": "intrinsic",
+      "reason": "Calendar and weekly period navigation now use the shared ui-period-nav gap."
+    },
+    {
+      "index": 415,
+      "action": "intrinsic",
+      "reason": "The shared ui-period-nav now owns both navigator button dimensions."
+    },
+    {
+      "index": 847,
+      "action": "intrinsic",
+      "reason": "The calendar-specific navigator inset was deleted when both period controls adopted the shared component."
+    },
+    {
+      "index": 848,
+      "action": "intrinsic",
+      "reason": "The shared ui-period-nav now owns both navigator button dimensions."
+    },
+    {
+      "index": 849,
+      "action": "intrinsic",
+      "reason": "The shared ui-period-nav now owns both navigator button dimensions."
+    },
+    {
+      "index": 850,
+      "action": "intrinsic",
+      "reason": "The shared ui-period-nav now owns one arrow size for calendar and review navigation."
+    },
+    {
+      "index": 851,
+      "action": "intrinsic",
+      "reason": "The shared ui-period-nav now owns one arrow size for calendar and review navigation."
+    },
+    {
+      "index": 982,
+      "action": "intrinsic",
+      "reason": "The combined legacy selector lost both navigator branches; their touch height is owned by ui-period-nav."
     },
     {
       "index": 120,
@@ -1507,9 +1622,8 @@
     },
     {
       "index": 126,
-      "action": "token",
-      "value": "var(--ui-icon-size)",
-      "reason": "Status feedback reserves one shared compact line box."
+      "action": "intrinsic",
+      "reason": "Calendar search now uses the shared statusMessage height instead of a parallel search-status rule."
     },
     {
       "index": 137,
@@ -1654,21 +1768,18 @@
     },
     {
       "index": 181,
-      "action": "token",
-      "value": "var(--ui-space-3) var(--ui-space-2)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The retired record-type option was removed; the current diary does not ask for a category before writing."
     },
     {
       "index": 189,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+      "action": "intrinsic",
+      "reason": "The retired journal-entry overflow trigger was removed; records use the shared detail dialog."
     },
     {
       "index": 191,
-      "action": "token",
-      "value": "var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The retired journal-entry overflow menu was removed; records use the shared detail dialog."
     },
     {
       "index": 192,
@@ -1865,9 +1976,8 @@
     },
     {
       "index": 250,
-      "action": "token",
-      "value": "var(--ui-space-3) var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The unmounted milestone-row padding was removed with its obsolete card layout."
     },
     {
       "index": 253,
@@ -1889,15 +1999,13 @@
     },
     {
       "index": 260,
-      "action": "token",
-      "value": "var(--ui-space-3) var(--ui-space-1)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The legacy habit-momentum-row padding was removed; current habit analysis renders through shared data rows."
     },
     {
       "index": 262,
-      "action": "token",
-      "value": "var(--ui-space-3) var(--ui-space-1)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The legacy ledger-row padding was removed; current growth evidence renders through shared info rows."
     },
     {
       "index": 263,
@@ -2016,12 +2124,6 @@
       "index": 311,
       "action": "token",
       "value": "var(--ui-space-6)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
-    },
-    {
-      "index": 312,
-      "action": "token",
-      "value": "var(--ui-space-3)",
       "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
     },
     {
@@ -2248,21 +2350,18 @@
     },
     {
       "index": 385,
-      "action": "token",
-      "value": "0 0 calc(var(--ui-nav-height) + var(--ui-space-4))",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The retired journal-editor shell was removed; the life diary owns its current layout."
     },
     {
       "index": 390,
-      "action": "token",
-      "value": "var(--ui-radius-surface)",
-      "reason": "Use the single public surface radius for component corners."
+      "action": "intrinsic",
+      "reason": "The obsolete numbered-record button was removed with the retired record editor."
     },
     {
       "index": 391,
-      "action": "token",
-      "value": "calc(-1 * var(--ui-space-4))",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The retired record form save-state override was removed; current status uses the shared component."
     },
     {
       "index": 398,
@@ -2296,9 +2395,8 @@
     },
     {
       "index": 406,
-      "action": "token",
-      "value": "var(--ui-space-4) 0 var(--ui-space-5)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The obsolete growth overview layout was removed; current growth content uses the shared page and section system."
     },
     {
       "index": 408,
@@ -2326,33 +2424,28 @@
     },
     {
       "index": 417,
-      "action": "token",
-      "value": "var(--ui-space-5)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The obsolete review-hero branch was removed; active review sections retain their current rule."
     },
     {
       "index": 418,
-      "action": "token",
-      "value": "var(--ui-radius-surface)",
-      "reason": "Use the single public surface radius for component corners."
+      "action": "intrinsic",
+      "reason": "The obsolete review-hero branch was removed; active review sections retain their current rule."
     },
     {
       "index": 419,
-      "action": "token",
-      "value": "var(--ui-space-5)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The retired review-experiment card was removed; current weekly review uses its approved adjustment flow."
     },
     {
       "index": 420,
-      "action": "token",
-      "value": "var(--ui-radius-surface)",
-      "reason": "Use the single public surface radius for component corners."
+      "action": "intrinsic",
+      "reason": "The retired review-experiment card was removed; current weekly review uses its approved adjustment flow."
     },
     {
       "index": 421,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+      "action": "intrinsic",
+      "reason": "The retired review-actions group was removed; current review actions use shared action groups."
     },
     {
       "index": 422,
@@ -2408,6 +2501,11 @@
       "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
     },
     {
+      "index": 441,
+      "action": "intrinsic",
+      "reason": "The tag-specific entity heading was removed when both detail sections adopted listSection; its spacing now follows the shared section-heading wrapper instead of a parallel h3 rule."
+    },
+    {
       "index": 442,
       "action": "token",
       "value": "var(--ui-icon-size)",
@@ -2427,9 +2525,8 @@
     },
     {
       "index": 446,
-      "action": "token",
-      "value": "var(--ui-space-4)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The habit detail summary now uses ui-metrics, which owns its shared padding."
     },
     {
       "index": 447,
@@ -2445,9 +2542,8 @@
     },
     {
       "index": 449,
-      "action": "token",
-      "value": "var(--ui-space-3) 0",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The unmounted habit-log-row padding was removed; habit history uses the current analysis list components."
     },
     {
       "index": 451,
@@ -2562,27 +2658,23 @@
     },
     {
       "index": 475,
-      "action": "token",
-      "value": "var(--ui-space-5) var(--ui-space-4)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The obsolete review-focus branch was removed; active review adjustments retain their current rule."
     },
     {
       "index": 476,
-      "action": "token",
-      "value": "var(--ui-radius-surface)",
-      "reason": "Use the single public surface radius for component corners."
+      "action": "intrinsic",
+      "reason": "The obsolete review-focus branch was removed; active review adjustments retain their current rule."
     },
     {
       "index": 478,
-      "action": "token",
-      "value": "var(--ui-space-5) var(--ui-space-4)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The retired proposed-experiment card was removed; current weekly review uses the adjustment list."
     },
     {
       "index": 479,
-      "action": "token",
-      "value": "var(--ui-radius-surface)",
-      "reason": "Use the single public surface radius for component corners."
+      "action": "intrinsic",
+      "reason": "The retired proposed-experiment card was removed; current weekly review uses the adjustment list."
     },
     {
       "index": 481,
@@ -2646,9 +2738,8 @@
     },
     {
       "index": 496,
-      "action": "token",
-      "value": "var(--ui-space-3) var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The never-mounted goal detail metadata child and its private padding were removed."
     },
     {
       "index": 497,
@@ -2658,9 +2749,8 @@
     },
     {
       "index": 498,
-      "action": "token",
-      "value": "var(--ui-space-4) var(--ui-space-4) var(--ui-space-2)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The goal detail h3 selector disappeared when the section adopted listSection; the equivalent padding remains on its shared section-heading wrapper."
     },
     {
       "index": 499,
@@ -2700,15 +2790,13 @@
     },
     {
       "index": 506,
-      "action": "token",
-      "value": "var(--ui-space-4) 0",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The never-mounted habit detail metadata row and its private padding were removed."
     },
     {
       "index": 508,
-      "action": "token",
-      "value": "0 var(--ui-space-2)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The habit metric item now uses the shared ui-metrics child geometry instead of a private inset."
     },
     {
       "index": 512,
@@ -2787,30 +2875,6 @@
       "action": "token",
       "value": "var(--ui-touch-size)",
       "reason": "Use the public touch target for floating, close and compact stage actions."
-    },
-    {
-      "index": 540,
-      "action": "token",
-      "value": "var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
-    },
-    {
-      "index": 541,
-      "action": "token",
-      "value": "var(--ui-icon-size)",
-      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
-    },
-    {
-      "index": 542,
-      "action": "token",
-      "value": "var(--ui-icon-size)",
-      "reason": "Use the single public selection-mark size for checkbox, choice marker, weekday picker and stage toggle geometry."
-    },
-    {
-      "index": 543,
-      "action": "token",
-      "value": "var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
     },
     {
       "index": 545,
@@ -2924,9 +2988,8 @@
     },
     {
       "index": 580,
-      "action": "token",
-      "value": "var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The old inline day-record action menu was removed; records open the shared detail dialog."
     },
     {
       "index": 583,
@@ -2948,21 +3011,18 @@
     },
     {
       "index": 596,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+      "action": "intrinsic",
+      "reason": "The unmounted legacy day evidence card was removed; current day analysis uses the shared optional-details component."
     },
     {
       "index": 597,
-      "action": "token",
-      "value": "var(--ui-space-4) var(--ui-space-4)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The unmounted legacy day evidence card was removed; current day analysis uses the shared optional-details component."
     },
     {
       "index": 598,
-      "action": "token",
-      "value": "var(--ui-radius-surface)",
-      "reason": "Use the single public surface radius for component corners."
+      "action": "intrinsic",
+      "reason": "The unmounted legacy day evidence card was removed; current day analysis uses the shared optional-details component."
     },
     {
       "index": 607,
@@ -2978,15 +3038,13 @@
     },
     {
       "index": 622,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+      "action": "intrinsic",
+      "reason": "The obsolete record-summary form field was removed; the current editor uses the shared journal field."
     },
     {
       "index": 623,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+      "action": "intrinsic",
+      "reason": "The retired record-type option was removed; the current diary does not ask for a category before writing."
     },
     {
       "index": 628,
@@ -2996,33 +3054,48 @@
     },
     {
       "index": 630,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+      "action": "intrinsic",
+      "reason": "The obsolete record-day summary row was removed; daily summaries now live in the day page's shared record list."
     },
     {
       "index": 632,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+      "action": "intrinsic",
+      "reason": "The obsolete record-day summary row was removed; daily summaries now live in the day page's shared record list."
     },
     {
       "index": 633,
-      "action": "token",
-      "value": "var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The obsolete record-day summary row was removed; daily summaries now live in the day page's shared record list."
     },
     {
       "index": 634,
-      "action": "token",
-      "value": "calc(var(--ui-button-height) + 2 * var(--ui-space-3))",
-      "reason": "Fixed action bars derive their minimum height from the shared button height and vertical padding."
+      "action": "intrinsic",
+      "reason": "The obsolete fixed record submit bar was removed; current diary actions use the shared composer row."
+    },
+    {
+      "index": 648,
+      "action": "intrinsic",
+      "reason": "The never-mounted habit overview summary was deleted together with its unused layout."
     },
     {
       "index": 649,
-      "action": "token",
-      "value": "var(--ui-space-4) 0 var(--ui-space-5)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The never-mounted habit overview summary was deleted together with its unused layout."
+    },
+    {
+      "index": 650,
+      "action": "intrinsic",
+      "reason": "The never-mounted habit overview summary was deleted together with its unused layout."
+    },
+    {
+      "index": 1258,
+      "action": "intrinsic",
+      "reason": "The never-mounted habit overview summary was deleted together with its unused page override."
+    },
+    {
+      "index": 1259,
+      "action": "intrinsic",
+      "reason": "The never-mounted habit overview summary was deleted together with its unused page override."
     },
     {
       "index": 651,
@@ -3068,9 +3141,8 @@
     },
     {
       "index": 676,
-      "action": "token",
-      "value": "var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The retired goal status marker was removed; current goal rows expose status through the shared row metadata."
     },
     {
       "index": 677,
@@ -3157,15 +3229,13 @@
     },
     {
       "index": 703,
-      "action": "token",
-      "value": "calc(var(--ui-row-action-width) + var(--ui-space-5))",
-      "reason": "Analysis selectors and tabs share one compact minimum label width."
+      "action": "intrinsic",
+      "reason": "The unused analysis range select was removed; the active segmented range control owns this choice."
     },
     {
       "index": 704,
-      "action": "token",
-      "value": "var(--ui-space-2) var(--ui-space-5) var(--ui-space-2) var(--ui-space-1)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The unused analysis range select and its private padding were removed."
     },
     {
       "index": 706,
@@ -3283,9 +3353,8 @@
     },
     {
       "index": 746,
-      "action": "token",
-      "value": "var(--ui-space-4) var(--ui-space-5) max(var(--ui-space-4), env(safe-area-inset-bottom))",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The unmounted analysis-bottom action bar was removed; analysis pages use shared page actions."
     },
     {
       "index": 748,
@@ -3352,9 +3421,8 @@
     },
     {
       "index": 763,
-      "action": "token",
-      "value": "var(--ui-button-height)",
-      "reason": "Compact range selector uses the shared button height."
+      "action": "intrinsic",
+      "reason": "The unused analysis range select and its responsive height override were removed."
     },
     {
       "index": 765,
@@ -3493,9 +3561,8 @@
     },
     {
       "index": 798,
-      "action": "token",
-      "value": "min(100%, var(--ui-page-width))",
-      "reason": "Analysis content follows the shared responsive page width."
+      "action": "intrinsic",
+      "reason": "The unmounted analysis-bottom action bar was removed; analysis pages use shared page actions."
     },
     {
       "index": 801,
@@ -3505,15 +3572,13 @@
     },
     {
       "index": 806,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+      "action": "intrinsic",
+      "reason": "The habit analysis action now uses the shared actionButton height instead of a private titlebar rule."
     },
     {
       "index": 807,
-      "action": "token",
-      "value": "var(--ui-space-2) var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The habit analysis action now uses the shared actionButton padding instead of a private titlebar rule."
     },
     {
       "index": 809,
@@ -3600,27 +3665,23 @@
     },
     {
       "index": 828,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+      "action": "intrinsic",
+      "reason": "The retired record template selector was removed with the old editor."
     },
     {
       "index": 833,
-      "action": "token",
-      "value": "var(--ui-space-3) 0",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The mobile override for the never-mounted habit detail metadata row was removed."
     },
     {
       "index": 835,
-      "action": "token",
-      "value": "var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The mobile habit summary override was removed; ui-metrics supplies the same responsive geometry everywhere."
     },
     {
       "index": 836,
-      "action": "token",
-      "value": "var(--ui-space-2)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The unused habit statistics note and its mobile padding override were deleted."
     },
     {
       "index": 838,
@@ -3630,15 +3691,13 @@
     },
     {
       "index": 842,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+      "action": "intrinsic",
+      "reason": "The obsolete narrow-screen habit-log-row height was removed with the component."
     },
     {
       "index": 843,
-      "action": "token",
-      "value": "var(--ui-space-3) 0",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The obsolete narrow-screen habit-log-row padding was removed with the component."
     },
     {
       "index": 844,
@@ -3654,9 +3713,8 @@
     },
     {
       "index": 846,
-      "action": "token",
-      "value": "var(--ui-touch-size)",
-      "reason": "Calendar toolbar uses the shared title/control row height."
+      "action": "intrinsic",
+      "reason": "The shared ui-period-nav now owns the navigator row height."
     },
     {
       "index": 858,
@@ -3702,36 +3760,18 @@
     },
     {
       "index": 875,
-      "action": "remove",
-      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
-      "owner": [
-        {
-          "selector": ".page-review .review-period-nav",
-          "value": "var(--ui-space-2)"
-        }
-      ]
+      "action": "intrinsic",
+      "reason": "The page-specific owner was replaced by the shared ui-period-nav component."
     },
     {
       "index": 876,
-      "action": "remove",
-      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
-      "owner": [
-        {
-          "selector": ".page-review .review-period-nav .button",
-          "value": "var(--ui-touch-size)"
-        }
-      ]
+      "action": "intrinsic",
+      "reason": "The page-specific owner was replaced by the shared ui-period-nav component."
     },
     {
       "index": 877,
-      "action": "remove",
-      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
-      "owner": [
-        {
-          "selector": ".page-review .review-period-nav .button",
-          "value": "var(--ui-touch-size)"
-        }
-      ]
+      "action": "intrinsic",
+      "reason": "The page-specific owner was replaced by the shared ui-period-nav component."
     },
     {
       "index": 879,
@@ -3753,9 +3793,8 @@
     },
     {
       "index": 887,
-      "action": "token",
-      "value": "0 var(--ui-space-2)",
-      "reason": "Attachment action retains zero vertical inset and the shared tight horizontal inset."
+      "action": "intrinsic",
+      "reason": "The old record attachment button was removed; the life diary uses the shared action button."
     },
     {
       "index": 892,
@@ -3840,15 +3879,13 @@
     },
     {
       "index": 921,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+      "action": "intrinsic",
+      "reason": "The final unmounted habit-log-row height override was removed with the component."
     },
     {
       "index": 922,
-      "action": "token",
-      "value": "calc(var(--ui-button-height) + 2 * var(--ui-space-3))",
-      "reason": "Fixed action bars derive their minimum height from the shared button height and vertical padding."
+      "action": "intrinsic",
+      "reason": "The obsolete fixed record submit bar was removed; current diary actions use the shared composer row."
     },
     {
       "index": 929,
@@ -3868,9 +3905,8 @@
     },
     {
       "index": 932,
-      "action": "token",
-      "value": "var(--ui-space-5)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The obsolete review-focus and proposed-experiment branches were removed; active adjustments retain their current rule."
     },
     {
       "index": 935,
@@ -3966,9 +4002,8 @@
     },
     {
       "index": 955,
-      "action": "token",
-      "value": "var(--ui-space-3) var(--ui-space-1) var(--ui-space-3)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The day record and action headings now use sectionHeading, so the retired direct-h2 margin selector no longer owns their spacing."
     },
     {
       "index": 956,
@@ -3984,15 +4019,13 @@
     },
     {
       "index": 964,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+      "action": "intrinsic",
+      "reason": "The unmounted legacy day evidence card override was removed with its component."
     },
     {
       "index": 965,
-      "action": "token",
-      "value": "var(--ui-space-4) var(--ui-space-4)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The unmounted legacy day evidence card override was removed with its component."
     },
     {
       "index": 968,
@@ -4047,15 +4080,13 @@
     },
     {
       "index": 989,
-      "action": "exception",
-      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
-      "category": "responsive-content-bound"
+      "action": "intrinsic",
+      "reason": "The page-scoped old journal input bound was removed; that input now exists only in its detail editor."
     },
     {
       "index": 990,
-      "action": "token",
-      "value": "calc(calc(2 * var(--ui-space-8)) + var(--bottom-nav-height) + var(--ui-space-7) + env(safe-area-inset-bottom))",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The retired journal-editor shell was removed; the life diary owns its current layout."
     },
     {
       "index": 994,
@@ -4153,27 +4184,23 @@
     },
     {
       "index": 1079,
-      "action": "token",
-      "value": "var(--ui-space-6) var(--ui-space-6)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The retired record body section was removed; the life diary uses its current composer."
     },
     {
       "index": 1080,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+      "action": "intrinsic",
+      "reason": "The obsolete record-day summary override was removed with its component."
     },
     {
       "index": 1082,
-      "action": "token",
-      "value": "var(--ui-space-3) var(--ui-space-6)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The obsolete record submit bar override was removed with the retired editor."
     },
     {
       "index": 1084,
-      "action": "token",
-      "value": "var(--ui-space-7) var(--ui-space-6)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The obsolete growth overview padding override was removed with its retired component."
     },
     {
       "index": 1085,
@@ -4183,9 +4210,8 @@
     },
     {
       "index": 1092,
-      "action": "token",
-      "value": "var(--ui-space-6) var(--ui-space-5)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The obsolete responsive growth overview padding override was removed with its retired component."
     },
     {
       "index": 1093,
@@ -4198,6 +4224,11 @@
       "action": "token",
       "value": "var(--ui-border-width)",
       "reason": "Connectors and separators use the shared hairline width."
+    },
+    {
+      "index": 1096,
+      "action": "intrinsic",
+      "reason": "The task-future heading now uses sectionHeading, so the retired direct-h2 margin selector no longer participates in layout."
     },
     {
       "index": 1097,
@@ -4303,9 +4334,23 @@
     },
     {
       "index": 1128,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+      "action": "intrinsic",
+      "reason": "The parallel personal-review-header wrapper was deleted; sectionHeading now supplies the review title row and its action determines the accessible height."
+    },
+    {
+      "index": 1129,
+      "action": "intrinsic",
+      "reason": "The parallel personal-review-header wrapper was deleted; sectionHeading now owns the title-to-action spacing."
+    },
+    {
+      "index": 1130,
+      "action": "intrinsic",
+      "reason": "The removed personal-review-header selector no longer sets a duplicate action width; the shared text action retains its public touch target."
+    },
+    {
+      "index": 1131,
+      "action": "intrinsic",
+      "reason": "The removed personal-review-header selector no longer sets a duplicate action height; the shared text action retains its public touch target."
     },
     {
       "index": 1133,
@@ -4702,10 +4747,19 @@
       "reason": "Trailing output and send actions use the shared row action width."
     },
     {
+      "index": 933,
+      "action": "intrinsic",
+      "reason": "The parallel settings heading was removed; the shared list section now owns heading-to-content spacing."
+    },
+    {
+      "index": 938,
+      "action": "intrinsic",
+      "reason": "The parallel settings heading was removed; the shared list section now owns heading-to-content spacing."
+    },
+    {
       "index": 1214,
-      "action": "token",
-      "value": "0 0 var(--ui-space-4)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The parallel settings heading was removed; the shared list section now owns heading-to-content spacing."
     },
     {
       "index": 1215,
@@ -4760,69 +4814,33 @@
     },
     {
       "index": 1234,
-      "action": "remove",
-      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
-      "owner": [
-        {
-          "selector": ".profile-avatar-choices",
-          "value": "var(--ui-space-4)"
-        }
-      ]
+      "action": "intrinsic",
+      "reason": "Both companion pickers now use ui-avatar-choice-group, so the profile-only gap owner was removed."
     },
     {
       "index": 1235,
-      "action": "remove",
-      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
-      "owner": [
-        {
-          "selector": ".profile-avatar-choices .avatar-choice",
-          "value": "var(--ui-portrait-choice-height)"
-        }
-      ]
+      "action": "intrinsic",
+      "reason": "Both companion pickers now receive the shared portrait choice height from ui-avatar-choice-group."
     },
     {
       "index": 1236,
-      "action": "remove",
-      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
-      "owner": [
-        {
-          "selector": ".profile-avatar-choices .avatar-choice",
-          "value": "var(--ui-space-4)"
-        }
-      ]
+      "action": "intrinsic",
+      "reason": "Both companion pickers now receive the shared portrait choice padding from ui-avatar-choice-group."
     },
     {
       "index": 1237,
-      "action": "remove",
-      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
-      "owner": [
-        {
-          "selector": ".profile-avatar-choices .avatar-choice",
-          "value": "var(--ui-radius-surface)"
-        }
-      ]
+      "action": "intrinsic",
+      "reason": "Both companion pickers now receive the shared portrait choice radius from ui-avatar-choice-group."
     },
     {
       "index": 1238,
-      "action": "remove",
-      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
-      "owner": [
-        {
-          "selector": ".profile-avatar-choices .avatar-choice-image",
-          "value": "var(--ui-portrait-image-width)"
-        }
-      ]
+      "action": "intrinsic",
+      "reason": "Both companion pickers now receive the shared portrait image width from ui-avatar-choice-group."
     },
     {
       "index": 1239,
-      "action": "remove",
-      "reason": "Exact selector and property are always owned by the later unconditional components layer; deleting the lower-priority declaration preserves the cascade.",
-      "owner": [
-        {
-          "selector": ".profile-avatar-choices .avatar-choice-image",
-          "value": "var(--ui-portrait-image-height)"
-        }
-      ]
+      "action": "intrinsic",
+      "reason": "Both companion pickers now receive the shared portrait image height from ui-avatar-choice-group."
     },
     {
       "index": 1242,
@@ -4917,6 +4935,416 @@
       "action": "exception",
       "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
       "category": "responsive-content-bound"
+    },
+    {
+      "index": 98,
+      "action": "intrinsic",
+      "reason": "The unmounted record-summary heading was removed; the current record editor uses shared field headings."
+    },
+    {
+      "index": 127,
+      "action": "intrinsic",
+      "reason": "The unmounted day-summary component was removed; the current day overview uses shared panels."
+    },
+    {
+      "index": 128,
+      "action": "intrinsic",
+      "reason": "The unmounted entry-card component was removed; records use the shared list row."
+    },
+    {
+      "index": 166,
+      "action": "intrinsic",
+      "reason": "The obsolete record-summary input was removed; the current editor uses the shared journal field."
+    },
+    {
+      "index": 388,
+      "action": "intrinsic",
+      "reason": "The obsolete record-summary block was removed with its unmounted component."
+    },
+    {
+      "index": 389,
+      "action": "intrinsic",
+      "reason": "The obsolete record-summary input override was removed with its unmounted component."
+    },
+    {
+      "index": 571,
+      "action": "intrinsic",
+      "reason": "Legacy day row icon columns were removed; current record and action rows contain only their shared content and trailing result."
+    },
+    {
+      "index": 572,
+      "action": "intrinsic",
+      "reason": "Legacy day row icon dimensions were removed with the unmounted icons."
+    },
+    {
+      "index": 573,
+      "action": "intrinsic",
+      "reason": "The active day record row now uses one intrinsic content column instead of reserving obsolete icon and menu columns."
+    },
+    {
+      "index": 574,
+      "action": "intrinsic",
+      "reason": "The active day action row now uses shared content and result columns instead of obsolete icon and chevron columns."
+    },
+    {
+      "index": 595,
+      "action": "intrinsic",
+      "reason": "The unmounted legacy day evidence card was removed; current day analysis uses shared optional details."
+    },
+    {
+      "index": 621,
+      "action": "intrinsic",
+      "reason": "The obsolete record-summary field was removed; the current editor uses the shared journal field."
+    },
+    {
+      "index": 631,
+      "action": "intrinsic",
+      "reason": "The obsolete record-day summary row was removed; the day page owns daily summary presentation."
+    },
+    {
+      "index": 744,
+      "action": "intrinsic",
+      "reason": "The unmounted analysis-bottom action bar was removed; analysis pages use shared actions."
+    },
+    {
+      "index": 745,
+      "action": "intrinsic",
+      "reason": "The unmounted analysis-bottom action bar was removed; analysis pages use shared actions."
+    },
+    {
+      "index": 754,
+      "action": "intrinsic",
+      "reason": "The obsolete responsive analysis-bottom action selector was removed from the shared mobile rule."
+    },
+    {
+      "index": 799,
+      "action": "intrinsic",
+      "reason": "The unmounted fixed analysis-bottom action bar was removed; analysis pages use shared actions."
+    },
+    {
+      "index": 957,
+      "action": "intrinsic",
+      "reason": "Legacy day row icon overrides were removed with their unmounted icons."
+    },
+    {
+      "index": 958,
+      "action": "intrinsic",
+      "reason": "Legacy day row icon overrides were removed with their unmounted icons."
+    },
+    {
+      "index": 1008,
+      "action": "intrinsic",
+      "reason": "Legacy day record semantic-icon sizing was removed with the unmounted icon."
+    },
+    {
+      "index": 1009,
+      "action": "intrinsic",
+      "reason": "Legacy day record semantic-icon sizing was removed with the unmounted icon."
+    },
+    {
+      "index": 1081,
+      "action": "intrinsic",
+      "reason": "The obsolete record-day summary override was removed with its component."
+    },
+    {
+      "index": 97,
+      "action": "intrinsic",
+      "reason": "The retired record form was removed; the life diary uses its current composer."
+    },
+    {
+      "index": 99,
+      "action": "intrinsic",
+      "reason": "The retired record body heading was removed; current fields use shared headings."
+    },
+    {
+      "index": 100,
+      "action": "intrinsic",
+      "reason": "The retired record body section was removed; current fields use the life diary composer."
+    },
+    {
+      "index": 101,
+      "action": "intrinsic",
+      "reason": "The retired numbered-record tool group was removed with the old editor."
+    },
+    {
+      "index": 179,
+      "action": "intrinsic",
+      "reason": "The old record prompt group was removed; the current diary starts directly in the writing surface."
+    },
+    {
+      "index": 386,
+      "action": "intrinsic",
+      "reason": "The old record prompt container was removed with the retired category chooser."
+    },
+    {
+      "index": 387,
+      "action": "intrinsic",
+      "reason": "The retired record template selector was removed with the old editor."
+    },
+    {
+      "index": 581,
+      "action": "intrinsic",
+      "reason": "The old inline day-record action menu was removed; records open the shared detail dialog."
+    },
+    {
+      "index": 620,
+      "action": "intrinsic",
+      "reason": "The retired journal-editor override was removed; the life diary owns its current spacing."
+    },
+    {
+      "index": 624,
+      "action": "intrinsic",
+      "reason": "The retired record-type option was removed; the current diary does not ask for a category before writing."
+    },
+    {
+      "index": 886,
+      "action": "intrinsic",
+      "reason": "The old record attachment button was removed; the life diary uses the shared action button."
+    },
+    {
+      "index": 991,
+      "action": "intrinsic",
+      "reason": "The obsolete fixed record submit bar was removed; current diary actions use the shared composer row."
+    },
+    {
+      "index": 973,
+      "action": "intrinsic",
+      "reason": "The retired record-type option was removed with the old category chooser."
+    },
+    {
+      "index": 974,
+      "action": "intrinsic",
+      "reason": "The retired numbered-record button was removed with the old editor."
+    },
+    {
+      "index": 975,
+      "action": "intrinsic",
+      "reason": "The retired numbered-record button was removed with the old editor."
+    },
+    {
+      "index": 981,
+      "action": "intrinsic",
+      "reason": "The old record attachment button branch was removed from the shared touch-target rule."
+    },
+    {
+      "index": 985,
+      "action": "intrinsic",
+      "reason": "The old day-record overflow trigger was removed; records open the shared detail dialog."
+    },
+    {
+      "index": 986,
+      "action": "intrinsic",
+      "reason": "The old day-record overflow trigger was removed; records open the shared detail dialog."
+    },
+    {
+      "index": 1077,
+      "action": "intrinsic",
+      "reason": "The old record prompt spacing override was removed with its retired container."
+    },
+    {
+      "index": 1078,
+      "action": "intrinsic",
+      "reason": "The retired record body section was removed; the life diary uses its current composer."
+    },
+    {
+      "index": 80,
+      "action": "intrinsic",
+      "reason": "The unmounted main-action card was removed; Today uses shared list sections and actions."
+    },
+    {
+      "index": 81,
+      "action": "intrinsic",
+      "reason": "The unmounted main-action button override was removed with its card."
+    },
+    {
+      "index": 93,
+      "action": "intrinsic",
+      "reason": "Obsolete simple-list and entry-timeline branches were removed; the active search section retains its current rule."
+    },
+    {
+      "index": 129,
+      "action": "intrinsic",
+      "reason": "The old entry-meta layout was removed; record metadata uses the current detail and day rows."
+    },
+    {
+      "index": 130,
+      "action": "intrinsic",
+      "reason": "The old entry-actions layout was removed; record management uses the shared detail dialog."
+    },
+    {
+      "index": 131,
+      "action": "intrinsic",
+      "reason": "The old entry-actions layout was removed; record management uses the shared detail dialog."
+    },
+    {
+      "index": 185,
+      "action": "intrinsic",
+      "reason": "The retired journal-entry action groups were removed; records use current list rows and the shared detail dialog."
+    },
+    {
+      "index": 186,
+      "action": "intrinsic",
+      "reason": "The retired journal-entry card was removed; records use the current day and diary rows."
+    },
+    {
+      "index": 187,
+      "action": "intrinsic",
+      "reason": "The retired journal-entry card was removed; records use the current day and diary rows."
+    },
+    {
+      "index": 188,
+      "action": "intrinsic",
+      "reason": "The retired journal-entry heading was removed; records use current metadata rows."
+    },
+    {
+      "index": 190,
+      "action": "intrinsic",
+      "reason": "The retired journal-entry overflow trigger was removed; records use the shared detail dialog."
+    },
+    {
+      "index": 270,
+      "action": "intrinsic",
+      "reason": "Obsolete review hero and experiment branches were removed; active review sections retain their current rule."
+    },
+    {
+      "index": 272,
+      "action": "intrinsic",
+      "reason": "The obsolete review-hero branch was removed; the active review intro retains its current rule."
+    },
+    {
+      "index": 273,
+      "action": "intrinsic",
+      "reason": "The retired review-actions group was removed; current review actions use shared action groups."
+    },
+    {
+      "index": 283,
+      "action": "intrinsic",
+      "reason": "The retired review-experiment facts layout was removed with its card."
+    },
+    {
+      "index": 474,
+      "action": "intrinsic",
+      "reason": "The obsolete review-focus branch was removed; active review adjustments retain their current rule."
+    },
+    {
+      "index": 477,
+      "action": "intrinsic",
+      "reason": "The retired proposed-experiment card was removed; current weekly review uses the adjustment list."
+    },
+    {
+      "index": 882,
+      "action": "intrinsic",
+      "reason": "Obsolete review-focus and proposed-experiment branches were removed; active adjustments retain their current rule."
+    },
+    {
+      "index": 196,
+      "action": "intrinsic",
+      "reason": "The obsolete growth-habits selector branch was removed; active page stacks retain the shared group gap."
+    },
+    {
+      "index": 227,
+      "action": "intrinsic",
+      "reason": "The retired habit-actions container was removed; current habit actions use shared action rows."
+    },
+    {
+      "index": 344,
+      "action": "intrinsic",
+      "reason": "The retired badge category summary was removed; current badges use the shared grid."
+    },
+    {
+      "index": 375,
+      "action": "intrinsic",
+      "reason": "The obsolete task subheading margin was removed; current task sections use shared section headings."
+    },
+    {
+      "index": 405,
+      "action": "intrinsic",
+      "reason": "The obsolete growth overview gap was removed with its retired component."
+    },
+    {
+      "index": 407,
+      "action": "intrinsic",
+      "reason": "The obsolete growth overview progress geometry was removed with its retired component."
+    },
+    {
+      "index": 689,
+      "action": "intrinsic",
+      "reason": "The retired decorative growth seed was removed."
+    },
+    {
+      "index": 690,
+      "action": "intrinsic",
+      "reason": "The retired decorative growth seed was removed."
+    },
+    {
+      "index": 691,
+      "action": "intrinsic",
+      "reason": "The retired decorative growth seed was removed."
+    },
+    {
+      "index": 692,
+      "action": "intrinsic",
+      "reason": "The retired decorative growth seed was removed."
+    },
+    {
+      "index": 693,
+      "action": "intrinsic",
+      "reason": "The retired decorative growth seed was removed."
+    },
+    {
+      "index": 697,
+      "action": "intrinsic",
+      "reason": "The obsolete growth overview progress radius was removed with its retired component."
+    },
+    {
+      "index": 910,
+      "action": "intrinsic",
+      "reason": "The retired growth overview statistic layout was removed."
+    },
+    {
+      "index": 911,
+      "action": "intrinsic",
+      "reason": "The retired growth overview value layout was removed."
+    },
+    {
+      "index": 912,
+      "action": "intrinsic",
+      "reason": "The retired growth overview progress statistic layout was removed."
+    },
+    {
+      "index": 913,
+      "action": "intrinsic",
+      "reason": "The obsolete growth overview progress height was removed with its retired component."
+    },
+    {
+      "index": 1032,
+      "action": "intrinsic",
+      "reason": "The retired state-related heading layout was removed; current detail rows use shared headings."
+    },
+    {
+      "index": 1074,
+      "action": "intrinsic",
+      "reason": "The retired habit heat summary override was removed; current analysis uses the shared chart layout."
+    },
+    {
+      "index": 1083,
+      "action": "intrinsic",
+      "reason": "The obsolete growth overview gap override was removed with its retired component."
+    },
+    {
+      "index": 1091,
+      "action": "intrinsic",
+      "reason": "The obsolete responsive growth overview gap override was removed with its retired component."
+    },
+    {
+      "index": 1110,
+      "action": "intrinsic",
+      "reason": "The retired assessment start-action spacing override was removed; current forms use shared form spacing."
+    },
+    {
+      "index": 1111,
+      "action": "intrinsic",
+      "reason": "The retired assessment dimension action grid was removed; current assessment controls use shared action components."
     }
   ]
 }

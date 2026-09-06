@@ -425,7 +425,7 @@ test('expanded settings avoid permanent explanatory paragraphs', async () => {
     await finishOnboarding(page);
     await page.goto(`${baseUrl}/#/system`);
     const settingsGroups = await page.locator('.settings-overview-group').evaluateAll((groups) => groups.map((group) => ({
-      title: group.querySelector(':scope > h2')?.textContent,
+      title: group.querySelector(':scope > .section-heading .ui-list-heading')?.textContent,
       sections: [...group.querySelectorAll('.settings-overview-row > .ui-row-label')].map((label) => label.textContent),
     })));
     assert.deepEqual(settingsGroups, [
@@ -554,7 +554,7 @@ test('today keeps records and habit editing behind compact entry points', async 
     assert.equal(await page.getByText('管理习惯', { exact: true }).count(), 0, 'habit creation should live in the section heading');
     const habitDialog = await openNewHabitEditor(page);
     await habitDialog.getByRole('searchbox', { name: '习惯名称' }).fill('晚饭后散步');
-    await habitDialog.getByRole('button', { name: '每日计数', exact: true }).click();
+    await habitDialog.getByRole('button', { name: '每天', exact: true }).click();
     await habitDialog.getByRole('spinbutton', { name: '每日打卡次数' }).fill('3');
     await habitDialog.getByRole('checkbox', { name: '周六' }).check();
     await habitDialog.getByRole('button', { name: '建立习惯' }).click();
@@ -2002,7 +2002,7 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     await page.goto(`${baseUrl}/#/tasks`);
     await page.getByRole('button', { name: '查看任务：做一次很短的舒展' }).click();
     const progressDialog = page.getByRole('dialog', { name: '记录任务结果' });
-    await progressDialog.getByRole('button', { name: '有进展', exact: true }).click();
+    await progressDialog.getByRole('button', { name: '进展', exact: true }).click();
     await assert.doesNotReject(() => progressDialog.getByText('确认保存前不会修改任务', { exact: false }).waitFor());
     assert.equal(await page.getByText('已记为部分完成；可以随时撤销。', { exact: false }).count(), 0);
     await progressDialog.getByRole('button', { name: '保存结果' }).click();
@@ -2019,7 +2019,7 @@ test('low state proposes replaceable recovery and one-click no-penalty feedback'
     await page.getByRole('dialog', { name: '修改任务结果' }).getByRole('button', { name: '撤销任务“做一次很短的舒展”的反馈' }).click();
     await page.getByRole('button', { name: '查看任务：做一次很短的舒展' }).click();
     const skipDialog = page.getByRole('dialog', { name: '记录任务结果' });
-    await skipDialog.getByRole('button', { name: '今天跳过', exact: true }).click();
+    await skipDialog.getByRole('button', { name: '跳过', exact: true }).click();
     await skipDialog.getByRole('button', { name: '保存结果' }).click();
     await assert.doesNotReject(() => page.getByText(/反馈已保存/).waitFor());
     assert.deepEqual(apiRequests, []);

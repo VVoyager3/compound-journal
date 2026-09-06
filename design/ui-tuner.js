@@ -91,7 +91,7 @@
     const d = frame.contentDocument;
     if (!d?.querySelector('main')) return;
     const first = d.querySelector('.ui-list-row,.ai-info-row');
-    const title = d.querySelector('.ui-list-heading,.ui-settings-group-title');
+    const title = d.querySelector('.ui-list-heading');
     const g = first?.getBoundingClientRect();
     const screen = d.querySelector('dialog[open] .dialog-content') || d.querySelector('.review-screen') || d.querySelector('main');
     const gap = screen?.children[1].getBoundingClientRect().top - screen?.children[0].getBoundingClientRect().bottom;

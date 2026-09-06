@@ -204,7 +204,6 @@ function legacyJournalMigrationPlan(body: string, kind?: JournalEntry['kind']): 
   }
   if (!found) return { body, kind: 'journal', legacyPromptDetected: false };
   const journalBody = trimBlankEdges(journalLines).join('\n');
-  const cleanedBody = trimBlankEdges(cleanedLines).join('\n');
   const successBody = successAnswers.join('\n').trim();
   if (!successBody) return { body: journalBody, kind: 'journal', legacyPromptDetected: true };
   if (!journalBody) return { body: successBody, kind: 'success', legacyPromptDetected: true };
