@@ -90,22 +90,26 @@ test('the companion-only baseline uses complete figures and no scene navigation'
   assert.doesNotMatch(app, /roomBackgroundImage|scheduleIdleGesture|room-hotspot/);
 });
 
-test('record editor keeps life diary and daily review as two simple subpages', async () => {
+test('record editor keeps quick and full writing simple while daily review remains in day review', async () => {
   const app = await read('src/app.ts');
   const styles = await read('src/styles.css');
-  assert.match(app, /'生活日记'/);
+  const components = await read('src/design-system.css');
+  assert.match(app, /'随记'/);
+  assert.match(app, /'整记'/);
   // The user removed the former success-diary category; keep it out of the UI.
   assert.doesNotMatch(app, /'成功小记'|'成功日记'/);
   assert.match(app, /'每日复盘'/);
   assert.doesNotMatch(app, /'难忘的事'|'日常记录'|'成功记录'|'趣事记录'|'普通记录'/);
   assert.doesNotMatch(app, /record-summary-input/);
   assert.match(app, /life-diary-composer/);
+  assert.match(app, /full-diary-input/);
+  assert.match(app, /full-diary-history/);
   assert.match(app, /readRecordImage/);
   assert.match(app, /openAnalysisPreview\(activeDraftDate, analysableEntries\)/);
-  assert.match(app, /db\.saveReview\(activeDraftDate, 'daily'/);
+  assert.match(app, /db\.saveReview\(date, 'daily'/);
   assert.match(app, /snapshotVariantFor/);
   assert.match(styles, /\.room-stage\.is-snapshot-(?:rest|focus|play|connection|bright)/);
-  assert.match(styles, /\.record-subtabs\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s);
+  assert.match(components, /\.record-mode-tabs\.ui-segmented-inline\s*\{[^}]*grid-template-columns:\s*repeat\(2, var\(--ui-touch-size\)\)/s);
   assert.match(styles, /\.life-diary-bubble\s*\{[^}]*justify-self:\s*end/s);
   assert.doesNotMatch(styles, /\.record-prompt-actions\s*\{[^}]*overflow-x:\s*auto/s);
 });

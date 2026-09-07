@@ -947,6 +947,21 @@ button.ui-list-row:is(:hover,:focus-visible) { background: var(--ui-color-accent
   font-size: var(--ui-font-meta);
 }
 
+.record-mode-tabs.ui-segmented-inline {
+  grid-template-columns: repeat(2, var(--ui-touch-size));
+}
+
+.record-toolbar { justify-content: space-between; flex-wrap: wrap; }
+.record-toolbar .life-diary-actions { margin-left: auto; }
+.full-diary-panel { align-content: start; }
+.full-diary-form,
+.full-diary-history {
+  display: grid;
+  gap: var(--ui-section-gap);
+}
+.full-diary-input { min-height: calc(var(--ui-textarea-height) * 2); }
+.full-diary-feed { min-height: 0; }
+
 .analysis-page-body { gap: var(--ui-space-5); min-width: 0; }
 .analysis-category-section { display: grid; gap: var(--ui-list-gap); padding: 0; border: 0; background: transparent; }
 .analysis-heat-section { margin: 0; padding: 0; display: grid; gap: var(--ui-section-gap); border-bottom: none; }

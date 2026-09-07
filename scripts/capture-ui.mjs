@@ -306,8 +306,9 @@ await page.keyboard.press('Escape');
 await go('record');
 await page.getByRole('textbox', { name: '现在的想法' }).fill('今天最想记住的是：把困难的任务缩小以后，我还是向前走了一步。');
 await shot('record-compose');
-await page.getByRole('button', { name: '每日复盘', exact: true }).click();
-await shot('record-daily-review');
+await page.getByRole('button', { name: '整记', exact: true }).click();
+await page.getByRole('textbox', { name: '完整记录' }).fill('今天把困难的任务缩小以后，仍然完成了关键的一步，也找到了更适合自己的推进节奏。');
+await shot('record-full');
 
 await go(`day/${today}`);
 await shot('day-overview');
@@ -396,7 +397,7 @@ await page.locator('.task-settled').getByRole('button', { name: '查看任务：
 await shot('task-result');
 await page.keyboard.press('Escape');
 await go('record');
-await page.getByRole('button', { name: '生活日记', exact: true }).click();
+await page.getByRole('button', { name: '随记', exact: true }).click();
 await page.getByRole('button', { name: 'AI整理' }).click();
 let scope = page.getByRole('dialog', { name: '发送内容' });
 await scope.waitFor();

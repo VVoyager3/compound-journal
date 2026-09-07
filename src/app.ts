@@ -109,6 +109,7 @@ interface InstallPromptEvent extends Event {
 }
 interface RecordDraft {
   body: string;
+  fullBody: string;
   kind: NonNullable<JournalEntry['kind']>;
   summary: string;
   imageDataUrl?: string;
@@ -540,16 +541,17 @@ function loadDrafts(): void {
       for (const [date, value] of Object.entries(saved)) {
         if (!isLocalDate(date)) continue;
         if (typeof value === 'string' && value.length <= 12_000) {
-          memoryDrafts[date] = { ...migrateLegacyJournalContent(value), summary: '' };
+          memoryDrafts[date] = { ...migrateLegacyJournalContent(value), fullBody: '', summary: '' };
           migratedLegacyDraft = true;
         }
         else if (value && typeof value === 'object' && !Array.isArray(value)) {
           const draft = value as Partial<RecordDraft>;
           if (typeof draft.body === 'string' && draft.body.length <= 12_000) {
             const summary = typeof draft.summary === 'string' && draft.summary.length <= 120 ? draft.summary : '';
+            const fullBody = typeof draft.fullBody === 'string' && draft.fullBody.length <= 12_000 ? draft.fullBody : '';
             const imageDataUrl = typeof draft.imageDataUrl === 'string' && draft.imageDataUrl.length <= 2_200_000 ? draft.imageDataUrl : undefined;
-            if (draft.kind === 'journal' || draft.kind === 'success' || draft.kind === 'fun') memoryDrafts[date] = { body: draft.body, kind: draft.kind, summary, imageDataUrl };
-            else { memoryDrafts[date] = { ...migrateLegacyJournalContent(draft.body), summary, imageDataUrl }; migratedLegacyDraft = true; }
+            if (draft.kind === 'journal' || draft.kind === 'success' || draft.kind === 'fun') memoryDrafts[date] = { body: draft.body, fullBody, kind: draft.kind, summary, imageDataUrl };
+            else { memoryDrafts[date] = { ...migrateLegacyJournalContent(draft.body), fullBody, summary, imageDataUrl }; migratedLegacyDraft = true; }
           }
         }
       }
@@ -566,20 +568,21 @@ function persistDrafts(): void {
     else localStorage.removeItem(DRAFT_KEY);
     draftNeedsUnloadWarning = false;
   } catch {
-    draftNeedsUnloadWarning = Object.values(memoryDrafts).some((draft) => Boolean(draft.body || draft.summary));
+    draftNeedsUnloadWarning = Object.values(memoryDrafts).some((draft) => Boolean(draft.body || draft.fullBody || draft.summary || draft.imageDataUrl));
   }
 }
 
 function readDraft(date: string): RecordDraft {
   loadDrafts();
-  return memoryDrafts[date] ?? { body: '', kind: 'journal', summary: '' };
+  return memoryDrafts[date] ?? { body: '', fullBody: '', kind: 'journal', summary: '' };
 }
 
-function saveDraft(date: string, body: string, kind: RecordDraft['kind'], summary?: string, imageDataUrl?: string | null): void {
+function saveDraft(date: string, body: string, kind: RecordDraft['kind'], summary?: string, imageDataUrl?: string | null, fullBody?: string): void {
   loadDrafts();
   const savedSummary = summary ?? memoryDrafts[date]?.summary ?? '';
   const savedImage = imageDataUrl === undefined ? memoryDrafts[date]?.imageDataUrl : imageDataUrl || undefined;
-  if (body || savedSummary || savedImage || kind === 'success') memoryDrafts[date] = { body, kind, summary: savedSummary, imageDataUrl: savedImage };
+  const savedFullBody = fullBody ?? memoryDrafts[date]?.fullBody ?? '';
+  if (body || savedFullBody || savedSummary || savedImage || kind === 'success') memoryDrafts[date] = { body, fullBody: savedFullBody, kind, summary: savedSummary, imageDataUrl: savedImage };
   else delete memoryDrafts[date];
   persistDrafts();
 }
@@ -2018,50 +2021,55 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   const dateControl = node('label', 'record-date-control');
   const dateText = node('span', '', formatDate(targetDate, { weekday: undefined }));
   dateControl.append(semanticIcon('calendar'), dateText, dateInput);
-  main.append(route.date && route.date !== today
-    ? pageHeader('补记', { back: true, action: dateControl })
-    : pageHeader('记录', { action: dateControl }));
+
+  const tabs = segmentedControl('nav', 'record-subtabs record-mode-tabs');
+  tabs.classList.add('ui-segmented-inline');
+  tabs.setAttribute('aria-label', '记录方式');
+  const quickButton = segmentedItem('button', '随记', { className: 'record-subtab' });
+  const fullButton = segmentedItem('button', '整记', { className: 'record-subtab' });
+  tabs.append(quickButton, fullButton);
+  const header = route.date && route.date !== today
+    ? pageHeader('补记', { back: true, action: tabs })
+    : pageHeader('记录', { action: tabs });
+  main.append(header);
 
   const initialDraft = readDraft(targetDate);
-  const savedCaption = await db.getDayCaption(targetDate);
   const savedEntries = await db.listEntries(targetDate);
   let activeDraftDate = targetDate;
   let selectedKind: NonNullable<JournalEntry['kind']> = initialDraft.kind === 'success' ? 'success' : 'journal';
   let selectedImage = initialDraft.imageDataUrl;
 
-  const tabs = segmentedControl('nav', 'record-subtabs');
-  tabs.setAttribute('aria-label', '记录子页面');
-  const lifeButton = segmentedItem('button', '生活日记', { className: 'record-subtab' });
-  const reviewButton = segmentedItem('button', '每日复盘', { className: 'record-subtab' });
-  tabs.append(lifeButton, reviewButton);
-
   const lifePanel = node('section', 'record-tab-panel life-diary-panel');
-  const lifeHeader = node('div', 'life-diary-header');
+  const lifeHeader = node('div', 'life-diary-header record-toolbar');
   const lifeActions = node('div', 'life-diary-actions');
   const analysableEntries = savedEntries.filter((entry) => entry.body.trim());
   const aiArchive = textAction('AI整理', () => { void openAnalysisPreview(activeDraftDate, analysableEntries); });
   aiArchive.disabled = !NATIVE_AI_READY || !analysableEntries.length;
   const viewToday = textAction('查看今天', () => { sessionStorage.setItem('qiguang.day-view', 'records'); go({ name: 'day', date: activeDraftDate }); });
   lifeActions.append(aiArchive, viewToday);
-  lifeHeader.append(lifeActions);
+  lifeHeader.append(dateControl, lifeActions);
 
-  const feed = node('div', 'life-diary-feed');
-  if (!savedEntries.length) feed.append(emptyState('还没有记录', 'journal-empty'));
-  savedEntries.forEach((entry) => {
-    const item = node('button', `life-diary-bubble is-${entry.kind ?? 'journal'}${entry.imageDataUrl ? ' has-image' : ''}`);
-    item.type = 'button';
-    item.setAttribute('aria-label', `查看生活日记：${entry.body.slice(0, 30) || '图片'}`);
-    if (entry.imageDataUrl) {
-      const image = node('img', 'life-diary-image') as HTMLImageElement;
-      image.src = entry.imageDataUrl;
-      image.alt = entry.body ? '记录图片' : '图片记录';
-      item.append(image);
-    }
-    if (entry.body) item.append(node('span', 'life-diary-copy', entry.body));
-    item.append(node('time', 'life-diary-time', new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })));
-    item.addEventListener('click', () => { void openEntryDetailDialog(entry); });
-    feed.append(item);
-  });
+  const recordFeed = (className: string): HTMLElement => {
+    const feed = node('div', className);
+    if (!savedEntries.length) feed.append(emptyState('还没有记录', 'journal-empty'));
+    savedEntries.forEach((entry) => {
+      const item = node('button', `life-diary-bubble is-${entry.kind ?? 'journal'}${entry.imageDataUrl ? ' has-image' : ''}`);
+      item.type = 'button';
+      item.setAttribute('aria-label', `查看记录：${entry.body.slice(0, 30) || '图片'}`);
+      if (entry.imageDataUrl) {
+        const image = node('img', 'life-diary-image') as HTMLImageElement;
+        image.src = entry.imageDataUrl;
+        image.alt = entry.body ? '记录图片' : '图片记录';
+        item.append(image);
+      }
+      if (entry.body) item.append(node('span', 'life-diary-copy', entry.body));
+      item.append(node('time', 'life-diary-time', new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })));
+      item.addEventListener('click', () => { void openEntryDetailDialog(entry); });
+      feed.append(item);
+    });
+    return feed;
+  };
+  const feed = recordFeed('life-diary-feed');
 
   const composer = node('form', 'life-diary-composer');
   const imageInput = node('input', 'life-diary-file') as HTMLInputElement;
@@ -2098,35 +2106,42 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   const composerRow = node('div', 'life-diary-composer-row');
   composerRow.append(imageButton, saveState, send, imageInput);
   composer.append(imagePreview, input, composerRow);
-  lifePanel.append(lifeHeader, feed, composer);
+  lifePanel.append(feed, composer);
 
-  const reviewPanel = node('section', 'record-tab-panel daily-review-panel');
-  const reviewForm = node('form', 'personal-review-card daily-review-form');
-  const reviewFields = formStack('personal-review-fields');
-  const reviewInputs = new Map<ReviewFieldKey, HTMLTextAreaElement>();
-  DAILY_REVIEW_FIELDS.forEach(([key, label]) => {
-    const reviewInput = node('textarea', 'input compact-textarea');
-    reviewInput.maxLength = 1_000;
-    reviewInput.value = reviewFieldValue(savedCaption?.dailyReview, key);
-    reviewInput.setAttribute('aria-label', label);
-    reviewInputs.set(key, reviewInput);
-    reviewFields.append(labelledControl(label, reviewInput));
-  });
-  const reviewStatus = statusMessage();
-  reviewStatus.setAttribute('role', 'status');
-  const reviewSubmit = actionButton('保存复盘', undefined, { variant: 'primary', className: 'button-wide', type: 'submit' });
-  reviewForm.append(reviewFields, reviewStatus, reviewSubmit);
-  reviewPanel.append(reviewForm);
-  main.append(tabs, lifePanel, reviewPanel);
+  const fullPanel = node('section', 'record-tab-panel life-diary-panel full-diary-panel');
+  const fullForm = node('form', 'full-diary-form');
+  const fullInput = node('textarea', 'input full-diary-input');
+  fullInput.name = 'body';
+  fullInput.rows = 12;
+  fullInput.maxLength = 12_000;
+  fullInput.placeholder = '写下完整记录';
+  fullInput.value = initialDraft.fullBody;
+  fullInput.setAttribute('aria-label', '完整记录');
+  const fullStatus = statusMessage();
+  fullStatus.setAttribute('role', 'status');
+  const fullSubmit = actionButton('保存记录', undefined, { variant: 'primary', className: 'button-wide', type: 'submit' });
+  fullForm.append(fullInput, fullStatus, fullSubmit);
+  const fullHistory = node('section', 'full-diary-history');
+  fullHistory.append(sectionHeading('当日记录'), recordFeed('life-diary-feed full-diary-feed'));
+  fullPanel.append(fullForm, fullHistory);
+  main.append(lifeHeader, lifePanel, fullPanel);
 
   const updateDraftState = (): void => {
-    saveDraft(activeDraftDate, input.value, selectedKind, '', selectedImage ?? null);
+    saveDraft(activeDraftDate, input.value, selectedKind, '', selectedImage ?? null, fullInput.value);
     send.disabled = !input.value.trim() && !selectedImage;
     saveState.textContent = draftNeedsUnloadWarning ? '应用未能保存草稿，请先不要关闭页面' : input.value || selectedImage ? '草稿已保存' : '';
     saveState.hidden = !saveState.textContent;
     saveState.classList.toggle('is-error', draftNeedsUnloadWarning);
   };
   input.addEventListener('input', updateDraftState);
+  const updateFullDraftState = (): void => {
+    saveDraft(activeDraftDate, input.value, selectedKind, '', selectedImage ?? null, fullInput.value);
+    fullSubmit.disabled = !fullInput.value.trim();
+    fullStatus.textContent = draftNeedsUnloadWarning ? '应用未能保存草稿，请先不要关闭页面' : fullInput.value ? '草稿已保存' : '';
+    fullStatus.hidden = !fullStatus.textContent;
+    fullStatus.classList.toggle('is-error', draftNeedsUnloadWarning);
+  };
+  fullInput.addEventListener('input', updateFullDraftState);
   imageInput.addEventListener('change', async () => {
     const file = imageInput.files?.[0];
     if (!file) return;
@@ -2156,7 +2171,9 @@ async function recordPage(route: Route): Promise<HTMLElement> {
     saveState.hidden = true;
     try {
       await db.addEntry(input.value, dateInput.value, 'text', selectedKind, selectedImage);
-      clearDraft(dateInput.value);
+      input.value = '';
+      selectedImage = undefined;
+      saveDraft(dateInput.value, '', selectedKind, '', null, fullInput.value);
       showToast('记录已保存。');
       sessionStorage.setItem('qiguang.day-view', 'records');
       go({ name: 'day', date: dateInput.value });
@@ -2169,37 +2186,39 @@ async function recordPage(route: Route): Promise<HTMLElement> {
       showToast(errorMessage(error), 'error');
     }
   });
-  reviewForm.addEventListener('submit', async (event) => {
+  fullForm.addEventListener('submit', async (event) => {
     event.preventDefault();
-    reviewSubmit.disabled = true;
+    fullSubmit.disabled = true;
+    fullStatus.hidden = true;
     try {
-      const values = Object.fromEntries([...reviewInputs].map(([key, item]) => [key, item.value])) as Partial<Record<ReviewFieldKey, string>>;
-      await db.saveReview(activeDraftDate, 'daily', {
-        progress: values.progress ?? '', takeaway: values.takeaway ?? '', problem: values.problem ?? '', tomorrowFocus: values.tomorrowFocus ?? '',
-      });
-      showToast('复盘已保存。');
-      sessionStorage.setItem('qiguang.day-view', 'review');
+      await db.addEntry(fullInput.value, dateInput.value, 'text', 'journal');
+      fullInput.value = '';
+      saveDraft(dateInput.value, input.value, selectedKind, '', selectedImage ?? null, '');
+      showToast('记录已保存。');
+      sessionStorage.setItem('qiguang.day-view', 'records');
       go({ name: 'day', date: activeDraftDate });
     } catch (error) {
-      reviewSubmit.disabled = false;
-      reviewStatus.textContent = errorMessage(error);
-      reviewStatus.classList.add('is-error');
+      fullSubmit.disabled = false;
+      fullStatus.textContent = `尚未保存：${errorMessage(error)}`;
+      fullStatus.hidden = false;
+      fullStatus.classList.add('is-error');
     }
   });
-  const selectTab = (tab: 'life' | 'review'): void => {
+  const selectTab = (tab: 'quick' | 'full'): void => {
     sessionStorage.setItem('qiguang.record-tab', tab);
-    lifePanel.hidden = tab !== 'life';
-    reviewPanel.hidden = tab !== 'review';
-    lifeButton.classList.toggle('is-active', tab === 'life');
-    reviewButton.classList.toggle('is-active', tab === 'review');
-    lifeButton.setAttribute('aria-pressed', String(tab === 'life'));
-    reviewButton.setAttribute('aria-pressed', String(tab === 'review'));
+    lifePanel.hidden = tab !== 'quick';
+    fullPanel.hidden = tab !== 'full';
+    quickButton.classList.toggle('is-active', tab === 'quick');
+    fullButton.classList.toggle('is-active', tab === 'full');
+    quickButton.setAttribute('aria-pressed', String(tab === 'quick'));
+    fullButton.setAttribute('aria-pressed', String(tab === 'full'));
   };
-  lifeButton.addEventListener('click', () => selectTab('life'));
-  reviewButton.addEventListener('click', () => selectTab('review'));
-  selectTab(sessionStorage.getItem('qiguang.record-tab') === 'review' ? 'review' : 'life');
+  quickButton.addEventListener('click', () => selectTab('quick'));
+  fullButton.addEventListener('click', () => selectTab('full'));
+  selectTab(sessionStorage.getItem('qiguang.record-tab') === 'full' ? 'full' : 'quick');
   renderImagePreview();
   updateDraftState();
+  updateFullDraftState();
   return main;
 }
 

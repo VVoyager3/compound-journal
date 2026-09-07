@@ -273,8 +273,9 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     await page.waitForURL(/#\/record$/);
     await page.locator('.life-diary-composer').waitFor();
     assert.equal(await page.locator('.bottom-nav:visible').count(), 1, 'recording should retain one visible primary page navigation');
-    assert.deepEqual(await page.locator('.record-subtab').allTextContents(), ['生活日记', '每日复盘']);
-    assert.equal(await page.getByRole('button', { name: '生活日记', pressed: true }).count(), 1);
+    assert.deepEqual(await page.locator('.record-subtab').allTextContents(), ['随记', '整记']);
+    assert.equal(await page.getByRole('button', { name: '随记', pressed: true }).count(), 1);
+    assert.equal(await page.locator('.page-header .record-mode-tabs').count(), 1, 'record modes belong in the top-right titlebar');
     assert.equal(await page.getByText('模板', { exact: true }).count(), 0, 'recording should not expose template selection');
     assert.equal(await page.locator('.record-kind-hint').count(), 0, 'record types must not repeat their prompt below the selector');
     assert.equal(await page.getByRole('textbox', { name: '今日一句' }).count(), 0, 'recording should not ask for a day title before writing');
@@ -288,6 +289,11 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     assert.equal(await input.getAttribute('placeholder'), '现在的想法');
     const editorLayout = await input.evaluate((element) => ({ height: element.getBoundingClientRect().height, radius: getComputedStyle(element).borderRadius }));
     assert.ok(editorLayout.height >= 60 && editorLayout.height <= 150 && editorLayout.radius === '0px', `life diary uses a multiline writing area inside one shared composer frame: ${JSON.stringify(editorLayout)}`);
+    await page.getByRole('button', { name: '整记' }).click();
+    const fullInput = page.getByRole('textbox', { name: '完整记录' });
+    assert.ok((await fullInput.boundingBox())?.height >= 200, 'full record mode must use a large writing area');
+    assert.equal(await page.getByRole('button', { name: '保存记录' }).count(), 1);
+    await page.getByRole('button', { name: '随记' }).click();
     const recordDate = await dateControl.locator('input[type="date"]').inputValue();
     await input.fill('电脑自动回归：记录一件真实发生的事。');
     assert.equal(await input.evaluate((element) => element === document.activeElement), true);
@@ -1531,13 +1537,13 @@ test('daily and weekly personal reviews stay editable and local', async () => {
   }
 });
 
-test('life diary creates stream entries with image attachments and local review', async () => {
+test('quick and full records share one daily history while daily review remains available', async () => {
   const { context, page } = await freshPage();
   try {
     await finishOnboarding(page);
     const date = await page.locator('.record-date-control input[type="date"]').inputValue();
     assert.equal(await page.getByRole('checkbox', { name: '记为成功记录' }).count(), 0);
-    await assert.doesNotReject(() => page.getByRole('button', { name: '生活日记', pressed: true }).waitFor());
+    await assert.doesNotReject(() => page.getByRole('button', { name: '随记', pressed: true }).waitFor());
     assert.equal(await page.locator('.record-type-option').count(), 0);
 
     const addEntry = async (body) => {
@@ -1588,7 +1594,17 @@ test('life diary creates stream entries with image attachments and local review'
     await page.locator('.success-evidence').getByText('我把失败的构建修复了', { exact: true }).waitFor({ state: 'detached' });
 
     await page.goto(`${baseUrl}/#/record/${date}`);
-    await page.getByRole('button', { name: '每日复盘' }).click();
+    await page.getByRole('button', { name: '整记' }).click();
+    const fullHistory = page.locator('.full-diary-history .life-diary-bubble');
+    assert.equal(await fullHistory.count(), 4, 'full mode must show every quick record from the selected day');
+    await page.getByRole('textbox', { name: '完整记录' }).fill('晚上把今天发生的事情完整整理了一遍。');
+    await page.getByRole('button', { name: '保存记录' }).click();
+    await page.waitForURL(new RegExp(`#\/day\/${date}$`));
+    await assert.doesNotReject(() => page.locator('.day-record-row').getByText('晚上把今天发生的事情完整整理了一遍。', { exact: true }).waitFor());
+    assert.equal(await page.locator('.day-record-row').count(), 5, 'quick and full records must share one daily history');
+
+    await page.getByRole('button', { name: '复盘', exact: true }).click();
+    await page.locator('.personal-review-card').getByRole('button', { name: '填写' }).click();
     await page.getByRole('textbox', { name: '今天推进了什么' }).fill('完成记录页重构');
     await page.getByRole('textbox', { name: '今天留下了什么' }).fill('生活日记流');
     await page.getByRole('textbox', { name: '最大问题' }).fill('旧分类太重');
