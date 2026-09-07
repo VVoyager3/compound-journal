@@ -6082,14 +6082,14 @@ function analysisHeatmap(
     const date = parseLocalDate(shiftDate(period.start, week * 7));
     const month = date.getMonth();
     if (month === previousMonth) continue;
-    const label = node('span', '', `${month + 1}月`);
+    const label = node('span', '', ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month]);
     label.style.gridColumnStart = String(week + 1);
     months.append(label);
     previousMonth = month;
   }
   const body = node('div', 'analysis-heat-body');
   const weekdayLabels = node('div', 'analysis-weekday-labels');
-  ['周一', '', '周三', '', '周五', '', ''].forEach((label) => weekdayLabels.append(node('span', '', label)));
+  ['Mon', '', 'Wed', '', 'Fri', '', ''].forEach((label) => weekdayLabels.append(node('span', '', label)));
   const cells = node('div', 'analysis-heat-cells');
   for (let offset = 0; offset < weeks * 7; offset += 1) {
     const date = shiftDate(period.start, offset);

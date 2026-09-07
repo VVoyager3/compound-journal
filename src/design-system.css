@@ -74,8 +74,8 @@
   --ui-action-gap: var(--ui-space-3);
   --ui-repeat-gap: 16px;
   --ui-review-input-height: 116px;
-  --ui-heat-cell: 13px;
-  --ui-heat-gap: 3px;
+  --ui-heat-cell: 15px;
+  --ui-heat-gap: 4px;
   --ui-monthly-trend-height: 14px;
   --ui-analysis-width: 100%;
   --ui-viewport-height: 100vh;

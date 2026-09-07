@@ -225,11 +225,11 @@ test('analysis heatmaps keep square cells and contain horizontal overflow', asyn
 
         assert.equal(geometry.cells.length, weeks * 7);
         assert.equal(geometry.cells.every((cell) => Math.abs(cell.width - cell.height) < 0.01), true, `${weeks} weeks must stay square at ${width}px`);
-        assert.equal(geometry.cells.every((cell) => cell.width === 13), true, `${weeks} weeks must use the compact heatmap scale at ${width}px`);
-        assert.equal(geometry.gap, '3px', `${weeks} weeks must keep the compact heatmap rhythm at ${width}px`);
+        assert.equal(geometry.cells.every((cell) => cell.width === 15), true, `${weeks} weeks must use the readable heatmap scale at ${width}px`);
+        assert.equal(geometry.gap, '4px', `${weeks} weeks must keep the readable heatmap rhythm at ${width}px`);
         assert.ok(geometry.pageScrollWidth <= geometry.pageClientWidth, `${weeks} weeks must not overflow the page at ${width}px`);
         if (weeks === 12) {
-          assert.deepEqual(geometry.lastMonth, { text: '10月', column: '12' }, 'the widest month label should occupy the final column');
+          assert.deepEqual(geometry.lastMonth, { text: 'Oct', column: '12' }, 'the final month label should occupy the final column');
           assert.ok(geometry.scrollWidth <= geometry.clientWidth, `12 weeks must fit without chart overflow at ${width}px`);
         } else {
           assert.equal(geometry.overflowX, 'auto');
