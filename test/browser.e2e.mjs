@@ -454,7 +454,7 @@ test('expanded settings avoid permanent explanatory paragraphs', async () => {
     await dialog.getByRole('button', { name: '返回' }).click();
     await page.getByRole('button', { name: /AI 整理/ }).click();
     dialog = page.getByRole('dialog', { name: 'AI 整理' });
-    await dialog.getByText('使用安装包提供的服务', { exact: true }).click();
+    await dialog.getByText('连接与发送设置', { exact: true }).click();
     await dialog.getByText('调整发送范围', { exact: true }).click();
     assert.equal(await dialog.getByText('选择周复盘可以使用的数据。日记原文不在其中。', { exact: true }).count(), 0);
     await dialog.getByRole('button', { name: '返回' }).click();
@@ -592,10 +592,11 @@ test('today keeps records and habit editing behind compact entry points', async 
     await todayHabit.getByRole('button', { name: /记录一次：晚饭后散步，当前 1\/3次/ }).click();
     await assert.doesNotReject(() => todayHabit.getByText('2/3次', { exact: true }).waitFor());
     await page.locator('.task-today-habits').getByText('1 项待打卡', { exact: true }).waitFor();
-    await page.getByRole('button', { name: '查看习惯：晚饭后散步' }).click();
-    const habitDetail = page.getByRole('dialog', { name: '习惯详情' });
-    assert.equal(await habitDetail.locator('.habit-week-legend').count(), 0);
-    await habitDetail.getByRole('button', { name: '返回' }).click();
+    await page.getByRole('button', { name: '编辑习惯：晚饭后散步' }).click();
+    const todayHabitEditor = page.getByRole('dialog', { name: '编辑习惯' });
+    await assert.doesNotReject(() => todayHabitEditor.waitFor());
+    assert.equal(await todayHabitEditor.evaluate(() => ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName ?? '')), false, 'opening an editor must not summon the keyboard');
+    await todayHabitEditor.getByRole('button', { name: '返回' }).click();
     assert.equal(await page.getByText(/最小动作：先做一个“晚饭后散步”/).count(), 0);
     assert.equal(await page.getByRole('button', { name: /进入任务板详细管理“晚饭后散步”/ }).count(), 0);
     await page.getByRole('link', { name: '任务', exact: true }).click();
@@ -799,6 +800,20 @@ test('the bottom quick-add keeps task creation in context', async () => {
     await page.reload();
     await page.getByRole('heading', { name: '直接添加' }).waitFor();
     assert.deepEqual(await page.locator('.task-today-list h3').allTextContents(), ['直接添加', '已有任务']);
+    const reorderedRows = page.locator('.task-today-list .task-list-item');
+    const firstHandle = reorderedRows.first().getByRole('button', { name: '拖动调整“直接添加”的位置' });
+    const secondBox = await reorderedRows.nth(1).boundingBox();
+    const handleBox = await firstHandle.boundingBox();
+    assert.ok(secondBox && handleBox);
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(handleBox.x + handleBox.width / 2, secondBox.y + secondBox.height * .75, { steps: 4 });
+    await page.mouse.up();
+    await assert.doesNotReject(() => page.getByText('任务顺序已保存。', { exact: true }).waitFor());
+    assert.deepEqual(await page.locator('.task-today-list h3').allTextContents(), ['已有任务', '直接添加']);
+    await page.reload();
+    await page.getByRole('heading', { name: '直接添加' }).waitFor();
+    assert.deepEqual(await page.locator('.task-today-list h3').allTextContents(), ['已有任务', '直接添加']);
     await page.getByRole('button', { name: '完成：直接添加' }).click();
     const completionToast = page.locator('.toast.is-completion');
     await completionToast.waitFor({ state: 'visible' });
@@ -1240,14 +1255,19 @@ test('one state dimension shows its related tasks and records and can be assesse
   }
 });
 
-test('weekly review scope defaults to all and persists one settings change', async () => {
-  const { context, page } = await freshPage();
+test('AI defaults to confirming daily organization and can persist direct organization', async () => {
+  const { context, page, apiRequests } = await freshPage();
   try {
     await finishOnboarding(page);
     await page.goto(`${baseUrl}/#/system`);
     await page.locator('.settings-overview-row').filter({ hasText: 'AI 发送范围' }).click();
     const ai = page.getByRole('dialog', { name: 'AI 发送范围' }).locator('.ai-settings');
-    await ai.getByText('使用安装包提供的服务', { exact: true }).click();
+    const direct = ai.getByRole('checkbox', { name: '每日整理无需确认' });
+    assert.equal(await direct.isChecked(), false, 'daily organization must confirm by default');
+    await ai.getByRole('checkbox', { name: '允许 AI 整理' }).check();
+    await direct.check();
+    await assert.doesNotReject(() => page.getByText('每日整理会直接使用默认范围。', { exact: true }).waitFor());
+    await ai.getByText('连接与发送设置', { exact: true }).click();
     const scope = ai.locator('.weekly-scope-settings');
     await scope.locator(':scope > summary').click();
     assert.equal(await scope.locator('input[type="checkbox"]:checked').count(), 8, 'weekly review should send all supported summaries by default');
@@ -1257,11 +1277,24 @@ test('weekly review scope defaults to all and persists one settings change', asy
     await page.reload();
     await page.locator('.settings-overview-row').filter({ hasText: 'AI 发送范围' }).click();
     const reloadedAi = page.getByRole('dialog', { name: 'AI 发送范围' }).locator('.ai-settings');
-    await reloadedAi.getByText('使用安装包提供的服务', { exact: true }).click();
+    assert.equal(await reloadedAi.getByRole('checkbox', { name: '每日整理无需确认' }).isChecked(), true);
+    await reloadedAi.getByText('连接与发送设置', { exact: true }).click();
     const reloadedScope = reloadedAi.locator('.weekly-scope-settings');
     await reloadedScope.locator(':scope > summary').click();
     assert.equal(await reloadedScope.getByRole('checkbox', { name: '习惯坚持' }).isChecked(), false);
     assert.equal(await reloadedScope.locator('input[type="checkbox"]:checked').count(), 7);
+    await page.getByRole('dialog', { name: 'AI 发送范围' }).getByRole('button', { name: '返回' }).click();
+    await page.goto(`${baseUrl}/#/record`);
+    await page.getByRole('textbox', { name: '现在的想法' }).fill('完成无需重复确认的每日整理。');
+    await page.getByRole('button', { name: '发送' }).click();
+    await page.locator('.day-evidence-details > summary').click();
+    const directResponse = page.waitForResponse((response) => response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/analyze');
+    await page.getByRole('button', { name: '检查范围并整理' }).click();
+    assert.equal(await page.getByRole('dialog', { name: '发送内容' }).count(), 0, 'direct organization must not reopen the range preview');
+    await directResponse;
+    await page.locator('.day-evidence-details > summary').click();
+    await assert.doesNotReject(() => page.getByRole('heading', { name: '测试整理结果' }).waitFor());
+    assert.equal(apiRequests.filter((request) => request.method === 'POST').length, 1);
   } finally {
     await context.close();
   }
@@ -1317,6 +1350,12 @@ test('success diary prompts stay optional and AI goal decomposition requires con
     assert.equal(await savedGoalDetail.getByRole('button', { name: /标为完成|撤销完成/ }).count(), 0, '目标详情只能管理，不能打卡子任务');
     assert.equal(await savedGoalDetail.getByRole('button', { name: '编辑子任务：完成第一段可检查成果' }).count(), 1);
     assert.equal(await savedGoalDetail.getByRole('button', { name: /拖动调整.+的位置/ }).count(), 2, 'every child task must expose an accessible reorder handle');
+    await savedGoalDetail.getByRole('button', { name: '编辑子任务：完成第一段可检查成果' }).click();
+    const childEditor = page.getByRole('dialog', { name: '修改任务' });
+    assert.equal(await childEditor.evaluate(() => ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName ?? '')), false, 'child task editing must open without the keyboard');
+    await childEditor.getByRole('button', { name: '返回' }).click();
+    savedGoalDetail = page.getByRole('dialog', { name: '目标详情' });
+    await assert.doesNotReject(() => savedGoalDetail.waitFor());
     await savedGoalDetail.getByRole('button', { name: '编辑目标', exact: true }).click();
     const goalEditor = page.getByRole('dialog', { name: '编辑目标' });
     await goalEditor.getByRole('button', { name: '返回' }).click();
@@ -1874,7 +1913,7 @@ test('Android without a MiniMax key keeps the local success and action loop usab
     await page.goto(`${baseUrl}/#/system`);
     await page.getByText('AI 整理', { exact: true }).click();
     const aiSettings = page.getByRole('dialog', { name: 'AI 整理' }).locator('.ai-settings');
-    await aiSettings.getByText('使用安装包提供的服务', { exact: true }).click();
+    await aiSettings.getByText('连接与发送设置', { exact: true }).click();
     const permission = aiSettings.getByRole('checkbox', { name: /允许 AI 整理/ });
     const check = aiSettings.getByRole('button', { name: '重新检查连接' });
     assert.equal(await check.isDisabled(), true);
@@ -2621,7 +2660,11 @@ test('a newly created habit has no historic debt and remains usable in weekly re
     const managementDetail = page.getByRole('dialog', { name: '习惯详情' });
     assert.equal(await managementDetail.locator('.habit-detail-checkin-actions').count(), 0, 'habit detail opened from plan must stay management-only');
     assert.equal(await managementDetail.getByRole('button', { name: '补记', exact: true }).count(), 0);
-    await managementDetail.getByRole('button', { name: '返回' }).click();
+    await managementDetail.getByRole('button', { name: '编辑计划' }).click();
+    const nestedHabitEditor = page.getByRole('dialog', { name: '编辑习惯' });
+    assert.equal(await nestedHabitEditor.evaluate(() => ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName ?? '')), false, 'habit editing must open without the keyboard');
+    await nestedHabitEditor.getByRole('button', { name: '返回' }).click();
+    await page.getByRole('dialog', { name: '习惯详情' }).getByRole('button', { name: '返回' }).click();
 
     await page.goto(`${baseUrl}/#/review`);
     await page.getByRole('button', { name: '检查范围并生成' }).click();

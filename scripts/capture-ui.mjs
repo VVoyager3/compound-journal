@@ -269,6 +269,8 @@ await shot('state-detail', { fullPage: false });
 await page.getByRole('button', { name: '重新评估' }).click();
 await shot('state-self-assessment', { fullPage: false });
 await page.keyboard.press('Escape');
+await page.getByRole('dialog', { name: '身体' }).waitFor();
+await page.keyboard.press('Escape');
 
 await go('tasks');
 await shot('tasks-today');
@@ -283,6 +285,8 @@ await page.getByRole('dialog').locator('.task-item-management > summary').click(
 await page.getByRole('button', { name: /^编辑任务：/ }).click();
 await page.getByRole('dialog', { name: '修改任务', exact: true }).waitFor();
 await shot('task-edit', { fullPage: false });
+await page.keyboard.press('Escape');
+await page.getByRole('dialog', { name: '记录任务结果' }).waitFor();
 await page.keyboard.press('Escape');
 
 await page.getByRole('tab', { name: '计划', exact: true }).click();
@@ -345,6 +349,11 @@ await go('system');
 await shot('settings');
 for (const [label, file] of [['人物与陪伴', 'settings-companion'], ['状态自评', 'settings-assessment'], ['AI 整理', 'settings-ai'], ['导入与导出', 'settings-data']]) {
   await page.getByRole('button', { name: new RegExp(`^${label}`) }).click();
+  if (label === 'AI 整理') {
+    const advanced = page.locator('.ai-advanced-settings > summary');
+    await advanced.click();
+    await advanced.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+  }
   await shot(file, { fullPage: false });
   await page.keyboard.press('Escape');
 }

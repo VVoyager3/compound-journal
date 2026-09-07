@@ -467,6 +467,49 @@ async function analysisContext(date: string): Promise<{
   };
 }
 
+function dailyAnalysisRequest(
+  date: string,
+  entries: JournalEntry[],
+  choices: Awaited<ReturnType<typeof analysisContext>>,
+  selected: {
+    events: boolean;
+    states: boolean;
+    goals: boolean;
+    habits: boolean;
+    tasks: boolean;
+    memories: SystemMemory[];
+    constraints: string[];
+  },
+): DailyAnalysisRequest {
+  return {
+    contractVersion: ANALYSIS_CONTRACT_VERSION,
+    operation: 'daily_analysis',
+    requestId: crypto.randomUUID(),
+    locale: 'zh-CN',
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai',
+    localDate: date,
+    userInput: { entries: entries.map((entry) => ({ entryId: entry.id, revision: entry.version, text: entry.body })) },
+    context: {
+      confirmedEvents: selected.events ? choices.events.map((item) => ({ eventId: item.id, localDate: item.localDate, title: item.title })) : [],
+      recentStates: selected.states ? choices.recentStates : [],
+      goals: selected.goals ? choices.goals : [],
+      bonusHabits: selected.habits ? choices.habits : [],
+      recentTaskResults: selected.tasks ? choices.recentTaskResults : [],
+      memories: selected.memories.map((item) => ({ memoryId: item.id, type: item.type, statement: item.statement })),
+      constraints: selected.constraints,
+    },
+    permissions: {
+      entryIds: entries.map((entry) => entry.id),
+      includeConfirmedEvents: selected.events,
+      includeRecentStates: selected.states,
+      includeGoals: selected.goals,
+      includeBonusHabits: selected.habits,
+      taskResultQuestIds: selected.tasks ? choices.recentTaskResults.map((item) => item.questId) : [],
+      memoryIds: selected.memories.map((item) => item.id),
+    },
+  };
+}
+
 async function submitAnalysisJob(job: AnalysisJob, resumeInterrupted = false): Promise<void> {
   if (job.operation !== 'daily_analysis') throw new Error('这不是每日整理任务。');
   if (!NATIVE_AI_READY) {
@@ -933,7 +976,10 @@ async function openStateDetail(dimension: (typeof DIMENSIONS)[number], observati
   }
   actions.remove();
   if (referenceDate === localDate()) {
-    const assess = primaryButton('重新评估', () => { dialog.close(); openAssessmentQuestionnaire(30, dimension.key); });
+    const returnToDetail = () => {
+      void db.resolvedStateAtOrBefore(referenceDate).then((values) => openStateDetail(dimension, values[dimension.key], referenceDate));
+    };
+    const assess = primaryButton('重新评估', () => { dialog.close(); openAssessmentQuestionnaire(30, dimension.key, returnToDetail); });
     scoreSection.append(assess);
   }
   dialog.showModal();
@@ -1445,7 +1491,12 @@ applyHabitDifficultyControl = listRow('label', 'ui-control-row');
     const taskSettingsActions = actionGroup('quest-adjust-shortcuts');
     const edit = actionButton('编辑任务', () => {
       dialog.close();
-      void openQuestAdjustmentDialog(quest);
+      void openQuestAdjustmentDialog(quest, { onBack: () => {
+        void db.listQuests().then((quests) => {
+          const updated = quests.find((item) => item.id === quest.id);
+          if (updated) void openQuestFeedbackDialog(updated);
+        });
+      } });
     });
     edit.setAttribute('aria-label', `编辑任务：${quest.title}`);
     const remove = actionButton('删除任务', () => {
@@ -1523,7 +1574,6 @@ applyHabitDifficultyControl = listRow('label', 'ui-control-row');
   });
   actions.append(...(quest.status === 'pending' ? [] : [secondaryAction]), cancel, save);
   dialog.showModal();
-  result.focus();
 }
 
 async function openGoalPathDecision(goalId: string, reason: string): Promise<void> {
@@ -1557,8 +1607,8 @@ async function openGoalPathDecision(goalId: string, reason: string): Promise<voi
   actions.append(later); dialog.showModal(); later.focus();
 }
 
-async function openQuestAdjustmentDialog(quest: Quest): Promise<void> {
-  const { dialog, content, actions } = dialogShell('修改任务', { back: true, className: 'ui-rebuilt-page ui-form-page', fullScreen: true });
+async function openQuestAdjustmentDialog(quest: Quest, options: { onBack?: () => void; onSaved?: () => void } = {}): Promise<void> {
+  const { dialog, content, actions } = dialogShell('修改任务', { back: true, onBack: options.onBack, className: 'ui-rebuilt-page ui-form-page', fullScreen: true });
   const title = node('input', 'input'); title.maxLength = 160; title.value = quest.title;
   const date = node('input', 'input'); date.type = 'date'; date.min = localDate(); date.value = quest.localDate;
   if (quest.sourceType === 'habit') date.disabled = true;
@@ -1593,9 +1643,10 @@ async function openQuestAdjustmentDialog(quest: Quest): Promise<void> {
       dialog.close();
       showToast(updated.localDate === quest.localDate ? '行动已调整。' : `已顺延到${formatDate(updated.localDate)}；没有扣分。`);
       await render();
+      options.onSaved?.();
     } catch (error) { save.disabled = false; status.textContent = errorMessage(error); status.classList.add('is-error'); }
   }, { variant: 'primary' });
-  actions.append(remove, save); dialog.showModal(); title.focus();
+  actions.append(remove, save); dialog.showModal();
 }
 
 interface TaskRowPresentation {
@@ -1643,30 +1694,43 @@ function enableRowReordering(list: HTMLElement, rowSelector: string, handleSelec
   const persistOrder = async (): Promise<void> => {
     await persistIds(rows().map((item) => item.dataset.reorderId!));
   };
+  let dragged: HTMLElement | undefined;
+  let moved = false;
+  list.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    const handle = (event.target as Element).closest<HTMLElement>(handleSelector);
+    const item = handle?.closest<HTMLElement>(rowSelector);
+    if (!handle || !item || item.parentElement !== list) return;
+    dragged = item;
+    moved = false;
+    list.setPointerCapture(event.pointerId);
+    item.classList.add('is-dragging');
+  });
+  list.addEventListener('pointermove', (event) => {
+    if (!dragged) return;
+    event.preventDefault();
+    const target = rows().find((row) => {
+      if (row === dragged) return false;
+      const box = row.getBoundingClientRect();
+      return event.clientY >= box.top && event.clientY <= box.bottom;
+    });
+    if (!target) return;
+    const after = event.clientY > target.getBoundingClientRect().top + target.getBoundingClientRect().height / 2;
+    const before = dragged.nextElementSibling;
+    list.insertBefore(dragged, after ? target.nextSibling : target);
+    moved ||= before !== dragged.nextElementSibling;
+  });
+  const finishDrag = (event: PointerEvent): void => {
+    if (!dragged) return;
+    dragged.classList.remove('is-dragging');
+    dragged = undefined;
+    if (list.hasPointerCapture(event.pointerId)) list.releasePointerCapture(event.pointerId);
+    if (moved) void persistOrder();
+  };
+  list.addEventListener('pointerup', finishDrag);
+  list.addEventListener('pointercancel', finishDrag);
   rows().forEach((item) => {
     const handle = item.querySelector<HTMLButtonElement>(handleSelector)!;
-    let dragging = false;
-    handle.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0) return;
-      dragging = true;
-      handle.setPointerCapture(event.pointerId);
-      item.classList.add('is-dragging');
-    });
-    handle.addEventListener('pointermove', (event) => {
-      if (!dragging) return;
-      event.preventDefault();
-      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>(rowSelector);
-      if (!target || target === item || target.parentElement !== list) return;
-      const after = event.clientY > target.getBoundingClientRect().top + target.getBoundingClientRect().height / 2;
-      list.insertBefore(item, after ? target.nextSibling : target);
-    });
-    handle.addEventListener('pointerup', (event) => {
-      if (!dragging) return;
-      dragging = false;
-      handle.releasePointerCapture(event.pointerId);
-      item.classList.remove('is-dragging');
-      void persistOrder();
-    });
     handle.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
       event.preventDefault();
@@ -1706,8 +1770,8 @@ function habitTodayRow(habit: Habit, quest: Quest): HTMLElement {
   const row = taskListQuest(quest, false, true, false, {
     title: habit.name,
     actionLabel: quest.targetCount ? '+1' : '打卡',
-    detailsLabel: `查看习惯：${habit.name}`,
-    onDetails: () => { void openHabitDetailDialog(habit); },
+    detailsLabel: `编辑习惯：${habit.name}`,
+    onDetails: () => { void openHabitDialog(habit); },
   });
   row.classList.add('is-habit-checkin');
   row.dataset.habitId = habit.id;
@@ -2312,7 +2376,6 @@ async function openDayCaptionDialog(date: string, entries: JournalEntry[], sugge
   const close = actionButton('关闭', () => dialog.close());
   actions.append(close);
   dialog.showModal();
-  captionInput.focus();
 }
 
 async function calendarPage(): Promise<HTMLElement> {
@@ -2595,6 +2658,8 @@ function dialogShell(title: string, options: {
     back: options.back ? { onClick: goBack, className: 'dialog-back' } : undefined,
   });
   heading.id = `dialog-title-${crypto.randomUUID()}`;
+  heading.tabIndex = -1;
+  heading.setAttribute('autofocus', '');
   dialog.setAttribute('aria-labelledby', heading.id);
   content.append(titlebar);
   const actions = node('div', 'dialog-actions');
@@ -2726,6 +2791,27 @@ async function openAnalysisPreview(date: string, entries: JournalEntry[], retryJ
   if (!NATIVE_AI_READY) { showToast(NATIVE_AI_UNAVAILABLE, 'error'); return; }
   const textEntries = entries.filter((entry) => entry.body.trim());
   if (!retryJob && !textEntries.length) { showToast('先写一条文字记录。', 'error'); return; }
+  if (!retryJob && settings.aiAllowed && !settings.previewBeforeSend) {
+    const choices = await analysisContext(date);
+    const request = dailyAnalysisRequest(date, textEntries, choices, {
+      events: true,
+      states: true,
+      goals: true,
+      habits: true,
+      tasks: true,
+      memories: choices.memories,
+      constraints: [],
+    });
+    try {
+      const job = await db.createDailyAnalysisJob(request);
+      await submitAnalysisJob(job);
+      const ready = (await db.listDailyAnalyses(date)).find((item) => item.status === 'ready');
+      if (ready && onSummary) onSummary(ready.result.summary);
+    } catch (error) {
+      showToast(errorMessage(error), 'error');
+    }
+    return;
+  }
   const { dialog, content, actions } = dialogShell(retryJob ? '检查并重试整理' : '发送内容', { back: true, className: 'analysis-preview-dialog', fullScreen: true });
   if (retryJob) {
     if (retryJob.operation !== 'daily_analysis') throw new Error('这不是每日整理任务。');
@@ -2799,33 +2885,15 @@ async function openAnalysisPreview(date: string, entries: JournalEntry[], retryJ
     const selectedEntries = recordOptions.filter((option) => option.input.checked).map((option) => option.entry);
     const selectedMemories = memoryOptions.filter((option) => option.input.checked).map((option) => option.memory);
     const constraintValues = constraints.value.split(/\n|；/).map((item) => item.trim()).filter(Boolean).slice(0, 10);
-    const request: DailyAnalysisRequest = {
-      contractVersion: ANALYSIS_CONTRACT_VERSION,
-      operation: 'daily_analysis',
-      requestId: crypto.randomUUID(),
-      locale: 'zh-CN',
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai',
-      localDate: date,
-      userInput: { entries: selectedEntries.map((entry) => ({ entryId: entry.id, revision: entry.version, text: entry.body })) },
-      context: {
-        confirmedEvents: eventOption.input.checked ? choices.events.map((item) => ({ eventId: item.id, localDate: item.localDate, title: item.title })) : [],
-        recentStates: stateOption.input.checked ? choices.recentStates : [],
-        goals: goalOption.input.checked ? choices.goals : [],
-        bonusHabits: habitOption.input.checked ? choices.habits : [],
-        recentTaskResults: taskResultOption.input.checked ? choices.recentTaskResults : [],
-        memories: selectedMemories.map((item) => ({ memoryId: item.id, type: item.type, statement: item.statement })),
-        constraints: constraintValues,
-      },
-      permissions: {
-        entryIds: selectedEntries.map((entry) => entry.id),
-        includeConfirmedEvents: eventOption.input.checked,
-        includeRecentStates: stateOption.input.checked,
-        includeGoals: goalOption.input.checked,
-        includeBonusHabits: habitOption.input.checked,
-        taskResultQuestIds: taskResultOption.input.checked ? choices.recentTaskResults.map((item) => item.questId) : [],
-        memoryIds: selectedMemories.map((item) => item.id),
-      },
-    };
+    const request = dailyAnalysisRequest(date, selectedEntries, choices, {
+      events: eventOption.input.checked,
+      states: stateOption.input.checked,
+      goals: goalOption.input.checked,
+      habits: habitOption.input.checked,
+      tasks: taskResultOption.input.checked,
+      memories: selectedMemories,
+      constraints: constraintValues,
+    });
     try {
       if (!settings.aiAllowed) settings = await db.saveSettings({ aiAllowed: true, previewBeforeSend: true });
       const job = await db.createDailyAnalysisJob(request);
@@ -2909,7 +2977,7 @@ async function openEditDialog(entry: JournalEntry): Promise<void> {
   const status = statusMessage(`${formatDate(entry.localDate)} · v${entry.version}`);
   const more = disclosure('⋮', 'record-detail-more');
   const moreActions = actionGroup('record-detail-more-actions');
-  const history = actionButton('修改历史', () => { dialog.close(); void openHistoryDialog(entry); }, { variant: 'quiet' });
+  const history = actionButton('修改历史', () => { dialog.close(); void openHistoryDialog(entry, () => { void openEditDialog(entry); }); }, { variant: 'quiet' });
   const remove = actionButton('删除记录', () => { void deleteEntry(entry, dialog); }, { variant: 'quiet', className: 'danger-button' });
   moreActions.append(history, remove);
   more.append(moreActions);
@@ -2931,12 +2999,11 @@ async function openEditDialog(entry: JournalEntry): Promise<void> {
   }, { variant: 'primary' });
   actions.append(save);
   dialog.showModal();
-  textarea.focus();
 }
 
-async function openHistoryDialog(entry: JournalEntry): Promise<void> {
+async function openHistoryDialog(entry: JournalEntry, onReturn?: () => void): Promise<void> {
   const history = await db.listRevisions(entry.id);
-  const { dialog, content, actions } = dialogShell('修改历史');
+  const { dialog, content, actions } = dialogShell('修改历史', { back: true, onBack: onReturn });
   if (!history.length) content.append(emptyState('暂无修改'));
   for (const revision of history) {
     const item = node('article', 'revision-item');
@@ -2947,7 +3014,7 @@ async function openHistoryDialog(entry: JournalEntry): Promise<void> {
     );
     content.append(item);
   }
-  const close = actionButton('关闭', () => dialog.close());
+  const close = actionButton('关闭', () => { dialog.close(); onReturn?.(); });
   actions.append(close);
   const latest = history[0];
   if (latest?.reason === 'user-edit' && !latest.undoneAt && latest.fromVersion + 1 === entry.version) {
@@ -3289,7 +3356,6 @@ function openPersonalReviewEditor(
   });
   actions.append(submit);
   dialog.showModal();
-  inputs.values().next().value?.focus();
 }
 
 function personalReviewSection(
@@ -3664,7 +3730,7 @@ async function openReviewConfirmation(review: Review): Promise<void> {
       dialog.close(); showToast(result.questScheduled ? '周复盘已确认，周实验行动已排入原定日期。' : '周复盘已确认；周实验行动仅保留为建议，没有覆盖已有安排。'); await render();
     } catch (error) { confirm.disabled = false; status.textContent = errorMessage(error); status.classList.add('is-error'); }
   });
-  actions.append(cancel, confirm); dialog.showModal(); theme.focus();
+  actions.append(cancel, confirm); dialog.showModal();
 }
 
 async function weeklyReviewPage(anchor: string): Promise<HTMLElement> {
@@ -4101,7 +4167,6 @@ async function openGoalSettingsDialog(goal: Goal): Promise<void> {
   });
   actions.append(cancel, save);
   dialog.showModal();
-  result.focus();
 }
 
 async function openGoalReplanDialog(goal: Goal): Promise<void> {
@@ -4190,7 +4255,7 @@ async function openGoalReplanDialog(goal: Goal): Promise<void> {
       confirm.disabled = false; status.textContent = errorMessage(error); status.classList.add('is-error');
     }
   });
-  actions.append(cancel, confirm); dialog.showModal(); result.focus();
+  actions.append(cancel, confirm); dialog.showModal();
 }
 
 async function openMilestoneDialog(goal: Goal): Promise<void> {
@@ -4239,7 +4304,6 @@ async function openMilestoneDialog(goal: Goal): Promise<void> {
   });
   actions.append(cancel, save);
   dialog.showModal();
-  title.focus();
 }
 
 async function openQuestDialog(goal?: Goal, suggestedTitle = ''): Promise<void> {
@@ -4289,11 +4353,10 @@ async function openQuestDialog(goal?: Goal, suggestedTitle = ''): Promise<void> 
   });
   actions.append(cancel, save);
   dialog.showModal();
-  title.focus();
 }
 
-async function openHabitDialog(habit?: Habit): Promise<void> {
-  const { dialog, content, actions } = dialogShell(habit ? '编辑习惯' : '新建习惯', { back: true, className: 'habit-editor-dialog', fullScreen: true });
+async function openHabitDialog(habit?: Habit, onReturn?: () => void): Promise<void> {
+  const { dialog, content, actions } = dialogShell(habit ? '编辑习惯' : '新建习惯', { back: true, onBack: onReturn, className: 'habit-editor-dialog', fullScreen: true });
   const name = node('input', 'input');
   name.type = 'search';
   name.maxLength = 60;
@@ -4416,7 +4479,7 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
   );
   content.insertBefore(advanced, status);
   updateCompletionMode();
-  const cancel = actionButton('取消', () => dialog.close());
+  const cancel = actionButton('取消', () => { dialog.close(); onReturn?.(); });
   const save = actionButton(habit ? '保存习惯' : '建立习惯', undefined, { variant: 'primary' });
   save.addEventListener('click', async () => {
     save.disabled = true;
@@ -4439,6 +4502,7 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
       if (!habit) localStorage.removeItem(editorDraftKey);
       showToast(habit ? '习惯设置已保存。' : bonus.checked ? '习惯已建立，会在计划日出现在今天。' : '习惯计划已保存。');
       await render();
+      onReturn?.();
     } catch (error) {
       save.disabled = false;
       status.textContent = errorMessage(error);
@@ -4495,7 +4559,11 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
       if (linkedQuest?.status === 'pending') {
         const editStage = actionButton('编辑', undefined, { variant: 'quiet', className: 'button-compact' });
         editStage.setAttribute('aria-label', `编辑子任务：${milestone.description}`);
-        editStage.addEventListener('click', () => { dialog.close(); void openQuestAdjustmentDialog(linkedQuest); });
+        editStage.addEventListener('click', () => {
+          dialog.close();
+          const returnToDetail = () => { void openGoalDetailDialog(goal); };
+          void openQuestAdjustmentDialog(linkedQuest, { onBack: returnToDetail, onSaved: returnToDetail });
+        });
         controls.append(editStage);
       }
       const drag = node('button', 'task-drag-handle milestone-drag-handle', '≡');
@@ -4567,7 +4635,8 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
   const habitIcon = node('span', 'entity-detail-icon is-habit-icon');
   habitIcon.append(semanticIcon('habit'));
   hero.append(node('h3', '', habit.name), node('p', 'caption', `${habit.weeklyTarget ? `每周 ${habit.weeklyTarget} 次` : `${habitScheduleLabel(habit.scheduleDays)} · 每天 ${habit.targetCount ?? 1}${habit.countUnit || '次'}`} · ${dimensionLabel(habit.dimension)}`));
-  const more = titlebarAction('更多习惯操作', '⋮', () => { dialog.close(); void openHabitDialog(habit); }, 'detail-header-more');
+  const returnToDetail = () => { void openHabitDetailDialog(habit, showCheckIn); };
+  const more = titlebarAction('更多习惯操作', '⋮', () => { dialog.close(); void openHabitDialog(habit, returnToDetail); }, 'detail-header-more');
   titlebar.append(more);
   content.append(hero);
   const currentWeek = weekRange(localDate());
@@ -4630,7 +4699,7 @@ async function openHabitDetailDialog(habit: Habit, showCheckIn = true): Promise<
   }
   recent.append(recentGrid);
   content.append(recent, stats);
-  const edit = actionButton('编辑计划', () => { dialog.close(); void openHabitDialog(habit); });
+  const edit = actionButton('编辑计划', () => { dialog.close(); void openHabitDialog(habit, returnToDetail); });
   const analysis = actionButton('查看分析', () => { dialog.close(); go({ name: 'habit-analysis', entityId: habit.id }); });
   actions.append(edit, analysis);
   dialog.showModal();
@@ -5100,17 +5169,17 @@ function settingsOverviewRow(icon: SemanticIcon, label: string, status: string, 
 
 const ASSESSMENT_ANSWER_LABELS = ['从不', '很少', '有时', '经常', '几乎总是'] as const;
 
-function openAssessmentQuestionnaire(length: AssessmentLength, onlyDimension?: Dimension): void {
+function openAssessmentQuestionnaire(length: AssessmentLength, onlyDimension?: Dimension, onReturn?: () => void): void {
   const allQuestions = assessmentQuestions(length);
   const questions = onlyDimension ? allQuestions.filter((question) => question.dimension === onlyDimension) : allQuestions;
   const answers: Record<string, number> = {};
   let index = 0;
   const selectedDimension = onlyDimension ? DIMENSIONS.find((item) => item.key === onlyDimension) : undefined;
-  const { dialog, content, actions } = dialogShell(selectedDimension ? `${selectedDimension.label}状态自评` : `${length} 题状态评估`, { back: true, className: 'ui-rebuilt-page ui-questionnaire-page', fullScreen: true });
+  const { dialog, content, actions } = dialogShell(selectedDimension ? `${selectedDimension.label}状态自评` : `${length} 题状态评估`, { back: true, onBack: onReturn, className: 'ui-rebuilt-page ui-questionnaire-page', fullScreen: true });
   const progress = node('p', 'caption ui-question-progress');
   const questionArea = node('div', 'ui-question-content');
   questionArea.tabIndex = -1;
-  const cancel = actionButton('稍后再测', () => dialog.close());
+  const cancel = actionButton('稍后再测', () => { dialog.close(); onReturn?.(); });
   const previous = actionButton('上一题', undefined, { variant: 'quiet' });
   previous.addEventListener('click', () => {
     if (index === 0) return;
@@ -5147,6 +5216,7 @@ function openAssessmentQuestionnaire(length: AssessmentLength, onlyDimension?: D
         dialog.close();
         showToast(selectedDimension ? `${selectedDimension.label}状态已更新。` : '当前状态已更新。');
         await render();
+        onReturn?.();
       } catch (error) {
         save.disabled = false;
         showToast(errorMessage(error), 'error');
@@ -5382,7 +5452,6 @@ async function deleteAllDialog(): Promise<void> {
   });
   actions.append(cancel, confirm);
   dialog.showModal();
-  input.focus();
 }
 
 async function openMemoryDecision(memory: SystemMemory): Promise<void> {
@@ -5544,7 +5613,7 @@ async function openAddMemoryDialog(): Promise<void> {
     try { await db.addConfirmedMemory(type.value as SystemMemory['type'], statement.value); dialog.close(); showToast('生活分身已记住；你随时可以修改。'); await render(); }
     catch (error) { save.disabled = false; status.textContent = errorMessage(error); status.classList.add('is-error'); }
   });
-  actions.append(cancel, save); dialog.showModal(); statement.focus();
+  actions.append(cancel, save); dialog.showModal();
 }
 
 function memorySettings(memories: SystemMemory[], events: JournalEvent[]): HTMLElement {
@@ -5613,7 +5682,7 @@ function aiPermissionSettings(): HTMLElement {
   permissionInput.addEventListener('change', async () => {
     permissionInput.disabled = true;
     try {
-      settings = await db.saveSettings({ aiAllowed: permissionInput.checked, previewBeforeSend: true });
+      settings = await db.saveSettings({ aiAllowed: permissionInput.checked });
       showToast(permissionInput.checked ? 'AI 整理权限已开启；发送范围按设置长期生效。' : 'AI 权限已关闭；不会再发送整理请求。');
     } catch (error) {
       permissionInput.checked = !permissionInput.checked;
@@ -5628,8 +5697,9 @@ function aiPermissionSettings(): HTMLElement {
     modelSelect.append(selectOption(item, item, item === savedModel));
   });
   const modelHint = node('span', 'caption ai-model-status');
-  const modelRow = listRow('label', 'ui-control-row');
-  modelRow.append(node('span', '', '模型'), modelSelect, modelHint);
+  const modelRow = labelledControl('模型', modelSelect);
+  modelRow.classList.add('ai-advanced-field');
+  modelRow.append(modelHint);
   modelSelect.addEventListener('change', async () => {
     modelSelect.disabled = true;
     try {
@@ -5644,16 +5714,16 @@ function aiPermissionSettings(): HTMLElement {
     }
   });
 
-  const keyInput = node('input');
+  const keyInput = node('input', 'input');
   keyInput.type = 'password';
   keyInput.inputMode = 'text';
   keyInput.placeholder = 'MiniMax API Key（可选）';
   keyInput.maxLength = 4_096;
   keyInput.autocomplete = 'new-password';
-  const keyStatus = node('p', 'caption');
-  const keyRow = listRow('label', 'ui-control-row');
-  keyRow.append(node('span', '', '自定义 API Key'), keyInput);
-  const keyActions = actionGroup('character-actions');
+  const keyStatus = node('p', 'caption ai-key-status');
+  const keyRow = labelledControl('自定义 API Key', keyInput);
+  keyRow.classList.add('ai-advanced-field');
+  const keyActions = actionGroup('character-actions ai-key-actions');
   const saveApiKey = actionButton('保存', undefined);
   const clearApiKey = actionButton('清除密钥', undefined, { variant: 'quiet' });
   keyActions.append(saveApiKey, clearApiKey);
@@ -5785,17 +5855,48 @@ function aiPermissionSettings(): HTMLElement {
     check,
   );
   const scopeSummary = listGroup('ai-scope-summary');
+  const dailyConfirmation = listRow('label', 'ui-control-row ai-daily-confirmation');
+  const dailyConfirmationCopy = node('span', 'ui-navigation-copy');
+  const dailyConfirmationStatus = node('span', 'caption');
+  const directDailyAnalysis = node('input', 'ui-switch');
+  directDailyAnalysis.type = 'checkbox';
+  directDailyAnalysis.checked = !settings.previewBeforeSend;
+  directDailyAnalysis.setAttribute('aria-label', '每日整理无需确认');
+  const updateDailyConfirmationStatus = (): void => {
+    dailyConfirmationStatus.textContent = directDailyAnalysis.checked ? '直接整理' : '每次确认';
+  };
+  updateDailyConfirmationStatus();
+  directDailyAnalysis.addEventListener('change', async () => {
+    directDailyAnalysis.disabled = true;
+    try {
+      settings = await db.saveSettings({ previewBeforeSend: !directDailyAnalysis.checked });
+      updateDailyConfirmationStatus();
+      await render();
+      showToast(directDailyAnalysis.checked ? '每日整理会直接使用默认范围。' : '每日整理会在发送前确认范围。');
+    } catch (error) {
+      directDailyAnalysis.checked = !directDailyAnalysis.checked;
+      updateDailyConfirmationStatus();
+      showToast(errorMessage(error), 'error');
+    } finally {
+      directDailyAnalysis.disabled = false;
+    }
+  });
+  dailyConfirmationCopy.append(node('strong', '', '每日整理'), dailyConfirmationStatus);
+  dailyConfirmation.append(dailyConfirmationCopy, directDailyAnalysis);
   scopeSummary.append(
-    aiInfoRow('organize', '每日整理', '每次确认'),
+    dailyConfirmation,
     aiInfoRow('goal', '目标拆分', '仅当前目标'),
     aiInfoRow('weekly-review', '周回顾', '摘要，不含日记原文'),
   );
-  const advanced = optionalDetails([
-    semanticIcon('nav-settings', 'ai-advanced-icon'),
-    node('span', '', '使用安装包提供的服务'),
-  ], 'ai-advanced-settings');
-  if (NATIVE_PLATFORM) advanced.append(modelRow, keyRow, keyActions, keyStatus);
-  advanced.append(weeklyScope);
+  const advanced = optionalDetails('连接与发送设置', 'ai-advanced-settings');
+  const advancedBody = formStack('ai-advanced-body');
+  if (NATIVE_PLATFORM) {
+    const credentials = listSection('模型与密钥', { className: 'ai-advanced-block' }, modelRow, keyRow, keyStatus, keyActions);
+    advancedBody.append(credentials);
+  }
+  const scopeBlock = listSection('周回顾范围', { className: 'ai-advanced-block' }, weeklyScope);
+  advancedBody.append(scopeBlock);
+  advanced.append(advancedBody);
   const group = (title: string, content: HTMLElement): HTMLElement => {
     return listSection(title, {}, content);
   };

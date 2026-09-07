@@ -34,7 +34,7 @@
 | 二级/全屏页 | 状态、目标、记录、设置详情及长编辑 | 返回，标题，可选操作，正文 |
 | 上下文弹层 | 短编辑、日期快照、确认、首次引导 | 公共标题栏，正文，操作区；保留背景 |
 
-左右20px，360px及以下默认16px；人工候选可覆盖。标题栏最低44px，标题栏到内容4px，同级内容组16px。顶部、底部和键盘空间使用系统安全区与可用视口。
+左右20px，360px及以下默认16px；人工候选可覆盖。标题栏最低44px，标题栏到内容4px，同级内容组16px。顶部、底部和键盘空间使用系统安全区与可用视口。全屏编辑页由标题接收初始焦点，不自动聚焦输入框或唤起软键盘。
 一级页与二级页均由 `pageHeader` 创建，只通过 `back`、`meta`、`action` 和 `fallback` 选项表达差异。返回/关闭/更多通过网格和相对布局对齐，不单独绝对定位。大字体允许标题栏自然增高。
 
 ## 字体：四级，外加两种明确用途的显示元素
@@ -72,6 +72,8 @@
 人物、日历、热力图、徽章允许专用内部布局，不强塞进列表，但必须复用外层页面、字体及控件。
 图片、发送按钮也使用公共 button；不依靠文字宽度碰巧达到最小点击尺寸。
 `sectionHeading`、`listSection`、`emptyState`、`metricGroup`、`metricItem`、`actionGroup`、`formStack`、`labelledControl`、`textAction`、`actionButton`、`fileButton`、`primaryButton`、`statusMessage`、`titleBar`、`backButton`、`titlebarAction`、`disclosure`、`optionalDetails`、`overflowMenu`、`segmentedControl`、`segmentedItem`、`periodNavigator`、`avatarChoiceGroup`、`avatarChoice`、`choiceGroup`、`choiceRow` 和 `recordItem` 是上述公共结构的唯一 DOM 入口；设置、问卷与复盘分组不再保留平行骨架。页面只传业务专用类、文字、状态和事件。普通按钮只允许 primary、secondary、quiet、danger 四种既有语义变体，并统一由 `actionButton` 设置样式、原生 button/submit 类型与可选点击行为；文件选择按钮由 `fileButton` 保留原生 input 语义。业务页不得再直接拼接标准按钮类。页面和弹层标题栏由 `titleBar` 生成，返回键由 `backButton` 建立，标题栏尾部的文字、符号或图标操作均由 `titlebarAction` 建立。所有 `<details><summary>` 先由 `disclosure` 建立；`optionalDetails` 与 `overflowMenu` 只添加各自语义和外观，不再重复创建原生骨架。周统计、任务分析与习惯统计的整组“标签 + 数值”均由 `metricGroup` 生成，单项由 `metricItem` 生成；日历月份与周复盘周期均由 `periodNavigator` 生成；初次引导和人物设置均由无页面专属类的 `avatarChoiceGroup` 与 `avatarChoice` 生成；任务结果和习惯完成方式由 `choiceGroup` 与 `choiceRow` 生成三列选择，问卷答案复用 `choiceRow` 的纵向列表形态；同一条生活日记在今日预览、消息流和日期回顾中只通过 `recordItem` 的三个受控变体呈现。未被运行时调用的候选变体直接删除。趋势图等带图形的指标保留专用结构。
+
+AI 设置的低频内容继续使用 `optionalDetails`，展开后只使用 `formStack`、`listSection`、`labelledControl` 与公共双按钮组。模型与密钥、周回顾范围各占一个同级分组；输入、状态和按钮不得并排挤入标签行。每日整理默认“每次确认”，用户主动切换后才使用默认范围直接整理。
 记录页右上角保留“随记 / 整记”两个写作子页及“每日复盘”直接入口：随记使用消息流、底部输入和多图片入口；整记使用大文本框、保存按钮，并在同页显示当日全部随记与整记。每日复盘仍使用独立固定表单，也可从当天回顾的“复盘”页进入，不与长文本整记混用。每条记录最多九张图片，按数量使用一张4:3、两张等分、三张主次、四张2×2、五张以上三列的固定网格。旧分类提示、模板选择、编号按钮、旧附件按钮和固定提交栏不是可选皮肤，禁止重新引入。图片操作使用公共 `actionButton`，记录管理进入统一详情弹层；今日预览、随记消息流、整记历史和日期回顾不得再分别手写记录条目。今日预览与习惯打卡共用 `listGroup` 的单一外框和组内分割线，只在行尾内容与点击行为上区分。
 日期记录和周复盘同样不保留旧卡片皮肤：记录条目进入统一详情弹层；周复盘只保留当前摘要、调整清单和公共操作组，不再并行维护 hero、focus 或 experiment 卡。
 搜索结果、表单保存及异步错误统一由 `statusMessage` 提供状态区域；业务页只更新文字和 `is-error` 状态，不再创建同尺寸的页面专用状态类。

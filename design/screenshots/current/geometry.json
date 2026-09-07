@@ -14,7 +14,7 @@
         "radius": "8px"
       },
       {
-        "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-energy",
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-progress",
         "height": 45,
         "width": 358,
         "grouped": true,
@@ -24,17 +24,7 @@
         "radius": "8px 8px 0px 0px"
       },
       {
-        "component": "ui-list-row ui-action-row task-list-item is-pending has-count is-habit-checkin is-source-habit is-dimension-energy",
-        "height": 45,
-        "width": 358,
-        "grouped": true,
-        "minHeight": "45px",
-        "paddingInline": "0px 0px",
-        "paddingBlock": "0px 0px",
-        "radius": "0px"
-      },
-      {
-        "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-progress",
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-energy",
         "height": 45,
         "width": 358,
         "grouped": true,
@@ -45,6 +35,16 @@
       },
       {
         "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-mind",
+        "height": 45,
+        "width": 358,
+        "grouped": true,
+        "minHeight": "45px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "0px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending has-count is-habit-checkin is-source-habit is-dimension-energy",
         "height": 45,
         "width": 358,
         "grouped": true,
@@ -117,25 +117,25 @@
         "weight": "800"
       },
       {
-        "text": "晚饭后散步",
-        "role": "row",
-        "size": "12.5px",
-        "weight": "400"
-      },
-      {
-        "text": "喝水",
-        "role": "row",
-        "size": "12.5px",
-        "weight": "400"
-      },
-      {
         "text": "整理数学错题",
         "role": "row",
         "size": "12.5px",
         "weight": "400"
       },
       {
+        "text": "晚饭后散步",
+        "role": "row",
+        "size": "12.5px",
+        "weight": "400"
+      },
+      {
         "text": "睡前收好书包",
+        "role": "row",
+        "size": "12.5px",
+        "weight": "400"
+      },
+      {
+        "text": "喝水",
         "role": "row",
         "size": "12.5px",
         "weight": "400"
@@ -269,24 +269,6 @@
         "role": "body",
         "tag": "H3",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "body",
-        "tag": "H3",
-        "classes": "ui-row-label",
-        "text": "喝水",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "body",
-        "tag": "H3",
-        "classes": "ui-row-label",
         "text": "整理数学错题",
         "size": "12.5px",
         "weight": "400",
@@ -296,7 +278,25 @@
         "role": "body",
         "tag": "H3",
         "classes": "ui-row-label",
+        "text": "晚饭后散步",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "body",
+        "tag": "H3",
+        "classes": "ui-row-label",
         "text": "睡前收好书包",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "body",
+        "tag": "H3",
+        "classes": "ui-row-label",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -556,7 +556,7 @@
         "role": "body",
         "tag": "SPAN",
         "classes": "ui-row-label",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -574,7 +574,7 @@
         "role": "body",
         "tag": "SPAN",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -583,7 +583,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-value",
-        "text": "9月3日 · 待完成",
+        "text": "9月3日 · 完成",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -813,7 +813,7 @@
         "radius": "8px"
       },
       {
-        "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-energy",
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-progress",
         "height": 45,
         "width": 358,
         "grouped": true,
@@ -823,17 +823,7 @@
         "radius": "8px 8px 0px 0px"
       },
       {
-        "component": "ui-list-row ui-action-row task-list-item is-pending has-count is-habit-checkin is-source-habit is-dimension-energy",
-        "height": 45,
-        "width": 358,
-        "grouped": true,
-        "minHeight": "45px",
-        "paddingInline": "0px 0px",
-        "paddingBlock": "0px 0px",
-        "radius": "0px"
-      },
-      {
-        "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-progress",
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-energy",
         "height": 45,
         "width": 358,
         "grouped": true,
@@ -844,6 +834,16 @@
       },
       {
         "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-mind",
+        "height": 45,
+        "width": 358,
+        "grouped": true,
+        "minHeight": "45px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "0px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending has-count is-habit-checkin is-source-habit is-dimension-energy",
         "height": 45,
         "width": 358,
         "grouped": true,
@@ -900,25 +900,25 @@
         "weight": "800"
       },
       {
-        "text": "晚饭后散步",
-        "role": "row",
-        "size": "12.5px",
-        "weight": "400"
-      },
-      {
-        "text": "喝水",
-        "role": "row",
-        "size": "12.5px",
-        "weight": "400"
-      },
-      {
         "text": "整理数学错题",
         "role": "row",
         "size": "12.5px",
         "weight": "400"
       },
       {
+        "text": "晚饭后散步",
+        "role": "row",
+        "size": "12.5px",
+        "weight": "400"
+      },
+      {
         "text": "睡前收好书包",
+        "role": "row",
+        "size": "12.5px",
+        "weight": "400"
+      },
+      {
+        "text": "喝水",
         "role": "row",
         "size": "12.5px",
         "weight": "400"
@@ -995,24 +995,6 @@
         "role": "body",
         "tag": "H3",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "body",
-        "tag": "H3",
-        "classes": "ui-row-label",
-        "text": "喝水",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "body",
-        "tag": "H3",
-        "classes": "ui-row-label",
         "text": "整理数学错题",
         "size": "12.5px",
         "weight": "400",
@@ -1022,7 +1004,25 @@
         "role": "body",
         "tag": "H3",
         "classes": "ui-row-label",
+        "text": "晚饭后散步",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "body",
+        "tag": "H3",
+        "classes": "ui-row-label",
         "text": "睡前收好书包",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "body",
+        "tag": "H3",
+        "classes": "ui-row-label",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -1942,34 +1942,9 @@
     "name": "habit-detail",
     "tiles": [
       {
-        "component": "habit-recent-cell is-completed",
-        "width": 44.5625,
-        "height": 44.5625
-      },
-      {
-        "component": "habit-recent-cell is-completed",
-        "width": 44.578125,
-        "height": 44.578125
-      },
-      {
-        "component": "habit-recent-cell is-completed",
-        "width": 44.5625,
-        "height": 44.5625
-      },
-      {
-        "component": "habit-recent-cell is-completed",
-        "width": 44.578125,
-        "height": 44.578125
-      },
-      {
-        "component": "habit-recent-cell is-completed",
-        "width": 44.5625,
-        "height": 44.5625
-      },
-      {
         "component": "habit-recent-cell is-empty",
-        "width": 44.578125,
-        "height": 44.578125
+        "width": 44.5625,
+        "height": 44.5625
       },
       {
         "component": "habit-recent-cell is-completed",
@@ -1998,11 +1973,36 @@
       },
       {
         "component": "habit-recent-cell is-completed",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-recent-cell is-empty",
         "width": 44.5625,
         "height": 44.5625
       },
       {
-        "component": "habit-recent-cell is-empty",
+        "component": "habit-recent-cell is-completed",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 44.5625,
+        "height": 44.5625
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 44.578125,
+        "height": 44.578125
+      },
+      {
+        "component": "habit-recent-cell is-completed",
+        "width": 44.5625,
+        "height": 44.5625
+      },
+      {
+        "component": "habit-recent-cell is-completed",
         "width": 44.578125,
         "height": 44.578125
       },
@@ -3242,7 +3242,7 @@
         "role": "body",
         "tag": "P",
         "classes": "monthly-growth-row",
-        "text": "身体 · +10 · 比上月少 94",
+        "text": "身体 · +12 · 比上月少 88",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -3251,7 +3251,7 @@
         "role": "body",
         "tag": "P",
         "classes": "monthly-growth-row",
-        "text": "心理 · +6 · 比上月少 30",
+        "text": "心理 · +4 · 比上月少 34",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -3269,7 +3269,7 @@
         "role": "body",
         "tag": "P",
         "classes": "monthly-growth-row",
-        "text": "工作 · +13 · 比上月少 35",
+        "text": "工作 · +13 · 比上月少 39",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -4672,6 +4672,41 @@
         "height": 15
       },
       {
+        "component": "analysis-heat-cell is-missed",
+        "width": 15,
+        "height": 15
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 15,
+        "height": 15
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 15,
+        "height": 15
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 15,
+        "height": 15
+      },
+      {
+        "component": "analysis-heat-cell is-level-5",
+        "width": 15,
+        "height": 15
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 15,
+        "height": 15
+      },
+      {
+        "component": "analysis-heat-cell is-empty",
+        "width": 15,
+        "height": 15
+      },
+      {
         "component": "analysis-heat-cell is-level-5",
         "width": 15,
         "height": 15
@@ -4848,41 +4883,6 @@
       },
       {
         "component": "analysis-heat-cell is-level-5",
-        "width": 15,
-        "height": 15
-      },
-      {
-        "component": "analysis-heat-cell is-empty",
-        "width": 15,
-        "height": 15
-      },
-      {
-        "component": "analysis-heat-cell is-level-5",
-        "width": 15,
-        "height": 15
-      },
-      {
-        "component": "analysis-heat-cell is-empty",
-        "width": 15,
-        "height": 15
-      },
-      {
-        "component": "analysis-heat-cell is-level-5",
-        "width": 15,
-        "height": 15
-      },
-      {
-        "component": "analysis-heat-cell is-empty",
-        "width": 15,
-        "height": 15
-      },
-      {
-        "component": "analysis-heat-cell is-empty",
-        "width": 15,
-        "height": 15
-      },
-      {
-        "component": "analysis-heat-cell is-missed",
         "width": 15,
         "height": 15
       },
@@ -5907,7 +5907,7 @@
         "radius": "0px"
       },
       {
-        "component": "ui-list-row ui-info-row  is-multiline",
+        "component": "ui-list-row ui-control-row ai-daily-confirmation",
         "height": 45,
         "width": 358,
         "grouped": true,
@@ -5939,7 +5939,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -5949,7 +5949,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -5959,7 +5959,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -5969,7 +5969,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -5979,7 +5979,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -5989,7 +5989,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -5999,7 +5999,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -6009,7 +6009,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -6039,6 +6039,12 @@
       },
       {
         "text": "密钥与高级设置",
+        "role": "section",
+        "size": "14.5px",
+        "weight": "800"
+      },
+      {
+        "text": "周回顾范围",
         "role": "section",
         "size": "14.5px",
         "weight": "800"
@@ -6154,18 +6160,9 @@
         "leading": "19.575px"
       },
       {
-        "role": "body",
-        "tag": "SPAN",
-        "classes": "ui-row-label",
-        "text": "每日整理",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
         "role": "meta",
         "tag": "SPAN",
-        "classes": "ui-row-value",
+        "classes": "caption",
         "text": "每次确认",
         "size": "11.5px",
         "weight": "400",
@@ -6217,6 +6214,15 @@
         "leading": "19.575px"
       },
       {
+        "role": "section",
+        "tag": "H2",
+        "classes": "ui-list-heading",
+        "text": "周回顾范围",
+        "size": "14.5px",
+        "weight": "800",
+        "leading": "19.575px"
+      },
+      {
         "role": "meta",
         "tag": "P",
         "classes": "caption ai-privacy-note",
@@ -6238,6 +6244,10 @@
       {
         "title": "密钥与高级设置",
         "gap": 16
+      },
+      {
+        "title": "周回顾范围",
+        "gap": 8
       }
     ],
     "pageShell": {
@@ -6383,7 +6393,7 @@
         "radius": "0px"
       },
       {
-        "component": "ui-list-row ui-info-row  is-multiline",
+        "component": "ui-list-row ui-control-row ai-daily-confirmation",
         "height": 45,
         "width": 358,
         "grouped": true,
@@ -6415,7 +6425,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -6425,7 +6435,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -6435,7 +6445,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -6445,7 +6455,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -6455,7 +6465,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -6465,7 +6475,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -6475,7 +6485,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -6485,7 +6495,7 @@
       {
         "component": "ui-list-row ui-control-row",
         "height": 45,
-        "width": 360,
+        "width": 334,
         "grouped": false,
         "minHeight": "45px",
         "paddingInline": "20px 20px",
@@ -6515,6 +6525,12 @@
       },
       {
         "text": "密钥与高级设置",
+        "role": "section",
+        "size": "14.5px",
+        "weight": "800"
+      },
+      {
+        "text": "周回顾范围",
         "role": "section",
         "size": "14.5px",
         "weight": "800"
@@ -6630,18 +6646,9 @@
         "leading": "19.575px"
       },
       {
-        "role": "body",
-        "tag": "SPAN",
-        "classes": "ui-row-label",
-        "text": "每日整理",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
         "role": "meta",
         "tag": "SPAN",
-        "classes": "ui-row-value",
+        "classes": "caption",
         "text": "每次确认",
         "size": "11.5px",
         "weight": "400",
@@ -6693,6 +6700,15 @@
         "leading": "19.575px"
       },
       {
+        "role": "section",
+        "tag": "H2",
+        "classes": "ui-list-heading",
+        "text": "周回顾范围",
+        "size": "14.5px",
+        "weight": "800",
+        "leading": "19.575px"
+      },
+      {
         "role": "meta",
         "tag": "P",
         "classes": "caption ai-privacy-note",
@@ -6714,6 +6730,10 @@
       {
         "title": "密钥与高级设置",
         "gap": 16
+      },
+      {
+        "title": "周回顾范围",
+        "gap": 8
       }
     ],
     "pageShell": {
@@ -8169,16 +8189,6 @@
         "minHeight": "45px",
         "paddingInline": "20px 20px",
         "paddingBlock": "0px 0px",
-        "radius": "0px"
-      },
-      {
-        "component": "ui-list-row ui-info-row is-multiline growth-evidence-row",
-        "height": 45,
-        "width": 358,
-        "grouped": true,
-        "minHeight": "45px",
-        "paddingInline": "20px 20px",
-        "paddingBlock": "0px 0px",
         "radius": "0px 0px 8px 8px"
       }
     ],
@@ -8200,6 +8210,33 @@
         "size": "16px",
         "weight": "800",
         "leading": "19.2px"
+      },
+      {
+        "role": "body",
+        "tag": "STRONG",
+        "classes": "ui-row-label",
+        "text": "晚饭后散步",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-meta",
+        "text": "晚饭后散步",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-value",
+        "text": "9月3日周四 · +2",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
       },
       {
         "role": "body",
@@ -8286,7 +8323,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -8295,7 +8332,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -8313,7 +8350,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -8322,7 +8359,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -8377,33 +8414,6 @@
         "tag": "SPAN",
         "classes": "ui-row-meta",
         "text": "喝水",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-value",
-        "text": "8月31日周一 · +2",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "body",
-        "tag": "STRONG",
-        "classes": "ui-row-label",
-        "text": "晚饭后散步",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-meta",
-        "text": "晚饭后散步",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -8421,7 +8431,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -8430,7 +8440,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -8539,6 +8549,33 @@
         "tag": "SPAN",
         "classes": "ui-row-meta",
         "text": "喝水",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-value",
+        "text": "8月27日周四 · +2",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "body",
+        "tag": "STRONG",
+        "classes": "ui-row-label",
+        "text": "晚饭后散步",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-meta",
+        "text": "晚饭后散步",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -8709,33 +8746,6 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-value",
-        "text": "8月24日周一 · +2",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "body",
-        "tag": "STRONG",
-        "classes": "ui-row-label",
-        "text": "晚饭后散步",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-meta",
-        "text": "晚饭后散步",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-value",
         "text": "8月23日周日 · +2",
         "size": "11.5px",
         "weight": "400",
@@ -8772,7 +8782,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -8781,7 +8791,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -8799,33 +8809,6 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-meta",
-        "text": "晚饭后散步",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-value",
-        "text": "8月21日周五 · +2",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "body",
-        "tag": "STRONG",
-        "classes": "ui-row-label",
         "text": "喝水",
         "size": "12.5px",
         "weight": "400",
@@ -8863,6 +8846,33 @@
         "tag": "SPAN",
         "classes": "ui-row-meta",
         "text": "晚饭后散步",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-value",
+        "text": "8月21日周五 · +2",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "body",
+        "tag": "STRONG",
+        "classes": "ui-row-label",
+        "text": "喝水",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-meta",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -8934,33 +8944,6 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "喝水",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-meta",
-        "text": "喝水",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-value",
-        "text": "8月18日周二 · +2",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "body",
-        "tag": "STRONG",
-        "classes": "ui-row-label",
         "text": "晚饭后散步",
         "size": "12.5px",
         "weight": "400",
@@ -8988,7 +8971,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -8997,7 +8980,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9006,7 +8989,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-value",
-        "text": "8月17日周一 · +2",
+        "text": "8月18日周二 · +2",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9034,33 +9017,6 @@
         "tag": "SPAN",
         "classes": "ui-row-value",
         "text": "8月17日周一 · +2",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "body",
-        "tag": "STRONG",
-        "classes": "ui-row-label",
-        "text": "喝水",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-meta",
-        "text": "喝水",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-value",
-        "text": "8月16日周日 · +2",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9106,6 +9062,33 @@
         "tag": "SPAN",
         "classes": "ui-row-meta",
         "text": "喝水",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-value",
+        "text": "8月16日周日 · +2",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "body",
+        "tag": "STRONG",
+        "classes": "ui-row-label",
+        "text": "晚饭后散步",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-meta",
+        "text": "晚饭后散步",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9204,7 +9187,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -9213,7 +9196,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9222,7 +9205,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-value",
-        "text": "8月12日周三 · +2",
+        "text": "8月13日周四 · +2",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9241,6 +9224,33 @@
         "tag": "SPAN",
         "classes": "ui-row-meta",
         "text": "晚饭后散步",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-value",
+        "text": "8月12日周三 · +2",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "body",
+        "tag": "STRONG",
+        "classes": "ui-row-label",
+        "text": "喝水",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-meta",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9312,7 +9322,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -9321,7 +9331,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9393,7 +9403,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -9402,7 +9412,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9420,7 +9430,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -9429,7 +9439,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9447,7 +9457,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -9456,7 +9466,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9555,33 +9565,6 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "喝水",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-meta",
-        "text": "喝水",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-value",
-        "text": "8月4日周二 · +2",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "body",
-        "tag": "STRONG",
-        "classes": "ui-row-label",
         "text": "晚饭后散步",
         "size": "12.5px",
         "weight": "400",
@@ -9609,7 +9592,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -9618,7 +9601,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9627,7 +9610,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-value",
-        "text": "8月3日周一 · +2",
+        "text": "8月4日周二 · +2",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9717,7 +9700,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -9726,7 +9709,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9825,6 +9808,33 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
+        "text": "喝水",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-meta",
+        "text": "喝水",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-value",
+        "text": "7月29日周三 · +2",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "body",
+        "tag": "STRONG",
+        "classes": "ui-row-label",
         "text": "晚饭后散步",
         "size": "12.5px",
         "weight": "400",
@@ -9870,7 +9880,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-value",
-        "text": "7月29日周三 · +2",
+        "text": "7月28日周二 · +2",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9924,7 +9934,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-value",
-        "text": "7月28日周二 · +2",
+        "text": "7月27日周一 · +2",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -9933,7 +9943,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -9942,7 +9952,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -10095,7 +10105,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -10104,7 +10114,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -10122,7 +10132,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -10131,7 +10141,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -10249,33 +10259,6 @@
         "tag": "SPAN",
         "classes": "ui-row-value",
         "text": "7月21日周二 · +2",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "body",
-        "tag": "STRONG",
-        "classes": "ui-row-label",
-        "text": "晚饭后散步",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-meta",
-        "text": "晚饭后散步",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-value",
-        "text": "7月20日周一 · +2",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -10392,33 +10375,6 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "喝水",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-meta",
-        "text": "喝水",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "meta",
-        "tag": "SPAN",
-        "classes": "ui-row-value",
-        "text": "7月17日周五 · +2",
-        "size": "11.5px",
-        "weight": "400",
-        "leading": "15.525px"
-      },
-      {
-        "role": "body",
-        "tag": "STRONG",
-        "classes": "ui-row-label",
         "text": "晚饭后散步",
         "size": "12.5px",
         "weight": "400",
@@ -10446,7 +10402,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -10455,7 +10411,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -10464,7 +10420,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-value",
-        "text": "7月16日周四 · +2",
+        "text": "7月17日周五 · +2",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -10500,7 +10456,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -10509,7 +10465,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "晚饭后散步",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -10527,7 +10483,7 @@
         "role": "body",
         "tag": "STRONG",
         "classes": "ui-row-label",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
@@ -10536,7 +10492,7 @@
         "role": "meta",
         "tag": "SPAN",
         "classes": "ui-row-meta",
-        "text": "喝水",
+        "text": "晚饭后散步",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -10618,6 +10574,33 @@
         "tag": "SPAN",
         "classes": "ui-row-meta",
         "text": "晚饭后散步",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-value",
+        "text": "7月13日周一 · +2",
+        "size": "11.5px",
+        "weight": "400",
+        "leading": "15.525px"
+      },
+      {
+        "role": "body",
+        "tag": "STRONG",
+        "classes": "ui-row-label",
+        "text": "喝水",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "meta",
+        "tag": "SPAN",
+        "classes": "ui-row-meta",
+        "text": "喝水",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -10941,7 +10924,7 @@
         "role": "meta",
         "tag": "P",
         "classes": "habit-plan-summary",
-        "text": "本周 3/7 天 · 每天 1次",
+        "text": "本周 4/7 天 · 每天 1次",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -10995,7 +10978,7 @@
         "role": "meta",
         "tag": "P",
         "classes": "habit-plan-summary",
-        "text": "本周 4/7 天 · 每天 5杯",
+        "text": "本周 3/7 天 · 每天 5杯",
         "size": "11.5px",
         "weight": "400",
         "leading": "15.525px"
@@ -11258,7 +11241,7 @@
     "tiles": [],
     "listRows": [
       {
-        "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-energy",
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-progress",
         "height": 45,
         "width": 358,
         "grouped": true,
@@ -11268,17 +11251,7 @@
         "radius": "8px 8px 0px 0px"
       },
       {
-        "component": "ui-list-row ui-action-row task-list-item is-pending has-count is-habit-checkin is-source-habit is-dimension-energy",
-        "height": 45,
-        "width": 358,
-        "grouped": true,
-        "minHeight": "45px",
-        "paddingInline": "0px 0px",
-        "paddingBlock": "0px 0px",
-        "radius": "0px"
-      },
-      {
-        "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-progress",
+        "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-energy",
         "height": 45,
         "width": 358,
         "grouped": true,
@@ -11289,6 +11262,16 @@
       },
       {
         "component": "ui-list-row ui-action-row task-list-item is-pending is-habit-checkin is-source-habit is-dimension-mind",
+        "height": 45,
+        "width": 358,
+        "grouped": true,
+        "minHeight": "45px",
+        "paddingInline": "0px 0px",
+        "paddingBlock": "0px 0px",
+        "radius": "0px"
+      },
+      {
+        "component": "ui-list-row ui-action-row task-list-item is-pending has-count is-habit-checkin is-source-habit is-dimension-energy",
         "height": 45,
         "width": 358,
         "grouped": true,
@@ -11349,25 +11332,25 @@
         "weight": "800"
       },
       {
-        "text": "晚饭后散步",
-        "role": "row",
-        "size": "12.5px",
-        "weight": "400"
-      },
-      {
-        "text": "喝水",
-        "role": "row",
-        "size": "12.5px",
-        "weight": "400"
-      },
-      {
         "text": "整理数学错题",
         "role": "row",
         "size": "12.5px",
         "weight": "400"
       },
       {
+        "text": "晚饭后散步",
+        "role": "row",
+        "size": "12.5px",
+        "weight": "400"
+      },
+      {
         "text": "睡前收好书包",
+        "role": "row",
+        "size": "12.5px",
+        "weight": "400"
+      },
+      {
+        "text": "喝水",
         "role": "row",
         "size": "12.5px",
         "weight": "400"
@@ -11450,24 +11433,6 @@
         "role": "body",
         "tag": "H3",
         "classes": "ui-row-label",
-        "text": "晚饭后散步",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "body",
-        "tag": "H3",
-        "classes": "ui-row-label",
-        "text": "喝水",
-        "size": "12.5px",
-        "weight": "400",
-        "leading": "18.75px"
-      },
-      {
-        "role": "body",
-        "tag": "H3",
-        "classes": "ui-row-label",
         "text": "整理数学错题",
         "size": "12.5px",
         "weight": "400",
@@ -11477,7 +11442,25 @@
         "role": "body",
         "tag": "H3",
         "classes": "ui-row-label",
+        "text": "晚饭后散步",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "body",
+        "tag": "H3",
+        "classes": "ui-row-label",
         "text": "睡前收好书包",
+        "size": "12.5px",
+        "weight": "400",
+        "leading": "18.75px"
+      },
+      {
+        "role": "body",
+        "tag": "H3",
+        "classes": "ui-row-label",
+        "text": "喝水",
         "size": "12.5px",
         "weight": "400",
         "leading": "18.75px"
