@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { startServer } from '../server.mjs';
 
 const base = process.env.QIGUANG_CAPTURE_URL || 'http://127.0.0.1:4183';
-const output = process.env.QIGUANG_CAPTURE_OUTPUT || fileURLToPath(new URL('../design/screenshots/20260904', import.meta.url));
+const output = process.env.QIGUANG_CAPTURE_OUTPUT || fileURLToPath(new URL('../design/screenshots/current', import.meta.url));
 const today = '2026-09-04';
 await mkdir(output, { recursive: true });
 if (process.argv.includes('--gallery-only')) {

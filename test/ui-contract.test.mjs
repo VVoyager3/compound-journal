@@ -39,9 +39,14 @@ test('the four text roles have one authoritative scale', () => {
 });
 
 test('equivalent rows opt into one shared geometry component', () => {
-  for (const featureClass of ['habit-list-row', 'today-record-row', 'growth-dimension-card', 'analysis-category-row']) {
+  for (const featureClass of ['habit-list-row', 'growth-dimension-card', 'analysis-category-row']) {
     assert.ok(app.split('\n').some(line => line.includes('listRow(') && line.includes(featureClass)), featureClass);
   }
+  assert.match(rows, /export function recordItem/);
+  assert.equal((app.match(/recordItem\(\{/g) ?? []).length, 3, 'all record summaries share one constructor');
+  assert.equal(app.includes("node('button', `life-diary-bubble"), false);
+  assert.equal(app.includes("node('button', `day-record-row"), false);
+  assert.equal(app.includes("listRow('button', 'today-record-row')"), false);
   assert.ok(app.includes('const item = taskRow('));
   assert.ok(app.includes('const row = infoRow(label, statusCell'));
   assert.ok(rows.includes("listRow('article', `ui-action-row task-list-item"));

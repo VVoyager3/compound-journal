@@ -1,5 +1,5 @@
 import { QiguangDb, migrateLegacyJournalContent, parseBackup } from './db.ts';
-import { actionButton, actionGroup, avatarChoice, avatarChoiceGroup, choiceGroup, choiceRow, disclosure, emptyState, fileButton, formStack, infoRow, labelledControl, listGroup, listRow, listSection, metricGroup, optionalDetails, overflowMenu, periodNavigator, primaryButton, sectionHeading, segmentedControl, segmentedItem, statusMessage, taskRow, textAction, titleBar, titlebarAction } from './ui-list.ts';
+import { actionButton, actionGroup, avatarChoice, avatarChoiceGroup, choiceGroup, choiceRow, disclosure, emptyState, fileButton, formStack, infoRow, labelledControl, listGroup, listRow, listSection, metricGroup, optionalDetails, overflowMenu, periodNavigator, primaryButton, recordItem, sectionHeading, segmentedControl, segmentedItem, statusMessage, taskRow, textAction, titleBar, titlebarAction } from './ui-list.ts';
 import {
   DEFAULT_WEEKLY_REVIEW_SCOPE,
   DIMENSIONS,
@@ -760,6 +760,10 @@ function localDateTimeInput(timestamp?: string): string {
   if (Number.isNaN(value.getTime())) return '';
   const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 16);
+}
+
+function entryTime(entry: JournalEntry): string {
+  return new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 }
 
 function isoFromDateTimeInput(value: string): string | undefined {
@@ -1990,17 +1994,12 @@ async function todayPage(): Promise<HTMLElement> {
   const recentTodayEntries = entries.slice(-3).reverse();
   if (recentTodayEntries.length) {
     recentTodayEntries.forEach((entry) => {
-    const preview = listRow('button', 'today-record-row');
-    preview.type = 'button';
     const previewIcon = node('span', `today-record-icon is-${entry.kind}`);
     previewIcon.append(semanticIcon(entry.kind === 'success' ? 'success-record' : 'nav-record'));
-    preview.append(
-      previewIcon,
-      node('span', 'today-record-copy', entry.body || '图片记录'),
-      node('time', 'caption', new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })),
-    );
-    preview.addEventListener('click', () => { void openEntryDetailDialog(entry); });
-    todayRecord.append(preview);
+    todayRecord.append(recordItem({
+      variant: 'preview', body: entry.body, time: entryTime(entry), kind: entry.kind,
+      leading: previewIcon, onOpen: () => { void openEntryDetailDialog(entry); },
+    }));
     });
   } else todayRecord.append(emptyState('今天还没有记录'));
   main.append(todayRecord);
@@ -2053,19 +2052,10 @@ async function recordPage(route: Route): Promise<HTMLElement> {
     const feed = node('div', className);
     if (!savedEntries.length) feed.append(emptyState('还没有记录', 'journal-empty'));
     savedEntries.forEach((entry) => {
-      const item = node('button', `life-diary-bubble is-${entry.kind ?? 'journal'}${entry.imageDataUrl ? ' has-image' : ''}`);
-      item.type = 'button';
-      item.setAttribute('aria-label', `查看记录：${entry.body.slice(0, 30) || '图片'}`);
-      if (entry.imageDataUrl) {
-        const image = node('img', 'life-diary-image') as HTMLImageElement;
-        image.src = entry.imageDataUrl;
-        image.alt = entry.body ? '记录图片' : '图片记录';
-        item.append(image);
-      }
-      if (entry.body) item.append(node('span', 'life-diary-copy', entry.body));
-      item.append(node('time', 'life-diary-time', new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })));
-      item.addEventListener('click', () => { void openEntryDetailDialog(entry); });
-      feed.append(item);
+      feed.append(recordItem({
+        variant: 'bubble', body: entry.body, time: entryTime(entry), kind: entry.kind,
+        imageSource: entry.imageDataUrl, onOpen: () => { void openEntryDetailDialog(entry); },
+      }));
     });
     return feed;
   };
@@ -3314,26 +3304,10 @@ async function dayPage(date: string): Promise<HTMLElement> {
   }
   if (!entries.length && !caption?.text) journal.append(emptyState('暂无记录', 'journal-empty'));
   for (const entry of entries) {
-    const item = node('button', `day-record-row is-${entry.kind ?? 'journal'}`);
-    item.type = 'button';
-    item.setAttribute('aria-label', `查看记录详情：${entry.body.slice(0, 30) || '图片'}`);
-    const copy = node('div', 'day-record-copy');
-    const meta = node('div', 'day-record-meta');
-    meta.append(
-      node('time', '', new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })),
-      node('span', 'day-record-kind', '生活日记'),
-    );
-    copy.append(meta);
-    if (entry.imageDataUrl) {
-      const image = node('img', 'day-record-image') as HTMLImageElement;
-      image.src = entry.imageDataUrl;
-      image.alt = entry.body ? '记录图片' : '图片记录';
-      copy.append(image);
-    }
-    if (entry.body) copy.append(node('p', 'day-record-body', entry.body));
-    item.append(copy);
-    item.addEventListener('click', () => { void openEntryDetailDialog(entry); });
-    journal.append(item);
+    journal.append(recordItem({
+      variant: 'detail', body: entry.body, time: entryTime(entry), kind: entry.kind,
+      imageSource: entry.imageDataUrl, onOpen: () => { void openEntryDetailDialog(entry); },
+    }));
   }
 
   const actionResults = listSection('行动结果', { className: 'day-action-results' });
@@ -6163,8 +6137,7 @@ async function taskAnalysisPage(): Promise<HTMLElement> {
     categoryTabs.replaceChildren();
     const dimensions: Array<readonly ['all' | Dimension, string]> = [['all', '全部'], ...DIMENSIONS.map((item) => [item.key, item.label] as const)];
     for (const [key, label] of dimensions) {
-      const tab = node('button', `ui-filter-item${category === key ? ' is-active' : ''}`, label);
-      tab.type = 'button';
+      const tab = segmentedItem('button', label, { active: category === key, className: 'ui-filter-item' });
       tab.setAttribute('aria-current', category === key ? 'page' : 'false');
       tab.addEventListener('click', () => { category = key; renderBody(); });
       categoryTabs.append(tab);

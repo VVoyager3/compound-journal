@@ -51,7 +51,7 @@
 日记行高1.55保留为长文阅读变体。普通 strong 不自动把任务变成粗标题；公共标题负责强调。HTML 标签不同不能使同一语义变成另一字号。
 所有业务布局 CSS 的字体声明已移除，静态测试禁止重新引入。专用数值和图标的文字规格也集中在公共层。
 
-## 组件：八组基础模板
+## 组件：公共模板
 
 | 组件组 | 公共结构 | 可调整项 |
 | --- | --- | --- |
@@ -71,8 +71,8 @@
 列表四种行为共用几何，不是四套皮肤：只读不打卡；导航行进入详情；操作行完成或+1；控件行提供开关或选项。组内只用一个外框和细分隔线；长文自然增高。列表网格只为当前实际子项分列：纯内容为单列，“内容 + 状态/操作”为双列；不得为已删除的图标、箭头或菜单保留空轨道。
 人物、日历、热力图、徽章允许专用内部布局，不强塞进列表，但必须复用外层页面、字体及控件。
 图片、发送按钮也使用公共 button；不依靠文字宽度碰巧达到最小点击尺寸。
-`sectionHeading`、`listSection`、`emptyState`、`metricGroup`、`metricItem`、`actionGroup`、`formStack`、`labelledControl`、`textAction`、`actionButton`、`fileButton`、`primaryButton`、`statusMessage`、`titleBar`、`backButton`、`titlebarAction`、`disclosure`、`optionalDetails`、`overflowMenu`、`segmentedControl`、`segmentedItem`、`periodNavigator`、`avatarChoiceGroup`、`avatarChoice`、`choiceGroup` 和 `choiceRow` 是上述公共结构的唯一 DOM 入口；设置、问卷与复盘分组不再保留平行骨架。页面只传业务专用类、文字、状态和事件。普通按钮只允许 primary、secondary、quiet、danger 四种既有语义变体，并统一由 `actionButton` 设置样式、原生 button/submit 类型与可选点击行为；文件选择按钮由 `fileButton` 保留原生 input 语义。业务页不得再直接拼接标准按钮类。页面和弹层标题栏由 `titleBar` 生成，返回键由 `backButton` 建立，标题栏尾部的文字、符号或图标操作均由 `titlebarAction` 建立。所有 `<details><summary>` 先由 `disclosure` 建立；`optionalDetails` 与 `overflowMenu` 只添加各自语义和外观，不再重复创建原生骨架。周统计、任务分析与习惯统计的整组“标签 + 数值”均由 `metricGroup` 生成，单项由 `metricItem` 生成；日历月份与周复盘周期均由 `periodNavigator` 生成；初次引导和人物设置均由无页面专属类的 `avatarChoiceGroup` 与 `avatarChoice` 生成；任务结果和习惯完成方式由 `choiceGroup` 与 `choiceRow` 生成三列选择，问卷答案复用 `choiceRow` 的纵向列表形态。未被运行时调用的候选变体（如旧 `quest-row`）直接删除。趋势图等带图形的指标保留专用结构。
-记录页只保留右上角“随记 / 整记”两个写作子页：随记使用消息流、底部输入和图片入口；整记使用大文本框、保存按钮，并在同页显示当日全部随记与整记。每日复盘保留在当天回顾的“复盘”页，不与长文本整记混用。旧分类提示、模板选择、编号按钮、旧附件按钮和固定提交栏不是可选皮肤，禁止重新引入。图片操作使用公共 `actionButton`，记录管理进入统一详情弹层。
+`sectionHeading`、`listSection`、`emptyState`、`metricGroup`、`metricItem`、`actionGroup`、`formStack`、`labelledControl`、`textAction`、`actionButton`、`fileButton`、`primaryButton`、`statusMessage`、`titleBar`、`backButton`、`titlebarAction`、`disclosure`、`optionalDetails`、`overflowMenu`、`segmentedControl`、`segmentedItem`、`periodNavigator`、`avatarChoiceGroup`、`avatarChoice`、`choiceGroup`、`choiceRow` 和 `recordItem` 是上述公共结构的唯一 DOM 入口；设置、问卷与复盘分组不再保留平行骨架。页面只传业务专用类、文字、状态和事件。普通按钮只允许 primary、secondary、quiet、danger 四种既有语义变体，并统一由 `actionButton` 设置样式、原生 button/submit 类型与可选点击行为；文件选择按钮由 `fileButton` 保留原生 input 语义。业务页不得再直接拼接标准按钮类。页面和弹层标题栏由 `titleBar` 生成，返回键由 `backButton` 建立，标题栏尾部的文字、符号或图标操作均由 `titlebarAction` 建立。所有 `<details><summary>` 先由 `disclosure` 建立；`optionalDetails` 与 `overflowMenu` 只添加各自语义和外观，不再重复创建原生骨架。周统计、任务分析与习惯统计的整组“标签 + 数值”均由 `metricGroup` 生成，单项由 `metricItem` 生成；日历月份与周复盘周期均由 `periodNavigator` 生成；初次引导和人物设置均由无页面专属类的 `avatarChoiceGroup` 与 `avatarChoice` 生成；任务结果和习惯完成方式由 `choiceGroup` 与 `choiceRow` 生成三列选择，问卷答案复用 `choiceRow` 的纵向列表形态；同一条生活日记在今日预览、消息流和日期回顾中只通过 `recordItem` 的三个受控变体呈现。未被运行时调用的候选变体直接删除。趋势图等带图形的指标保留专用结构。
+记录页只保留右上角“随记 / 整记”两个写作子页：随记使用消息流、底部输入和图片入口；整记使用大文本框、保存按钮，并在同页显示当日全部随记与整记。每日复盘保留在当天回顾的“复盘”页，不与长文本整记混用。旧分类提示、模板选择、编号按钮、旧附件按钮和固定提交栏不是可选皮肤，禁止重新引入。图片操作使用公共 `actionButton`，记录管理进入统一详情弹层；今日预览、随记消息流、整记历史和日期回顾不得再分别手写记录条目。
 日期记录和周复盘同样不保留旧卡片皮肤：记录条目进入统一详情弹层；周复盘只保留当前摘要、调整清单和公共操作组，不再并行维护 hero、focus 或 experiment 卡。
 搜索结果、表单保存及异步错误统一由 `statusMessage` 提供状态区域；业务页只更新文字和 `is-error` 状态，不再创建同尺寸的页面专用状态类。
 
@@ -117,7 +117,7 @@
 
 `node scripts/audit-ui-code.mjs --strict` 要求全部处理完成且无漂移，并用CSS语法表拦截未知属性、非法属性值和漏登记尺寸；普通测试会阻止新增未登记尺寸、遗漏改动和已删除/自适应规则复活。`scripts/prune-ui-css.mjs --owned-geometry` 只检查无条件公共层的精确同选择器覆盖；`--apply-decisions` 应用已登记的令牌替换和内容自适应删除。两者默认dry-run，明确加`--write`才改文件，执行后须核对Git差异和测试；若写入失败，先修正差异与账本的一致性，不能刷新基线绕过门禁。
 
-默认值不变的迁移还用 `node scripts/compare-ui-css.mjs` 检查55个相同内容夹具：先等待连续两帧字节一致（最多5帧、总预算10秒），再严格比较前后SHA-256；不使用像素容差。统一默认值后的意图性视觉调整改用新截图集 `design/screenshots/20260906-dimension-complete/` 验收：55场景、0预览溢出、统一页面壳与文字角色。工具默认读取暂存区CSS作为前态，因此只适合尚未暂存且预期像素不变的批次；`--self-test` 验证稳定与失败边界。
+默认值不变的迁移还用 `node scripts/compare-ui-css.mjs` 检查55个相同内容夹具：先等待连续两帧字节一致（最多5帧、总预算10秒），再严格比较前后SHA-256；不使用像素容差。工具默认读取暂存区CSS作为前态，因此只适合尚未暂存且预期像素不变的批次；`--self-test` 验证稳定与失败边界。
 
-2026-09-07 最终审查基线为 `design/screenshots/20260907-component-review/`：55个实际页面/状态全部通过公共页面壳断言，775个文字节点零规格偏差，210个列表行均不低于45px，243个日历/热力方格宽高差不超过1px，预览无横向溢出。独立只读审查逐页复核重点页面与上下文弹层后结论为PASS。配套门禁为严格尺寸审计、39项组件定向测试、完整`npm test`及47/47浏览器业务回归；后续组件修改不得降低这些基线。
+当前审查入口固定为 `design/screenshots/current/`，每次完整收口直接刷新，不新增日期目录。冻结的尺寸迁移输入仅保留 `20260906-complete-unification` 与 `20260906-dimension-migration`，不得把历史截图重新当作并行设计标准。
 Android WebView、实际键盘、安全区和设备字体需另做设备验收；浏览器测试不替代真机结论。

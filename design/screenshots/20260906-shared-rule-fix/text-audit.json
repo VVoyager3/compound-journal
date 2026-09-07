@@ -1,6 +1,0 @@
-{
-  "screenshots": 55,
-  "measuredTextNodes": 774,
-  "scope": "Visible DOM in active dialog or page; known roles only. Includes line-height; semantic exceptions require review.",
-  "findings": []
-}

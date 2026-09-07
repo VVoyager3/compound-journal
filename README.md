@@ -21,7 +21,7 @@
 - 公共组件样式：`src/design-system.css`；列表渲染器：`src/ui-list.ts`；分类与适用边界见 [组件规范](./docs/UI_COMPONENTS.md)。
 - 开发服务启动后打开 `/design/ui-tuner.html` 调整候选参数。前3个视图使用公共渲染器，其余8个使用真实页面的隔离数据快照；已移除手写原型及其专用样式。导出参数不会自动修改正式应用。
 - `node scripts/audit-ui-code.mjs` 生成静态样式清单；`npm test` 运行项目测试。截图检查见 `scripts/capture-ui.mjs`，使用隔离的测试数据，不读取用户日记。
-- 页面截图见 [页面审计](./design/screenshots/20260906-dimension-complete/index.html)。55个场景均有统一页面壳和文字规格，预览溢出为0；固定基线的1276条直接尺寸已全部迁移或明确分类，公共组件层不再直接声明尺寸。Android安全区、键盘和设备字体仍需单独验收。
+- 页面截图见 [当前页面审计](./design/screenshots/current/index.html)。历史截图批次不再重复保留；冻结的尺寸迁移基线仍供自动脚本核对。Android安全区、键盘和设备字体仍需单独验收。
 
 ## 技术栈
 

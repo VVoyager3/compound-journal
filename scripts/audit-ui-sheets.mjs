@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const folder = resolve(process.argv[2] || 'design/screenshots/20260905-settings-spacing');
+const folder = resolve(process.argv[2] || 'design/screenshots/current');
 await mkdir(`${folder}/audit`, { recursive: true });
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 try {

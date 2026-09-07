@@ -286,6 +286,57 @@ export function infoRow(title: string, value: string | HTMLElement = '', options
   return row;
 }
 
+export function recordItem(options: {
+  variant: 'preview' | 'bubble' | 'detail';
+  body: string;
+  time: string;
+  kind?: string;
+  imageSource?: string;
+  leading?: HTMLElement;
+  onOpen: () => void;
+}): HTMLButtonElement {
+  const kind = options.kind ?? 'journal';
+  const variantClass = options.variant === 'preview'
+    ? 'today-record-row'
+    : options.variant === 'bubble'
+      ? `life-diary-bubble${options.imageSource ? ' has-image' : ''}`
+      : 'day-record-row';
+  const item = options.variant === 'preview'
+    ? listRow('button', `ui-record-item ${variantClass} is-${kind}`)
+    : element('button', `ui-record-item ${variantClass} is-${kind}`);
+  item.type = 'button';
+  item.setAttribute('aria-label', `查看记录详情：${options.body.slice(0, 30) || '图片'}`);
+
+  if (options.variant === 'preview') {
+    if (options.leading) item.append(options.leading);
+    item.append(element('span', 'today-record-copy', options.body || '图片记录'), element('time', 'caption', options.time));
+  } else if (options.variant === 'bubble') {
+    if (options.imageSource) {
+      const image = element('img', 'life-diary-image');
+      image.src = options.imageSource;
+      image.alt = options.body ? '记录图片' : '图片记录';
+      item.append(image);
+    }
+    if (options.body) item.append(element('span', 'life-diary-copy', options.body));
+    item.append(element('time', 'life-diary-time', options.time));
+  } else {
+    const copy = element('div', 'day-record-copy');
+    const meta = element('div', 'day-record-meta');
+    meta.append(element('time', '', options.time), element('span', 'day-record-kind', '生活日记'));
+    copy.append(meta);
+    if (options.imageSource) {
+      const image = element('img', 'day-record-image');
+      image.src = options.imageSource;
+      image.alt = options.body ? '记录图片' : '图片记录';
+      copy.append(image);
+    }
+    if (options.body) copy.append(element('p', 'day-record-body', options.body));
+    item.append(copy);
+  }
+  item.addEventListener('click', options.onOpen);
+  return item;
+}
+
 export function taskRow(options: {
   title: string;
   status: string;
