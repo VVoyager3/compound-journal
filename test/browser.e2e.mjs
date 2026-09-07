@@ -188,6 +188,7 @@ test('analysis heatmaps keep square cells and contain horizontal overflow', asyn
 
     assert.equal(await page.locator('.analysis-range-select').count(), 0, 'task analysis must not repeat the time-range control in the header');
     assert.equal(await page.locator('.analysis-heat-legend').count(), 0, 'task analysis must not show the redundant heatmap legend');
+    assert.equal(await page.locator('.analysis-heat-section').evaluate((section) => getComputedStyle(section).borderBottomStyle), 'none', 'heatmap must not end with a divider');
     assert.equal(await page.locator('.analysis-heat-cell.is-today').count(), 1, 'heatmap must mark today once');
     assert.equal(await page.locator('.analysis-heat-cell').first().evaluate((cell) => getComputedStyle(cell, '::after').content), 'none', 'heatmap cells must not add decorative status glyphs');
     const categoryLabels = await page.locator('.analysis-category-tabs > button').allTextContents();
@@ -213,6 +214,7 @@ test('analysis heatmaps keep square cells and contain horizontal overflow', asyn
             clientWidth: viewport.clientWidth,
             scrollWidth: viewport.scrollWidth,
             overflowX: getComputedStyle(viewport).overflowX,
+            gap: getComputedStyle(viewport.querySelector('.analysis-heat-cells')).columnGap,
             cells: cells.map((cell) => {
               const box = cell.getBoundingClientRect();
               return { width: box.width, height: box.height };
@@ -223,6 +225,8 @@ test('analysis heatmaps keep square cells and contain horizontal overflow', asyn
 
         assert.equal(geometry.cells.length, weeks * 7);
         assert.equal(geometry.cells.every((cell) => Math.abs(cell.width - cell.height) < 0.01), true, `${weeks} weeks must stay square at ${width}px`);
+        assert.equal(geometry.cells.every((cell) => cell.width === 13), true, `${weeks} weeks must use the compact heatmap scale at ${width}px`);
+        assert.equal(geometry.gap, '3px', `${weeks} weeks must keep the compact heatmap rhythm at ${width}px`);
         assert.ok(geometry.pageScrollWidth <= geometry.pageClientWidth, `${weeks} weeks must not overflow the page at ${width}px`);
         if (weeks === 12) {
           assert.deepEqual(geometry.lastMonth, { text: '10月', column: '12' }, 'the widest month label should occupy the final column');

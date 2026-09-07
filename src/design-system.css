@@ -18,12 +18,12 @@
   --ui-color-accent-soft: #dee6d8;
   --ui-color-danger: #a83b32;
   --ui-color-focus: #214d3c;
-  --ui-color-heat-empty: #ebe7dc;
+  --ui-color-heat-empty: #ebe8df;
   --ui-color-heat-missed: #c8c2b3;
-  --ui-color-heat-1: #dce5d8;
-  --ui-color-heat-2: #b9cdb3;
-  --ui-color-heat-3: #89aa83;
-  --ui-color-heat-4: #557d61;
+  --ui-color-heat-1: #cadbc6;
+  --ui-color-heat-2: #a8c5a2;
+  --ui-color-heat-3: #79a574;
+  --ui-color-heat-4: #4b7656;
   --ui-color-heat-5: #214d3c;
 
   /* Type */
@@ -74,8 +74,8 @@
   --ui-action-gap: var(--ui-space-3);
   --ui-repeat-gap: 16px;
   --ui-review-input-height: 116px;
-  --ui-heat-cell: 16px;
-  --ui-heat-gap: 5px;
+  --ui-heat-cell: 13px;
+  --ui-heat-gap: 3px;
   --ui-monthly-trend-height: 14px;
   --ui-analysis-width: 100%;
   --ui-viewport-height: 100vh;
@@ -949,7 +949,7 @@ button.ui-list-row:is(:hover,:focus-visible) { background: var(--ui-color-accent
 
 .analysis-page-body { gap: var(--ui-space-5); min-width: 0; }
 .analysis-category-section { display: grid; gap: var(--ui-list-gap); padding: 0; border: 0; background: transparent; }
-.analysis-heat-section { margin: 0; padding: 0; display: grid; gap: var(--ui-section-gap); }
+.analysis-heat-section { margin: 0; padding: 0; display: grid; gap: var(--ui-section-gap); border-bottom: none; }
 .analysis-heat-scroll { container-type: inline-size; min-width: 0; }
 .analysis-heat-chart {
   --heat-label-width: var(--ui-space-7);
@@ -987,25 +987,9 @@ button.ui-list-row:is(:hover,:focus-visible) { background: var(--ui-color-accent
 }
 .analysis-heat-cell.is-today {
   outline: var(--ui-border-width) solid var(--ui-color-text);
-  outline-offset: var(--ui-space-1);
+  outline-offset: calc(-1 * var(--ui-border-width));
 }
 .analysis-heat-cell::after { content: none; }
-.page-habit-analysis:not(.page-habit-analysis-overview) .analysis-heat-cell:is(.is-level-1, .is-level-2, .is-level-3, .is-level-4, .is-level-5)::after,
-.page-habit-analysis:not(.page-habit-analysis-overview) .analysis-heat-cell.is-missed::after {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: var(--ui-font-meta);
-}
-.page-habit-analysis:not(.page-habit-analysis-overview) .analysis-heat-cell:is(.is-level-1, .is-level-2, .is-level-3, .is-level-4, .is-level-5)::after {
-  color: var(--ui-color-surface);
-  content: '✓';
-}
-.page-habit-analysis:not(.page-habit-analysis-overview) .analysis-heat-cell.is-missed::after {
-  color: var(--ui-color-muted);
-  content: '–';
-}
 
 /* Companion settings mirror the reference: preview, choices, nickname, save. */
 .settings-detail-dialog .profile-settings.settings-detail-content {
