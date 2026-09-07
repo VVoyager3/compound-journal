@@ -806,11 +806,9 @@
         1140,
         1198,
         1203,
-        1205,
         1212,
         1243,
-        1251,
-        1254
+        1251
       ],
       "action": "token",
       "value": "var(--ui-radius-surface)",
@@ -984,8 +982,7 @@
         322,
         355,
         537,
-        686,
-        1253
+        686
       ],
       "action": "token",
       "value": "var(--ui-space-4)",
@@ -4850,9 +4847,40 @@
     },
     {
       "index": 1249,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "All compact interactive rows and disclosure headers use the shared row height."
+      "action": "remove",
+      "owner": [
+        {
+          "selector": ".page-habit-analysis-overview .habit-comparison-heading",
+          "value": "0"
+        }
+      ],
+      "reason": "The one-week habit matrix heading is not an interactive row; the component layer owns its intrinsic height."
+    },
+    {
+      "index": 1253,
+      "action": "remove",
+      "owner": [
+        {
+          "selector": ".page-habit-analysis-overview .habit-comparison-row",
+          "value": "var(--ui-row-pad-y) var(--ui-row-pad-x)"
+        },
+        {
+          "selector": ".page-habit-analysis-overview .habit-comparison-heading",
+          "value": "var(--ui-space-3) var(--ui-row-pad-x)"
+        }
+      ],
+      "reason": "The component layer aligns weekday headings and habit rows on the same seven-column track."
+    },
+    {
+      "index": 1254,
+      "action": "remove",
+      "owner": [
+        {
+          "selector": ".page-habit-analysis-overview .habit-comparison-row",
+          "value": "var(--ui-radius-surface)"
+        }
+      ],
+      "reason": "Standalone habit rows use the shared surface radius owned by the component layer."
     },
     {
       "index": 1255,
@@ -5345,6 +5373,17 @@
       "index": 1111,
       "action": "intrinsic",
       "reason": "The retired assessment dimension action grid was removed; current assessment controls use shared action components."
+    },
+    {
+      "index": 1205,
+      "action": "remove",
+      "reason": "The long-form diary composer now has a project-approved rectangular shape owned by the shared component layer.",
+      "owner": [
+        {
+          "selector": ".life-diary-composer",
+          "value": "0"
+        }
+      ]
     }
   ]
 }

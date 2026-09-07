@@ -118,6 +118,8 @@ const seeded = await page.evaluate(async ({ today }) => {
     }
   }
   await db.ensureTodayBonusQuests(today);
+  const waterToday = (await db.listQuests(today)).find((quest) => quest.sourceId === habits[3].id && quest.targetCount);
+  if (waterToday) for (let count = 0; count < 3; count += 1) await db.changeQuestProgress(waterToday.id, 1);
   db.close();
   return { goalId: goal.goal.id, habitId: habits[1].id, manualId: manual.id };
 }, { today });
@@ -193,7 +195,7 @@ async function shot(name, options = {}) {
       const children = [...el.children].filter(rendered);
       return { title: children[0]?.textContent?.slice(0, 40), gap: children.length > 1 ? children[1].getBoundingClientRect().top - children[0].getBoundingClientRect().bottom : null };
     });
-    const selectors = '.calendar-day,.analysis-heat-cell,.habit-recent-cell,.habit-weekday-column,.habit-comparison-weeks > span,.goal-detail-stage > .stage-toggle';
+    const selectors = '.calendar-day,.analysis-heat-cell,.habit-recent-cell,.habit-weekday-column,.habit-comparison-weeks > span,.habit-month-grid > span,.goal-detail-stage > .stage-toggle';
     const tiles = [...scope.querySelectorAll(selectors)].map(element => {
       const rect = element.getBoundingClientRect();
       return { component: element.className, width: rect.width, height: rect.height };
@@ -296,6 +298,9 @@ await page.keyboard.press('Escape');
 
 await page.getByRole('button', { name: '习惯', exact: true }).click();
 await page.locator('.task-habits .section-heading').getByRole('button', { name: '新建', exact: true }).click();
+await page.getByRole('searchbox', { name: '习惯名称' }).fill('喝水');
+await page.getByRole('spinbutton', { name: '每日目标次数' }).fill('8');
+await page.getByRole('textbox', { name: '单位（如：杯）' }).fill('杯');
 await shot('habit-create', { fullPage: false });
 await page.keyboard.press('Escape');
 await page.locator('.task-habits .habit-row').first().locator('summary').click();
@@ -466,7 +471,7 @@ await writeFile(`${output}/captures.json`, JSON.stringify(captures, null, 2));
 await writeGallery(captures);
 await writeFile(`${output}/geometry.json`, JSON.stringify(geometry, null, 2));
 // Findings are an audit, not a claim that every leaf has a known semantic role.
-const expectedText = { page: [16, 800, 19.2], section: [14.5, 800, 19.575], body: [12.5, 400, 18.75], meta: [11.5, 400, 15.525], label: [12.5, 500, 18.75] };
+const expectedText = { page: [16, 800, 19.2], section: [14.5, 800, 19.575], body: [12.5, 500, 18.75], meta: [11.5, 400, 15.525], label: [12.5, 700, 18.75] };
 const findings = geometry.flatMap(screen => screen.textMetrics.flatMap(item => {
   const expected = expectedText[item.role];
   return [item.size, item.weight, item.leading].some((value, i) => Math.abs(parseFloat(value) - expected[i]) > .06)
@@ -492,7 +497,7 @@ for (const screen of geometry) for (const type of screen.typography) {
     ? { size: '16px', weight: '800' }
     : type.role === 'section'
       ? { size: '14.5px', weight: '800' }
-      : { size: '12.5px', weight: '400' };
+      : { size: '12.5px', weight: '500' };
   assert.equal(type.size, expected.size, `${screen.name}: ${type.role} “${type.text}” uses the shared font size`);
   assert.equal(type.weight, expected.weight, `${screen.name}: ${type.role} “${type.text}” uses the shared font weight`);
 }
@@ -505,7 +510,7 @@ for (const screen of geometry) {
 }
 for (const screen of geometry) for (const row of screen.listRows) {
   assert.equal(row.minHeight, '45px', `${screen.name}: ${row.component} must use the shared row height`);
-  if (!row.grouped) assert.equal(row.radius, '8px', `${screen.name}: standalone row uses shared radius`);
+  if (!row.grouped) assert.equal(row.radius, '20px', `${screen.name}: standalone row uses shared radius`);
   const isAction = row.component.includes('ui-action-row');
   assert.equal(row.paddingInline, isAction ? '0px 0px' : '20px 20px', `${screen.name}: ${row.component} must use shared horizontal padding`);
   assert.equal(row.paddingBlock, '0px 0px', `${screen.name}: ${row.component} must use shared vertical padding`);
@@ -517,7 +522,7 @@ for (const screen of geometry) for (const row of screen.listRows) {
 
 async function writeGallery(captures) {
   const sections = captures.map(item => `<section><h2>${item.file.replace('.png', '')}</h2><a href="${item.file}"><img src="${item.file}" loading="lazy" alt="${item.file}"></a></section>`).join('');
-  await writeFile(`${output}/index.html`, `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>栖光 · 最新页面截图审计</title><style>body{margin:32px;background:#f7f3e8;color:#214d3c;font:16px/1.5 sans-serif}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:32px 24px}section{min-width:0}h1{font-size:26px}h2{margin:0 0 10px;font-size:15px}img{display:block;width:100%;border:1px solid #d9d2c1;background:#fcfaf4}a{color:inherit}</style><h1>栖光 · 最新页面截图审计</h1><p>${captures.length} 张实际运行截图 · 400×866 CSS 视口 · 点击图片查看原图</p><main>${sections}</main></html>`);
+  await writeFile(`${output}/index.html`, `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>栖光 · 最新页面截图审计</title><style>body{margin:32px;background:#f8f8f0;color:#794f27;font:16px/1.5 Nunito,"Noto Sans SC",sans-serif}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:32px 24px}section{min-width:0}h1{font-size:26px}h2{margin:0 0 10px;font-size:15px}img{display:block;width:100%;border:1px solid #c4b89e;border-radius:20px;background:#f7f3df}a{color:inherit}</style><h1>栖光 · 最新页面截图审计</h1><p>${captures.length} 张实际运行截图 · 400×866 CSS 视口 · 点击图片查看原图</p><main>${sections}</main></html>`);
 }
 
 async function writeTextAudit(audit, captures) {

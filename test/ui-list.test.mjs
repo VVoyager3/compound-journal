@@ -38,7 +38,7 @@ test('text roles do not depend on tags or page, and action spacing is independen
         return { type, before, after, adjusted };
       }, size);
       for (const actual of results.type) {
-        const [font, weight, leading] = { section: [14.5, '800', 1.35], meta: [11.5, '400', 1.35], body: [12.5, '400', 1.5] }[actual.role];
+        const [font, weight, leading] = { section: [14.5, '800', 1.35], meta: [11.5, '400', 1.35], body: [12.5, '500', 1.5] }[actual.role];
         assert.equal(actual.size, font * size / 16, `${actual.role} font size`);
         assert.equal(actual.weight, weight);
         assert.ok(Math.abs(actual.leading - font * size / 16 * leading) < .06, `${actual.role} line height: ${actual.leading}`);

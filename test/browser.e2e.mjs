@@ -554,8 +554,8 @@ test('today keeps records and habit editing behind compact entry points', async 
     assert.equal(await page.getByText('管理习惯', { exact: true }).count(), 0, 'habit creation should live in the section heading');
     const habitDialog = await openNewHabitEditor(page);
     await habitDialog.getByRole('searchbox', { name: '习惯名称' }).fill('晚饭后散步');
-    await habitDialog.getByRole('button', { name: '每天', exact: true }).click();
-    await habitDialog.getByRole('spinbutton', { name: '每日打卡次数' }).fill('3');
+    await habitDialog.getByRole('spinbutton', { name: '每日目标次数' }).fill('3');
+    await habitDialog.getByRole('textbox', { name: '单位（如：杯）' }).fill('杯');
     await habitDialog.getByRole('checkbox', { name: '周六' }).check();
     await habitDialog.getByRole('button', { name: '建立习惯' }).click();
     const createdHabit = page.locator('.habit-row').filter({ hasText: '晚饭后散步' });
@@ -575,9 +575,9 @@ test('today keeps records and habit editing behind compact entry points', async 
     const todayHabit = page.locator('.task-list-item').filter({ hasText: '晚饭后散步' });
     await todayHabit.waitFor();
     assert.match(await todayHabit.textContent(), /0\/3/);
-    await todayHabit.getByRole('button', { name: /记录一次：晚饭后散步，当前 0\/3次/ }).click();
-    await todayHabit.getByRole('button', { name: /记录一次：晚饭后散步，当前 1\/3次/ }).click();
-    await assert.doesNotReject(() => todayHabit.getByText('2/3次', { exact: true }).waitFor());
+    await todayHabit.getByRole('button', { name: /记录一次：晚饭后散步，当前 0\/3杯/ }).click();
+    await todayHabit.getByRole('button', { name: /记录一次：晚饭后散步，当前 1\/3杯/ }).click();
+    await assert.doesNotReject(() => todayHabit.getByText('2/3杯', { exact: true }).waitFor());
     await page.locator('.task-today-habits').getByText('1 项待打卡', { exact: true }).waitFor();
     await page.getByRole('button', { name: '查看习惯：晚饭后散步' }).click();
     const habitDetail = page.getByRole('dialog', { name: '习惯详情' });
@@ -611,7 +611,7 @@ test('today keeps records and habit editing behind compact entry points', async 
     await resumeDialog.getByRole('button', { name: '保存习惯' }).click();
     await page.goto(`${baseUrl}/#/today`);
     await assert.doesNotReject(() => page.getByRole('button', { name: /记录一次：晚饭后散步十五分钟/ }).waitFor());
-    await page.getByRole('button', { name: '记录一次：晚饭后散步十五分钟，当前 2/3次' }).click();
+    await page.getByRole('button', { name: '记录一次：晚饭后散步十五分钟，当前 2/3杯' }).click();
     await todayHabit.locator('.task-check').getByText('✓', { exact: true }).waitFor();
     await page.locator('.task-today-habits').getByText('0 项待打卡', { exact: true }).waitFor();
     assert.deepEqual(apiRequests, []);

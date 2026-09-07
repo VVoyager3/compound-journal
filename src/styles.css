@@ -1875,6 +1875,10 @@ input[type="range"] {
   display: grid;
 }
 
+.habit-completion-choices {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .quest-count-actions {
   align-items: center;
 }
@@ -6003,7 +6007,7 @@ body { font-synthesis: none; }
 .life-diary-bubble { position: relative; border-radius: var(--ui-radius-surface); background: #eee9dc; box-shadow: none; gap: var(--ui-section-gap); }
 .life-diary-copy { white-space: pre-wrap; overflow-wrap: anywhere; }
 .life-diary-composer {
-  bottom: calc(var(--bottom-nav-height) + 12px + env(safe-area-inset-bottom)); border: 1px solid var(--ui-line); border-radius: var(--ui-radius-surface);
+  bottom: calc(var(--bottom-nav-height) + 12px + env(safe-area-inset-bottom)); border: 1px solid var(--ui-line);
   background: var(--paper);
 }
 .life-diary-input { width: 100%; max-height: 150px; border: 0; background: transparent; overflow-y: auto; }
@@ -6075,7 +6079,7 @@ body { font-synthesis: none; }
 .habit-comparison-score { grid-row: 1; }
 .habit-comparison-weeks { grid-row: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 0; }
 .habit-comparison-weeks > span { display: grid; place-items: center; width: 100%; height: auto; min-height: 0; padding: 0; aspect-ratio: 1; border-radius: 2px; }
-.page-habit-analysis-overview .habit-comparison-heading { display: grid; min-height: var(--ui-row-height); align-items: center; }
+.page-habit-analysis-overview .habit-comparison-heading { display: grid; align-items: center; }
 .habit-comparison-heading > h2 { grid-column: 1 / 3; }
 .habit-comparison-heading > span { display: grid; grid-column: 3; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--ui-field-gap); white-space: nowrap; text-align: center; }
 .habit-comparison-list { border: 0; }
@@ -6087,8 +6091,8 @@ body { font-synthesis: none; }
 .page-task-analysis .analysis-category-row:last-child { border-bottom: 0; }
 .habit-overview-period { display: grid; }
 .page-habit-analysis-overview .habit-comparison-row,
-.page-habit-analysis-overview .habit-comparison-heading { grid-template-columns: minmax(50px, .8fr) minmax(0, 2.2fr) 44px; gap: var(--ui-row-content-gap); padding: var(--ui-space-4); }
-.page-habit-analysis-overview .habit-comparison-row { border: 1px solid var(--ui-line); border-radius: var(--ui-radius-surface); align-items: center; }
+.page-habit-analysis-overview .habit-comparison-heading { grid-template-columns: minmax(50px, .8fr) minmax(0, 2.2fr) 44px; gap: var(--ui-row-content-gap); }
+.page-habit-analysis-overview .habit-comparison-row { border: 1px solid var(--ui-line); align-items: center; }
 .habit-comparison-weeks { grid-column: 2; }
 .habit-comparison-weeks > span { background: transparent; }
 .habit-comparison-weeks > span { align-self: start; }

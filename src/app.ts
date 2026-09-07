@@ -62,9 +62,6 @@ import badgeExperimentImage from '../design-assets/generated/growth-icons/badge-
 import branchHealthImage from '../design-assets/generated/growth-icons/branch-health.png';
 import branchTrustImage from '../design-assets/generated/growth-icons/branch-trust.png';
 import branchAutonomyImage from '../design-assets/generated/growth-icons/branch-autonomy.png';
-import habitWalkingImage from '../design-assets/generated/habit-icons/walking.png';
-import habitStudyImage from '../design-assets/generated/habit-icons/study.png';
-import habitPhoneImage from '../design-assets/generated/habit-icons/phone.png';
 import habitBedtimeImage from '../design-assets/generated/habit-icons/bedtime.png';
 import habitChecklistImage from '../design-assets/generated/habit-icons/checklist.png';
 import navTodayIcon from '../design-assets/generated/ui-icons/nav-today.png';
@@ -4275,27 +4272,18 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
   minimum.maxLength = 160;
   minimum.placeholder = '例如：穿鞋出门走 5 分钟';
   minimum.value = habit?.minimumAction ?? '';
-  const completionMode = node('select', 'input');
-  completionMode.append(selectOption('once', '完成一次', !habit?.targetCount && !habit?.weeklyTarget), selectOption('count', '每日计数', Boolean(habit?.targetCount)), selectOption('weekly', '每周次数', Boolean(habit?.weeklyTarget)));
-  completionMode.hidden = true;
-  const completionChoices = choiceGroup('habit-completion-choices');
-  const completionChoiceLabels = { once: '一次', count: '每天', weekly: '每周' } as const;
-  for (const option of [...completionMode.options]) {
-    const button = choiceRow(completionChoiceLabels[option.value as keyof typeof completionChoiceLabels], {
-      className: 'habit-completion-choice',
-      selected: option.selected,
-      value: option.value,
-      onSelect: () => { completionMode.value = option.value; completionMode.dispatchEvent(new Event('change')); },
-    });
-    completionChoices.append(button);
-  }
+  const completionMode = node('select', 'input habit-target-period');
+  completionMode.setAttribute('aria-label', '目标周期');
+  completionMode.append(selectOption('count', '按天', !habit?.weeklyTarget), selectOption('weekly', '按周', Boolean(habit?.weeklyTarget)));
   const targetCount = node('input', 'input');
-  targetCount.type = 'number'; targetCount.min = habit?.weeklyTarget ? '1' : '2'; targetCount.max = '1000'; targetCount.value = String(habit?.weeklyTarget ?? habit?.targetCount ?? 8);
+  targetCount.type = 'number'; targetCount.min = '1'; targetCount.max = '1000'; targetCount.value = String(habit?.weeklyTarget ?? habit?.targetCount ?? 1);
+  targetCount.setAttribute('aria-label', habit?.weeklyTarget ? '每周目标次数' : '每日目标次数');
   const countUnit = node('input', 'input');
   countUnit.maxLength = 20; countUnit.value = habit?.countUnit ?? '次';
-  const countFields = node('div', 'count-task-fields');
-  const targetLabel = labelledControl(habit?.weeklyTarget ? '每周打卡次数' : '每日打卡次数', targetCount);
-  countFields.append(targetLabel, labelledControl('单位', countUnit));
+  countUnit.placeholder = '单位';
+  countUnit.setAttribute('aria-label', '单位（如：杯）');
+  const targetFields = node('fieldset', 'habit-target-fields');
+  targetFields.append(node('legend', 'field-label', '目标'), completionMode, targetCount, countUnit);
   const trigger = node('select', 'input');
   const triggerValue = habit?.trigger ?? '';
   const triggerOptions = ['晚饭后', '起床后', '放学后', '完成晚间洗漱后', '睡前'];
@@ -4316,12 +4304,9 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
   });
   const updateCompletionMode = () => {
     const weekly = completionMode.value === 'weekly';
-    countFields.hidden = completionMode.value === 'once';
     schedule.hidden = weekly;
     countUnit.disabled = weekly;
-    targetCount.min = weekly ? '1' : '2';
-    targetLabel.firstChild!.textContent = weekly ? '每周打卡次数' : '每日打卡次数';
-    completionChoices.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.value === completionMode.value)));
+    targetCount.setAttribute('aria-label', weekly ? '每周目标次数' : '每日目标次数');
   };
   completionMode.addEventListener('change', updateCompletionMode);
   const dimension = taskDimensionSelect(habit?.dimension ?? 'progress');
@@ -4357,8 +4342,8 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
         if ([...difficulty.options].some((item) => item.value === difficultyValue)) difficulty.value = difficultyValue;
         if ([...habitStatus.options].some((item) => item.value === statusValue)) habitStatus.value = statusValue;
         bonus.checked = draft.bonus !== 'false';
-        if (['once', 'count', 'weekly'].includes(draft.completionMode ?? '')) completionMode.value = draft.completionMode!;
-        targetCount.value = draft.targetCount ?? targetCount.value;
+        if (draft.completionMode === 'weekly') completionMode.value = 'weekly';
+        targetCount.value = draft.completionMode === 'once' ? '1' : draft.targetCount ?? targetCount.value;
         countUnit.value = draft.countUnit ?? countUnit.value;
         const savedDays = new Set((draft.scheduleDays ?? '').split(',').filter(Boolean));
         if (savedDays.size) schedule.querySelectorAll<HTMLInputElement>('input').forEach((input) => { input.checked = savedDays.has(input.value); });
@@ -4380,13 +4365,14 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
   const status = statusMessage();
   const advanced = disclosure('更多设置', 'form-advanced');
   const advancedFields = formStack('form-advanced-fields');
-  advancedFields.append(labelledControl('什么时候做', trigger), bonusLabel, labelledControl('状态', habitStatus));
+  advancedFields.append(
+    labelledControl('五维状态', dimension), labelledControl('难度', difficulty),
+    labelledControl('什么时候做', trigger), bonusLabel, labelledControl('状态', habitStatus),
+  );
   advanced.append(advancedFields);
   content.append(
-    labelledControl('习惯名称', name), labelledControl('完成方式', completionMode), completionChoices, countFields, schedule,
-    labelledControl('五维状态', dimension), labelledControl('难度', difficulty), status,
+    labelledControl('习惯名称', name), targetFields, schedule, advanced, status,
   );
-  content.insertBefore(advanced, status);
   updateCompletionMode();
   const cancel = actionButton('取消', () => dialog.close());
   const save = actionButton(habit ? '保存习惯' : '建立习惯', undefined, { variant: 'primary' });
@@ -4394,11 +4380,13 @@ async function openHabitDialog(habit?: Habit): Promise<void> {
     save.disabled = true;
     const days = Array.from(schedule.querySelectorAll<HTMLInputElement>('input:checked')).map((item) => Number(item.value));
     try {
+      const target = Number(targetCount.value);
+      if (!Number.isInteger(target) || target < 1 || target > 1_000) throw new Error('目标次数需要填写 1 到 1000 的整数。');
       const value = {
         name: name.value, minimumAction: minimum.value.trim() || name.value.trim(), trigger: trigger.value, scheduleDays: completionMode.value === 'weekly' ? [1, 2, 3, 4, 5, 6, 7] : days,
-        weeklyTarget: completionMode.value === 'weekly' ? Number(targetCount.value) : undefined,
-        targetCount: completionMode.value === 'count' ? Number(targetCount.value) : undefined,
-        countUnit: completionMode.value === 'count' ? countUnit.value : undefined,
+        weeklyTarget: completionMode.value === 'weekly' ? target : undefined,
+        targetCount: completionMode.value === 'count' && target > 1 ? target : undefined,
+        countUnit: completionMode.value === 'count' && target > 1 ? countUnit.value : undefined,
         dimension: dimension.value as Dimension, difficulty: difficulty.value as Difficulty,
         bonusEnabled: bonus.checked,
       };
@@ -4846,15 +4834,6 @@ const DIMENSION_ICON_ASSETS: Record<Dimension, string> = {
   progress: habitChecklistImage,
   play: branchAutonomyImage,
 };
-
-function habitImage(habit: Habit): string {
-  const name = habit.name.toLowerCase();
-  if (/散步|走路|步行|跑步|运动|walk|run/.test(name)) return habitWalkingImage;
-  if (/睡|晚安|冥想|夜|sleep|bed/.test(name)) return habitBedtimeImage;
-  if (/数学|错题|学习|读书|阅读|作业|study|read|math/.test(name)) return habitStudyImage;
-  if (/电话|联系|家人|朋友|call|phone/.test(name)) return habitPhoneImage;
-  return habitChecklistImage;
-}
 
 function openBadgeEvidenceDialog(badge: GrowthBadge): void {
   const { dialog, content, actions } = dialogShell('徽章详情');
@@ -6200,118 +6179,94 @@ function habitScheduleLabel(days: number[]): string {
   return sorted.map((day) => `周${'一二三四五六日'[day - 1]}`).join('、');
 }
 
-function habitPeriodStats(habit: Habit, logs: HabitLog[], start: string, end: string): { planned: number; completed: number; rate: number } {
-  let planned = 0;
-  let completed = 0;
-  for (let date = start; date <= end; date = shiftDate(date, 1)) {
-    const schedule = habitAnalysisSchedule(habit, date);
-    if (!schedule?.trackingEnabled || !schedule.scheduleDays.includes(parseLocalDate(date).getDay() || 7)) continue;
-    planned += 1;
-    if (logs.some((log) => log.habitId === habit.id && log.localDate === date && log.result === 'completed')) completed += 1;
+function habitDayProgress(habit: Habit, logs: HabitLog[], quests: Quest[], date: string): { rate: number; state: 'tracked' | 'future' | 'unplanned'; label: string } {
+  const schedule = habitAnalysisSchedule(habit, date);
+  if (!schedule?.trackingEnabled || !schedule.scheduleDays.includes(parseLocalDate(date).getDay() || 7)) {
+    return { rate: 0, state: 'unplanned', label: `${formatDate(date)}：未计划` };
   }
-  return { planned, completed, rate: analysisPercent(completed, planned) };
+  if (date > localDate()) return { rate: 0, state: 'future', label: `${formatDate(date)}：待记录` };
+  const dayQuests = quests.filter((quest) => quest.sourceType === 'habit' && quest.sourceId === habit.id && quest.localDate === date && !quest.systemRetiredAt);
+  const countQuest = dayQuests.find((quest) => quest.targetCount);
+  if (countQuest?.targetCount) {
+    const progress = countQuest.status === 'completed' ? countQuest.targetCount : Math.min(countQuest.progressCount ?? 0, countQuest.targetCount);
+    const rate = analysisPercent(progress, countQuest.targetCount);
+    return { rate, state: 'tracked', label: `${formatDate(date)}：${progress}/${countQuest.targetCount}${countQuest.countUnit || '次'}（${rate}%）` };
+  }
+  const results = logs.filter((log) => log.habitId === habit.id && log.localDate === date).map((log) => log.result);
+  const rate = results.includes('completed') ? 100 : results.includes('partial') ? 50 : 0;
+  return { rate, state: 'tracked', label: `${formatDate(date)}：${rate ? `完成 ${rate}%` : '未完成'}` };
 }
 
-async function habitAnalysisOverviewPage(habits: Habit[], logs: HabitLog[]): Promise<HTMLElement> {
+function habitProgressCell(habit: Habit, logs: HabitLog[], quests: Quest[], date: string): HTMLElement {
+  const progress = habitDayProgress(habit, logs, quests, date);
+  const cell = node('span', `habit-comparison-day is-${progress.state}`);
+  cell.style.setProperty('--habit-day-rate', `${progress.rate}%`);
+  cell.title = progress.label;
+  cell.setAttribute('role', 'img');
+  cell.setAttribute('aria-label', progress.label);
+  return cell;
+}
+
+async function habitAnalysisOverviewPage(habits: Habit[], logs: HabitLog[], quests: Quest[]): Promise<HTMLElement> {
   const main = node('main', 'page page-analysis page-habit-analysis page-habit-analysis-overview');
   main.append(pageHeader('习惯分析', { back: true, fallback: { name: 'tasks' } }));
   const active = habits.filter((habit) => habit.status !== 'ended');
-  const end = localDate();
-  const start = shiftDate(end, -27);
+  const start = weekRange().start;
+  const end = shiftDate(start, 6);
   const range = node('div', 'habit-overview-period');
-  range.append(node('span', '', '近四周'), node('span', '', `${formatDate(start)} — ${formatDate(end)}`));
+  range.append(node('span', '', '本周'), node('span', '', `${formatDate(start)} — ${formatDate(end)}`));
   main.append(range);
 
   const list = node('section', 'habit-comparison-list');
   const heading = node('div', 'habit-comparison-heading');
   const weekLabels = node('span');
-  Array.from({ length: 4 }, (_, week) => shiftDate(start, week * 7).slice(5).replace('-', '.'))
-    .forEach((label) => weekLabels.append(node('span', '', label)));
-  heading.append(node('span', 'habit-comparison-name', '习惯'), weekLabels, node('span', 'habit-comparison-total', '完成率'));
+  '一二三四五六日'.split('').forEach((label) => weekLabels.append(node('span', '', label)));
+  heading.append(node('span', 'habit-comparison-name', '习惯'), weekLabels);
   list.append(heading);
   if (!active.length) list.append(emptyState('暂无习惯'));
   active.forEach((habit) => {
-    const row = listRow('button', 'ui-data-row habit-comparison-row');
-    row.type = 'button';
-    row.setAttribute('aria-label', `查看${habit.name}的习惯分析`);
+    const row = listRow('div', 'ui-data-row habit-comparison-row');
     const copy = node('span', 'habit-comparison-copy');
-    const icon = node('img', 'habit-comparison-icon') as HTMLImageElement;
-    icon.src = habitImage(habit);
-    icon.alt = '';
-    copy.append(node('span', '', habit.name));
-    const total = habitPeriodStats(habit, logs, start, end);
+    copy.append(node('span', '', `${habit.name}：`));
     const weeksRow = node('span', 'habit-comparison-weeks');
-    for (let week = 0; week < 4; week += 1) {
-      const weekStart = shiftDate(start, week * 7);
-      const value = habitPeriodStats(habit, logs, weekStart, shiftDate(weekStart, 6));
-      weeksRow.append(node('span', '', `${value.completed}/${value.planned}`));
+    for (let day = 0; day < 7; day += 1) {
+      weeksRow.append(habitProgressCell(habit, logs, quests, shiftDate(start, day)));
     }
-    const score = node('span', 'habit-comparison-score');
-    score.append(node('strong', '', `${total.rate}%`));
-    row.append(copy, weeksRow, score);
-    row.addEventListener('click', () => go({ name: 'habit-analysis', entityId: habit.id }));
+    row.append(copy, weeksRow);
     list.append(row);
   });
   main.append(list);
   return main;
 }
 
+function habitAnalysisDetailPage(habit: Habit, logs: HabitLog[], quests: Quest[]): HTMLElement {
+  const main = node('main', 'page page-analysis page-habit-analysis page-habit-analysis-detail');
+  main.append(pageHeader(`${habit.name}分析`, { back: true, fallback: { name: 'tasks' } }));
+  const start = shiftDate(weekRange().start, -21);
+  const end = shiftDate(start, 27);
+  const range = node('div', 'habit-overview-period');
+  range.append(node('span', '', '近一个月'), node('span', '', `${formatDate(start)} — ${formatDate(end)}`));
+  const panel = node('section', 'habit-month-panel');
+  const weekdays = node('div', 'habit-month-weekdays');
+  '一二三四五六日'.split('').forEach((label) => weekdays.append(node('span', '', label)));
+  const grid = node('div', 'habit-month-grid');
+  for (let day = 0; day < 28; day += 1) grid.append(habitProgressCell(habit, logs, quests, shiftDate(start, day)));
+  panel.append(weekdays, grid);
+  main.append(range, panel);
+  return main;
+}
+
 async function habitAnalysisPage(habitId: string): Promise<HTMLElement> {
   await db.ensureTodayBonusQuests(localDate());
-  const [habits, logs] = await Promise.all([db.listHabits(), db.listHabitLogs(habitId || undefined)]);
-  if (!habitId) return habitAnalysisOverviewPage(habits, logs);
+  const [habits, logs, quests] = await Promise.all([db.listHabits(), db.listHabitLogs(habitId || undefined), db.listQuests()]);
+  if (!habitId) return habitAnalysisOverviewPage(habits, logs, quests);
   const habit = habits.find((item) => item.id === habitId);
-  const main = node('main', 'page page-analysis page-habit-analysis');
-  const header = pageHeader(habit ? `${habit.name}分析` : '习惯分析', { back: true, fallback: { name: 'tasks' } });
-  header.classList.add('ui-titlebar-with-filter');
-  main.append(header);
-  if (!habit) { main.append(emptyState('习惯不存在')); return main; }
-  const logByDate = new Map(logs.map((log) => [log.localDate, log]));
-  let weeks: AnalysisWeeks = 12;
-  const body = node('div', 'analysis-page-body');
-  main.append(body);
-  const renderBody = (): void => {
-    const period = analysisRange(weeks);
-    const plannedDates: string[] = [];
-    for (let date = period.start; date <= period.end; date = shiftDate(date, 1)) {
-      const schedule = habitAnalysisSchedule(habit, date);
-      if (schedule?.trackingEnabled && schedule.scheduleDays.includes(parseLocalDate(date).getDay() || 7)) plannedDates.push(date);
-    }
-    const completed = plannedDates.filter((date) => logByDate.get(date)?.result === 'completed').length;
-    const summary = metricGroup([
-      ['完成天数', `${completed} 天`],
-      ['完成率', `${analysisPercent(completed, plannedDates.length)}%`],
-    ], { className: 'habit-focus-summary', itemClassName: 'habit-focus-rate' });
-    header.querySelector('.analysis-range-tabs')?.remove();
-    const rangeTabs = analysisRangeTabs(weeks, (value) => { weeks = value; renderBody(); });
-    rangeTabs.classList.add('ui-segmented-inline');
-    header.append(rangeTabs);
-    body.replaceChildren(summary);
-    const plannedSet = new Set(plannedDates);
-    const heat = analysisHeatmap('完成情况', weeks, (date) => {
-      if (!plannedSet.has(date)) return { tone: 'empty', label: `${formatDate(date)}：未计划` };
-      const log = logByDate.get(date);
-      if (log?.result !== 'completed') return { tone: 'missed', label: `${formatDate(date)}：未完成` };
-      return { tone: 'level-5', label: `${formatDate(date)}：已完成` };
-    });
-    body.append(heat);
-    const weekdays = node('section', 'analysis-section habit-weekday-section');
-    weekdays.append(sectionHeading('按星期看'));
-    const chart = node('div', 'habit-weekday-chart');
-    for (let day = 1; day <= 7; day += 1) {
-      const dates = plannedDates.filter((date) => (parseLocalDate(date).getDay() || 7) === day);
-      const done = dates.filter((date) => logByDate.get(date)?.result === 'completed').length;
-      const rate = analysisPercent(done, dates.length);
-      const column = node('div', 'habit-weekday-column');
-      column.style.setProperty('--weekday-opacity', String(.12 + rate / 150));
-      column.append(node('span', '', '一二三四五六日'[day - 1]), node('strong', '', dates.length ? `${rate}%` : '—'));
-      chart.append(column);
-    }
-    weekdays.append(chart);
-    body.append(weekdays);
-  };
-  renderBody();
-  return main;
+  if (!habit) {
+    const main = node('main', 'page page-analysis page-habit-analysis');
+    main.append(pageHeader('习惯分析', { back: true, fallback: { name: 'tasks' } }), emptyState('习惯不存在'));
+    return main;
+  }
+  return habitAnalysisDetailPage(habit, logs, quests);
 }
 
 function applySettings(): void {

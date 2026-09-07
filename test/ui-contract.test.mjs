@@ -114,17 +114,25 @@ test('section headings and empty states have one DOM constructor', () => {
 test('numeric summaries share one metric group, item, and geometry', () => {
   assert.match(rows, /export function metricItem/);
   assert.match(rows, /export function metricGroup/);
-  for (const summaryClass of ['review-summary-stats', 'habit-detail-stats', 'analysis-summary-grid', 'habit-focus-summary']) {
+  for (const summaryClass of ['review-summary-stats', 'habit-detail-stats', 'analysis-summary-grid']) {
     assert.ok(app.includes(summaryClass), summaryClass);
   }
   assert.equal(app.includes("node('section', 'habit-detail-stats ui-metrics')"), false);
   assert.equal(app.includes("node('section', 'analysis-summary-grid ui-metrics')"), false);
-  assert.equal(app.includes("node('section', 'habit-focus-summary ui-metrics')"), false);
   assert.equal(app.includes("node('div', 'review-summary-stats ui-metrics')"), false);
   assert.equal(app.includes("const stat = node('span')"), false);
   assert.equal(legacyCss.includes('habit-stats-note'), false);
   assert.doesNotMatch(legacyCss, /\.habit-detail-stats\s*>\s*\.habit-stat/);
   assert.equal((app + css + legacyCss).includes('habit-overview-summary'), false, 'never-mounted habit summary must stay deleted');
+});
+
+test('habit analysis keeps a one-week overview and a four-week detail', () => {
+  const analysis = app.slice(app.indexOf('function habitDayProgress('), app.indexOf('function applySettings('));
+  assert.match(analysis, /for \(let day = 0; day < 7; day \+= 1\)/);
+  assert.match(analysis, /shiftDate\(weekRange\(\)\.start, -21\)/);
+  assert.match(analysis, /for \(let day = 0; day < 28; day \+= 1\)/);
+  assert.doesNotMatch(analysis, /analysisRangeTabs/);
+  assert.match(css, /\.habit-month-grid[\s\S]*grid-template-columns: repeat\(7,/);
 });
 
 test('primary and secondary pages share one header constructor', () => {
@@ -170,8 +178,8 @@ test('onboarding and settings share one avatar choice', () => {
 test('single-select list choices share one constructor and selected state', () => {
   assert.match(rows, /export function choiceGroup/);
   assert.match(rows, /export function choiceRow/);
-  assert.equal((app.match(/choiceGroup\(/g) ?? []).length, 2);
-  assert.equal((app.match(/choiceRow\(/g) ?? []).length, 3);
+  assert.equal((app.match(/choiceGroup\(/g) ?? []).length, 1);
+  assert.equal((app.match(/choiceRow\(/g) ?? []).length, 2);
   assert.equal(app.includes("listRow('button', 'ui-choice-row"), false);
   assert.equal(app.includes("node('button', 'feedback-result-choice'"), false);
   assert.equal(app.includes("node('div', 'feedback-result-choices')"), false);
