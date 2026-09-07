@@ -3822,9 +3822,8 @@
     },
     {
       "index": 901,
-      "action": "token",
-      "value": "var(--ui-space-4) var(--page-pad) var(--ui-space-4)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "Today records now use the shared list section and group frame; page-specific inset and padding would create a second list width."
     },
     {
       "index": 902,
@@ -3833,21 +3832,18 @@
     },
     {
       "index": 903,
-      "action": "token",
-      "value": "var(--ui-space-8)",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "The removed record floating action no longer needs reserved bottom padding; the shared section rhythm owns the spacing."
     },
     {
       "index": 904,
-      "action": "token",
-      "value": "var(--ui-row-height)",
-      "reason": "Repeated information and form rows use the shared minimum row height and grow only when content requires it."
+      "action": "intrinsic",
+      "reason": "Record previews inherit the shared ui-list-row minimum height instead of declaring the same geometry on the page."
     },
     {
       "index": 905,
-      "action": "token",
-      "value": "calc(var(--ui-nav-height) + var(--ui-space-2))",
-      "reason": "Align layout insets with the shared spacing scale while preserving the original shorthand sides and safe-area expression."
+      "action": "intrinsic",
+      "reason": "Record previews no longer reserve space for a deleted floating action; row padding comes from the shared list component."
     },
     {
       "index": 906,

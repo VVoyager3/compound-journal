@@ -1988,19 +1988,20 @@ async function todayPage(): Promise<HTMLElement> {
   }
   main.append(todayTasks);
 
-  const todayRecord = node('section', 'today-record-preview');
   const openDay = textAction('查看今天 ›', () => go({ name: 'day', date: today }));
-  todayRecord.append(sectionHeading('今天留下的', { tail: openDay }));
+  const todayRecord = listSection('今天留下的', { className: 'today-record-preview', tail: openDay });
   const recentTodayEntries = entries.slice(-3).reverse();
   if (recentTodayEntries.length) {
+    const recordList = listGroup();
     recentTodayEntries.forEach((entry) => {
-    const previewIcon = node('span', `today-record-icon is-${entry.kind}`);
-    previewIcon.append(semanticIcon(entry.kind === 'success' ? 'success-record' : 'nav-record'));
-    todayRecord.append(recordItem({
-      variant: 'preview', body: entry.body, time: entryTime(entry), kind: entry.kind,
-      leading: previewIcon, onOpen: () => { void openEntryDetailDialog(entry); },
-    }));
+      const previewIcon = node('span', `today-record-icon is-${entry.kind}`);
+      previewIcon.append(semanticIcon(entry.kind === 'success' ? 'success-record' : 'nav-record'));
+      recordList.append(recordItem({
+        variant: 'preview', body: entry.body, time: entryTime(entry), kind: entry.kind,
+        leading: previewIcon, onOpen: () => { void openEntryDetailDialog(entry); },
+      }));
     });
+    todayRecord.append(recordList);
   } else todayRecord.append(emptyState('今天还没有记录'));
   main.append(todayRecord);
 

@@ -47,6 +47,10 @@ test('equivalent rows opt into one shared geometry component', () => {
   assert.equal(app.includes("node('button', `life-diary-bubble"), false);
   assert.equal(app.includes("node('button', `day-record-row"), false);
   assert.equal(app.includes("listRow('button', 'today-record-row')"), false);
+  assert.match(app, /const todayRecord = listSection\('今天留下的',[\s\S]*const recordList = listGroup\(\)/);
+  assert.equal(legacyCss.includes('.today-record-row + .today-record-row'), false, 'record previews use the shared group frame and separators');
+  assert.equal(legacyCss.includes('.page-today .today-record-preview'), false, 'record previews cannot keep a page-specific inset');
+  assert.equal(legacyCss.includes('.page-today .today-record-row'), false, 'record preview rows inherit the shared group geometry');
   assert.ok(app.includes('const item = taskRow('));
   assert.ok(app.includes('const row = infoRow(label, statusCell'));
   assert.ok(rows.includes("listRow('article', `ui-action-row task-list-item"));
