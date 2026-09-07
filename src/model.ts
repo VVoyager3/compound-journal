@@ -73,6 +73,8 @@ export interface ImportableEntity extends BaseEntity {
 export interface JournalEntry extends ImportableEntity {
   localDate: string;
   body: string;
+  /** Current attachment shape; legacy backups may still contain imageDataUrl. */
+  imageDataUrls?: string[];
   imageDataUrl?: string;
   inputMethod: 'text' | 'import';
   /** Explicit user intent; absent on legacy records and defaults to a regular journal entry. */
@@ -84,6 +86,8 @@ export interface JournalRevision extends ImportableEntity {
   entryId: string;
   fromVersion: number;
   previousBody: string;
+  /** Current attachment shape; legacy revisions may still contain previousImageDataUrl. */
+  previousImageDataUrls?: string[];
   previousImageDataUrl?: string;
   /** The kind before this revision; absent on legacy revisions and defaults to journal. */
   previousKind?: NonNullable<JournalEntry['kind']>;

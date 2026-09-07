@@ -4374,9 +4374,14 @@
     },
     {
       "index": 1141,
-      "action": "exception",
-      "reason": "Responsive content bounds protect dialogs, notices, media previews and the diary workspace from viewport overflow; these are container-specific limits, not reusable row or control geometry.",
-      "category": "responsive-content-bound"
+      "action": "remove",
+      "reason": "The shared multi-photo preview rule now owns this width, so the obsolete single-photo bound must not remain in the legacy layer.",
+      "owner": [
+        {
+          "selector": ".life-diary-image-preview",
+          "value": "78%"
+        }
+      ]
     },
     {
       "index": 1144,

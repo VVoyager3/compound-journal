@@ -291,15 +291,17 @@ export function recordItem(options: {
   body: string;
   time: string;
   kind?: string;
+  imageSources?: readonly string[];
   imageSource?: string;
   leading?: HTMLElement;
   onOpen: () => void;
 }): HTMLButtonElement {
   const kind = options.kind ?? 'journal';
+  const images = options.imageSources ?? (options.imageSource ? [options.imageSource] : []);
   const variantClass = options.variant === 'preview'
     ? 'today-record-row'
     : options.variant === 'bubble'
-      ? `life-diary-bubble${options.imageSource ? ' has-image' : ''}`
+      ? `life-diary-bubble${images.length ? ' has-image' : ''}`
       : 'day-record-row';
   const item = options.variant === 'preview'
     ? listRow('button', `ui-record-item ${variantClass} is-${kind}`)
@@ -311,11 +313,15 @@ export function recordItem(options: {
     if (options.leading) item.append(options.leading);
     item.append(element('span', 'today-record-copy', options.body || '图片记录'), element('time', 'caption', options.time));
   } else if (options.variant === 'bubble') {
-    if (options.imageSource) {
-      const image = element('img', 'life-diary-image');
-      image.src = options.imageSource;
-      image.alt = options.body ? '记录图片' : '图片记录';
-      item.append(image);
+    if (images.length) {
+      const grid = element('span', `record-image-grid is-count-${Math.min(images.length, 5)}`);
+      images.forEach((source, index) => {
+        const image = element('img', 'life-diary-image');
+        image.src = source;
+        image.alt = `${options.body ? '记录图片' : '图片记录'} ${index + 1}`;
+        grid.append(image);
+      });
+      item.append(grid);
     }
     if (options.body) item.append(element('span', 'life-diary-copy', options.body));
     item.append(element('time', 'life-diary-time', options.time));
@@ -324,11 +330,15 @@ export function recordItem(options: {
     const meta = element('div', 'day-record-meta');
     meta.append(element('time', '', options.time), element('span', 'day-record-kind', '生活日记'));
     copy.append(meta);
-    if (options.imageSource) {
-      const image = element('img', 'day-record-image');
-      image.src = options.imageSource;
-      image.alt = options.body ? '记录图片' : '图片记录';
-      copy.append(image);
+    if (images.length) {
+      const grid = element('div', `record-image-grid is-count-${Math.min(images.length, 5)}`);
+      images.forEach((source, index) => {
+        const image = element('img', 'day-record-image');
+        image.src = source;
+        image.alt = `${options.body ? '记录图片' : '图片记录'} ${index + 1}`;
+        grid.append(image);
+      });
+      copy.append(grid);
     }
     if (options.body) copy.append(element('p', 'day-record-body', options.body));
     item.append(copy);

@@ -41,6 +41,21 @@ test('unfinished tasks keep the user-defined order', async (t) => {
   await assert.rejects(() => db.reorderPendingQuests('2026-09-02', [first.id]), /列表已变化/);
 });
 
+test('goal child tasks keep the user-defined order and next step', async (t) => {
+  const db = await withDatabase(t, 'goal-task-order');
+  const created = await db.addGoalWithStages({ result: '完成三步目标' }, [
+    { title: '第一步', localDate: '2026-09-10', dimension: 'progress', difficulty: 'light' },
+    { title: '第二步', localDate: '2026-09-11', dimension: 'progress', difficulty: 'light' },
+    { title: '第三步', localDate: '2026-09-12', dimension: 'progress', difficulty: 'light' },
+  ]);
+
+  await db.reorderGoalMilestones(created.goal.id, [created.milestones[2].id, created.milestones[0].id, created.milestones[1].id]);
+
+  assert.deepEqual((await db.listMilestones(created.goal.id)).map((item) => item.description), ['第三步', '第一步', '第二步']);
+  assert.equal((await db.listGoals()).find((item) => item.id === created.goal.id)?.nextStep, '第三步');
+  await assert.rejects(() => db.reorderGoalMilestones(created.goal.id, [created.milestones[0].id]), /列表已变化/);
+});
+
 test('legacy quest types do not create a hidden default priority', async (t) => {
   const db = await withDatabase(t, 'task-type-order');
   const manual = await db.addQuest({ localDate: '2026-09-02', type: 'side', sourceType: 'manual', title: '先建立的任务', reason: '手动安排', difficulty: 'light', dimension: 'progress' });
@@ -2445,6 +2460,23 @@ test('original leading and trailing whitespace is preserved', async (t) => {
   const body = '\n  an intentionally quiet opening  \n';
   const entry = await db.addEntry(body, '2026-08-14');
   assert.equal((await db.getEntry(entry.id)).body, body);
+});
+
+test('records keep up to nine photos through edit, undo and backup', async (t) => {
+  const db = await withDatabase(t, 'multi-photo-entry');
+  const first = 'data:image/png;base64,AAAA';
+  const second = 'data:image/jpeg;base64,BBBB';
+  const third = 'data:image/webp;base64,CCCC';
+  const entry = await db.addEntry('', '2026-08-14', 'text', 'journal', [first, second]);
+  assert.deepEqual(entry.imageDataUrls, [first, second]);
+  assert.equal(entry.imageDataUrl, undefined);
+
+  const edited = await db.editEntry(entry.id, entry.version, '三张照片', 'journal', [second, third, first]);
+  assert.deepEqual(edited.imageDataUrls, [second, third, first]);
+  assert.deepEqual((await db.listRevisions(entry.id))[0].previousImageDataUrls, [first, second]);
+  assert.deepEqual((await db.undoLastEdit(entry.id)).imageDataUrls, [first, second]);
+  assert.deepEqual(parseBackup(JSON.stringify(await db.exportBundle())).data.entries[0].imageDataUrls, [first, second]);
+  await assert.rejects(() => db.addEntry('', '2026-08-15', 'text', 'journal', Array(10).fill(first)), /最多添加 9 张/);
 });
 
 test('edit creates a revision and undo restores the previous body as a new version', async (t) => {

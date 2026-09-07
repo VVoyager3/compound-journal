@@ -261,6 +261,8 @@ async function finishGoal(page) {
   await dialog.getByRole('button', { name: '保存目标' }).click();
   await page.getByRole('dialog', { name: '确认目标已完成？' }).getByRole('button', { name: '确认完成' }).click();
   await goal.waitFor();
+  const detail = page.getByRole('dialog', { name: '目标详情' });
+  await detail.getByRole('button', { name: '返回' }).click();
 }
 
 async function adoptWeeklyReview(page) {

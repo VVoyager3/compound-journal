@@ -59,9 +59,6 @@ import badgeGoalImage from '../design-assets/generated/growth-icons/badge-goal.p
 import badgeHabitImage from '../design-assets/generated/growth-icons/badge-habit.png';
 import badgeRecoveryImage from '../design-assets/generated/growth-icons/badge-recovery.png';
 import badgeExperimentImage from '../design-assets/generated/growth-icons/badge-experiment.png';
-import branchHealthImage from '../design-assets/generated/growth-icons/branch-health.png';
-import branchTrustImage from '../design-assets/generated/growth-icons/branch-trust.png';
-import branchAutonomyImage from '../design-assets/generated/growth-icons/branch-autonomy.png';
 import habitWalkingImage from '../design-assets/generated/habit-icons/walking.png';
 import habitStudyImage from '../design-assets/generated/habit-icons/study.png';
 import habitPhoneImage from '../design-assets/generated/habit-icons/phone.png';
@@ -112,7 +109,7 @@ interface RecordDraft {
   fullBody: string;
   kind: NonNullable<JournalEntry['kind']>;
   summary: string;
-  imageDataUrl?: string;
+  imageDataUrls?: string[];
 }
 
 interface TaskFeedbackDraft {
@@ -129,6 +126,7 @@ const DRAFT_KEY = 'qiguang.record-drafts.v2';
 const TASK_FEEDBACK_DRAFT_PREFIX = 'qiguang.task-feedback-draft.';
 const SEEN_BADGES_KEY = 'qiguang.seen-badges.v1';
 const RECORD_IMAGE_MAX_BYTES = 1_500_000;
+const RECORD_IMAGE_MAX_COUNT = 9;
 const INTERRUPTED_TAKEOVER_MS = 2 * 60_000;
 const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN ?? '').replace(/\/$/, '');
 const AVAILABLE_AI_MODELS = ['MiniMax-M3', 'MiniMax-M2.7'] as const;
@@ -549,9 +547,13 @@ function loadDrafts(): void {
           if (typeof draft.body === 'string' && draft.body.length <= 12_000) {
             const summary = typeof draft.summary === 'string' && draft.summary.length <= 120 ? draft.summary : '';
             const fullBody = typeof draft.fullBody === 'string' && draft.fullBody.length <= 12_000 ? draft.fullBody : '';
-            const imageDataUrl = typeof draft.imageDataUrl === 'string' && draft.imageDataUrl.length <= 2_200_000 ? draft.imageDataUrl : undefined;
-            if (draft.kind === 'journal' || draft.kind === 'success' || draft.kind === 'fun') memoryDrafts[date] = { body: draft.body, fullBody, kind: draft.kind, summary, imageDataUrl };
-            else { memoryDrafts[date] = { ...migrateLegacyJournalContent(draft.body), fullBody, summary, imageDataUrl }; migratedLegacyDraft = true; }
+            const legacyImage = typeof (draft as Partial<RecordDraft> & { imageDataUrl?: unknown }).imageDataUrl === 'string'
+              ? (draft as Partial<RecordDraft> & { imageDataUrl?: string }).imageDataUrl : undefined;
+            const imageDataUrls = (Array.isArray(draft.imageDataUrls) ? draft.imageDataUrls : legacyImage ? [legacyImage] : [])
+              .filter((value): value is string => typeof value === 'string' && value.length <= 2_200_000)
+              .slice(0, RECORD_IMAGE_MAX_COUNT);
+            if (draft.kind === 'journal' || draft.kind === 'success' || draft.kind === 'fun') memoryDrafts[date] = { body: draft.body, fullBody, kind: draft.kind, summary, imageDataUrls };
+            else { memoryDrafts[date] = { ...migrateLegacyJournalContent(draft.body), fullBody, summary, imageDataUrls }; migratedLegacyDraft = true; }
           }
         }
       }
@@ -568,7 +570,7 @@ function persistDrafts(): void {
     else localStorage.removeItem(DRAFT_KEY);
     draftNeedsUnloadWarning = false;
   } catch {
-    draftNeedsUnloadWarning = Object.values(memoryDrafts).some((draft) => Boolean(draft.body || draft.fullBody || draft.summary || draft.imageDataUrl));
+    draftNeedsUnloadWarning = Object.values(memoryDrafts).some((draft) => Boolean(draft.body || draft.fullBody || draft.summary || draft.imageDataUrls?.length));
   }
 }
 
@@ -577,12 +579,12 @@ function readDraft(date: string): RecordDraft {
   return memoryDrafts[date] ?? { body: '', fullBody: '', kind: 'journal', summary: '' };
 }
 
-function saveDraft(date: string, body: string, kind: RecordDraft['kind'], summary?: string, imageDataUrl?: string | null, fullBody?: string): void {
+function saveDraft(date: string, body: string, kind: RecordDraft['kind'], summary?: string, imageDataUrls?: string[] | null, fullBody?: string): void {
   loadDrafts();
   const savedSummary = summary ?? memoryDrafts[date]?.summary ?? '';
-  const savedImage = imageDataUrl === undefined ? memoryDrafts[date]?.imageDataUrl : imageDataUrl || undefined;
+  const savedImages = imageDataUrls === undefined ? memoryDrafts[date]?.imageDataUrls : imageDataUrls?.length ? [...imageDataUrls] : undefined;
   const savedFullBody = fullBody ?? memoryDrafts[date]?.fullBody ?? '';
-  if (body || savedFullBody || savedSummary || savedImage || kind === 'success') memoryDrafts[date] = { body, fullBody: savedFullBody, kind, summary: savedSummary, imageDataUrl: savedImage };
+  if (body || savedFullBody || savedSummary || savedImages?.length || kind === 'success') memoryDrafts[date] = { body, fullBody: savedFullBody, kind, summary: savedSummary, imageDataUrls: savedImages };
   else delete memoryDrafts[date];
   persistDrafts();
 }
@@ -766,6 +768,10 @@ function entryTime(entry: JournalEntry): string {
   return new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 }
 
+function entryImages(entry: Pick<JournalEntry, 'imageDataUrls' | 'imageDataUrl'>): string[] {
+  return entry.imageDataUrls ?? (entry.imageDataUrl ? [entry.imageDataUrl] : []);
+}
+
 function isoFromDateTimeInput(value: string): string | undefined {
   return value ? new Date(value).toISOString() : undefined;
 }
@@ -935,8 +941,7 @@ async function openStateDetail(dimension: (typeof DIMENSIONS)[number], observati
 }
 
 function statusSummary(observations: Partial<Record<Dimension, ResolvedDimensionState>>, referenceDate = localDate()): HTMLElement {
-  const section = node('section', 'surface ui-surface-plain status-summary');
-  section.append(sectionHeading('五维状态'));
+  const section = listSection('五维状态', { className: 'surface ui-surface-plain status-summary' });
   const grid = node('div', 'status-grid');
   for (const dimension of DIMENSIONS) {
     const observation = observations[dimension.key];
@@ -1633,19 +1638,13 @@ function taskListQuest(quest: Quest, overdue = false, directComplete = false, re
   return item;
 }
 
-function enableTaskReordering(list: HTMLElement, date: string): void {
-  const rows = () => [...list.querySelectorAll<HTMLElement>('.task-list-item[data-reorderable="true"]')];
-  const persist = async (): Promise<void> => {
-    try {
-      await db.reorderPendingQuests(date, rows().map((item) => item.dataset.questId!));
-      showToast('任务顺序已保存。');
-    } catch (error) {
-      showToast(errorMessage(error), 'error');
-      await render();
-    }
+function enableRowReordering(list: HTMLElement, rowSelector: string, handleSelector: string, persistIds: (ids: string[]) => Promise<void>): void {
+  const rows = () => [...list.querySelectorAll<HTMLElement>(rowSelector)];
+  const persistOrder = async (): Promise<void> => {
+    await persistIds(rows().map((item) => item.dataset.reorderId!));
   };
   rows().forEach((item) => {
-    const handle = item.querySelector<HTMLButtonElement>('.task-drag-handle')!;
+    const handle = item.querySelector<HTMLButtonElement>(handleSelector)!;
     let dragging = false;
     handle.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
@@ -1656,7 +1655,7 @@ function enableTaskReordering(list: HTMLElement, date: string): void {
     handle.addEventListener('pointermove', (event) => {
       if (!dragging) return;
       event.preventDefault();
-      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('.task-list-item[data-reorderable="true"]');
+      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>(rowSelector);
       if (!target || target === item || target.parentElement !== list) return;
       const after = event.clientY > target.getBoundingClientRect().top + target.getBoundingClientRect().height / 2;
       list.insertBefore(item, after ? target.nextSibling : target);
@@ -1666,18 +1665,31 @@ function enableTaskReordering(list: HTMLElement, date: string): void {
       dragging = false;
       handle.releasePointerCapture(event.pointerId);
       item.classList.remove('is-dragging');
-      void persist();
+      void persistOrder();
     });
     handle.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
       event.preventDefault();
       const sibling = event.key === 'ArrowUp' ? item.previousElementSibling : item.nextElementSibling;
-      if (!(sibling instanceof HTMLElement) || sibling.dataset.reorderable !== 'true') return;
+      if (!(sibling instanceof HTMLElement) || !sibling.matches(rowSelector)) return;
       if (event.key === 'ArrowUp') list.insertBefore(item, sibling);
       else list.insertBefore(sibling, item);
-      void persist();
+      void persistOrder();
       handle.focus();
     });
+  });
+}
+
+function enableTaskReordering(list: HTMLElement, date: string): void {
+  list.querySelectorAll<HTMLElement>('.task-list-item[data-reorderable="true"]').forEach((item) => { item.dataset.reorderId = item.dataset.questId; });
+  enableRowReordering(list, '.task-list-item[data-reorderable="true"]', '.task-drag-handle', async (orderedIds) => {
+    try {
+      await db.reorderPendingQuests(date, orderedIds);
+      showToast('任务顺序已保存。');
+    } catch (error) {
+      showToast(errorMessage(error), 'error');
+      await render();
+    }
   });
 }
 
@@ -2037,7 +2049,7 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   const savedEntries = await db.listEntries(targetDate);
   let activeDraftDate = targetDate;
   let selectedKind: NonNullable<JournalEntry['kind']> = initialDraft.kind === 'success' ? 'success' : 'journal';
-  let selectedImage = initialDraft.imageDataUrl;
+  let selectedImages = [...(initialDraft.imageDataUrls ?? [])];
 
   const lifePanel = node('section', 'record-tab-panel life-diary-panel');
   const lifeHeader = node('div', 'life-diary-header record-toolbar');
@@ -2045,8 +2057,8 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   const analysableEntries = savedEntries.filter((entry) => entry.body.trim());
   const aiArchive = textAction('AI整理', () => { void openAnalysisPreview(activeDraftDate, analysableEntries); });
   aiArchive.disabled = !NATIVE_AI_READY || !analysableEntries.length;
-  const viewToday = textAction('查看今天', () => { sessionStorage.setItem('qiguang.day-view', 'records'); go({ name: 'day', date: activeDraftDate }); });
-  lifeActions.append(aiArchive, viewToday);
+  const reviewToday = textAction('每日复盘', () => { sessionStorage.setItem('qiguang.day-view', 'review'); go({ name: 'day', date: activeDraftDate }); });
+  lifeActions.append(aiArchive, reviewToday);
   lifeHeader.append(dateControl, lifeActions);
 
   const recordFeed = (className: string): HTMLElement => {
@@ -2055,7 +2067,7 @@ async function recordPage(route: Route): Promise<HTMLElement> {
     savedEntries.forEach((entry) => {
       feed.append(recordItem({
         variant: 'bubble', body: entry.body, time: entryTime(entry), kind: entry.kind,
-        imageSource: entry.imageDataUrl, onOpen: () => { void openEntryDetailDialog(entry); },
+        imageSources: entryImages(entry), onOpen: () => { void openEntryDetailDialog(entry); },
       }));
     });
     return feed;
@@ -2066,7 +2078,8 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   const imageInput = node('input', 'life-diary-file') as HTMLInputElement;
   imageInput.type = 'file';
   imageInput.accept = 'image/png,image/jpeg,image/webp,image/gif';
-  imageInput.setAttribute('aria-label', '选择图片');
+  imageInput.multiple = true;
+  imageInput.setAttribute('aria-label', '选择图片，最多九张');
   const imageButton = actionButton('图片', () => imageInput.click(), { variant: 'quiet', className: 'life-diary-image-button' });
   const input = node('textarea', 'life-diary-input');
   input.name = 'body';
@@ -2081,18 +2094,22 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   saveState.setAttribute('role', 'status');
   const renderImagePreview = (): void => {
     imagePreview.replaceChildren();
-    imagePreview.hidden = !selectedImage;
-    if (!selectedImage) return;
-    const image = node('img') as HTMLImageElement;
-    image.src = selectedImage;
-    image.alt = '待保存图片';
-    const remove = textAction('移除', () => {
-      selectedImage = undefined;
-      imageInput.value = '';
-      updateDraftState();
-      renderImagePreview();
+    imagePreview.hidden = !selectedImages.length;
+    selectedImages.forEach((source, index) => {
+      const item = node('span', 'record-image-preview-item');
+      const image = node('img') as HTMLImageElement;
+      image.src = source;
+      image.alt = `待保存图片 ${index + 1}`;
+      const remove = textAction('×', () => {
+        selectedImages.splice(index, 1);
+        imageInput.value = '';
+        updateDraftState();
+        renderImagePreview();
+      });
+      remove.setAttribute('aria-label', `移除第 ${index + 1} 张图片`);
+      item.append(image, remove);
+      imagePreview.append(item);
     });
-    imagePreview.append(image, remove);
   };
   const composerRow = node('div', 'life-diary-composer-row');
   composerRow.append(imageButton, saveState, send, imageInput);
@@ -2118,15 +2135,15 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   main.append(lifeHeader, lifePanel, fullPanel);
 
   const updateDraftState = (): void => {
-    saveDraft(activeDraftDate, input.value, selectedKind, '', selectedImage ?? null, fullInput.value);
-    send.disabled = !input.value.trim() && !selectedImage;
-    saveState.textContent = draftNeedsUnloadWarning ? '应用未能保存草稿，请先不要关闭页面' : input.value || selectedImage ? '草稿已保存' : '';
+    saveDraft(activeDraftDate, input.value, selectedKind, '', selectedImages, fullInput.value);
+    send.disabled = !input.value.trim() && !selectedImages.length;
+    saveState.textContent = draftNeedsUnloadWarning ? '应用未能保存草稿，请先不要关闭页面' : input.value || selectedImages.length ? '草稿已保存' : '';
     saveState.hidden = !saveState.textContent;
     saveState.classList.toggle('is-error', draftNeedsUnloadWarning);
   };
   input.addEventListener('input', updateDraftState);
   const updateFullDraftState = (): void => {
-    saveDraft(activeDraftDate, input.value, selectedKind, '', selectedImage ?? null, fullInput.value);
+    saveDraft(activeDraftDate, input.value, selectedKind, '', selectedImages, fullInput.value);
     fullSubmit.disabled = !fullInput.value.trim();
     fullStatus.textContent = draftNeedsUnloadWarning ? '应用未能保存草稿，请先不要关闭页面' : fullInput.value ? '草稿已保存' : '';
     fullStatus.hidden = !fullStatus.textContent;
@@ -2134,10 +2151,12 @@ async function recordPage(route: Route): Promise<HTMLElement> {
   };
   fullInput.addEventListener('input', updateFullDraftState);
   imageInput.addEventListener('change', async () => {
-    const file = imageInput.files?.[0];
-    if (!file) return;
+    const files = [...(imageInput.files ?? [])];
+    if (!files.length) return;
     try {
-      selectedImage = await readRecordImage(file);
+      if (selectedImages.length + files.length > RECORD_IMAGE_MAX_COUNT) throw new Error(`一条记录最多添加 ${RECORD_IMAGE_MAX_COUNT} 张图片。`);
+      selectedImages.push(...await Promise.all(files.map(readRecordImage)));
+      imageInput.value = '';
       updateDraftState();
       renderImagePreview();
     } catch (error) {
@@ -2161,9 +2180,9 @@ async function recordPage(route: Route): Promise<HTMLElement> {
     send.textContent = '保存中';
     saveState.hidden = true;
     try {
-      await db.addEntry(input.value, dateInput.value, 'text', selectedKind, selectedImage);
+      await db.addEntry(input.value, dateInput.value, 'text', selectedKind, selectedImages);
       input.value = '';
-      selectedImage = undefined;
+      selectedImages = [];
       saveDraft(dateInput.value, '', selectedKind, '', null, fullInput.value);
       showToast('记录已保存。');
       sessionStorage.setItem('qiguang.day-view', 'records');
@@ -2184,7 +2203,7 @@ async function recordPage(route: Route): Promise<HTMLElement> {
     try {
       await db.addEntry(fullInput.value, dateInput.value, 'text', 'journal');
       fullInput.value = '';
-      saveDraft(dateInput.value, input.value, selectedKind, '', selectedImage ?? null, '');
+      saveDraft(dateInput.value, input.value, selectedKind, '', selectedImages, '');
       showToast('记录已保存。');
       sessionStorage.setItem('qiguang.day-view', 'records');
       go({ name: 'day', date: activeDraftDate });
@@ -2563,15 +2582,17 @@ async function calendarPage(): Promise<HTMLElement> {
 
 function dialogShell(title: string, options: {
   back?: boolean;
+  onBack?: () => void;
   className?: string;
   fullScreen?: boolean;
 } = {}): { dialog: HTMLDialogElement; content: HTMLElement; actions: HTMLElement; titlebar: HTMLElement } {
   const dialog = node('dialog', ['dialog', options.fullScreen && 'full-screen-editor', options.className].filter(Boolean).join(' '));
   const content = node('div', 'dialog-content');
+  const goBack = () => { dialog.close(); options.onBack?.(); };
   const { header: titlebar, heading } = titleBar(title, {
     level: 'h2',
     className: 'ui-dialog-titlebar',
-    back: options.back ? { onClick: () => dialog.close(), className: 'dialog-back' } : undefined,
+    back: options.back ? { onClick: goBack, className: 'dialog-back' } : undefined,
   });
   heading.id = `dialog-title-${crypto.randomUUID()}`;
   dialog.setAttribute('aria-labelledby', heading.id);
@@ -2600,7 +2621,7 @@ function dialogShell(title: string, options: {
     viewport?.removeEventListener('scroll', syncViewport);
     dialog.remove();
   }, { once: true });
-  dialog.addEventListener('cancel', () => dialog.close());
+  dialog.addEventListener('cancel', (event) => { event.preventDefault(); goBack(); });
   return { dialog, content, actions, titlebar };
 }
 
@@ -2846,30 +2867,38 @@ async function openEditDialog(entry: JournalEntry): Promise<void> {
   textarea.value = entry.body;
   bodyLabel.append(textarea);
   const kind = entry.kind ?? 'journal';
-  let imageDataUrl = entry.imageDataUrl;
+  let imageDataUrls = entryImages(entry);
   const imageInput = node('input') as HTMLInputElement;
   imageInput.type = 'file';
   imageInput.accept = 'image/png,image/jpeg,image/webp,image/gif';
+  imageInput.multiple = true;
   imageInput.hidden = true;
   const imageBox = node('div', 'record-detail-image-box');
   const renderImage = (): void => {
     imageBox.replaceChildren();
-    if (imageDataUrl) {
+    const grid = node('div', `record-image-grid is-count-${Math.min(imageDataUrls.length, 5)}`);
+    imageDataUrls.forEach((source, index) => {
+      const item = node('span', 'record-detail-image-item');
       const image = node('img') as HTMLImageElement;
-      image.src = imageDataUrl;
-      image.alt = '记录图片';
-      imageBox.append(image);
-    }
-    const replace = actionButton(imageDataUrl ? '更换图片' : '添加图片', () => imageInput.click());
-    const remove = actionButton('移除图片', () => { imageDataUrl = undefined; imageInput.value = ''; renderImage(); }, { variant: 'quiet' });
-    remove.hidden = !imageDataUrl;
-    imageBox.append(replace, remove, imageInput);
+      image.src = source;
+      image.alt = `记录图片 ${index + 1}`;
+      const remove = textAction('×', () => { imageDataUrls.splice(index, 1); imageInput.value = ''; renderImage(); });
+      remove.setAttribute('aria-label', `移除第 ${index + 1} 张图片`);
+      item.append(image, remove);
+      grid.append(item);
+    });
+    if (imageDataUrls.length) imageBox.append(grid);
+    const add = actionButton(imageDataUrls.length ? '继续添加' : '添加图片', () => imageInput.click());
+    add.disabled = imageDataUrls.length >= RECORD_IMAGE_MAX_COUNT;
+    imageBox.append(add, imageInput);
   };
   imageInput.addEventListener('change', async () => {
-    const file = imageInput.files?.[0];
-    if (!file) return;
+    const files = [...(imageInput.files ?? [])];
+    if (!files.length) return;
     try {
-      imageDataUrl = await readRecordImage(file);
+      if (imageDataUrls.length + files.length > RECORD_IMAGE_MAX_COUNT) throw new Error(`一条记录最多添加 ${RECORD_IMAGE_MAX_COUNT} 张图片。`);
+      imageDataUrls.push(...await Promise.all(files.map(readRecordImage)));
+      imageInput.value = '';
       renderImage();
     } catch (error) {
       imageInput.value = '';
@@ -2890,7 +2919,7 @@ async function openEditDialog(entry: JournalEntry): Promise<void> {
     save.disabled = true;
     status.textContent = '正在保存修改…';
     try {
-      await db.editEntry(entry.id, entry.version, textarea.value, kind, imageDataUrl);
+      await db.editEntry(entry.id, entry.version, textarea.value, kind, imageDataUrls);
       dialog.close();
       showToast('修改已保存，可撤销一次。');
       await render();
@@ -3307,7 +3336,7 @@ async function dayPage(date: string): Promise<HTMLElement> {
   for (const entry of entries) {
     journal.append(recordItem({
       variant: 'detail', body: entry.body, time: entryTime(entry), kind: entry.kind,
-      imageSource: entry.imageDataUrl, onOpen: () => { void openEntryDetailDialog(entry); },
+      imageSources: entryImages(entry), onOpen: () => { void openEntryDetailDialog(entry); },
     }));
   }
 
@@ -4021,7 +4050,8 @@ async function openGoalDialog(): Promise<void> {
 }
 
 async function openGoalSettingsDialog(goal: Goal): Promise<void> {
-  const { dialog, content, actions } = dialogShell('编辑目标', { back: true, className: 'goal-editor-dialog', fullScreen: true });
+  const returnToDetail = () => { void openGoalDetailDialog(goal); };
+  const { dialog, content, actions } = dialogShell('编辑目标', { back: true, onBack: returnToDetail, className: 'goal-editor-dialog', fullScreen: true });
   const result = node('input', 'input');
   result.maxLength = 160;
   result.value = goal.result;
@@ -4043,7 +4073,7 @@ async function openGoalSettingsDialog(goal: Goal): Promise<void> {
     labelledControl('目标状态', goalStatus),
     status,
   );
-  const cancel = actionButton('取消', () => dialog.close(), { variant: 'quiet' });
+  const cancel = actionButton('取消', () => { dialog.close(); returnToDetail(); }, { variant: 'quiet' });
   const save = actionButton('保存目标', undefined, { variant: 'primary' });
   save.addEventListener('click', async () => {
     save.disabled = true;
@@ -4054,13 +4084,14 @@ async function openGoalSettingsDialog(goal: Goal): Promise<void> {
         if (!confirmed) { save.disabled = false; return; }
       }
       const achievementsBefore = await growthBadgeIds();
-      await db.saveGoal(goal.id, {
+      const updated = await db.saveGoal(goal.id, {
         result: result.value,
         targetDate: targetDate.value,
         status: nextStatus,
       });
       dialog.close();
       await render();
+      await openGoalDetailDialog(updated);
       await announceNewGrowthBadge(achievementsBefore, nextStatus === 'completed' ? '目标已完成。' : '目标已更新。', nextStatus === 'completed');
     } catch (error) {
       save.disabled = false;
@@ -4163,7 +4194,8 @@ async function openGoalReplanDialog(goal: Goal): Promise<void> {
 }
 
 async function openMilestoneDialog(goal: Goal): Promise<void> {
-  const { dialog, content, actions } = dialogShell('添加子任务', { back: true, className: 'task-editor-dialog', fullScreen: true });
+  const returnToDetail = () => { void openGoalDetailDialog(goal); };
+  const { dialog, content, actions } = dialogShell('添加子任务', { back: true, onBack: returnToDetail, className: 'task-editor-dialog', fullScreen: true });
   const title = node('input', 'input');
   title.maxLength = 160;
   const date = node('input', 'input');
@@ -4182,7 +4214,7 @@ async function openMilestoneDialog(goal: Goal): Promise<void> {
     labelledControl('难度', difficulty),
     status,
   );
-  const cancel = actionButton('取消', () => dialog.close());
+  const cancel = actionButton('取消', () => { dialog.close(); returnToDetail(); });
   const save = actionButton('添加', undefined, { variant: 'primary' });
   save.addEventListener('click', async () => {
     save.disabled = true;
@@ -4197,6 +4229,8 @@ async function openMilestoneDialog(goal: Goal): Promise<void> {
       dialog.close();
       showToast(`子任务已安排到${date.value === localDate() ? '今天' : formatDate(date.value)}。`);
       await render();
+      const updated = (await db.listGoals()).find((item) => item.id === goal.id);
+      if (updated) await openGoalDetailDialog(updated);
     } catch (error) {
       save.disabled = false;
       status.textContent = errorMessage(error);
@@ -4439,6 +4473,8 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
   const nextMilestoneId = currentMilestones.find((item) => item.status === 'pending')?.id;
   currentMilestones.forEach((milestone, index) => {
     const row = node('article', `ui-panel goal-detail-stage is-${milestone.status}`);
+    row.dataset.reorderable = 'true';
+    row.dataset.reorderId = milestone.id;
     if (milestone.id === nextMilestoneId) row.classList.add('is-next');
     row.append(node('span', 'stage-number', String(index + 1)), node('div', 'stage-copy'));
     const copy = row.querySelector<HTMLElement>('.stage-copy')!;
@@ -4462,10 +4498,35 @@ async function openGoalDetailDialog(goal: Goal): Promise<void> {
         editStage.addEventListener('click', () => { dialog.close(); void openQuestAdjustmentDialog(linkedQuest); });
         controls.append(editStage);
       }
+      const drag = node('button', 'task-drag-handle milestone-drag-handle', '≡');
+      drag.type = 'button';
+      drag.setAttribute('aria-label', `拖动调整“${milestone.description}”的位置`);
+      controls.append(drag);
+      row.append(controls);
+    }
+    if (!row.querySelector('.milestone-drag-handle')) {
+      const controls = actionGroup('goal-stage-actions');
+      const drag = node('button', 'task-drag-handle milestone-drag-handle', '≡');
+      drag.type = 'button';
+      drag.setAttribute('aria-label', `拖动调整“${milestone.description}”的位置`);
+      controls.append(drag);
       row.append(controls);
     }
     stages.append(row);
   });
+  if (currentMilestones.length > 1) {
+    enableRowReordering(stages, '.goal-detail-stage[data-reorderable="true"]', '.milestone-drag-handle', async (orderedIds) => {
+      try {
+        await db.reorderGoalMilestones(goal.id, orderedIds);
+        showToast('子任务顺序已保存。');
+      } catch (error) {
+        showToast(errorMessage(error), 'error');
+        dialog.close();
+        const updated = (await db.listGoals()).find((item) => item.id === goal.id);
+        if (updated) await openGoalDetailDialog(updated);
+      }
+    });
+  }
   content.append(stages);
   const edit = actionButton('编辑目标', undefined, { variant: 'quiet' });
   edit.addEventListener('click', () => { dialog.close(); void openGoalSettingsDialog(goal); });
@@ -4833,14 +4894,6 @@ function growthBadgeDisplayName(badge: GrowthBadge): string {
   return '小尝试完成';
 }
 
-const DIMENSION_ICON_ASSETS: Record<Dimension, string> = {
-  energy: branchHealthImage,
-  mind: habitBedtimeImage,
-  connection: branchTrustImage,
-  progress: habitChecklistImage,
-  play: branchAutonomyImage,
-};
-
 function habitImage(habit: Habit): string {
   const name = habit.name.toLowerCase();
   if (/散步|走路|步行|跑步|运动|walk|run/.test(name)) return habitWalkingImage;
@@ -4934,8 +4987,7 @@ async function growthPage(): Promise<HTMLElement> {
   const milestoneById = new Map(milestones.map((item) => [item.id, item]));
   const eventById = new Map(events.map((item) => [item.id, item]));
   const feedbackByQuest = activeFeedbackByQuest(feedbacks);
-  const grid = node('section', 'growth-dimension-grid');
-  grid.append(sectionHeading('五维成长', { className: 'growth-dimension-title' }));
+  const grid = listSection('五维成长', { className: 'growth-dimension-grid', headingClassName: 'growth-dimension-title' });
   DIMENSIONS.forEach((dimension, index) => {
     const value = progress[index]!;
     const dimensionLedger = activeLedger
@@ -4945,12 +4997,9 @@ async function growthPage(): Promise<HTMLElement> {
     card.type = 'button';
     card.dataset.dimension = dimension.key;
     const heading = node('div', 'growth-dimension-heading');
-    const icon = node('img', 'growth-dimension-icon') as HTMLImageElement;
-    icon.src = DIMENSION_ICON_ASSETS[dimension.key];
-    icon.alt = '';
     const headingCopy = node('span', 'growth-dimension-copy');
     headingCopy.append(node('h3', '', dimension.label));
-    heading.append(icon, headingCopy);
+    heading.append(headingCopy);
     const stats = node('div', 'growth-dimension-stats');
     stats.append(node('span', '', `等级 ${value.level}`));
     const meter = node('progress', 'growth-dimension-meter');
@@ -5781,7 +5830,7 @@ async function installStorageSettings(): Promise<HTMLElement> {
       ? formatDate(localDate(new Date(value))) : '尚未备份';
   };
   updateBackupDate();
-  for (const [label, value] of [['记录', `${entries.length} 条`], ['图片', `${entries.filter((entry) => entry.imageDataUrl).length} 张`], ['最近备份', backupDate]] as const) {
+  for (const [label, value] of [['记录', `${entries.length} 条`], ['图片', `${entries.reduce((count, entry) => count + entryImages(entry).length, 0)} 张`], ['最近备份', backupDate]] as const) {
     const row = listRow('div', 'ui-info-row');
     row.append(node('span', '', label), typeof value === 'string' ? node('span', 'caption', value) : value);
     stats.append(row);

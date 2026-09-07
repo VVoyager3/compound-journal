@@ -5234,7 +5234,6 @@ h1, h2, h3, p { overflow-wrap: break-word; }
 .growth-dimension-heading {
   grid-column: 2;
   align-self: center;
-  min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
 }
@@ -5753,7 +5752,6 @@ h1, h2, h3, p { overflow-wrap: break-word; }
 
 .life-diary-image-preview {
   display: grid;
-  width: min(68%, 260px);
   gap: var(--ui-field-gap);
   justify-self: end;
   padding: var(--ui-space-3);

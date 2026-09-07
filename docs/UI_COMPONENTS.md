@@ -72,13 +72,13 @@
 人物、日历、热力图、徽章允许专用内部布局，不强塞进列表，但必须复用外层页面、字体及控件。
 图片、发送按钮也使用公共 button；不依靠文字宽度碰巧达到最小点击尺寸。
 `sectionHeading`、`listSection`、`emptyState`、`metricGroup`、`metricItem`、`actionGroup`、`formStack`、`labelledControl`、`textAction`、`actionButton`、`fileButton`、`primaryButton`、`statusMessage`、`titleBar`、`backButton`、`titlebarAction`、`disclosure`、`optionalDetails`、`overflowMenu`、`segmentedControl`、`segmentedItem`、`periodNavigator`、`avatarChoiceGroup`、`avatarChoice`、`choiceGroup`、`choiceRow` 和 `recordItem` 是上述公共结构的唯一 DOM 入口；设置、问卷与复盘分组不再保留平行骨架。页面只传业务专用类、文字、状态和事件。普通按钮只允许 primary、secondary、quiet、danger 四种既有语义变体，并统一由 `actionButton` 设置样式、原生 button/submit 类型与可选点击行为；文件选择按钮由 `fileButton` 保留原生 input 语义。业务页不得再直接拼接标准按钮类。页面和弹层标题栏由 `titleBar` 生成，返回键由 `backButton` 建立，标题栏尾部的文字、符号或图标操作均由 `titlebarAction` 建立。所有 `<details><summary>` 先由 `disclosure` 建立；`optionalDetails` 与 `overflowMenu` 只添加各自语义和外观，不再重复创建原生骨架。周统计、任务分析与习惯统计的整组“标签 + 数值”均由 `metricGroup` 生成，单项由 `metricItem` 生成；日历月份与周复盘周期均由 `periodNavigator` 生成；初次引导和人物设置均由无页面专属类的 `avatarChoiceGroup` 与 `avatarChoice` 生成；任务结果和习惯完成方式由 `choiceGroup` 与 `choiceRow` 生成三列选择，问卷答案复用 `choiceRow` 的纵向列表形态；同一条生活日记在今日预览、消息流和日期回顾中只通过 `recordItem` 的三个受控变体呈现。未被运行时调用的候选变体直接删除。趋势图等带图形的指标保留专用结构。
-记录页只保留右上角“随记 / 整记”两个写作子页：随记使用消息流、底部输入和图片入口；整记使用大文本框、保存按钮，并在同页显示当日全部随记与整记。每日复盘保留在当天回顾的“复盘”页，不与长文本整记混用。旧分类提示、模板选择、编号按钮、旧附件按钮和固定提交栏不是可选皮肤，禁止重新引入。图片操作使用公共 `actionButton`，记录管理进入统一详情弹层；今日预览、随记消息流、整记历史和日期回顾不得再分别手写记录条目。今日预览与习惯打卡共用 `listGroup` 的单一外框和组内分割线，只在行尾内容与点击行为上区分。
+记录页右上角保留“随记 / 整记”两个写作子页及“每日复盘”直接入口：随记使用消息流、底部输入和多图片入口；整记使用大文本框、保存按钮，并在同页显示当日全部随记与整记。每日复盘仍使用独立固定表单，也可从当天回顾的“复盘”页进入，不与长文本整记混用。每条记录最多九张图片，按数量使用一张4:3、两张等分、三张主次、四张2×2、五张以上三列的固定网格。旧分类提示、模板选择、编号按钮、旧附件按钮和固定提交栏不是可选皮肤，禁止重新引入。图片操作使用公共 `actionButton`，记录管理进入统一详情弹层；今日预览、随记消息流、整记历史和日期回顾不得再分别手写记录条目。今日预览与习惯打卡共用 `listGroup` 的单一外框和组内分割线，只在行尾内容与点击行为上区分。
 日期记录和周复盘同样不保留旧卡片皮肤：记录条目进入统一详情弹层；周复盘只保留当前摘要、调整清单和公共操作组，不再并行维护 hero、focus 或 experiment 卡。
 搜索结果、表单保存及异步错误统一由 `statusMessage` 提供状态区域；业务页只更新文字和 `is-error` 状态，不再创建同尺寸的页面专用状态类。
 
 没有挂载到页面的候选组件必须删除，不以“以后可能使用”为由保留平行 DOM、计算或 CSS。已完成、逾期任务直接复用 `taskRow`；习惯分析与成长记录复用现有数据/信息行，不再保留旧 momentum、ledger、milestone、habit-log 或 analysis-result 行皮肤。习惯分析总览只保留实际展示的近四周表格。
 状态、成长、习惯和目标页同样不保留旧 `growth-overview`、`growth-seed`、`goal-status`、`habit-actions`、`assessment-*-actions` 或专页标题/列表间距类；现行页面只由公共页面壳、栏目标题、列表行、指标组、操作组和表单间距组合。
-标准“标题 + 内容”区域直接使用 `listSection`；热力图、日历等必须保留专用内部网格的区域仅复用 `sectionHeading`。业务页不再用裸 `h2/h3` 另造同级小节标题和间距。日期记录、行动结果和月度概览属于标准区块；日期预览与复盘调整保留专用布局，但标题仍由 `sectionHeading` 生成。
+标准“标题 + 内容”区域直接使用 `listSection`；五维状态与五维成长也遵循同一13px标题到内容间距，成长行不放装饰图标。热力图、日历等必须保留专用内部网格的区域仅复用 `sectionHeading`。业务页不再用裸 `h2/h3` 另造同级小节标题和间距。日期记录、行动结果和月度概览属于标准区块；日期预览与复盘调整保留专用布局，但标题仍由 `sectionHeading` 生成。
 原 `iconButton` 已删除：无图标的文字按钮全部回到 `actionButton`；仅日历翻月保留 `calendarMonthButton` 这一种专用无文字图标按钮，避免把专用箭头样式扩散成第二套普通按钮。
 
 ## 间隔归属

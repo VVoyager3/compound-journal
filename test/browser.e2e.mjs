@@ -280,7 +280,8 @@ test('first use selects a companion, records, edits, and undoes locally', async 
     assert.equal(await page.locator('.record-kind-hint').count(), 0, 'record types must not repeat their prompt below the selector');
     assert.equal(await page.getByRole('textbox', { name: '今日一句' }).count(), 0, 'recording should not ask for a day title before writing');
     assert.equal(await page.locator('.record-type-option').count(), 0, 'recording should not ask for a category before writing');
-    assert.equal(await page.getByRole('button', { name: '图片' }).count(), 1, 'life diary should support one local image attachment');
+    assert.equal(await page.getByRole('button', { name: '图片' }).count(), 1, 'life diary should expose one multi-photo picker');
+    assert.equal(await page.getByRole('button', { name: '每日复盘' }).count(), 1, 'recording must expose a direct daily-review entry');
     assert.equal(await page.getByRole('button', { name: 'AI整理' }).count(), 1, 'life diary should expose post-writing AI filing');
     const dateControl = page.locator('.record-date-control');
     await assert.doesNotReject(() => dateControl.waitFor());
@@ -1311,10 +1312,16 @@ test('success diary prompts stay optional and AI goal decomposition requires con
     await assert.doesNotReject(() => page.getByRole('heading', { name: '发布一篇文章' }).waitFor());
     const savedGoal = page.locator('.goal-row').filter({ hasText: '发布一篇文章' });
     await savedGoal.getByRole('button', { name: '查看目标“发布一篇文章”的子任务' }).click();
-    const savedGoalDetail = page.getByRole('dialog', { name: '目标详情' });
+    let savedGoalDetail = page.getByRole('dialog', { name: '目标详情' });
     await assert.doesNotReject(() => savedGoalDetail.getByText('完成第一段可检查成果', { exact: true }).waitFor());
     assert.equal(await savedGoalDetail.getByRole('button', { name: /标为完成|撤销完成/ }).count(), 0, '目标详情只能管理，不能打卡子任务');
     assert.equal(await savedGoalDetail.getByRole('button', { name: '编辑子任务：完成第一段可检查成果' }).count(), 1);
+    assert.equal(await savedGoalDetail.getByRole('button', { name: /拖动调整.+的位置/ }).count(), 2, 'every child task must expose an accessible reorder handle');
+    await savedGoalDetail.getByRole('button', { name: '编辑目标', exact: true }).click();
+    const goalEditor = page.getByRole('dialog', { name: '编辑目标' });
+    await goalEditor.getByRole('button', { name: '返回' }).click();
+    savedGoalDetail = page.getByRole('dialog', { name: '目标详情' });
+    await assert.doesNotReject(() => savedGoalDetail.waitFor());
     await savedGoalDetail.getByRole('button', { name: '返回' }).click();
     await assert.doesNotReject(() => savedGoal.locator(':scope > .quest-more-actions > summary').waitFor());
     await openTaskView(page, '今天');
@@ -1561,15 +1568,19 @@ test('quick and full records share one daily history while daily review remains 
 
     await page.goto(`${baseUrl}/#/record/${date}`);
     const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64');
-    await page.locator('.life-diary-file').setInputFiles({ name: 'note.png', mimeType: 'image/png', buffer: tinyPng });
-    await assert.doesNotReject(() => page.locator('.life-diary-image-preview img').waitFor());
+    await page.locator('.life-diary-file').setInputFiles([
+      { name: 'note-1.png', mimeType: 'image/png', buffer: tinyPng },
+      { name: 'note-2.png', mimeType: 'image/png', buffer: tinyPng },
+    ]);
+    await assert.doesNotReject(() => page.locator('.life-diary-image-preview img').first().waitFor());
+    assert.equal(await page.locator('.life-diary-image-preview img').count(), 2);
     await page.getByRole('button', { name: '发送' }).click();
     await page.waitForURL(new RegExp(`#\\/day\\/${date}$`));
 
     const entries = page.locator('.day-record-row');
     await assert.doesNotReject(() => entries.filter({ hasText: '先保存一条普通记录' }).waitFor());
     assert.equal(await entries.count(), 4, 'one day must accept more than one stream entry');
-    assert.equal(await page.locator('.day-record-image').count(), 1, 'image attachments should render in the day record stream');
+    assert.equal(await page.locator('.day-record-image').count(), 2, 'all image attachments should render in the day record stream');
     const successes = page.locator('.success-evidence');
     assert.equal(await successes.getByText('先保存一条普通记录', { exact: true }).count(), 0);
     assert.equal(await successes.getByText('我把失败的构建修复了', { exact: true }).count(), 0);
@@ -1643,7 +1654,6 @@ test('a goal child task completes from Today before the goal can be confirmed', 
     await childDialog.getByRole('textbox', { name: '完成日期' }).fill(today);
     await childDialog.getByRole('button', { name: '添加', exact: true }).click();
 
-    await goalCard.getByRole('button', { name: `查看目标“${goalName}”的子任务` }).click();
     let details = page.getByRole('dialog', { name: '目标详情' });
     await details.getByText('0 / 1 子任务', { exact: true }).waitFor();
     assert.equal(await details.getByRole('button', { name: /标为完成|撤销完成|确认目标完成/ }).count(), 0, '目标详情不能代替今日任务打卡');
@@ -1855,6 +1865,7 @@ test('Android without a MiniMax key keeps the local success and action loop usab
     await scheduleSavedGoalToday(page, goalDialog, '完成一个本地目标');
     assert.equal(await page.getByText(/已确认的拆解/).count(), 0);
     await assert.doesNotReject(() => page.getByRole('heading', { name: '完成一个本地目标', exact: true }).waitFor());
+    await page.getByRole('dialog', { name: '目标详情' }).getByRole('button', { name: '返回' }).click();
     await openTaskView(page, '今天');
     await assert.doesNotReject(() => page.getByRole('heading', { name: '确定一个可以开始的下一步' }).waitFor());
 
