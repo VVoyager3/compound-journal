@@ -188,6 +188,8 @@ test('analysis heatmaps keep square cells and contain horizontal overflow', asyn
 
     assert.equal(await page.locator('.analysis-range-select').count(), 0, 'task analysis must not repeat the time-range control in the header');
     assert.equal(await page.locator('.analysis-heat-legend').count(), 0, 'task analysis must not show the redundant heatmap legend');
+    assert.equal(await page.locator('.analysis-heat-cell.is-today').count(), 1, 'heatmap must mark today once');
+    assert.equal(await page.locator('.analysis-heat-cell').first().evaluate((cell) => getComputedStyle(cell, '::after').content), 'none', 'heatmap cells must not add decorative status glyphs');
     const categoryLabels = await page.locator('.analysis-category-tabs > button').allTextContents();
     assert.deepEqual(categoryLabels, ['全部', '身体', '心理', '关系', '工作', '玩乐'], 'task analysis must use the same five dimensions as the rest of the app');
     assert.equal(await page.locator('.analysis-category-tabs > button').filter({ hasText: /^(学习|生活)$/ }).count(), 0, 'task analysis must not restore the retired study/life split');

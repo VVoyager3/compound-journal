@@ -6094,7 +6094,7 @@ function analysisHeatmap(
   for (let offset = 0; offset < weeks * 7; offset += 1) {
     const date = shiftDate(period.start, offset);
     const value = date <= period.gridEnd ? cellForDate(date) : { tone: 'empty' as const, label: '' };
-    const cell = node('span', `analysis-heat-cell is-${value.tone}`);
+    const cell = node('span', `analysis-heat-cell is-${value.tone}${date === localDate() ? ' is-today' : ''}`);
     cell.title = value.label;
     cell.setAttribute('role', 'img');
     cell.setAttribute('aria-label', value.label);

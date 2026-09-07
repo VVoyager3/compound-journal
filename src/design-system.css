@@ -18,6 +18,13 @@
   --ui-color-accent-soft: #dee6d8;
   --ui-color-danger: #a83b32;
   --ui-color-focus: #214d3c;
+  --ui-color-heat-empty: #ebe7dc;
+  --ui-color-heat-missed: #c8c2b3;
+  --ui-color-heat-1: #dce5d8;
+  --ui-color-heat-2: #b9cdb3;
+  --ui-color-heat-3: #89aa83;
+  --ui-color-heat-4: #557d61;
+  --ui-color-heat-5: #214d3c;
 
   /* Type */
   --ui-font-family: "Noto Sans CJK SC", "Microsoft YaHei", system-ui, sans-serif;
@@ -962,7 +969,43 @@ button.ui-list-row:is(:hover,:focus-visible) { background: var(--ui-color-accent
 .analysis-heat-months span:last-child { justify-self: end; }
 .analysis-heat-cells, .analysis-weekday-labels { gap: var(--heat-gap); }
 .analysis-weekday-labels { font-size: var(--ui-font-meta); color: var(--ui-color-muted); }
-.analysis-heat-cell { border-radius: var(--ui-space-1); }
+.analysis-heat-cell {
+  box-sizing: border-box;
+  border: var(--ui-border-width) solid transparent;
+  border-radius: var(--ui-space-1);
+  background: var(--ui-color-heat-empty);
+}
+.analysis-heat-cell.is-level-1 { background: var(--ui-color-heat-1); }
+.analysis-heat-cell.is-level-2 { background: var(--ui-color-heat-2); }
+.analysis-heat-cell.is-level-3 { background: var(--ui-color-heat-3); }
+.analysis-heat-cell.is-level-4 { background: var(--ui-color-heat-4); }
+.analysis-heat-cell.is-level-5 { background: var(--ui-color-heat-5); }
+.analysis-heat-cell.is-missed,
+.analysis-heat-cell.is-skipped {
+  border-color: var(--ui-color-heat-missed);
+  background: transparent;
+}
+.analysis-heat-cell.is-today {
+  outline: var(--ui-border-width) solid var(--ui-color-text);
+  outline-offset: var(--ui-space-1);
+}
+.analysis-heat-cell::after { content: none; }
+.page-habit-analysis:not(.page-habit-analysis-overview) .analysis-heat-cell:is(.is-level-1, .is-level-2, .is-level-3, .is-level-4, .is-level-5)::after,
+.page-habit-analysis:not(.page-habit-analysis-overview) .analysis-heat-cell.is-missed::after {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: var(--ui-font-meta);
+}
+.page-habit-analysis:not(.page-habit-analysis-overview) .analysis-heat-cell:is(.is-level-1, .is-level-2, .is-level-3, .is-level-4, .is-level-5)::after {
+  color: var(--ui-color-surface);
+  content: '✓';
+}
+.page-habit-analysis:not(.page-habit-analysis-overview) .analysis-heat-cell.is-missed::after {
+  color: var(--ui-color-muted);
+  content: '–';
+}
 
 /* Companion settings mirror the reference: preview, choices, nickname, save. */
 .settings-detail-dialog .profile-settings.settings-detail-content {
